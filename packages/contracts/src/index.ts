@@ -6,3 +6,6 @@ export * from './common/roles.js';
 
 // Identity
 export * from './identity/auth.schema.js';
+export * from './identity/mfa.schema.js';
+export * from './identity/password.schema.js';
+export * from './identity/session.schema.js';

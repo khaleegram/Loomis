@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "node --env-file=../../.env.local ./node_modules/tsx/dist/cli.mjs watch src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "node dist/src/index.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
     "test": "vitest run",
@@ -23,13 +23,17 @@
     "drizzle-orm": "^0.33.0",
     "fastify": "^5.0.0",
     "ioredis": "^5.4.1",
+    "jose": "^6.2.3",
     "pino": "^9.4.0",
     "postgres": "^3.4.4",
+    "speakeasy": "^2.0.0",
     "uuidv7": "^1.0.2",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@loomis/config": "workspace:*",
+    "@types/node": "^25.9.1",
+    "@types/speakeasy": "^2.0.10",
     "drizzle-kit": "^0.24.2",
     "tsx": "^4.19.1",
     "typescript": "^5.6.2",
