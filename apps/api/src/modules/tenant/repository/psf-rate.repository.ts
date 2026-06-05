@@ -1,6 +1,5 @@
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import { psfRateSnapshots } from '../../../../drizzle/schema/tenant.js';
-import { db } from '../../../shared/db.js';
 import { withTenantContext } from '../../../shared/tenant-context.js';
 import type { CreatePsfRateSnapshotInput } from '../types.js';
 
@@ -16,8 +15,8 @@ import type { CreatePsfRateSnapshotInput } from '../types.js';
 export const psfRateSnapshotRepository = {
   async create(input: CreatePsfRateSnapshotInput) {
     const contextTenantId = input.scope === 'tenant' ? input.tenantId : null;
-    return withTenantContext(contextTenantId, async () => {
-      const [snapshot] = await db
+    return withTenantContext(contextTenantId, async (tx) => {
+      const [snapshot] = await tx
         .insert(psfRateSnapshots)
         .values({
           scope: input.scope,
@@ -38,8 +37,8 @@ export const psfRateSnapshotRepository = {
 
   /** Latest global default PSF rate snapshot, or null if none set yet. */
   async findLatestGlobal() {
-    return withTenantContext(null, async () => {
-      const [snapshot] = await db
+    return withTenantContext(null, async (tx) => {
+      const [snapshot] = await tx
         .select()
         .from(psfRateSnapshots)
         .where(eq(psfRateSnapshots.scope, 'global'))
@@ -51,8 +50,8 @@ export const psfRateSnapshotRepository = {
 
   /** Latest per-tenant override snapshot for a tenant, or null. */
   async findLatestForTenant(tenantId: string) {
-    return withTenantContext(tenantId, async () => {
-      const [snapshot] = await db
+    return withTenantContext(tenantId, async (tx) => {
+      const [snapshot] = await tx
         .select()
         .from(psfRateSnapshots)
         .where(
@@ -65,8 +64,8 @@ export const psfRateSnapshotRepository = {
   },
 
   async listGlobalHistory() {
-    return withTenantContext(null, async () => {
-      return db
+    return withTenantContext(null, async (tx) => {
+      return tx
         .select()
         .from(psfRateSnapshots)
         .where(eq(psfRateSnapshots.scope, 'global'))
@@ -75,8 +74,8 @@ export const psfRateSnapshotRepository = {
   },
 
   async listTenantHistory(tenantId: string) {
-    return withTenantContext(tenantId, async () => {
-      return db
+    return withTenantContext(tenantId, async (tx) => {
+      return tx
         .select()
         .from(psfRateSnapshots)
         .where(
@@ -88,8 +87,8 @@ export const psfRateSnapshotRepository = {
 
   /** Convenience for global default lookups expressed via tenant_id IS NULL. */
   async existsGlobal() {
-    return withTenantContext(null, async () => {
-      const [row] = await db
+    return withTenantContext(null, async (tx) => {
+      const [row] = await tx
         .select({ id: psfRateSnapshots.id })
         .from(psfRateSnapshots)
         .where(isNull(psfRateSnapshots.tenantId))
