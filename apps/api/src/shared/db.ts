@@ -2,13 +2,14 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { getEnv } from '../config/env.js';
 import * as identitySchema from '../../drizzle/schema/identity.js';
+import * as tenantSchema from '../../drizzle/schema/tenant.js';
 
 const env = getEnv();
 
 const client = postgres(env.DATABASE_URL, { max: 10 });
 
 export const db = drizzle(client, {
-  schema: { ...identitySchema },
+  schema: { ...identitySchema, ...tenantSchema },
 });
 
 export type Db = typeof db;

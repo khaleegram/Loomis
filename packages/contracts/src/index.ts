@@ -9,3 +9,6 @@ export * from './identity/auth.schema.js';
 export * from './identity/mfa.schema.js';
 export * from './identity/password.schema.js';
 export * from './identity/session.schema.js';
+
+// Tenant
+export * from './tenant/tenant.schema.js';

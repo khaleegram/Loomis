@@ -18,5 +18,7 @@ declare module 'fastify' {
     authUser?: VerifiedAccessToken;
     /** Set by `requireStepUp` once a valid X-MFA-Token is presented for the action. */
     stepUp?: { action: StepUpAction };
+    /** Set by `requireIdempotencyKey` from the Idempotency-Key header. */
+    idempotencyKey?: string;
   }
 }

@@ -8,6 +8,20 @@
       "when": 1780689239459,
       "tag": "0000_empty_proudstar",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1780694900194,
+      "tag": "0001_slow_magneto",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780694923455,
+      "tag": "0002_tenant_constraints_rls",
+      "breakpoints": true
     }
   ]
 }
