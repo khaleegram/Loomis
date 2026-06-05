@@ -101,6 +101,9 @@ export const authService = {
       throw new LoomisError('IDENTITY_INVALID_CREDENTIALS', 401, 'Invalid email or password');
     }
 
+    if (user.status === 'pending') {
+      throw new LoomisError('FORBIDDEN', 403, 'Account setup is pending');
+    }
     if (user.status === 'deactivated') {
       throw new LoomisError('FORBIDDEN', 403, 'Account is deactivated');
     }

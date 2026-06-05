@@ -6,6 +6,7 @@ import { getEnv } from './config/env.js';
 import { registerHttpErrorHandling } from './shared/http.js';
 import { identityModule } from './modules/identity/index.js';
 import { tenantModule } from './modules/tenant/index.js';
+import { hrmModule } from './modules/hrm/index.js';
 
 /**
  * Fastify bootstrap. Domain modules register as plugins under /api/v1
@@ -35,6 +36,7 @@ async function buildServer() {
   // Phase 1 modules register under /api/v1 (identity -> tenant -> ...).
   await app.register(identityModule, { prefix: '/api/v1' });
   await app.register(tenantModule, { prefix: '/api/v1' });
+  await app.register(hrmModule, { prefix: '/api/v1' });
 
   return app;
 }

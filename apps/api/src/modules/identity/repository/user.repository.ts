@@ -40,6 +40,7 @@ export const userRepository = {
         role: input.role,
         tenantId: input.tenantId,
         mfaRequired: input.mfaRequired,
+        status: input.status ?? 'active',
         phone: input.phone ?? null,
       })
       .returning();
@@ -53,6 +54,35 @@ export const userRepository = {
       .update(users)
       .set({
         passwordHash,
+        userVer: sql`${users.userVer} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return user ?? null;
+  },
+
+  async activatePendingUser(userId: string, passwordHash: string, tx?: Executor) {
+    const executor = tx ?? db;
+    const [user] = await executor
+      .update(users)
+      .set({
+        passwordHash,
+        status: 'active',
+        userVer: sql`${users.userVer} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(users.id, userId), eq(users.status, 'pending')))
+      .returning();
+    return user ?? null;
+  },
+
+  async updateRole(userId: string, role: string, tx?: Executor) {
+    const executor = tx ?? db;
+    const [user] = await executor
+      .update(users)
+      .set({
+        role,
         userVer: sql`${users.userVer} + 1`,
         updatedAt: new Date(),
       })

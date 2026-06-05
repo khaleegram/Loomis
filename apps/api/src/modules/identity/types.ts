@@ -1,6 +1,6 @@
 import type { Role } from '@loomis/contracts';
 
-export type UserStatus = 'active' | 'locked' | 'deactivated';
+export type UserStatus = 'pending' | 'active' | 'locked' | 'deactivated';
 
 export type MfaStatus = 'pending' | 'active';
 
@@ -57,6 +57,7 @@ export interface CreateUserInput {
   role: Role;
   tenantId: string | null;
   mfaRequired: boolean;
+  status?: UserStatus;
   phone?: string;
 }
 
