@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { LoomisError } from '../../../shared/errors.js';
+import { enrollmentService } from '../../student/services/enrollment.service.js';
 import { psfRateService } from '../../tenant/services/psf-rate.service.js';
 import { tenantRepository } from '../../tenant/repository/tenant.repository.js';
 import type { TermCensusLockedPayload } from '../events/types.js';
@@ -10,19 +11,9 @@ import { requireTenant, requireTerm } from './_shared.js';
 /** Variance tolerance before a documented reason is required (System Design §8.1 step 3). */
 const VARIANCE_TOLERANCE = 0.02;
 
-/**
- * The authoritative billable-enrollment count for a term comes from
- * `student.enrollments` (status `active_billable`).
- *
- * BLOCKED: the Student module (next in Phase 1) is not built yet, so there is no
- * enrollment source to count. We return `null` ("unknown") rather than a
- * fabricated number (loomis-implementation-guardrails: no fake data). When the
- * Student module ships, replace this with a real read of active billable
- * enrollments for the term and the variance check below activates.
- */
-// eslint-disable-next-line @typescript-eslint/require-await
-async function readSystemBillableCount(_tenantId: string, _termId: string): Promise<number | null> {
-  return null;
+/** Authoritative billable count from `student.enrollments` (status `active_billable`). */
+async function readSystemBillableCount(tenantId: string, termId: string): Promise<number> {
+  return enrollmentService.countBillableForTerm(tenantId, termId);
 }
 
 export const censusService = {
@@ -71,21 +62,17 @@ export const censusService = {
       );
     }
 
-    // §8.1 steps 2-3: compare declared vs system count. Unknown while the Student
-    // module is unbuilt — the per-student fan-out and authoritative reconciliation
-    // happen in the Ledger consumer using the same rate snapshot recorded here.
+    // §8.1 steps 2-3: compare declared vs active billable enrollments on record.
     const systemBillableCount = await readSystemBillableCount(tenantId, termId);
-    if (systemBillableCount !== null) {
-      const denominator = systemBillableCount === 0 ? 1 : systemBillableCount;
-      const variance = Math.abs(input.declaredBillableCount - systemBillableCount) / denominator;
-      if (variance > VARIANCE_TOLERANCE && !input.varianceReason) {
-        throw new LoomisError(
-          'ACADEMIC_CENSUS_VARIANCE_REASON_REQUIRED',
-          422,
-          'The declared count differs from the system count beyond tolerance; a documented reason is required (System Design §8.1)',
-          { declared: input.declaredBillableCount, system: systemBillableCount },
-        );
-      }
+    const denominator = systemBillableCount === 0 ? 1 : systemBillableCount;
+    const variance = Math.abs(input.declaredBillableCount - systemBillableCount) / denominator;
+    if (variance > VARIANCE_TOLERANCE && !input.varianceReason) {
+      throw new LoomisError(
+        'ACADEMIC_CENSUS_VARIANCE_REASON_REQUIRED',
+        422,
+        'The declared count differs from the system count beyond tolerance; a documented reason is required (System Design §8.1)',
+        { declared: input.declaredBillableCount, system: systemBillableCount },
+      );
     }
 
     const lockedAt = new Date().toISOString();

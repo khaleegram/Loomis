@@ -50,6 +50,20 @@
       "when": 1780696815488,
       "tag": "0006_academic_constraints_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1780701559638,
+      "tag": "0007_melted_tenebrous",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1780701559639,
+      "tag": "0008_student_constraints_rls",
+      "breakpoints": true
     }
   ]
 }

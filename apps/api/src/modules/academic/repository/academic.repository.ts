@@ -406,6 +406,17 @@ export const academicRepository = {
     );
   },
 
+  async findClassArmById(tenantId: string, classArmId: string) {
+    return withTenantContext(tenantId, async (tx) => {
+      const [arm] = await tx
+        .select()
+        .from(classArms)
+        .where(and(eq(classArms.tenantId, tenantId), eq(classArms.id, classArmId)))
+        .limit(1);
+      return arm ?? null;
+    });
+  },
+
   async upsertProgression(
     tenantId: string,
     input: { fromClassLevelId: string; toClassLevelId: string | null; isTerminal: boolean },

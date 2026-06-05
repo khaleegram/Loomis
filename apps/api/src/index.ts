@@ -8,11 +8,12 @@ import { identityModule } from './modules/identity/index.js';
 import { tenantModule } from './modules/tenant/index.js';
 import { hrmModule } from './modules/hrm/index.js';
 import { academicModule } from './modules/academic/index.js';
+import { studentModule } from './modules/student/index.js';
 
 /**
  * Fastify bootstrap. Domain modules register as plugins under /api/v1
  * following the module structure (loomis-module-patterns rule).
- * Phase 1 order: identity -> tenant -> hrm -> academic -> student.
+ * Phase 1 order: identity -> tenant -> hrm -> academic -> student (complete).
  */
 async function buildServer() {
   const env = getEnv();
@@ -39,6 +40,7 @@ async function buildServer() {
   await app.register(tenantModule, { prefix: '/api/v1' });
   await app.register(hrmModule, { prefix: '/api/v1' });
   await app.register(academicModule, { prefix: '/api/v1' });
+  await app.register(studentModule, { prefix: '/api/v1' });
 
   return app;
 }

@@ -18,3 +18,6 @@ export * from './hrm/hrm.schema.js';
 
 // Academic
 export * from './academic/academic.schema.js';
+
+// Student
+export * from './student/student.schema.js';

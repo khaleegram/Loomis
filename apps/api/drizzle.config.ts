@@ -7,11 +7,12 @@ export default defineConfig({
     './drizzle/schema/hrm.ts',
     './drizzle/schema/academic.ts',
     './drizzle/schema/ledger.ts',
+    './drizzle/schema/student.ts',
   ],
   out: './drizzle/migrations',
   dialect: 'postgresql',
   dbCredentials: {
     url: process.env.DATABASE_URL!,
   },
-  schemaFilter: ['identity', 'tenant', 'hrm', 'academic', 'ledger'],
+  schemaFilter: ['identity', 'tenant', 'hrm', 'academic', 'ledger', 'student'],
 });

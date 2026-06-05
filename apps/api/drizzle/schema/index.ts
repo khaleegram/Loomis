@@ -3,3 +3,4 @@ export * from './tenant.js';
 export * from './hrm.js';
 export * from './academic.js';
 export * from './ledger.js';
+export * from './student.js';
