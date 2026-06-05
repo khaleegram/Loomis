@@ -1,6 +1,7 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { getEnv } from '../../../config/env.js';
 import type { Executor } from '../../../shared/db.js';
+import { LoomisError } from '../../../shared/errors.js';
 import { deviceRepository } from '../repository/device.repository.js';
 import type { DevicePlatform } from '../types.js';
 
@@ -118,5 +119,34 @@ export const deviceService = {
    */
   async deregisterAllForUser(userId: string, tx?: Executor) {
     return deviceRepository.revokeAllForUser(userId, tx);
+  },
+
+  /** Lists registered devices for the security settings page (US-HRM-008). */
+  async listDevicesForUser(userId: string) {
+    const devices = await deviceRepository.listByUserId(userId);
+    return devices.map((device) => ({
+      id: device.id,
+      platform: device.platform as DevicePlatform,
+      registeredAt: device.registeredAt.toISOString(),
+      lastSeenAt: device.lastSeenAt.toISOString(),
+      hasPersistentToken:
+        device.persistentTokenHash !== null &&
+        device.persistentTokenExpiresAt !== null &&
+        device.persistentTokenExpiresAt > new Date(),
+      persistentTokenExpiresAt: device.persistentTokenExpiresAt?.toISOString() ?? null,
+    }));
+  },
+
+  /** User-initiated deregistration from security settings (US-HRM-008). */
+  async deregisterDeviceForUser(userId: string, deviceId: string) {
+    const device = await deviceRepository.findById(deviceId);
+    if (!device || device.userId !== userId || device.revoked) {
+      throw new LoomisError('NOT_FOUND', 404, 'Device not found');
+    }
+    const revoked = await this.deregisterDevice(deviceId);
+    if (!revoked) {
+      throw new LoomisError('NOT_FOUND', 404, 'Device not found');
+    }
+    return revoked;
   },
 };

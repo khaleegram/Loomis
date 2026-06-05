@@ -10,6 +10,7 @@ export type PasswordResetChannel = 'email' | 'phone';
 
 export type SessionRevokeReason =
   | 'user_logout'
+  | 'user_revoke'
   | 'password_change'
   | 'role_change'
   | 'deactivation'

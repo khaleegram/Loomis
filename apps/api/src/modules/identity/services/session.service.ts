@@ -124,4 +124,34 @@ export const sessionService = {
     }
     return revoked;
   },
+
+  /** Lists active sessions for the security settings page (US-HRM-008). */
+  async listActiveSessionsForUser(userId: string, currentSessionId: string) {
+    const sessions = await sessionRepository.listActiveByUserId(userId);
+    return sessions.map((session) => ({
+      id: session.id,
+      platform: session.platform as DevicePlatform | null,
+      ipAddress: session.ipAddress ?? null,
+      userAgent: session.userAgent ?? null,
+      issuedAt: session.issuedAt.toISOString(),
+      lastActiveAt: session.lastActiveAt.toISOString(),
+      idleExpiresAt: session.idleExpiresAt.toISOString(),
+      absExpiresAt: session.absExpiresAt.toISOString(),
+      isCurrent: session.id === currentSessionId,
+    }));
+  },
+
+  /** User-initiated revocation from security settings (US-HRM-008). */
+  async revokeSessionForUser(userId: string, sessionId: string) {
+    const session = await sessionRepository.findById(sessionId);
+    if (!session || session.userId !== userId) {
+      throw new LoomisError('NOT_FOUND', 404, 'Session not found');
+    }
+    if (session.revoked) return session;
+    const revoked = await this.revokeSession(sessionId, 'user_revoke');
+    if (!revoked) {
+      throw new LoomisError('NOT_FOUND', 404, 'Session not found');
+    }
+    return revoked;
+  },
 };

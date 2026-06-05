@@ -12,6 +12,7 @@ import {
   type StepUpRequest,
 } from '@loomis/contracts';
 import { authenticate } from '../../../middleware/authenticate.js';
+import { loginRateLimiter } from '../../../middleware/login-rate-limiter.js';
 import { validateBody } from '../../../shared/validation.js';
 import {
   loginHandler,
@@ -31,7 +32,7 @@ import {
 export async function authRoutes(app: FastifyInstance): Promise<void> {
   app.post<{ Body: LoginRequest }>(
     '/auth/login',
-    { preValidation: [validateBody(loginRequest)] },
+    { preValidation: [validateBody(loginRequest)], preHandler: [loginRateLimiter] },
     loginHandler,
   );
 
