@@ -1,6 +1,6 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { importPKCS8, importSPKI, jwtVerify, SignJWT } from 'jose';
-import type { Role } from '@loomis/contracts';
+import type { Role, StepUpAction } from '@loomis/contracts';
 import { uuidv7 } from 'uuidv7';
 import { getEnv } from '../../../config/env.js';
 import { LoomisError } from '../../../shared/errors.js';
@@ -12,6 +12,12 @@ const JWT_ISSUER = 'https://api.loomis.ng';
 const JWT_AUDIENCE = 'loomis-api';
 const USER_VER_CACHE_TTL_SECONDS = 30;
 const JTI_BLACKLIST_KEY = 'identity:jti:blacklist';
+
+/** Audience separation keeps purpose-built tokens from being accepted as access tokens. */
+const ENROLLMENT_AUDIENCE = 'loomis-mfa-enrollment';
+const STEPUP_AUDIENCE = 'loomis-stepup';
+const ENROLLMENT_TTL_SECONDS = 15 * 60;
+const STEPUP_TTL_SECONDS = 5 * 60;
 
 let privateKey: CryptoKey | null = null;
 let publicKey: CryptoKey | null = null;
@@ -204,5 +210,86 @@ export const tokenService = {
   getRefreshTokenExpiresAt(): Date {
     const env = getEnv();
     return new Date(Date.now() + env.JWT_REFRESH_TTL_SECONDS * 1000);
+  },
+
+  /**
+   * Short-lived token issued after password verification when a mandatory-MFA
+   * user has no active MFA config. Scopes access to the enrollment endpoints
+   * only — the account stays locked until MFA is active (SEC-AUTH-003).
+   */
+  async signEnrollmentToken(userId: string): Promise<{ token: string; expiresAt: Date }> {
+    const now = Math.floor(Date.now() / 1000);
+    const exp = now + ENROLLMENT_TTL_SECONDS;
+    const token = await new SignJWT({ token_use: 'mfa_enrollment' })
+      .setProtectedHeader({ alg: 'RS256' })
+      .setSubject(userId)
+      .setIssuer(JWT_ISSUER)
+      .setAudience(ENROLLMENT_AUDIENCE)
+      .setJti(uuidv7())
+      .setIssuedAt(now)
+      .setExpirationTime(exp)
+      .sign(await getPrivateKey());
+    return { token, expiresAt: new Date(exp * 1000) };
+  },
+
+  async verifyEnrollmentToken(token: string): Promise<{ userId: string }> {
+    try {
+      const { payload } = await jwtVerify(token, await getPublicKey(), {
+        issuer: JWT_ISSUER,
+        audience: ENROLLMENT_AUDIENCE,
+      });
+      if (payload.token_use !== 'mfa_enrollment' || typeof payload.sub !== 'string') {
+        throw new LoomisError('IDENTITY_MFA_NOT_ENROLLED', 401, 'Invalid enrollment token');
+      }
+      return { userId: payload.sub };
+    } catch (err) {
+      if (err instanceof LoomisError) throw err;
+      throw new LoomisError('IDENTITY_MFA_NOT_ENROLLED', 401, 'Enrollment token is invalid or expired');
+    }
+  },
+
+  /**
+   * Step-up proof token for a single high-risk action category (System Design §5.3).
+   * Five-minute expiry, bound to the user and the action scope.
+   */
+  async signStepUpToken(
+    userId: string,
+    action: StepUpAction,
+  ): Promise<{ token: string; expiresAt: Date }> {
+    const now = Math.floor(Date.now() / 1000);
+    const exp = now + STEPUP_TTL_SECONDS;
+    const token = await new SignJWT({ token_use: 'stepup', action })
+      .setProtectedHeader({ alg: 'RS256' })
+      .setSubject(userId)
+      .setIssuer(JWT_ISSUER)
+      .setAudience(STEPUP_AUDIENCE)
+      .setJti(uuidv7())
+      .setIssuedAt(now)
+      .setExpirationTime(exp)
+      .sign(await getPrivateKey());
+    return { token, expiresAt: new Date(exp * 1000) };
+  },
+
+  async verifyStepUpToken(
+    token: string,
+    expectedAction: StepUpAction,
+    expectedUserId: string,
+  ): Promise<void> {
+    let payload: Awaited<ReturnType<typeof jwtVerify>>['payload'];
+    try {
+      ({ payload } = await jwtVerify(token, await getPublicKey(), {
+        issuer: JWT_ISSUER,
+        audience: STEPUP_AUDIENCE,
+      }));
+    } catch {
+      throw new LoomisError('IDENTITY_STEPUP_REQUIRED', 401, 'Step-up proof is invalid or expired');
+    }
+    if (
+      payload.token_use !== 'stepup' ||
+      payload.action !== expectedAction ||
+      payload.sub !== expectedUserId
+    ) {
+      throw new LoomisError('IDENTITY_STEPUP_REQUIRED', 401, 'Step-up proof does not match this action');
+    }
   },
 };

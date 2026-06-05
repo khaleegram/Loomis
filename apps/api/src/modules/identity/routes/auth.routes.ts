@@ -1,0 +1,62 @@
+import type { FastifyInstance } from 'fastify';
+import {
+  loginRequest,
+  type LoginRequest,
+  type LogoutRequest,
+  mfaEnrollConfirmRequest,
+  type MfaEnrollConfirmRequest,
+  mfaVerifyRequest,
+  type MfaVerifyRequest,
+  type RefreshTokenRequest,
+  stepUpRequest,
+  type StepUpRequest,
+} from '@loomis/contracts';
+import { authenticate } from '../../../middleware/authenticate.js';
+import { validateBody } from '../../../shared/validation.js';
+import {
+  loginHandler,
+  logoutHandler,
+  mfaEnrollConfirmHandler,
+  mfaEnrollStartHandler,
+  mfaVerifyHandler,
+  refreshHandler,
+  stepUpHandler,
+} from '../handlers/index.js';
+
+/**
+ * Identity auth routes (loomis-api conventions). Registered under /api/v1.
+ * Public flows authenticate via their own proofs (password, MFA challenge,
+ * enrollment/refresh tokens); logout and step-up require a valid access token.
+ */
+export async function authRoutes(app: FastifyInstance): Promise<void> {
+  app.post<{ Body: LoginRequest }>(
+    '/auth/login',
+    { preValidation: [validateBody(loginRequest)] },
+    loginHandler,
+  );
+
+  app.post<{ Body: MfaVerifyRequest }>(
+    '/auth/mfa/verify',
+    { preValidation: [validateBody(mfaVerifyRequest)] },
+    mfaVerifyHandler,
+  );
+
+  // Enrollment is authorised by the Bearer enrollment token, verified in the handler.
+  app.get('/auth/mfa/enroll', mfaEnrollStartHandler);
+  app.post<{ Body: MfaEnrollConfirmRequest }>(
+    '/auth/mfa/enroll',
+    { preValidation: [validateBody(mfaEnrollConfirmRequest)] },
+    mfaEnrollConfirmHandler,
+  );
+
+  // Refresh accepts the token from the httpOnly cookie or the request body.
+  app.post<{ Body: RefreshTokenRequest }>('/auth/refresh', refreshHandler);
+
+  app.post<{ Body: LogoutRequest }>('/auth/logout', { preHandler: [authenticate] }, logoutHandler);
+
+  app.post<{ Body: StepUpRequest }>(
+    '/auth/stepup',
+    { preHandler: [authenticate], preValidation: [validateBody(stepUpRequest)] },
+    stepUpHandler,
+  );
+}

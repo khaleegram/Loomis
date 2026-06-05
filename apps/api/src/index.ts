@@ -3,6 +3,8 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import { uuidv7 } from 'uuidv7';
 import { getEnv } from './config/env.js';
+import { registerHttpErrorHandling } from './shared/http.js';
+import { identityModule } from './modules/identity/index.js';
 
 /**
  * Fastify bootstrap. Domain modules register as plugins under /api/v1
@@ -25,10 +27,12 @@ async function buildServer() {
   await app.register(helmet, { contentSecurityPolicy: false });
   await app.register(cors, { origin: true, credentials: true });
 
+  registerHttpErrorHandling(app);
+
   app.get('/health', async () => ({ status: 'ok', service: 'loomis-api' }));
 
-  // TODO Phase 1: register module plugins under /api/v1
-  //   await app.register(identityModule, { prefix: '/api/v1' });
+  // Phase 1 modules register under /api/v1 (identity first).
+  await app.register(identityModule, { prefix: '/api/v1' });
   //   await app.register(tenantModule,   { prefix: '/api/v1' });
   //   ...
 
