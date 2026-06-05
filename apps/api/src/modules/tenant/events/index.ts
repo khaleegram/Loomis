@@ -1,5 +1,8 @@
 import { uuidv7 } from 'uuidv7';
+import { registerEventHandler } from '../../../shared/events/registry.js';
 import { dispatchEvent } from '../../../shared/events/registry.js';
+import { WORKFLOW_EVENT_TYPES } from '../../workflow/events/types.js';
+import { handleWorkflowCompleted } from './consumers/workflow-events.consumer.js';
 import {
   TENANT_EVENT_TYPES,
   type TenantPsfRateChangedEvent,
@@ -18,6 +21,11 @@ import {
  * event registry (`dispatchEvent`). When the outbox table/relay ship, swap these
  * calls for transactional outbox inserts. Do NOT add a second delivery path.
  */
+/** Registers in-process consumers for cross-module workflow events. */
+export function registerTenantEventConsumers(): void {
+  registerEventHandler(WORKFLOW_EVENT_TYPES.completed, handleWorkflowCompleted);
+}
+
 export const tenantEvents = {
   async publishProvisioned(
     payload: Omit<TenantProvisionedEvent, 'eventId' | 'occurredAt'>,

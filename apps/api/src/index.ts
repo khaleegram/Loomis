@@ -9,6 +9,7 @@ import { tenantModule } from './modules/tenant/index.js';
 import { hrmModule } from './modules/hrm/index.js';
 import { academicModule } from './modules/academic/index.js';
 import { studentModule } from './modules/student/index.js';
+import { workflowModule } from './modules/workflow/index.js';
 
 /**
  * Fastify bootstrap. Domain modules register as plugins under /api/v1
@@ -41,6 +42,7 @@ async function buildServer() {
   await app.register(hrmModule, { prefix: '/api/v1' });
   await app.register(academicModule, { prefix: '/api/v1' });
   await app.register(studentModule, { prefix: '/api/v1' });
+  await app.register(workflowModule, { prefix: '/api/v1' });
 
   return app;
 }

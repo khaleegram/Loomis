@@ -83,6 +83,7 @@ export const psfRateService = {
       changeType: 'psf_rate_override',
       tenantId: input.tenantId,
       requestedById: actor.userId,
+      requestedByRole: actor.role,
       justification: input.justification,
       payload: {
         rateMinor: input.rateMinor,

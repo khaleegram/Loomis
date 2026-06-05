@@ -21,3 +21,9 @@ export * from './academic/academic.schema.js';
 
 // Student
 export * from './student/student.schema.js';
+
+// Workflow
+export * from './workflow/workflow.schema.js';
+
+// Storage
+export * from './storage/storage.schema.js';
