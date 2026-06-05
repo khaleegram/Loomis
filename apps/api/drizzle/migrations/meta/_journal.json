@@ -36,6 +36,20 @@
       "when": 1780696815486,
       "tag": "0004_hrm_constraints_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1780696815487,
+      "tag": "0005_academic_session",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1780696815488,
+      "tag": "0006_academic_constraints_rls",
+      "breakpoints": true
     }
   ]
 }

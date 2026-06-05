@@ -1,4 +1,5 @@
 import { sql } from 'drizzle-orm';
+import type { PgTransactionConfig } from 'drizzle-orm/pg-core';
 import { db, type DbTransaction } from './db.js';
 
 /**
@@ -15,10 +16,16 @@ import { db, type DbTransaction } from './db.js';
  *
  * Callers MUST use the provided `tx` executor for their queries — using the
  * global `db` inside `fn` would run on a different connection and defeat RLS.
+ *
+ * `config` is forwarded to the underlying transaction. The census lock uses
+ * `{ isolationLevel: 'serializable' }` so the whole PSF-obligation trigger is one
+ * SERIALIZABLE unit (System Design §8.1) — drizzle issues `begin isolation level
+ * serializable` before the `set_config`, which is the required ordering.
  */
 export async function withTenantContext<T>(
   tenantId: string | null,
   fn: (tx: DbTransaction) => Promise<T>,
+  config?: PgTransactionConfig,
 ): Promise<T> {
   return db.transaction(async (tx) => {
     if (tenantId === null) {
@@ -27,5 +34,5 @@ export async function withTenantContext<T>(
       await tx.execute(sql`SELECT set_config('app.current_tenant_id', ${tenantId}, true)`);
     }
     return fn(tx);
-  });
+  }, config);
 }

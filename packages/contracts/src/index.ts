@@ -15,3 +15,6 @@ export * from './tenant/tenant.schema.js';
 
 // HRM
 export * from './hrm/hrm.schema.js';
+
+// Academic
+export * from './academic/academic.schema.js';
