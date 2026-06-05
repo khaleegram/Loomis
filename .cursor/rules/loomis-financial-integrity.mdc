@@ -1,0 +1,64 @@
+---
+description: Financial integrity rules — PSF lifecycle, outbox pattern, ledger, idempotency
+alwaysApply: true
+---
+
+# Loomis — Financial Integrity Rules (Never Break These)
+
+## PSF — The Fundamental Rule
+**PSF obligations are created by census lock, NOT by payment.**
+- `psf_obligations` are inserted inside the census lock transaction — never anywhere else.
+- A payment event SETTLES an obligation. It does NOT create one.
+- PSF rate of zero is permanently blocked. Enforce in the Zod schema and the DB check constraint.
+- `psf_obligations` rows are IMMUTABLE after creation. Never UPDATE them. Use `psf_settlements` to record payments against them.
+
+## Outbox Pattern (mandatory for all financial and cross-module events)
+Every financial write MUST use the outbox pattern:
+```typescript
+// ✅ CORRECT — state change + outbox in ONE transaction
+await db.transaction(async (tx) => {
+  await tx.insert(psfObligations).values(obligationData);
+  await tx.insert(outboxEvents).values({
+    eventType: 'billing.psf_obligation.created',
+    aggregateId: obligation.id,
+    payload: obligationData,
+  });
+});
+
+// ❌ WRONG — publishes event outside the transaction
+await db.insert(psfObligations).values(obligationData);
+await eventBus.publish('billing.psf_obligation.created', obligationData); // may never arrive
+```
+
+## Double-Entry Ledger
+- Every ledger write posts TWO rows (debit + credit) that net to zero.
+- Ledger rows are IMMUTABLE — `INSERT` only. No `UPDATE`, no `DELETE`.
+- The ledger module has an INSERT-only DB role. Never use the application's main role to write ledger entries directly — go through `LedgerService.post(transaction)`.
+- Corrections are new entries (reversal + new), never edits.
+
+## Idempotency
+- Every financial and workflow write MUST check the `Idempotency-Key` header.
+- Use `IdempotencyService.wrap(key, userId, endpoint, fn)` — it stores the result in Redis (24h) and returns the cached result on duplicate.
+- Event consumers MUST check `processedEvents` table before applying logic:
+```typescript
+const alreadyProcessed = await isEventProcessed(event.event_id);
+if (alreadyProcessed) return; // silent discard
+await markEventProcessed(event.event_id);
+// ... apply business logic
+```
+
+## Fail Closed
+If the audit writer, ledger service, or outbox relay is unavailable:
+- Financial writes MUST return 503 — do NOT proceed without an audit trail.
+- Use `requireAuditAvailable()` middleware on all financial write routes.
+
+## Monetary Amounts
+- All monetary amounts are stored as `BIGINT` in kobo (minor NGN units).
+- 1 Naira = 100 kobo. ₦10,000 = 1,000,000 kobo.
+- Never use `FLOAT` or `DECIMAL` for money. Never divide before storing.
+- Display conversion happens only in the response serialiser layer.
+
+## Refunds
+- PSF obligations are NOT reversed when a school fee is refunded.
+- PSF reversal is only allowed for: duplicate payment, platform error, provider chargeback, or legal compulsion.
+- All PSF reversals require Platform Operations dual approval via the privileged change workflow.

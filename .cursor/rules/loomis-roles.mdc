@@ -1,0 +1,48 @@
+---
+description: All user roles, their tenant scope, and what they can never do
+alwaysApply: true
+---
+
+# Loomis — Roles and Scope
+
+## Role → Tenant Scope
+| Role | `tenant_id` in JWT | Notes |
+|------|-------------------|-------|
+| `platform_owner` | null | Global access |
+| `platform_admin` | null | Global; break-glass requires ticket |
+| `dpo` | null | Compliance functions only |
+| `regional_manager` | null | Read across assigned region; onboard schools |
+| `regional_subordinate` | null | Read own portfolio; onboard schools |
+| `school_owner` | tenant UUID | Highest school-level role |
+| `principal` | tenant UUID | School operations |
+| `admin_officer` | tenant UUID | Admissions, student registry, staff onboarding |
+| `accountant` | tenant UUID | Fee config, payment verification |
+| `cashier` | tenant UUID | Log payments only; cannot verify |
+| `exam_officer` | tenant UUID | Exams, grading schemes, result publish |
+| `deputy_exam_officer` | tenant UUID | Activated only after 72h Exam Officer inactivity |
+| `timetable_officer` | tenant UUID | Timetable builder |
+| `teacher` | tenant UUID | Gradebook for own subjects; no attendance |
+| `class_teacher` | tenant UUID | Attendance for own class + Teacher capabilities |
+| `parent` | null | Cross-tenant; scoped to linked children only |
+| `student` | tenant UUID | Own data only |
+
+## Hard Rules (enforce in middleware AND service layer)
+- **Class Teacher only** marks attendance. Teachers have zero access to attendance endpoints.
+- **Teacher** enters grades for own assigned subjects only. Class Teachers have READ-ONLY gradebook access.
+- **Cashier** who logs a payment CANNOT verify it. Check `payment.logged_by_id !== req.user.id` in the verify handler.
+- **Regional Manager** CANNOT approve their own subordinate's KYC. Check `kyc.subject_user_id not in manager's subordinates`.
+- **Deputy Exam Officer** is only active when `exam_officer.last_active_at < now() - 72h`. Check this at the service layer on every Deputy action.
+- **Parent** dashboard queries are SEPARATE per-tenant DB round-trips. Never JOIN across tenants for parent data.
+- **Platform Admin** can only access tenant data via a break-glass session (requires support ticket ID).
+
+## `requireRole` Usage
+```typescript
+// Single role
+app.post('/attendance', { preHandler: [authenticate, requireRole('class_teacher')] }, handler);
+
+// Multiple allowed roles
+app.post('/admissions', { preHandler: [authenticate, requireRole('admin_officer', 'principal')] }, handler);
+
+// Platform-only routes
+app.get('/admin/tenants', { preHandler: [authenticate, requireRole('platform_admin', 'platform_owner')] }, handler);
+```

@@ -1,0 +1,65 @@
+---
+description: Core project identity, tech stack, module map, and build phase for Loomis
+alwaysApply: true
+---
+
+# Loomis — Core Context
+
+Loomis is a **multi-tenant SaaS school management platform** for Nigerian private schools.
+Revenue model: **Per-Student Fee (PSF)** charged once per billable student per academic term, triggered by enrollment census lock — NOT by payment.
+
+## Tech Stack (exact)
+- **Backend:** Node.js 22 + Fastify 5 + TypeScript
+- **Database:** PostgreSQL 16 (Aurora Serverless v2 in prod; local Docker for dev)
+- **Cache / Sessions:** Redis 7 (ElastiCache in prod; local Docker for dev)
+- **ORM / Query:** Drizzle ORM (type-safe; no raw SQL except migrations)
+- **Migrations:** Drizzle Kit (versioned, checksummed)
+- **Auth:** JWT RS256 (access 8h) + TOTP MFA (speakeasy)
+- **Events:** BullMQ on Redis (outbox relay + background jobs)
+- **File Storage:** AWS S3 (pre-signed URLs only; never stream files through the server)
+- **Email:** AWS SES; SMS: Termii
+- **Push:** FCM (Android) + APNs (iOS)
+- **Mobile:** React Native (Expo managed workflow)
+- **Web:** Next.js 15 (App Router)
+- **Containerisation:** Docker + Docker Compose (dev); ECS Fargate (prod)
+- **IaC:** Terraform
+
+## Module Map (each module = one DB schema, one folder)
+```
+src/modules/
+  identity/       -- users, sessions, devices, MFA, token blacklist
+  tenant/         -- tenants, tiers, PSF rate snapshots, config
+  hrm/            -- staff profiles, role assignments, subject assignments
+  academic/       -- years, terms, classes, attendance, gradebook, exams
+  student/        -- students, admissions, enrollments, parent links
+  finance/        -- fee structures, invoices, payments, receipts
+  ledger/         -- PSF obligations, settlements, double-entry ledger
+  risk/           -- IVP signals, anomaly cases, break-glass sessions
+  referral/       -- participants, KYC, codes, earnings, payouts
+  comms/          -- messages, notifications, push subscriptions
+  workflow/       -- approval instances, steps, decisions
+  compliance/     -- DSAR, breach records, retention schedules
+  storage/        -- storage object metadata
+```
+
+## Current Build Phase
+**Phase 1 — Foundation** (build in this order):
+1. Identity (auth, MFA, sessions)
+2. Tenant (provisioning, config)
+3. HRM (staff onboarding, roles, assignments)
+4. Academic Session (years, terms, census)
+5. Student (admissions, enrollment, parent links)
+
+Do not build Phase 2+ features until Phase 1 is complete and tested.
+
+## Project Structure
+```
+src/
+  modules/          -- domain modules (one folder per module)
+  shared/           -- shared utilities: logger, errors, validation, db client
+  middleware/       -- auth, tenant context, rate limit, audit writer
+  config/           -- env config (zod-validated)
+drizzle/
+  migrations/       -- versioned SQL migrations
+  schema/           -- Drizzle schema definitions (one file per module)
+```

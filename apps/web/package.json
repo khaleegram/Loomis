@@ -1,0 +1,31 @@
+{
+  "name": "@loomis/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "lint": "next lint",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@loomis/api-client": "workspace:*",
+    "@loomis/contracts": "workspace:*",
+    "@loomis/core": "workspace:*",
+    "@loomis/design-tokens": "workspace:*",
+    "@loomis/ui-web": "workspace:*",
+    "@tanstack/react-query": "^5.56.2",
+    "next": "^15.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zustand": "^4.5.5"
+  },
+  "devDependencies": {
+    "@loomis/config": "workspace:*",
+    "@types/react": "^18.3.8",
+    "typescript": "^5.6.2",
+    "vitest": "^2.1.1"
+  }
+}

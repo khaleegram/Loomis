@@ -1,0 +1,60 @@
+---
+description: Frontend rules for web (Next.js) and mobile (Expo) — state, auth, money, offline
+globs: apps/web/**,apps/mobile/**,packages/api-client/**,packages/contracts/**,packages/core/**,packages/ui-web/**,packages/ui-mobile/**
+alwaysApply: false
+---
+
+# Loomis — Frontend Rules
+
+## State Management
+- Server state lives in TanStack Query v5 ONLY. Never put server data in Zustand.
+- Zustand is for client/UI state only: active tenant context, theme, sidebar, multi-step form drafts.
+- Forms use React Hook Form + `zodResolver` with the SHARED schema from `packages/contracts`. Never write bespoke client validation.
+
+## Auth & Sessions
+- Web: NEVER store JWTs in `localStorage`. Refresh token lives in an httpOnly cookie via the Next.js BFF route handlers. Access token is held in memory only.
+- Mobile: tokens live in Expo SecureStore (Keychain/Keystore). Never AsyncStorage for tokens.
+- Switch on `error.code` (e.g. `IDENTITY_SESSION_INVALIDATED`), never on HTTP status or message strings.
+- `IDENTITY_TOKEN_EXPIRED` → single-flight refresh, then retry.
+- `IDENTITY_SESSION_INVALIDATED` → hard logout. On mobile, PRESERVE the offline queue. Never attempt refresh.
+- On logout, call `queryClient.clear()` to purge all cached tenant data.
+
+## Tenant-Partitioned Cache (security)
+- Every tenant-scoped query key includes `tenantId` as the second element: `['students', tenantId, ...]`.
+- Use the typed key factory in `packages/api-client/src/query/keys.ts`. Never inline raw arrays.
+- Never JOIN or merge data across tenants in the client. Parents switch active child → separate query keys.
+
+## Financial Mutations
+- Use `useFinancialMutation` for all financial/workflow writes. Never a raw `useMutation`.
+- The `Idempotency-Key` is generated on form MOUNT and held stable across retries. Regenerate only on a fresh operation.
+- Disable submit while in-flight; never allow double submit.
+- On `409` idempotency replay → treat as success, surface the original result.
+- Step-up MFA actions drive the inline MFA challenge to obtain `X-MFA-Token` before sending.
+
+## Money
+- Enter and display amounts in Naira. Transmit and store as kobo (`amountMinor`, integer ×100).
+- Never send floats. Convert Naira→kobo in the form transform; kobo→Naira in the display layer.
+- Format with `Intl.NumberFormat` and the `₦` symbol.
+
+## Role-Based Rendering (UX only, not security)
+- Gate UI with `can(role, capability)` from `packages/core/src/capabilities.ts`.
+- Never write inline `if (role === 'principal')`. The server enforces real authorisation.
+
+## Web (Next.js 15 App Router)
+- Routes are partitioned by role into route groups: `(auth)`, `(platform)`, `(regional)`, `(school)`, `(parent)`.
+- Authenticated data pages are Client Components using the shared api-client.
+- Server Components only for static shell/layout that needs no session token.
+- `middleware.ts` gates auth at the edge and redirects role-mismatched routes.
+
+## Mobile (Expo, offline-first)
+- Write to local SQLite FIRST, sync later. UI reads from the local store so it works offline.
+- The SQLite DB is encrypted at rest via a key in SecureStore.
+- Every offline queued action is signed with the per-tenant ECDSA device key before sync.
+- A sync record whose tenant doesn't match the authenticated context is rejected wholesale — never partially applied.
+- The durable queue is SQLite. Zustand only mirrors a summary (pending count, last sync) for the UI banner.
+- Notification bodies NEVER contain PII, grades, or amounts — opaque deep-link IDs only.
+
+## Imports / Dependency Direction
+- `contracts` and `design-tokens` import nothing internal (leaf packages).
+- `web`/`mobile` are roots — nothing imports from them.
+- A backwards import (e.g. `contracts` importing `web`) is an error.

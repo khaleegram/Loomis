@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+.next/
+.expo/
+out/
+
+# Turborepo
+.turbo/
+
+# Environment — NEVER commit secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+.secrets/
+.secrets-tmp/
+
+# Testing
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.swp
+
+# Mobile native
+apps/mobile/ios/
+apps/mobile/android/
+
+# DB / local data
+pgdata/
+redisdata/

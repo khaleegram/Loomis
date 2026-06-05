@@ -1,0 +1,82 @@
+---
+description: Module structure pattern — how every domain module is organised
+globs: src/modules/**
+alwaysApply: false
+---
+
+# Loomis — Module Structure
+
+Every domain module follows this layout. Do not deviate.
+
+```
+src/modules/<name>/
+  routes/           -- Fastify route plugins (one file per resource)
+  handlers/         -- Route handler functions (thin — delegate to services)
+  services/         -- Business logic (all rules live here, not in handlers)
+  repository/       -- All DB queries (no SQL in services or handlers)
+  events/           -- Event publishers and consumers for this module
+  schemas/          -- Zod validation schemas for requests and responses
+  types.ts          -- TypeScript interfaces for this module's domain objects
+  index.ts          -- Exports the Fastify plugin that registers all routes
+```
+
+## Handler → Service → Repository Pattern
+```typescript
+// handler: receives request, calls service, returns response
+async function createPaymentHandler(req, reply) {
+  const result = await paymentService.logOfflinePayment(req.body, req.tenantContext);
+  return reply.send({ status: 'success', data: result });
+}
+
+// service: enforces business rules, calls repository
+async function logOfflinePayment(dto, ctx) {
+  if (dto.amount <= 0) throw new LoomisError('FINANCE_INVALID_AMOUNT', 400);
+  return paymentRepository.createOfflinePayment(dto, ctx);
+}
+
+// repository: only DB access, no business logic
+async function createOfflinePayment(dto, ctx) {
+  return withTenantContext(ctx.tenantId, () =>
+    db.insert(payments).values({ ...dto, status: 'pending_verification' }).returning()
+  );
+}
+```
+
+## Audit Writing
+Every write operation must end with an audit event. Use the shared `writeAudit` helper — it is called inside the same DB transaction as the state change:
+```typescript
+await db.transaction(async (tx) => {
+  const [record] = await tx.insert(payments).values(data).returning();
+  await writeAudit(tx, {
+    tenantId: ctx.tenantId,
+    actorUserId: ctx.userId,
+    action: 'payment.offline.logged',
+    resourceType: 'payment',
+    resourceId: record.id,
+    sensitivity: 'financial',
+    result: 'success',
+  });
+  return record;
+});
+```
+
+## Cross-Module Calls
+Modules communicate through:
+1. **Synchronous service calls** — only for data reads where the caller needs the result immediately.
+2. **Outbox events** — for side effects. Never call another module's service from inside a DB transaction.
+
+```typescript
+// ✅ Correct: publish an outbox event; let the consumer update the other module
+await tx.insert(outboxEvents).values({ eventType: 'payment.verified', ... });
+
+// ❌ Wrong: calling another module's service inside a transaction
+await tx.transaction(async (tx2) => {
+  await ledgerService.post(tx2, ...); // creates nested dependency and coupling
+});
+```
+
+## Error Handling
+Throw `LoomisError(code, statusCode, message)` from services. Fastify's error handler catches it and formats the standard error response. Never throw raw `Error` objects from business logic.
+
+## Environment Variables
+All env vars are defined and validated in `src/config/env.ts` using Zod. Never access `process.env` directly in modules — always import from `src/config/env.ts`.

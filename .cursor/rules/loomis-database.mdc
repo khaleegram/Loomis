@@ -1,0 +1,65 @@
+---
+description: Database conventions — schema ownership, RLS, migrations, Drizzle patterns
+globs: drizzle/**,src/**/schema/**,src/**/repository/**,src/**/*.repository.ts
+alwaysApply: false
+---
+
+# Loomis — Database Rules
+
+## Schema Ownership
+- Each module owns exactly ONE PostgreSQL schema (e.g., `identity`, `finance`, `ledger`).
+- A module's Drizzle schema file lives at `drizzle/schema/<module>.ts`.
+- A module NEVER queries another module's schema directly. Cross-module data goes through a service call or a `read_models` projection.
+
+## IDs
+- All primary keys are UUIDv7 (use `uuidv7()` from the `uuidv7` npm package).
+- UUIDv7 is time-sortable — do NOT add a separate `created_at` index for pagination. Use `id` as the cursor.
+
+## Tenant ID on Every Tenant-Bound Table
+```typescript
+// ✅ Every tenant-bound table includes this column
+tenantId: uuid('tenant_id').notNull().references(() => tenants.id),
+```
+The RLS policy fires on `tenant_id`. If the column is missing, the RLS policy will not protect the table.
+
+## Timestamps
+```typescript
+createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+```
+Use `withTimezone: true` on all timestamps. Store in UTC. Never store local time.
+
+## Monetary Amounts
+```typescript
+amountMinor: bigint('amount_minor', { mode: 'number' }).notNull(), // kobo
+```
+Never use `real`, `float4`, `float8`, or `numeric` for monetary columns.
+
+## Migrations (Drizzle Kit)
+- Migrations are in `drizzle/migrations/` as numbered SQL files.
+- NEVER use `DROP TABLE` or `DROP COLUMN` in a forward migration. Add `deleted_at` first; drop in the next release.
+- New NOT NULL columns MUST have a DEFAULT so the migration is zero-downtime.
+- Large indexes use `CREATE INDEX CONCURRENTLY` to avoid table locks.
+- Run `drizzle-kit generate` to produce migrations; never hand-edit generated files.
+
+## Immutable Tables
+These tables are INSERT-only. Never write UPDATE or DELETE queries against them:
+- `ledger.ledger_entries`
+- `audit.audit_events`
+- `audit.data_access_events`
+- `ledger.psf_obligations`
+- `student.enrollment_attestations`
+
+## Drizzle Query Pattern
+```typescript
+// ✅ Always set tenant context before querying
+const result = await withTenantContext(tenantId, () =>
+  db.select().from(students).where(eq(students.status, 'active'))
+);
+
+// ❌ Never query tenant-bound tables without tenant context
+const result = await db.select().from(students); // RLS will reject or return wrong data
+```
+
+## Connection Pooling
+Use the shared `db` client from `src/shared/db.ts`. Never create a new Pool or Client instance in a module. PgBouncer runs in transaction mode — do NOT use `SET LOCAL` or advisory locks that depend on session state beyond a single transaction.

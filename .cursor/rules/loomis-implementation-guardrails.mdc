@@ -1,0 +1,72 @@
+---
+description: Stop-and-ask guardrails — no silent tech substitution, no fake mocks, request missing credentials
+alwaysApply: true
+---
+
+# Loomis — Implementation Guardrails (Stop and Ask)
+
+These rules prevent the most damaging AI failure mode: silently working around a
+blocker instead of surfacing it. Surfacing a blocker costs one message. Hiding it
+costs hours of rework. Always prefer to STOP and ASK.
+
+## 1. No Silent Technology Substitution
+The tech stack in `loomis-core` is FIXED. Never swap a declared technology for an
+easier one just because setup is incomplete or a credential is missing.
+
+- If PostgreSQL is required but not configured → do NOT switch to SQLite, an
+  in-memory store, a JSON file, or a stub. STOP and tell the user what to set up.
+- If Redis is required but not running → do NOT fall back to an in-process map. STOP.
+- If a real gateway/integration is needed → do NOT replace it with a different
+  library or service to make it "work".
+
+```
+❌ WRONG: "Postgres credentials weren't set, so I used SQLite which works locally."
+✅ RIGHT: "This needs PostgreSQL but DATABASE_URL isn't set. Start it with
+          `pnpm db:up` and add DATABASE_URL to .env.local. Paste it back and I'll continue."
+```
+
+## 2. Stop and Ask for Missing Credentials / External Resources
+When a task requires something only the user can provide — and it is missing —
+STOP, state clearly what is missing and why, give exact steps to obtain it, and
+WAIT for the user. Never leave it blank, never guess, never invent a value.
+
+Things that REQUIRE the user (non-exhaustive):
+- AWS access keys, region, S3 bucket name/URL, KMS key IDs
+- Payment gateway secret keys and webhook secrets (Paystack, Flutterwave, Monnify, Remita)
+- JWT signing keys, TOTP encryption key, HMAC secrets
+- Database / Redis connection strings
+- Email (SES) / SMS (Termii) credentials
+- FCM / APNs push credentials
+- Any third-party API key or endpoint URL
+
+```
+✅ RIGHT: "I'm wiring up S3 file storage, but you haven't provided AWS credentials
+          or a bucket name. I need: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,
+          S3_REGION, S3_BUCKET. Add them to .env.local (see .env.example) and send
+          them, or tell me to pause this until you have them. I will not stub S3."
+```
+
+## 3. No Fake Mocks to "Make It Work"
+Do not insert mock data, hardcoded fake responses, or placeholder implementations
+that pretend a missing dependency exists. This makes broken things look finished.
+
+- Allowed: real mocks in TEST files (MSW, vitest mocks) for testing purposes.
+- Not allowed: a mock in application/runtime code that masks a missing real integration.
+
+If you cannot complete a piece because of a missing dependency, leave a clearly
+labelled `// BLOCKED:` comment describing exactly what is needed, and tell the user
+in your reply. Do not silently fill the gap.
+
+## 4. Surface the Blocker Explicitly in Your Reply
+When blocked, your reply MUST clearly state:
+1. WHAT you were implementing.
+2. WHAT is missing (the exact env var, key, URL, or setup step).
+3. HOW the user gets it (concrete steps or where to obtain it).
+4. That you are PAUSING that piece until they provide it.
+
+Then continue with any other unblocked work, or stop if everything is blocked.
+
+## 5. Never Downgrade Security or Integrity to Unblock
+Do not disable RLS, skip MFA, store secrets in code, weaken validation, or bypass
+the outbox/idempotency patterns to get something running. A blocked-but-correct
+state is always better than an unblocked-but-unsafe one.

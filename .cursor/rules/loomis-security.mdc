@@ -1,0 +1,44 @@
+---
+description: Security rules that must never be broken — auth, RLS, secrets, access control
+alwaysApply: true
+---
+
+# Loomis — Security Rules (Never Break These)
+
+## Authentication
+- Every protected route MUST use the `authenticate` middleware which validates the JWT, checks `user_ver` against Redis, and verifies the token is not blacklisted.
+- Step-up MFA is REQUIRED before: refund approval, data export, PSF rate change, census lock, result publish, ledger adjustment. Use the `requireStepUp(action)` middleware.
+- After 5 failed login attempts in 10 minutes → lock account and send email. Use the `loginRateLimiter` middleware.
+
+## Tenant Isolation (Row-Level Security)
+- EVERY database query on a tenant-bound table MUST set `app.current_tenant_id` on the connection before executing.
+- Use the `withTenantContext(tenantId, fn)` helper — never set it manually in a handler.
+- NEVER write a JOIN across tenant schemas. Parent portal uses separate per-tenant queries.
+- The RLS policy is `AS RESTRICTIVE` — it ANDs with everything. It cannot be bypassed.
+
+## Authorisation
+- Use `requireRole(...roles)` middleware on every route. Never check `req.user.role` inline in business logic.
+- Segregation of duties is enforced in the service layer, not just the route:
+  - Cashier who logged a payment CANNOT verify it → check `payment.logged_by !== req.user.id`
+  - Regional Manager CANNOT approve their own subordinate's KYC
+  - Requester of a privileged change CANNOT be the approver
+
+## Secrets
+- NEVER hardcode secrets, API keys, or JWT signing keys anywhere in code.
+- ALL secrets come from environment variables validated by `src/config/env.ts` (zod schema).
+- In dev, secrets live in `.env.local` (gitignored). In prod, they come from AWS Secrets Manager via ECS task role.
+- NEVER log a secret, JWT token, full password, raw referral code, or OTP.
+
+## Data in Logs
+- NEVER include PII (student name, phone, email, address) in log messages.
+- Log only opaque IDs and action names. Example: `logger.info('payment.verified', { paymentId, tenantId })` not `{ studentName, amount }`.
+
+## Passwords and Sensitive Storage
+- Passwords: Argon2id (argon2 npm package). Never bcrypt for new code.
+- TOTP secrets: encrypted with AES-256-GCM using `TOTP_ENCRYPTION_KEY` env var before storing.
+- Referral codes: stored ONLY as HMAC-SHA256 hash. Raw code returned once at generation, never stored.
+
+## HTTP Security
+- All routes behind the API must validate `X-Tenant-Id` header matches the JWT `tenant_id` claim (or null for platform actors).
+- Financial and workflow write routes MUST validate the `Idempotency-Key` header. Reject with 422 if absent.
+- Reject requests where `X-Tenant-Id` is present but the JWT `tenant_id` is null only if the role is not a platform-level actor.
