@@ -22,7 +22,6 @@ export interface TermClosureEvaluation {
 }
 
 export const termClosureGate = {
-  // eslint-disable-next-line @typescript-eslint/require-await
   async evaluate(_tenantId: string, _termId: string): Promise<TermClosureEvaluation> {
     // BLOCKED: each of these reads a not-yet-built module's read-model. Wire them
     // up as those modules ship; until then they are unverifiable → blockers.

@@ -7,7 +7,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint .",
+    "lint": "eslint src --no-error-on-unmatched-pattern",
     "test": "jest"
   },
   "dependencies": {

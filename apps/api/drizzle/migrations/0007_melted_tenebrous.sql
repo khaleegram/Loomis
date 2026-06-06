@@ -1,8 +1,8 @@
-CREATE SCHEMA "academic";
+CREATE SCHEMA IF NOT EXISTS "academic";
 --> statement-breakpoint
-CREATE SCHEMA "ledger";
+CREATE SCHEMA IF NOT EXISTS "ledger";
 --> statement-breakpoint
-CREATE SCHEMA "student";
+CREATE SCHEMA IF NOT EXISTS "student";
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "academic"."academic_terms" (
 	"id" uuid PRIMARY KEY NOT NULL,

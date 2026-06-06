@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { LoomisError } from '../../../shared/errors.js';
 
 const mockTokenRepository = {
   findByHash: vi.fn(),
