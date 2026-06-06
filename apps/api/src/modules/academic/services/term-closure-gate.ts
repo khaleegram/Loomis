@@ -1,3 +1,5 @@
+import { paymentRepository } from '../../finance/repository/payment.repository.js';
+
 /**
  * Term closure gate (FR-ASM-006 / US-ASM-004 / CON-021).
  *
@@ -22,15 +24,23 @@ export interface TermClosureEvaluation {
 }
 
 export const termClosureGate = {
-  async evaluate(_tenantId: string, _termId: string): Promise<TermClosureEvaluation> {
-    // BLOCKED: each of these reads a not-yet-built module's read-model. Wire them
-    // up as those modules ship; until then they are unverifiable → blockers.
+  async evaluate(tenantId: string, termId: string): Promise<TermClosureEvaluation> {
+    const financialBlockers: string[] = [
+      'PENDING_LEDGER: PSF obligation settlement status cannot be verified (Ledger module not built)',
+    ];
+
+    const unverifiedOffline = await paymentRepository.countUnverifiedOfflinePayments(
+      tenantId,
+      termId,
+    );
+    if (unverifiedOffline > 0) {
+      financialBlockers.push(
+        `FINANCE_UNVERIFIED_OFFLINE_PAYMENTS: ${unverifiedOffline} offline payment(s) await accountant verification`,
+      );
+    }
+
     return {
-      // Ledger (psf_obligations) + Finance (offline payments) — financial, CON-021.
-      financialBlockers: [
-        'PENDING_LEDGER: PSF obligation settlement status cannot be verified (Ledger module not built)',
-        'PENDING_FINANCE: offline payment verification status cannot be verified (Finance module not built)',
-      ],
+      financialBlockers,
       // Academic gradebook/exams + Workflow + Risk (IVP) — operational.
       operationalBlockers: [
         'PENDING_ACADEMIC: gradebook lock / result publication state cannot be verified',

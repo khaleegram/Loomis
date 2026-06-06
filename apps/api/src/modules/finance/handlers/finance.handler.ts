@@ -3,17 +3,23 @@ import type {
   AmendFeeStructureRequest,
   BatchIssueInvoicesRequest,
   CreateFeeStructureRequest,
+  InitializeOnlinePaymentRequest,
   IssueInvoiceRequest,
+  LogOfflinePaymentRequest,
   OutstandingBalancesQuery,
+  PaymentsQuery,
   UpdateFeeStructureRequest,
+  VerifyOfflinePaymentRequest,
 } from '@loomis/contracts';
+import { LoomisError } from '../../../shared/errors.js';
 import { sendSuccess } from '../../../shared/http.js';
-import { feeStructureService, invoiceService } from '../services/index.js';
-import { auditContext, requireTenantActor } from './_context.js';
+import { feeStructureService, invoiceService, paymentService } from '../services/index.js';
+import { auditContext, requireParentActor, requireTenantActor } from './_context.js';
 import {
   feeStructureToResponse,
   invoiceToResponse,
   outstandingBalancesToResponse,
+  paymentToResponse,
 } from './_serializers.js';
 
 interface TenantParams {
@@ -27,6 +33,9 @@ interface TermParams extends TenantParams {
 }
 interface InvoiceParams extends TenantParams {
   invoiceId: string;
+}
+interface PaymentParams extends TenantParams {
+  paymentId: string;
 }
 
 // ── Fee structures ────────────────────────────────────────────────────────────
@@ -167,4 +176,84 @@ export async function outstandingBalancesHandler(
     requireTenantActor(req),
   );
   return sendSuccess(reply, outstandingBalancesToResponse(result));
+}
+
+// ── Payments ──────────────────────────────────────────────────────────────────
+
+function requireIdempotencyKey(req: FastifyRequest): string {
+  const key = req.idempotencyKey;
+  if (!key) {
+    throw new LoomisError('IDEMPOTENCY_KEY_REQUIRED', 422, 'Idempotency-Key header is required');
+  }
+  return key;
+}
+
+export async function logOfflinePaymentHandler(
+  req: FastifyRequest<{ Params: TenantParams; Body: LogOfflinePaymentRequest }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const result = await paymentService.logOfflinePayment(
+    req.params.tenantId,
+    req.body,
+    requireTenantActor(req),
+    auditContext(req),
+    requireIdempotencyKey(req),
+  );
+  return sendSuccess(reply, paymentToResponse(result), 201);
+}
+
+export async function verifyOfflinePaymentHandler(
+  req: FastifyRequest<{ Params: PaymentParams; Body: VerifyOfflinePaymentRequest }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const result = await paymentService.verifyOfflinePayment(
+    req.params.tenantId,
+    req.params.paymentId,
+    req.body,
+    requireTenantActor(req),
+    auditContext(req),
+    requireIdempotencyKey(req),
+  );
+  return sendSuccess(reply, paymentToResponse(result));
+}
+
+export async function initializeOnlinePaymentHandler(
+  req: FastifyRequest<{ Params: TenantParams; Body: InitializeOnlinePaymentRequest }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const result = await paymentService.initializeOnlinePayment(
+    req.params.tenantId,
+    req.body,
+    requireParentActor(req, req.params.tenantId),
+    auditContext(req),
+    requireIdempotencyKey(req),
+  );
+  return sendSuccess(reply, {
+    payment: paymentToResponse({ payment: result.payment, receipt: null }),
+    authorizationUrl: result.authorizationUrl,
+  }, 201);
+}
+
+export async function listPaymentsHandler(
+  req: FastifyRequest<{ Params: TenantParams; Querystring: PaymentsQuery }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const results = await paymentService.listPayments(
+    req.params.tenantId,
+    req.query,
+    requireTenantActor(req),
+  );
+  return sendSuccess(reply, { payments: results.map(paymentToResponse) });
+}
+
+export async function getPaymentHandler(
+  req: FastifyRequest<{ Params: PaymentParams }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const result = await paymentService.getPayment(
+    req.params.tenantId,
+    req.params.paymentId,
+    requireTenantActor(req),
+  );
+  return sendSuccess(reply, paymentToResponse(result));
 }

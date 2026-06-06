@@ -231,3 +231,122 @@ export const outstandingBalancesResponse = z.object({
   rows: z.array(outstandingBalanceRow),
 });
 export type OutstandingBalancesResponse = z.infer<typeof outstandingBalancesResponse>;
+
+// ── Payments (US-FIN-002..004) ───────────────────────────────────────────────
+
+export const paymentChannel = z.enum(['offline', 'online']);
+export type PaymentChannel = z.infer<typeof paymentChannel>;
+
+export const offlinePaymentMethod = z.enum(['cash', 'bank_transfer', 'pos']);
+export type OfflinePaymentMethod = z.infer<typeof offlinePaymentMethod>;
+
+export const onlinePaymentMethod = z.enum(['card', 'bank_transfer', 'ussd']);
+export type OnlinePaymentMethod = z.infer<typeof onlinePaymentMethod>;
+
+export const paymentGatewayProvider = z.enum(['paystack', 'flutterwave']);
+export type PaymentGatewayProvider = z.infer<typeof paymentGatewayProvider>;
+
+export const paymentStatus = z.enum([
+  'pending_verification',
+  'pending',
+  'verified',
+  'failed',
+  'cancelled',
+]);
+export type PaymentStatus = z.infer<typeof paymentStatus>;
+
+export const receiptStatus = z.enum(['provisional', 'final']);
+export type ReceiptStatus = z.infer<typeof receiptStatus>;
+
+/** US-FIN-002. Cashier logs an offline payment against an invoice. */
+export const logOfflinePaymentRequest = z.object({
+  invoiceId: z.string().uuid(),
+  amountMinor: positiveKoboAmount,
+  method: offlinePaymentMethod,
+  paymentDate: calendarDate,
+  channelReference: z.string().min(1).max(120).optional(),
+  evidenceStorageObjectId: z.string().uuid().optional(),
+});
+export type LogOfflinePaymentRequest = z.infer<typeof logOfflinePaymentRequest>;
+
+/** US-FIN-003. Accountant verifies a pending offline payment. */
+export const verifyOfflinePaymentRequest = z.object({
+  notes: z.string().max(500).optional(),
+});
+export type VerifyOfflinePaymentRequest = z.infer<typeof verifyOfflinePaymentRequest>;
+
+/** US-FIN-004. Parent initiates an online payment via a gateway. */
+export const initializeOnlinePaymentRequest = z.object({
+  invoiceId: z.string().uuid(),
+  amountMinor: positiveKoboAmount,
+  provider: paymentGatewayProvider,
+  method: onlinePaymentMethod.default('card'),
+  payerEmail: z.string().email(),
+});
+export type InitializeOnlinePaymentRequest = z.infer<typeof initializeOnlinePaymentRequest>;
+
+export const receiptLineItemResponse = z.object({
+  name: z.string(),
+  category: feeItemCategory,
+  amountMinor: koboAmount,
+});
+export type ReceiptLineItemResponse = z.infer<typeof receiptLineItemResponse>;
+
+export const receiptResponse = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
+  paymentId: z.string().uuid(),
+  termId: z.string().uuid(),
+  sequenceNumber: z.number().int(),
+  status: receiptStatus,
+  amountMinor: koboAmount,
+  lineItems: z.array(receiptLineItemResponse),
+  issuedById: z.string().uuid(),
+  issuedAt: z.string().datetime(),
+  finalizedAt: z.string().datetime().nullable(),
+});
+export type ReceiptResponse = z.infer<typeof receiptResponse>;
+
+export const paymentResponse = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
+  invoiceId: z.string().uuid(),
+  termId: z.string().uuid(),
+  studentId: z.string().uuid(),
+  channel: paymentChannel,
+  method: z.string(),
+  amountMinor: koboAmount,
+  status: paymentStatus,
+  loggedById: z.string().uuid(),
+  verifiedById: z.string().uuid().nullable(),
+  verifiedAt: z.string().datetime().nullable(),
+  paymentDate: calendarDate,
+  channelReference: z.string().nullable(),
+  evidenceStorageObjectId: z.string().uuid().nullable(),
+  gatewayProvider: paymentGatewayProvider.nullable(),
+  gatewayReference: z.string().nullable(),
+  gatewayAuthorizationUrl: z.string().nullable(),
+  receipt: receiptResponse.nullable(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+export type PaymentResponse = z.infer<typeof paymentResponse>;
+
+export const paymentListResponse = z.object({
+  payments: z.array(paymentResponse),
+});
+export type PaymentListResponse = z.infer<typeof paymentListResponse>;
+
+export const initializeOnlinePaymentResponse = z.object({
+  payment: paymentResponse,
+  authorizationUrl: z.string().url(),
+});
+export type InitializeOnlinePaymentResponse = z.infer<typeof initializeOnlinePaymentResponse>;
+
+export const paymentsQuery = z.object({
+  termId: z.string().uuid().optional(),
+  studentId: z.string().uuid().optional(),
+  status: paymentStatus.optional(),
+  channel: paymentChannel.optional(),
+});
+export type PaymentsQuery = z.infer<typeof paymentsQuery>;

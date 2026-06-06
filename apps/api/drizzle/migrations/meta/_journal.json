@@ -127,6 +127,20 @@
       "when": 1780707416723,
       "tag": "0015_finance_constraints_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1780708000000,
+      "tag": "0017_finance_payments",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1780708000001,
+      "tag": "0018_finance_payments_constraints_rls",
+      "breakpoints": true
     }
   ]
 }

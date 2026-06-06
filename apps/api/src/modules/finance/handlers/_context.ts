@@ -14,6 +14,18 @@ export function requireTenantActor(req: FastifyRequest): ActorContext {
   return { userId: user.sub, role: user.role, tenantId: user.tenantId };
 }
 
+/** Parent actor scoped to a school via X-Tenant-Id (US-FIN-004). */
+export function requireParentActor(req: FastifyRequest, tenantId: string): ActorContext {
+  const user = req.authUser;
+  if (!user) {
+    throw new LoomisError('IDENTITY_SESSION_INVALIDATED', 401, 'Not authenticated');
+  }
+  if (user.role !== 'parent') {
+    throw new LoomisError('FORBIDDEN', 403, 'Only parents may perform this action');
+  }
+  return { userId: user.sub, role: user.role, tenantId };
+}
+
 /** Captures request metadata for the immutable audit trail. */
 export function auditContext(req: FastifyRequest): AuditContext {
   return {

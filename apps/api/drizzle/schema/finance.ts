@@ -1,10 +1,12 @@
 import { sql } from 'drizzle-orm';
 import {
   bigint,
+  boolean,
   check,
   date,
   index,
   integer,
+  jsonb,
   pgSchema,
   timestamp,
   uniqueIndex,
@@ -200,5 +202,156 @@ export const invoiceItems = financeSchema.table(
   (table) => ({
     invoiceIdx: index('invoice_items_tenant_invoice_idx').on(table.tenantId, table.invoiceId),
     amountPositive: check('invoice_items_amount_positive', sql`${table.amountMinor} > 0`),
+  }),
+);
+
+/**
+ * Payments (SRS §4.6 FR-FIN-004/005; US-FIN-002..004; System Design §9).
+ * Offline payments start in `pending_verification` (Cashier log); online payments
+ * start `pending` until a verified gateway webhook confirms settlement. Only
+ * `verified` payments settle invoice balances and emit `payment.verified` for
+ * the Ledger module to apply PSF settlements.
+ *
+ * Amounts are BIGINT kobo. `logged_by_id` is the Cashier (offline) or Parent
+ * (online init). `verified_by_id` is the Accountant (offline verify) or null
+ * when gateway-confirmed. Segregation of duties: the Cashier who logged CANNOT
+ * verify the same payment (enforced in the service layer).
+ */
+export const payments = financeSchema.table(
+  'payments',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id),
+    invoiceId: uuid('invoice_id')
+      .notNull()
+      .references(() => invoices.id),
+    termId: uuid('term_id').notNull(),
+    studentId: uuid('student_id').notNull(),
+    channel: varchar('channel', { length: 20 }).notNull(),
+    method: varchar('method', { length: 30 }).notNull(),
+    amountMinor: bigint('amount_minor', { mode: 'number' }).notNull(),
+    status: varchar('status', { length: 30 }).notNull().default('pending_verification'),
+    idempotencyKey: varchar('idempotency_key', { length: 128 }).notNull(),
+    loggedById: uuid('logged_by_id').notNull(),
+    verifiedById: uuid('verified_by_id'),
+    verifiedAt: timestamp('verified_at', { withTimezone: true }),
+    paymentDate: date('payment_date').notNull(),
+    channelReference: varchar('channel_reference', { length: 120 }),
+    evidenceStorageObjectId: uuid('evidence_storage_object_id'),
+    gatewayProvider: varchar('gateway_provider', { length: 20 }),
+    gatewayReference: varchar('gateway_reference', { length: 120 }),
+    gatewayAuthorizationUrl: varchar('gateway_authorization_url', { length: 2000 }),
+    metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    tenantIdempotencyUnique: uniqueIndex('payments_tenant_idempotency_unique').on(
+      table.tenantId,
+      table.idempotencyKey,
+    ),
+    tenantInvoiceIdx: index('payments_tenant_invoice_idx').on(table.tenantId, table.invoiceId),
+    tenantStudentIdx: index('payments_tenant_student_idx').on(table.tenantId, table.studentId),
+    tenantStatusIdx: index('payments_tenant_status_idx').on(table.tenantId, table.status),
+    gatewayReferenceIdx: index('payments_gateway_reference_idx').on(
+      table.gatewayProvider,
+      table.gatewayReference,
+    ),
+    channelValid: check('payments_channel_valid', sql`${table.channel} IN ('offline', 'online')`),
+    amountPositive: check('payments_amount_positive', sql`${table.amountMinor} > 0`),
+    statusValid: check(
+      'payments_status_valid',
+      sql`${table.status} IN ('pending_verification', 'pending', 'verified', 'failed', 'cancelled')`,
+    ),
+  }),
+);
+
+/**
+ * Receipts (FR-FIN-004 / FR-RIN-007). Issued on offline log as `provisional`;
+ * promoted to `final` on Accountant verification or immediately `final` for
+ * gateway-confirmed online payments. Sequence numbers are immutable and
+ * gapless per (tenant, term) — enforced in the service layer.
+ */
+export const receipts = financeSchema.table(
+  'receipts',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id),
+    paymentId: uuid('payment_id')
+      .notNull()
+      .references(() => payments.id),
+    termId: uuid('term_id').notNull(),
+    sequenceNumber: integer('sequence_number').notNull(),
+    status: varchar('status', { length: 20 }).notNull().default('provisional'),
+    amountMinor: bigint('amount_minor', { mode: 'number' }).notNull(),
+    lineItems: jsonb('line_items').$type<Array<Record<string, unknown>>>().notNull(),
+    issuedById: uuid('issued_by_id').notNull(),
+    issuedAt: timestamp('issued_at', { withTimezone: true }).notNull().defaultNow(),
+    finalizedAt: timestamp('finalized_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    paymentUnique: uniqueIndex('receipts_payment_unique').on(table.paymentId),
+    tenantTermSequenceUnique: uniqueIndex('receipts_tenant_term_sequence_unique').on(
+      table.tenantId,
+      table.termId,
+      table.sequenceNumber,
+    ),
+    tenantTermIdx: index('receipts_tenant_term_idx').on(table.tenantId, table.termId),
+    statusValid: check(
+      'receipts_status_valid',
+      sql`${table.status} IN ('provisional', 'final')`,
+    ),
+    amountPositive: check('receipts_amount_positive', sql`${table.amountMinor} > 0`),
+    sequencePositive: check('receipts_sequence_positive', sql`${table.sequenceNumber} > 0`),
+  }),
+);
+
+/**
+ * Gateway webhook event log (SRS §10.1 / SEC-WH-001..003; System Design §9.2).
+ * GLOBAL table — no tenant RLS. Idempotent on (provider, provider_event_id).
+ * Signature verification happens BEFORE insert; duplicates short-circuit with
+ * no business logic. Downstream processing is driven by the outbox relay.
+ */
+export const webhookEvents = financeSchema.table(
+  'webhook_events',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    provider: varchar('provider', { length: 20 }).notNull(),
+    providerEventId: varchar('provider_event_id', { length: 120 }).notNull(),
+    eventType: varchar('event_type', { length: 80 }).notNull(),
+    signatureValid: boolean('signature_valid').notNull(),
+    payload: jsonb('payload').$type<Record<string, unknown>>().notNull(),
+    status: varchar('status', { length: 20 }).notNull().default('received'),
+    providerTimestamp: timestamp('provider_timestamp', { withTimezone: true }),
+    tenantId: uuid('tenant_id'),
+    paymentId: uuid('payment_id'),
+    processedAt: timestamp('processed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    providerEventUnique: uniqueIndex('webhook_events_provider_event_unique').on(
+      table.provider,
+      table.providerEventId,
+    ),
+    statusIdx: index('webhook_events_status_idx').on(table.status, table.createdAt),
+    providerValid: check(
+      'webhook_events_provider_valid',
+      sql`${table.provider} IN ('paystack', 'flutterwave')`,
+    ),
+    statusValid: check(
+      'webhook_events_status_valid',
+      sql`${table.status} IN ('received', 'processed', 'duplicate', 'rejected')`,
+    ),
   }),
 );

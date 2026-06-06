@@ -10,6 +10,9 @@ export const FINANCE_EVENT_TYPES = {
   feeStructureAmendmentRequested: 'finance.fee_structure.amendment_requested',
   feeStructureAmended: 'finance.fee_structure.amended',
   invoiceIssued: 'finance.invoice.issued',
+  paymentLogged: 'finance.payment.logged',
+  paymentVerified: 'payment.verified',
+  paymentWebhookReceived: 'payment.webhook.received',
 } as const;
 
 export interface FeeStructureEventPayload extends Record<string, unknown> {
@@ -30,4 +33,25 @@ export interface InvoiceIssuedPayload extends Record<string, unknown> {
   classLevelId: string;
   amountChargedMinor: number;
   issuedById: string;
+}
+
+export interface PaymentVerifiedPayload extends Record<string, unknown> {
+  tenantId: string;
+  paymentId: string;
+  invoiceId: string;
+  studentId: string;
+  termId: string;
+  amountMinor: number;
+  channel: string;
+  verifiedAt: string;
+  verifiedById: string | null;
+}
+
+export interface PaymentWebhookReceivedPayload extends Record<string, unknown> {
+  webhookEventId: string;
+  provider: string;
+  providerEventId: string;
+  tenantId: string | null;
+  paymentId: string | null;
+  gatewayReference: string | null;
 }

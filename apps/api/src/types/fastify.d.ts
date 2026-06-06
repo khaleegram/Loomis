@@ -20,5 +20,7 @@ declare module 'fastify' {
     stepUp?: { action: StepUpAction };
     /** Set by `requireIdempotencyKey` from the Idempotency-Key header. */
     idempotencyKey?: string;
+    /** Raw request body preserved for gateway webhook HMAC verification. */
+    rawBody?: string;
   }
 }

@@ -3,8 +3,12 @@ import type {
   BatchIssueInvoicesRequest,
   CreateFeeStructureRequest,
   FeeItemInput,
+  InitializeOnlinePaymentRequest,
   IssueInvoiceRequest,
+  LogOfflinePaymentRequest,
+  PaymentsQuery,
   UpdateFeeStructureRequest,
+  VerifyOfflinePaymentRequest,
 } from '@loomis/contracts';
 
 /** Actor context for finance writes — set from the verified access token. */
@@ -27,6 +31,10 @@ export type AmendFeeStructureInput = AmendFeeStructureRequest;
 export type FeeItemInputDto = FeeItemInput;
 export type IssueInvoiceInput = IssueInvoiceRequest;
 export type BatchIssueInvoicesInput = BatchIssueInvoicesRequest;
+export type LogOfflinePaymentInput = LogOfflinePaymentRequest;
+export type VerifyOfflinePaymentInput = VerifyOfflinePaymentRequest;
+export type InitializeOnlinePaymentInput = InitializeOnlinePaymentRequest;
+export type PaymentsListQuery = PaymentsQuery;
 
 /** A single durable outbox event row to insert inside a producer's transaction. */
 export interface OutboxEventInput {

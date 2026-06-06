@@ -1,6 +1,8 @@
 import { registerEventHandler } from '../../../shared/events/registry.js';
 import { WORKFLOW_EVENT_TYPES } from '../../workflow/events/types.js';
+import { handlePaymentWebhookReceived } from './consumers/payment-webhook.consumer.js';
 import { handleWorkflowCompleted } from './consumers/workflow-events.consumer.js';
+import { FINANCE_EVENT_TYPES } from './types.js';
 
 /**
  * Registers in-process consumers for cross-module events the Finance module
@@ -11,7 +13,13 @@ import { handleWorkflowCompleted } from './consumers/workflow-events.consumer.js
  */
 export function registerFinanceEventConsumers(): void {
   registerEventHandler(WORKFLOW_EVENT_TYPES.completed, handleWorkflowCompleted);
+  registerEventHandler(FINANCE_EVENT_TYPES.paymentWebhookReceived, handlePaymentWebhookReceived);
 }
 
 export { FINANCE_EVENT_TYPES } from './types.js';
-export type { FeeStructureEventPayload, InvoiceIssuedPayload } from './types.js';
+export type {
+  FeeStructureEventPayload,
+  InvoiceIssuedPayload,
+  PaymentVerifiedPayload,
+  PaymentWebhookReceivedPayload,
+} from './types.js';

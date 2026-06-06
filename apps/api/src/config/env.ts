@@ -26,6 +26,15 @@ const envSchema = z.object({
   S3_REGION: z.string().min(1),
   AWS_ACCESS_KEY_ID: z.string().min(1),
   AWS_SECRET_ACCESS_KEY: z.string().min(1),
+
+  /** Payment gateways (sandbox keys for dev; SRS §10.1 / System Design §9). */
+  PAYSTACK_SECRET_KEY: z.string().optional(),
+  PAYSTACK_WEBHOOK_SECRET: z.string().optional(),
+  FLUTTERWAVE_SECRET_KEY: z.string().optional(),
+  FLUTTERWAVE_WEBHOOK_SECRET: z.string().optional(),
+
+  /** Base URL for gateway redirect after online payment (parent portal). */
+  PAYMENT_REDIRECT_BASE_URL: z.string().url().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

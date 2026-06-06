@@ -6,9 +6,12 @@ import type {
   InvoiceStatus,
   OutstandingBalanceRow,
   OutstandingBalancesResponse,
+  PaymentChannel,
+  PaymentStatus,
+  ReceiptStatus,
 } from '@loomis/contracts';
 import type { invoices } from '../../../../drizzle/schema/finance.js';
-import type { FeeStructureWithItems, InvoiceWithItems } from '../repository/index.js';
+import type { FeeStructureWithItems, InvoiceWithItems, PaymentWithReceipt } from '../repository/index.js';
 
 type InvoiceRow = typeof invoices.$inferSelect;
 
@@ -86,4 +89,52 @@ export function outstandingBalancesToResponse(result: {
     balanceMinor: row.balanceMinor,
   }));
   return { termId: result.termId, summary: result.summary, rows };
+}
+
+export function receiptToResponse(receipt: NonNullable<PaymentWithReceipt['receipt']>) {
+  const lineItems = (receipt.lineItems as Array<Record<string, unknown>>).map((item) => ({
+    name: String(item.name ?? item.description ?? 'Payment'),
+    category: (item.category as FeeItemCategory | undefined) ?? 'other',
+    amountMinor: Number(item.amountMinor ?? 0),
+  }));
+  return {
+    id: receipt.id,
+    tenantId: receipt.tenantId,
+    paymentId: receipt.paymentId,
+    termId: receipt.termId,
+    sequenceNumber: receipt.sequenceNumber,
+    status: receipt.status as ReceiptStatus,
+    amountMinor: receipt.amountMinor,
+    lineItems,
+    issuedById: receipt.issuedById,
+    issuedAt: receipt.issuedAt.toISOString(),
+    finalizedAt: receipt.finalizedAt?.toISOString() ?? null,
+  };
+}
+
+export function paymentToResponse(data: PaymentWithReceipt) {
+  const { payment, receipt } = data;
+  return {
+    id: payment.id,
+    tenantId: payment.tenantId,
+    invoiceId: payment.invoiceId,
+    termId: payment.termId,
+    studentId: payment.studentId,
+    channel: payment.channel as PaymentChannel,
+    method: payment.method,
+    amountMinor: payment.amountMinor,
+    status: payment.status as PaymentStatus,
+    loggedById: payment.loggedById,
+    verifiedById: payment.verifiedById ?? null,
+    verifiedAt: payment.verifiedAt?.toISOString() ?? null,
+    paymentDate: payment.paymentDate,
+    channelReference: payment.channelReference ?? null,
+    evidenceStorageObjectId: payment.evidenceStorageObjectId ?? null,
+    gatewayProvider: (payment.gatewayProvider as 'paystack' | 'flutterwave' | null) ?? null,
+    gatewayReference: payment.gatewayReference ?? null,
+    gatewayAuthorizationUrl: payment.gatewayAuthorizationUrl ?? null,
+    receipt: receipt ? receiptToResponse(receipt) : null,
+    createdAt: payment.createdAt.toISOString(),
+    updatedAt: payment.updatedAt.toISOString(),
+  };
 }
