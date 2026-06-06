@@ -22,3 +22,11 @@ export function validateParams<S extends ZodTypeAny>(schema: S) {
     req.params = parsed;
   };
 }
+
+/** Validates query strings against a Zod schema and replaces req.query. */
+export function validateQuery<S extends ZodTypeAny>(schema: S) {
+  return async function validateQueryHook(req: FastifyRequest, _reply: FastifyReply): Promise<void> {
+    const parsed: ZodInfer<S> = schema.parse(req.query ?? {});
+    req.query = parsed;
+  };
+}

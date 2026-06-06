@@ -5,6 +5,7 @@ import {
   date,
   index,
   integer,
+  jsonb,
   pgSchema,
   timestamp,
   uniqueIndex,
@@ -287,5 +288,251 @@ export const studentPromotionRecords = academicSchema.table(
       'student_promotion_records_held_back_reason',
       sql`${table.outcome} <> 'held_back' OR ${table.heldBackReason} IS NOT NULL`,
     ),
+  }),
+);
+
+/**
+ * Grading schemes (SRS §4.5 / US-ACA-001). A tenant can define reusable CA/exam
+ * weighting policies. The two component weights must sum to exactly 100 in both
+ * Zod contracts and this DB CHECK so persisted totals are comparable.
+ */
+export const gradingSchemes = academicSchema.table(
+  'grading_schemes',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id),
+    name: varchar('name', { length: 100 }).notNull(),
+    continuousAssessmentWeight: integer('continuous_assessment_weight').notNull(),
+    examWeight: integer('exam_weight').notNull(),
+    passMark: integer('pass_mark').notNull().default(40),
+    gradeBands: jsonb('grade_bands')
+      .$type<Array<{ minScore: number; maxScore: number; grade: string; remark: string | null }>>()
+      .notNull(),
+    isDefault: boolean('is_default').notNull().default(false),
+    createdById: uuid('created_by_id').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    tenantNameUnique: uniqueIndex('grading_schemes_tenant_id_name_unique').on(
+      table.tenantId,
+      table.name,
+    ),
+    defaultUnique: uniqueIndex('grading_schemes_tenant_default_unique')
+      .on(table.tenantId)
+      .where(sql`${table.isDefault} = true`),
+    weightsSum: check(
+      'grading_schemes_weights_sum_100',
+      sql`${table.continuousAssessmentWeight} + ${table.examWeight} = 100`,
+    ),
+    weightsRange: check(
+      'grading_schemes_weights_range',
+      sql`${table.continuousAssessmentWeight} BETWEEN 0 AND 100 AND ${table.examWeight} BETWEEN 0 AND 100`,
+    ),
+    passMarkRange: check('grading_schemes_pass_mark_range', sql`${table.passMark} BETWEEN 0 AND 100`),
+  }),
+);
+
+/**
+ * Exam configuration for a term/class/subject (SRS §4.5 / US-ACA-002). Subjects
+ * are still represented by UUIDs from HRM assignment records until a subject
+ * catalogue lands in Academic.
+ */
+export const examConfigs = academicSchema.table(
+  'exam_configs',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id),
+    termId: uuid('term_id')
+      .notNull()
+      .references(() => academicTerms.id),
+    classArmId: uuid('class_arm_id')
+      .notNull()
+      .references(() => classArms.id),
+    subjectId: uuid('subject_id').notNull(),
+    gradingSchemeId: uuid('grading_scheme_id')
+      .notNull()
+      .references(() => gradingSchemes.id),
+    title: varchar('title', { length: 120 }).notNull(),
+    status: varchar('status', { length: 20 }).notNull().default('draft'),
+    configuredById: uuid('configured_by_id').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    termClassSubjectUnique: uniqueIndex('exam_configs_term_class_subject_unique').on(
+      table.tenantId,
+      table.termId,
+      table.classArmId,
+      table.subjectId,
+    ),
+    tenantTermIdx: index('exam_configs_tenant_term_idx').on(table.tenantId, table.termId),
+    statusValid: check('exam_configs_status_valid', sql`${table.status} IN ('draft', 'open', 'closed')`),
+  }),
+);
+
+/**
+ * Gradebook entries (SRS §4.5 / US-ACA-003). Teachers may create/update only for
+ * their own active subject assignments; Class Teachers get read-only access.
+ */
+export const gradebookEntries = academicSchema.table(
+  'gradebook_entries',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id),
+    termId: uuid('term_id')
+      .notNull()
+      .references(() => academicTerms.id),
+    classArmId: uuid('class_arm_id')
+      .notNull()
+      .references(() => classArms.id),
+    subjectId: uuid('subject_id').notNull(),
+    studentId: uuid('student_id').notNull(),
+    examConfigId: uuid('exam_config_id')
+      .notNull()
+      .references(() => examConfigs.id),
+    gradingSchemeId: uuid('grading_scheme_id')
+      .notNull()
+      .references(() => gradingSchemes.id),
+    teacherStaffProfileId: uuid('teacher_staff_profile_id').notNull(),
+    continuousAssessmentScore: integer('continuous_assessment_score').notNull(),
+    examScore: integer('exam_score').notNull(),
+    totalScore: integer('total_score').notNull(),
+    grade: varchar('grade', { length: 10 }).notNull(),
+    remark: varchar('remark', { length: 120 }),
+    status: varchar('status', { length: 30 }).notNull().default('draft'),
+    submittedAt: timestamp('submitted_at', { withTimezone: true }),
+    correctedAt: timestamp('corrected_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    studentSubjectUnique: uniqueIndex('gradebook_entries_student_subject_unique').on(
+      table.tenantId,
+      table.termId,
+      table.classArmId,
+      table.subjectId,
+      table.studentId,
+    ),
+    termClassSubjectIdx: index('gradebook_entries_term_class_subject_idx').on(
+      table.tenantId,
+      table.termId,
+      table.classArmId,
+      table.subjectId,
+    ),
+    scoreRange: check(
+      'gradebook_entries_score_range',
+      sql`${table.continuousAssessmentScore} BETWEEN 0 AND 100 AND ${table.examScore} BETWEEN 0 AND 100 AND ${table.totalScore} BETWEEN 0 AND 100`,
+    ),
+    statusValid: check(
+      'gradebook_entries_status_valid',
+      sql`${table.status} IN ('draft', 'submitted', 'correction_pending', 'corrected')`,
+    ),
+  }),
+);
+
+/** Durable audit of grade corrections routed through Workflow (CON-004/005). */
+export const gradeCorrectionLogs = academicSchema.table(
+  'grade_correction_logs',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id),
+    gradebookEntryId: uuid('gradebook_entry_id')
+      .notNull()
+      .references(() => gradebookEntries.id),
+    workflowInstanceId: uuid('workflow_instance_id').notNull(),
+    previousContinuousAssessmentScore: integer('previous_continuous_assessment_score').notNull(),
+    previousExamScore: integer('previous_exam_score').notNull(),
+    previousTotalScore: integer('previous_total_score').notNull(),
+    previousGrade: varchar('previous_grade', { length: 10 }).notNull(),
+    newContinuousAssessmentScore: integer('new_continuous_assessment_score').notNull(),
+    newExamScore: integer('new_exam_score').notNull(),
+    newTotalScore: integer('new_total_score').notNull(),
+    newGrade: varchar('new_grade', { length: 10 }).notNull(),
+    reason: varchar('reason', { length: 500 }).notNull(),
+    status: varchar('status', { length: 20 }).notNull().default('pending'),
+    requestedById: uuid('requested_by_id').notNull(),
+    approvedById: uuid('approved_by_id'),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    workflowUnique: uniqueIndex('grade_correction_logs_workflow_instance_unique').on(
+      table.workflowInstanceId,
+    ),
+    entryStatusIdx: index('grade_correction_logs_entry_status_idx').on(
+      table.tenantId,
+      table.gradebookEntryId,
+      table.status,
+    ),
+    statusValid: check(
+      'grade_correction_logs_status_valid',
+      sql`${table.status} IN ('pending', 'approved', 'rejected', 'returned')`,
+    ),
+    scoreRange: check(
+      'grade_correction_logs_score_range',
+      sql`${table.previousContinuousAssessmentScore} BETWEEN 0 AND 100
+        AND ${table.previousExamScore} BETWEEN 0 AND 100
+        AND ${table.previousTotalScore} BETWEEN 0 AND 100
+        AND ${table.newContinuousAssessmentScore} BETWEEN 0 AND 100
+        AND ${table.newExamScore} BETWEEN 0 AND 100
+        AND ${table.newTotalScore} BETWEEN 0 AND 100`,
+    ),
+  }),
+);
+
+/**
+ * Published result headers (SRS §4.5 / US-ACA-004). Publishing requires step-up
+ * MFA at the route and records one result per student/term.
+ */
+export const results = academicSchema.table(
+  'results',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id),
+    termId: uuid('term_id')
+      .notNull()
+      .references(() => academicTerms.id),
+    classArmId: uuid('class_arm_id')
+      .notNull()
+      .references(() => classArms.id),
+    studentId: uuid('student_id').notNull(),
+    averageScore: integer('average_score').notNull(),
+    status: varchar('status', { length: 20 }).notNull().default('published'),
+    publishedById: uuid('published_by_id').notNull(),
+    publishedAt: timestamp('published_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    studentTermUnique: uniqueIndex('results_student_term_unique').on(
+      table.tenantId,
+      table.termId,
+      table.studentId,
+    ),
+    termClassIdx: index('results_term_class_idx').on(table.tenantId, table.termId, table.classArmId),
+    averageRange: check('results_average_score_range', sql`${table.averageScore} BETWEEN 0 AND 100`),
+    statusValid: check('results_status_valid', sql`${table.status} IN ('published', 'withdrawn')`),
   }),
 );

@@ -5,6 +5,11 @@ import {
   classArms,
   classLevels,
   classProgressionMap,
+  examConfigs,
+  gradebookEntries,
+  gradeCorrectionLogs,
+  gradingSchemes,
+  results,
   studentPromotionRecords,
 } from '../../../../drizzle/schema/academic.js';
 import { withTenantContext } from '../../../shared/tenant-context.js';
@@ -12,7 +17,13 @@ import { ACADEMIC_EVENT_TYPES, type TermCensusLockedPayload } from '../events/ty
 import type {
   ConfigureTermInput,
   CreateAcademicYearInput,
+  CreateExamConfigInput,
+  CreateGradingSchemeInput,
+  GradeCalculation,
   PromotionDecisionInput,
+  PublishResultsInput,
+  RequestGradeCorrectionInput,
+  UpsertGradebookEntryInput,
 } from '../types.js';
 import { outboxRepository } from './outbox.repository.js';
 
@@ -541,6 +552,344 @@ export const academicRepository = {
           ),
         )
         .returning();
+    });
+  },
+
+  // ── Grading schemes ─────────────────────────────────────────────────────────
+
+  async createGradingScheme(tenantId: string, input: CreateGradingSchemeInput, createdById: string) {
+    return withTenantContext(tenantId, async (tx) => {
+      if (input.isDefault) {
+        await tx
+          .update(gradingSchemes)
+          .set({ isDefault: false, updatedAt: new Date() })
+          .where(and(eq(gradingSchemes.tenantId, tenantId), eq(gradingSchemes.isDefault, true)));
+      }
+
+      const [scheme] = await tx
+        .insert(gradingSchemes)
+        .values({ tenantId, ...input, createdById })
+        .returning();
+      if (!scheme) throw new Error('Failed to create grading scheme');
+      return scheme;
+    });
+  },
+
+  async listGradingSchemes(tenantId: string) {
+    return withTenantContext(tenantId, async (tx) =>
+      tx.select().from(gradingSchemes).where(eq(gradingSchemes.tenantId, tenantId)).orderBy(asc(gradingSchemes.name)),
+    );
+  },
+
+  async findGradingSchemeById(tenantId: string, schemeId: string) {
+    return withTenantContext(tenantId, async (tx) => {
+      const [scheme] = await tx
+        .select()
+        .from(gradingSchemes)
+        .where(and(eq(gradingSchemes.tenantId, tenantId), eq(gradingSchemes.id, schemeId)))
+        .limit(1);
+      return scheme ?? null;
+    });
+  },
+
+  // ── Exam configs ────────────────────────────────────────────────────────────
+
+  async createExamConfig(tenantId: string, input: CreateExamConfigInput, configuredById: string) {
+    return withTenantContext(tenantId, async (tx) => {
+      const [config] = await tx
+        .insert(examConfigs)
+        .values({ tenantId, ...input, configuredById })
+        .returning();
+      if (!config) throw new Error('Failed to create exam config');
+      return config;
+    });
+  },
+
+  async listExamConfigs(tenantId: string, termId: string) {
+    return withTenantContext(tenantId, async (tx) =>
+      tx
+        .select()
+        .from(examConfigs)
+        .where(and(eq(examConfigs.tenantId, tenantId), eq(examConfigs.termId, termId)))
+        .orderBy(asc(examConfigs.classArmId), asc(examConfigs.subjectId)),
+    );
+  },
+
+  async findExamConfigById(tenantId: string, examConfigId: string) {
+    return withTenantContext(tenantId, async (tx) => {
+      const [config] = await tx
+        .select()
+        .from(examConfigs)
+        .where(and(eq(examConfigs.tenantId, tenantId), eq(examConfigs.id, examConfigId)))
+        .limit(1);
+      return config ?? null;
+    });
+  },
+
+  // ── Gradebook ───────────────────────────────────────────────────────────────
+
+  async upsertGradebookEntry(input: {
+    tenantId: string;
+    gradebook: UpsertGradebookEntryInput;
+    examConfig: typeof examConfigs.$inferSelect;
+    calculation: GradeCalculation;
+    teacherStaffProfileId: string;
+  }) {
+    return withTenantContext(input.tenantId, async (tx) => {
+      const now = new Date();
+      const [existing] = await tx
+        .select()
+        .from(gradebookEntries)
+        .where(
+          and(
+            eq(gradebookEntries.tenantId, input.tenantId),
+            eq(gradebookEntries.termId, input.examConfig.termId),
+            eq(gradebookEntries.classArmId, input.examConfig.classArmId),
+            eq(gradebookEntries.subjectId, input.examConfig.subjectId),
+            eq(gradebookEntries.studentId, input.gradebook.studentId),
+          ),
+        )
+        .limit(1);
+
+      const values = {
+        tenantId: input.tenantId,
+        termId: input.examConfig.termId,
+        classArmId: input.examConfig.classArmId,
+        subjectId: input.examConfig.subjectId,
+        studentId: input.gradebook.studentId,
+        examConfigId: input.examConfig.id,
+        gradingSchemeId: input.examConfig.gradingSchemeId,
+        teacherStaffProfileId: input.teacherStaffProfileId,
+        continuousAssessmentScore: input.gradebook.continuousAssessmentScore,
+        examScore: input.gradebook.examScore,
+        totalScore: input.calculation.totalScore,
+        grade: input.calculation.grade,
+        remark: input.calculation.remark,
+      };
+
+      if (existing) {
+        const [entry] = await tx
+          .update(gradebookEntries)
+          .set({
+            ...values,
+            status: existing.status === 'corrected' ? 'corrected' : 'draft',
+            updatedAt: now,
+          })
+          .where(
+            and(
+              eq(gradebookEntries.tenantId, input.tenantId),
+              eq(gradebookEntries.id, existing.id),
+              ne(gradebookEntries.status, 'correction_pending'),
+            ),
+          )
+          .returning();
+        return entry ?? null;
+      }
+
+      const [entry] = await tx.insert(gradebookEntries).values(values).returning();
+      if (!entry) throw new Error('Failed to create gradebook entry');
+      return entry;
+    });
+  },
+
+  async listGradebookEntries(input: {
+    tenantId: string;
+    termId: string;
+    classArmId: string;
+    subjectId?: string;
+  }) {
+    return withTenantContext(input.tenantId, async (tx) =>
+      tx
+        .select()
+        .from(gradebookEntries)
+        .where(
+          and(
+            eq(gradebookEntries.tenantId, input.tenantId),
+            eq(gradebookEntries.termId, input.termId),
+            eq(gradebookEntries.classArmId, input.classArmId),
+            ...(input.subjectId ? [eq(gradebookEntries.subjectId, input.subjectId)] : []),
+          ),
+        )
+        .orderBy(asc(gradebookEntries.subjectId), asc(gradebookEntries.studentId)),
+    );
+  },
+
+  async findGradebookEntryById(tenantId: string, entryId: string) {
+    return withTenantContext(tenantId, async (tx) => {
+      const [entry] = await tx
+        .select()
+        .from(gradebookEntries)
+        .where(and(eq(gradebookEntries.tenantId, tenantId), eq(gradebookEntries.id, entryId)))
+        .limit(1);
+      return entry ?? null;
+    });
+  },
+
+  async createGradeCorrectionRequest(input: {
+    tenantId: string;
+    entry: typeof gradebookEntries.$inferSelect;
+    correction: RequestGradeCorrectionInput;
+    calculation: GradeCalculation;
+    workflowInstanceId: string;
+    requestedById: string;
+  }) {
+    return withTenantContext(input.tenantId, async (tx) => {
+      const now = new Date();
+      await tx
+        .update(gradebookEntries)
+        .set({ status: 'correction_pending', updatedAt: now })
+        .where(and(eq(gradebookEntries.tenantId, input.tenantId), eq(gradebookEntries.id, input.entry.id)));
+
+      const [log] = await tx
+        .insert(gradeCorrectionLogs)
+        .values({
+          tenantId: input.tenantId,
+          gradebookEntryId: input.entry.id,
+          workflowInstanceId: input.workflowInstanceId,
+          previousContinuousAssessmentScore: input.entry.continuousAssessmentScore,
+          previousExamScore: input.entry.examScore,
+          previousTotalScore: input.entry.totalScore,
+          previousGrade: input.entry.grade,
+          newContinuousAssessmentScore: input.correction.continuousAssessmentScore,
+          newExamScore: input.correction.examScore,
+          newTotalScore: input.calculation.totalScore,
+          newGrade: input.calculation.grade,
+          reason: input.correction.reason,
+          requestedById: input.requestedById,
+        })
+        .returning();
+      if (!log) throw new Error('Failed to create grade correction log');
+      return log;
+    });
+  },
+
+  async findGradeCorrectionByWorkflow(tenantId: string, workflowInstanceId: string) {
+    return withTenantContext(tenantId, async (tx) => {
+      const [log] = await tx
+        .select()
+        .from(gradeCorrectionLogs)
+        .where(
+          and(
+            eq(gradeCorrectionLogs.tenantId, tenantId),
+            eq(gradeCorrectionLogs.workflowInstanceId, workflowInstanceId),
+          ),
+        )
+        .limit(1);
+      return log ?? null;
+    });
+  },
+
+  async applyGradeCorrection(input: {
+    tenantId: string;
+    correction: typeof gradeCorrectionLogs.$inferSelect;
+    approvedById: string;
+  }) {
+    return withTenantContext(input.tenantId, async (tx) => {
+      const now = new Date();
+      const [entry] = await tx
+        .update(gradebookEntries)
+        .set({
+          continuousAssessmentScore: input.correction.newContinuousAssessmentScore,
+          examScore: input.correction.newExamScore,
+          totalScore: input.correction.newTotalScore,
+          grade: input.correction.newGrade,
+          status: 'corrected',
+          correctedAt: now,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(gradebookEntries.tenantId, input.tenantId),
+            eq(gradebookEntries.id, input.correction.gradebookEntryId),
+          ),
+        )
+        .returning();
+      if (!entry) throw new Error('Failed to apply grade correction');
+
+      const [log] = await tx
+        .update(gradeCorrectionLogs)
+        .set({ status: 'approved', approvedById: input.approvedById, decidedAt: now, updatedAt: now })
+        .where(and(eq(gradeCorrectionLogs.tenantId, input.tenantId), eq(gradeCorrectionLogs.id, input.correction.id)))
+        .returning();
+      if (!log) throw new Error('Failed to update grade correction log');
+      return { entry, log };
+    });
+  },
+
+  async markGradeCorrectionTerminal(input: {
+    tenantId: string;
+    correction: typeof gradeCorrectionLogs.$inferSelect;
+    status: 'rejected' | 'returned';
+  }) {
+    return withTenantContext(input.tenantId, async (tx) => {
+      const now = new Date();
+      await tx
+        .update(gradebookEntries)
+        .set({ status: 'submitted', updatedAt: now })
+        .where(
+          and(
+            eq(gradebookEntries.tenantId, input.tenantId),
+            eq(gradebookEntries.id, input.correction.gradebookEntryId),
+          ),
+        );
+      const [log] = await tx
+        .update(gradeCorrectionLogs)
+        .set({ status: input.status, decidedAt: now, updatedAt: now })
+        .where(and(eq(gradeCorrectionLogs.tenantId, input.tenantId), eq(gradeCorrectionLogs.id, input.correction.id)))
+        .returning();
+      if (!log) throw new Error('Failed to update grade correction log');
+      return log;
+    });
+  },
+
+  async publishResults(input: PublishResultsInput & { tenantId: string; publishedById: string }) {
+    return withTenantContext(input.tenantId, async (tx) => {
+      const now = new Date();
+      const published = [];
+      for (const result of input.results) {
+        const [existing] = await tx
+          .select()
+          .from(results)
+          .where(
+            and(
+              eq(results.tenantId, input.tenantId),
+              eq(results.termId, input.termId),
+              eq(results.studentId, result.studentId),
+            ),
+          )
+          .limit(1);
+
+        if (existing) {
+          const [updated] = await tx
+            .update(results)
+            .set({
+              classArmId: input.classArmId,
+              averageScore: result.averageScore,
+              status: 'published',
+              publishedById: input.publishedById,
+              publishedAt: now,
+              updatedAt: now,
+            })
+            .where(eq(results.id, existing.id))
+            .returning();
+          if (updated) published.push(updated);
+          continue;
+        }
+
+        const [created] = await tx
+          .insert(results)
+          .values({
+            tenantId: input.tenantId,
+            termId: input.termId,
+            classArmId: input.classArmId,
+            studentId: result.studentId,
+            averageScore: result.averageScore,
+            publishedById: input.publishedById,
+          })
+          .returning();
+        if (created) published.push(created);
+      }
+      return published;
     });
   },
 };

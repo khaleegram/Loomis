@@ -68,5 +68,14 @@ export const academicEvents = {
   },
 };
 
+import { registerEventHandler } from '../../../shared/events/registry.js';
+import { WORKFLOW_EVENT_TYPES } from '../../workflow/events/types.js';
+import { gradebookService } from '../services/gradebook.service.js';
+
+/** Registers Academic consumers for cross-module workflow completion events. */
+export function registerAcademicEventConsumers(): void {
+  registerEventHandler(WORKFLOW_EVENT_TYPES.completed, gradebookService.handleWorkflowCompleted);
+}
+
 export { ACADEMIC_EVENT_TYPES } from './types.js';
 export type { TermCensusLockedPayload } from './types.js';

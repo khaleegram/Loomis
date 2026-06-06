@@ -18,6 +18,7 @@ export * from './hrm/hrm.schema.js';
 
 // Academic
 export * from './academic/academic.schema.js';
+export * from './academic/gradebook.schema.js';
 
 // Student
 export * from './student/student.schema.js';

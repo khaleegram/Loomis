@@ -7,14 +7,21 @@ import type {
   CreateAcademicYearRequest,
   CreateClassArmRequest,
   CreateClassLevelRequest,
+  CreateExamConfigRequest,
+  CreateGradingSchemeRequest,
+  ListGradebookQuery,
+  PublishResultsRequest,
+  RequestGradeCorrectionRequest,
   StagePromotionRequest,
   UpsertProgressionRequest,
+  UpsertGradebookEntryRequest,
 } from '@loomis/contracts';
 import { sendSuccess } from '../../../shared/http.js';
 import {
   academicYearService,
   censusService,
   classStructureService,
+  gradebookService,
   promotionService,
   termService,
 } from '../services/index.js';
@@ -25,8 +32,13 @@ import {
   censusLockToResponse,
   classArmToResponse,
   classLevelToResponse,
+  examConfigToResponse,
+  gradebookEntryToResponse,
+  gradeCorrectionToResponse,
+  gradingSchemeToResponse,
   progressionToResponse,
   promotionRecordToResponse,
+  resultToResponse,
 } from './_serializers.js';
 
 interface TenantParams {
@@ -37,6 +49,9 @@ interface YearParams extends TenantParams {
 }
 interface TermParams extends TenantParams {
   termId: string;
+}
+interface EntryParams extends TenantParams {
+  entryId: string;
 }
 
 // ── Academic years ───────────────────────────────────────────────────────────
@@ -268,4 +283,83 @@ export async function confirmPromotionsHandler(
     requireActor(req),
   );
   return sendSuccess(reply, { records: records.map(promotionRecordToResponse) });
+}
+
+// ── Grading schemes, gradebook & results ───────────────────────────────────────
+
+export async function createGradingSchemeHandler(
+  req: FastifyRequest<{ Params: TenantParams; Body: CreateGradingSchemeRequest }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const scheme = await gradebookService.createGradingScheme(req.params.tenantId, req.body, requireActor(req));
+  return sendSuccess(reply, gradingSchemeToResponse(scheme), 201);
+}
+
+export async function listGradingSchemesHandler(
+  req: FastifyRequest<{ Params: TenantParams }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const schemes = await gradebookService.listGradingSchemes(req.params.tenantId, requireActor(req));
+  return sendSuccess(reply, { schemes: schemes.map(gradingSchemeToResponse) });
+}
+
+export async function createExamConfigHandler(
+  req: FastifyRequest<{ Params: TenantParams; Body: CreateExamConfigRequest }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const config = await gradebookService.createExamConfig(req.params.tenantId, req.body, requireActor(req));
+  return sendSuccess(reply, examConfigToResponse(config), 201);
+}
+
+export async function listExamConfigsHandler(
+  req: FastifyRequest<{ Params: TermParams }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const configs = await gradebookService.listExamConfigs(
+    req.params.tenantId,
+    req.params.termId,
+    requireActor(req),
+  );
+  return sendSuccess(reply, { configs: configs.map(examConfigToResponse) });
+}
+
+export async function upsertGradebookEntryHandler(
+  req: FastifyRequest<{ Params: TenantParams; Body: UpsertGradebookEntryRequest }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const entry = await gradebookService.upsertGradebookEntry(req.params.tenantId, req.body, requireActor(req));
+  return sendSuccess(reply, gradebookEntryToResponse(entry), 201);
+}
+
+export async function listGradebookEntriesHandler(
+  req: FastifyRequest<{ Params: TenantParams; Querystring: ListGradebookQuery }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const entries = await gradebookService.listGradebookEntries(
+    req.params.tenantId,
+    req.query,
+    requireActor(req),
+  );
+  return sendSuccess(reply, { entries: entries.map(gradebookEntryToResponse) });
+}
+
+export async function requestGradeCorrectionHandler(
+  req: FastifyRequest<{ Params: EntryParams; Body: RequestGradeCorrectionRequest }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const correction = await gradebookService.requestGradeCorrection(
+    req.params.tenantId,
+    req.params.entryId,
+    req.body,
+    requireActor(req),
+  );
+  return sendSuccess(reply, gradeCorrectionToResponse(correction), 202);
+}
+
+export async function publishResultsHandler(
+  req: FastifyRequest<{ Params: TenantParams; Body: PublishResultsRequest }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const published = await gradebookService.publishResults(req.params.tenantId, req.body, requireActor(req));
+  return sendSuccess(reply, { results: published.map(resultToResponse) }, 201);
 }

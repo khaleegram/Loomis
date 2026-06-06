@@ -194,6 +194,45 @@ export const staffService = {
     return serializeProfile(profile, roles);
   },
 
+  async findActiveProfileByUserId(tenantId: string, userId: string) {
+    return staffRepository.findProfileByUserId(tenantId, userId);
+  },
+
+  async findActiveSubjectAssignmentForUser(input: {
+    tenantId: string;
+    userId: string;
+    termId: string;
+    classArmId: string;
+    subjectId: string;
+  }) {
+    const profile = await staffRepository.findProfileByUserId(input.tenantId, input.userId);
+    if (!profile || profile.status !== 'active') return null;
+    return staffRepository.findActiveSubjectAssignment({
+      tenantId: input.tenantId,
+      staffProfileId: profile.id,
+      termId: input.termId,
+      classArmId: input.classArmId,
+      subjectId: input.subjectId,
+    });
+  },
+
+  async findActiveClassTeacherAssignmentForUser(input: {
+    tenantId: string;
+    userId: string;
+    termId: string;
+    classArmId: string;
+  }) {
+    const profile = await staffRepository.findProfileByUserId(input.tenantId, input.userId);
+    if (!profile || profile.status !== 'active') return null;
+    const assignment = await staffRepository.findActiveClassTeacherForStaffTerm(
+      input.tenantId,
+      profile.id,
+      input.termId,
+    );
+    if (!assignment || assignment.classArmId !== input.classArmId) return null;
+    return assignment;
+  },
+
   async changePrimaryRole(
     tenantId: string,
     staffProfileId: string,
