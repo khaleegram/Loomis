@@ -113,6 +113,20 @@
       "when": 1780707416724,
       "tag": "0016_academic_attendance_timetable",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1780707416722,
+      "tag": "0014_finance",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1780707416723,
+      "tag": "0015_finance_constraints_rls",
+      "breakpoints": true
     }
   ]
 }

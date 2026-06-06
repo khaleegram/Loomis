@@ -7,6 +7,7 @@ export default defineConfig({
     './drizzle/schema/hrm.ts',
     './drizzle/schema/academic.ts',
     './drizzle/schema/ledger.ts',
+    './drizzle/schema/finance.ts',
     './drizzle/schema/student.ts',
     './drizzle/schema/workflow.ts',
     './drizzle/schema/storage.ts',
@@ -16,5 +17,5 @@ export default defineConfig({
   dbCredentials: {
     url: process.env.DATABASE_URL!,
   },
-  schemaFilter: ['identity', 'tenant', 'hrm', 'academic', 'ledger', 'student', 'workflow', 'storage'],
+  schemaFilter: ['identity', 'tenant', 'hrm', 'academic', 'ledger', 'finance', 'student', 'workflow', 'storage'],
 });

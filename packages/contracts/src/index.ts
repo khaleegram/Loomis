@@ -20,6 +20,9 @@ export * from './hrm/hrm.schema.js';
 export * from './academic/academic.schema.js';
 export * from './academic/gradebook.schema.js';
 
+// Finance
+export * from './finance/finance.schema.js';
+
 // Student
 export * from './student/student.schema.js';
 

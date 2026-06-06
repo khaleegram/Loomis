@@ -6,6 +6,7 @@ import * as tenantSchema from '../../drizzle/schema/tenant.js';
 import * as hrmSchema from '../../drizzle/schema/hrm.js';
 import * as academicSchema from '../../drizzle/schema/academic.js';
 import * as ledgerSchema from '../../drizzle/schema/ledger.js';
+import * as financeSchema from '../../drizzle/schema/finance.js';
 import * as studentSchema from '../../drizzle/schema/student.js';
 import * as storageSchema from '../../drizzle/schema/storage.js';
 
@@ -20,6 +21,7 @@ export const db = drizzle(client, {
     ...hrmSchema,
     ...academicSchema,
     ...ledgerSchema,
+    ...financeSchema,
     ...studentSchema,
     ...storageSchema,
   },

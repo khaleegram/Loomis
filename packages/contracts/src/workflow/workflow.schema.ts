@@ -16,6 +16,7 @@ export const workflowType = z.enum([
   'grade_correction',
   'admission_decision',
   'financial_adjustment',
+  'fee_structure_change',
   'student_transfer_out',
   'psf_waiver',
   'psf_rate_override',
@@ -198,6 +199,13 @@ export const DEFAULT_WORKFLOW_CHAINS: Record<
       { role: 'principal', timeoutHours: 48 },
       { role: 'school_owner', timeoutHours: 72 },
     ],
+  },
+  // Amending a fee structure after its term has opened requires Principal
+  // approval (US-FIN-001). Mandatory so it can never be disabled per tenant.
+  fee_structure_change: {
+    scope: 'tenant',
+    isMandatory: true,
+    chain: [{ role: 'principal', timeoutHours: 48, escalatesToRole: 'school_owner' }],
   },
   student_transfer_out: {
     scope: 'tenant',
