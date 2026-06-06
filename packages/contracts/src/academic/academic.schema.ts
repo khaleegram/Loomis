@@ -310,3 +310,320 @@ export const promotionListResponse = z.object({
   records: z.array(promotionRecordResponse),
 });
 export type PromotionListResponse = z.infer<typeof promotionListResponse>;
+
+
+// ── Attendance (SRS §4.5 FR-ACA-002; CON-003; US-ACA-005) ────────────────────
+//
+// Attendance marking is EXCLUSIVELY a Class Teacher capability (CON-003). Regular
+// Teachers have no attendance access at all — enforced at the route middleware
+// (requireRole('class_teacher')) and again in the service layer. Offline entries
+// captured on the mobile app are signed with a per-tenant device key and verified
+// server-side at sync (MOB-007). A submitted day's attendance may be amended only
+// within the same day, and every amendment is logged.
+
+export const attendanceStatus = z.enum(['present', 'absent', 'late', 'excused']);
+export type AttendanceStatus = z.infer<typeof attendanceStatus>;
+
+/** Session granularity — schools may mark once per day or split AM/PM. */
+export const attendanceSession = z.enum(['morning', 'afternoon', 'full_day']);
+export type AttendanceSession = z.infer<typeof attendanceSession>;
+
+/** How a record reached the server (FR-ACA-002 offline support / MOB-007). */
+export const attendanceSource = z.enum(['online', 'offline_sync']);
+export type AttendanceSource = z.infer<typeof attendanceSource>;
+
+/** One student's status within a batch mark. */
+export const attendanceMarkEntry = z.object({
+  studentId: z.string().uuid(),
+  status: attendanceStatus,
+});
+export type AttendanceMarkEntry = z.infer<typeof attendanceMarkEntry>;
+
+/**
+ * US-ACA-005. The Class Teacher marks the whole class list for one date/session
+ * in a single online call. `attendanceDate` must be today (server-validated).
+ */
+export const markAttendanceRequest = z.object({
+  termId: z.string().uuid(),
+  classArmId: z.string().uuid(),
+  attendanceDate: calendarDate,
+  session: attendanceSession.default('full_day'),
+  entries: z.array(attendanceMarkEntry).min(1).max(500),
+});
+export type MarkAttendanceRequest = z.infer<typeof markAttendanceRequest>;
+
+/** Same-day amendment of a single record (US-ACA-005). Reason is logged. */
+export const amendAttendanceRequest = z.object({
+  status: attendanceStatus,
+  reason: z.string().min(3).max(500),
+});
+export type AmendAttendanceRequest = z.infer<typeof amendAttendanceRequest>;
+
+/**
+ * A single offline-captured entry. It is self-describing (carries its own
+ * tenant/term/class/student/date) and is signed by the device's private key over
+ * the canonical message (see device-signature.ts). `originTenantId` MUST match
+ * the authenticated tenant at sync time — any mismatch rejects the WHOLE batch
+ * (MOB-007: never partially applied).
+ */
+export const offlineAttendanceEntry = z.object({
+  originTenantId: z.string().uuid(),
+  termId: z.string().uuid(),
+  classArmId: z.string().uuid(),
+  studentId: z.string().uuid(),
+  attendanceDate: calendarDate,
+  session: attendanceSession.default('full_day'),
+  status: attendanceStatus,
+  /** When the entry was captured on-device (ISO-8601), part of the signed message. */
+  capturedAt: z.string().datetime(),
+  /** Base64 ECDSA P-256 (IEEE-P1363) signature over the canonical message. */
+  signature: z.string().min(1).max(512),
+});
+export type OfflineAttendanceEntry = z.infer<typeof offlineAttendanceEntry>;
+
+/** US-ACA-005 offline sync. All entries are verified before any are applied. */
+export const syncOfflineAttendanceRequest = z.object({
+  deviceId: z.string().uuid(),
+  entries: z.array(offlineAttendanceEntry).min(1).max(200),
+});
+export type SyncOfflineAttendanceRequest = z.infer<typeof syncOfflineAttendanceRequest>;
+
+export const listAttendanceQuery = z.object({
+  termId: z.string().uuid(),
+  classArmId: z.string().uuid(),
+  attendanceDate: calendarDate.optional(),
+  studentId: z.string().uuid().optional(),
+});
+export type ListAttendanceQuery = z.infer<typeof listAttendanceQuery>;
+
+export const attendanceRecordResponse = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
+  termId: z.string().uuid(),
+  classArmId: z.string().uuid(),
+  studentId: z.string().uuid(),
+  attendanceDate: calendarDate,
+  session: attendanceSession,
+  status: attendanceStatus,
+  source: attendanceSource,
+  deviceId: z.string().uuid().nullable(),
+  signatureVerified: z.boolean(),
+  markedByStaffProfileId: z.string().uuid(),
+  capturedAt: z.string().datetime().nullable(),
+  syncedAt: z.string().datetime().nullable(),
+  amendedAt: z.string().datetime().nullable(),
+  previousStatus: attendanceStatus.nullable(),
+  amendmentReason: z.string().nullable(),
+  amendmentCount: z.number().int(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+export type AttendanceRecordResponse = z.infer<typeof attendanceRecordResponse>;
+
+export const attendanceListResponse = z.object({
+  records: z.array(attendanceRecordResponse),
+});
+export type AttendanceListResponse = z.infer<typeof attendanceListResponse>;
+
+export const syncOfflineAttendanceResponse = z.object({
+  applied: z.number().int(),
+  records: z.array(attendanceRecordResponse),
+});
+export type SyncOfflineAttendanceResponse = z.infer<typeof syncOfflineAttendanceResponse>;
+
+// ── Attendance Device Keys (MOB-007: per-tenant device signing key) ───────────
+//
+// The mobile client generates an ECDSA P-256 key pair, keeps the private key in
+// the device secure keystore, and registers the PUBLIC key here. The server uses
+// it to verify offline attendance signatures at sync.
+
+export const registerDeviceKeyRequest = z.object({
+  deviceId: z.string().uuid(),
+  /** SPKI PEM-encoded ECDSA P-256 public key. */
+  publicKeyPem: z.string().min(1).max(2000),
+  label: z.string().min(1).max(120).optional(),
+});
+export type RegisterDeviceKeyRequest = z.infer<typeof registerDeviceKeyRequest>;
+
+export const deviceKeyResponse = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
+  deviceId: z.string().uuid(),
+  label: z.string().nullable(),
+  revoked: z.boolean(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+export type DeviceKeyResponse = z.infer<typeof deviceKeyResponse>;
+
+export const deviceKeyListResponse = z.object({
+  devices: z.array(deviceKeyResponse),
+});
+export type DeviceKeyListResponse = z.infer<typeof deviceKeyListResponse>;
+
+// ── Timetable (SRS §4.5 FR-ACA-001; US-ACA-006) ──────────────────────────────
+//
+// A timetable is the set of period slots for a (term, class arm). The builder
+// detects conflicts — a teacher, a class arm, or a venue double-booked in an
+// overlapping time window on the same weekday — and refuses to save (US-ACA-006).
+// Times are minutes-from-midnight to make overlap maths exact and timezone-free.
+
+export const timetableEntryStatus = z.enum(['draft', 'published']);
+export type TimetableEntryStatus = z.infer<typeof timetableEntryStatus>;
+
+/** 1 = Monday … 7 = Sunday (ISO-8601 weekday). */
+export const weekday = z.number().int().min(1).max(7);
+
+export const createTimetableEntryRequest = z
+  .object({
+    termId: z.string().uuid(),
+    classArmId: z.string().uuid(),
+    subjectId: z.string().uuid(),
+    teacherStaffProfileId: z.string().uuid(),
+    dayOfWeek: weekday,
+    startMinute: z.number().int().min(0).max(1439),
+    endMinute: z.number().int().min(1).max(1440),
+    venue: z.string().min(1).max(120).optional(),
+  })
+  .refine((v) => v.endMinute > v.startMinute, {
+    message: 'endMinute must be after startMinute',
+    path: ['endMinute'],
+  });
+export type CreateTimetableEntryRequest = z.infer<typeof createTimetableEntryRequest>;
+
+export const publishTimetableRequest = z.object({
+  termId: z.string().uuid(),
+  classArmId: z.string().uuid(),
+});
+export type PublishTimetableRequest = z.infer<typeof publishTimetableRequest>;
+
+export const listTimetableQuery = z.object({
+  termId: z.string().uuid(),
+  classArmId: z.string().uuid(),
+});
+export type ListTimetableQuery = z.infer<typeof listTimetableQuery>;
+
+export const timetableEntryResponse = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
+  termId: z.string().uuid(),
+  classArmId: z.string().uuid(),
+  subjectId: z.string().uuid(),
+  teacherStaffProfileId: z.string().uuid(),
+  dayOfWeek: z.number().int(),
+  startMinute: z.number().int(),
+  endMinute: z.number().int(),
+  venue: z.string().nullable(),
+  status: timetableEntryStatus,
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+export type TimetableEntryResponse = z.infer<typeof timetableEntryResponse>;
+
+export const timetableListResponse = z.object({
+  entries: z.array(timetableEntryResponse),
+});
+export type TimetableListResponse = z.infer<typeof timetableListResponse>;
+
+// ── Assignments & Submissions (SRS §4.5 FR-ACA-003; US-ACA-007) ───────────────
+//
+// Teachers create assignments for their own assigned subject/class (verified at
+// the service layer against the HRM subject assignment). Students submit; teachers
+// grade against individual submissions. A submission after the due date is flagged
+// late automatically.
+
+export const assignmentStatus = z.enum(['draft', 'published', 'closed']);
+export type AssignmentStatus = z.infer<typeof assignmentStatus>;
+
+export const createAssignmentRequest = z.object({
+  termId: z.string().uuid(),
+  classArmId: z.string().uuid(),
+  subjectId: z.string().uuid(),
+  title: z.string().min(1).max(200),
+  instructions: z.string().min(1).max(5000),
+  dueAt: z.string().datetime(),
+  maxScore: z.number().int().min(1).max(1000).default(100),
+});
+export type CreateAssignmentRequest = z.infer<typeof createAssignmentRequest>;
+
+export const updateAssignmentRequest = z.object({
+  title: z.string().min(1).max(200).optional(),
+  instructions: z.string().min(1).max(5000).optional(),
+  dueAt: z.string().datetime().optional(),
+  maxScore: z.number().int().min(1).max(1000).optional(),
+});
+export type UpdateAssignmentRequest = z.infer<typeof updateAssignmentRequest>;
+
+export const listAssignmentsQuery = z.object({
+  termId: z.string().uuid(),
+  classArmId: z.string().uuid(),
+  subjectId: z.string().uuid().optional(),
+});
+export type ListAssignmentsQuery = z.infer<typeof listAssignmentsQuery>;
+
+export const assignmentResponse = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
+  termId: z.string().uuid(),
+  classArmId: z.string().uuid(),
+  subjectId: z.string().uuid(),
+  teacherStaffProfileId: z.string().uuid(),
+  title: z.string(),
+  instructions: z.string(),
+  dueAt: z.string().datetime(),
+  maxScore: z.number().int(),
+  status: assignmentStatus,
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+export type AssignmentResponse = z.infer<typeof assignmentResponse>;
+
+export const assignmentListResponse = z.object({
+  assignments: z.array(assignmentResponse),
+});
+export type AssignmentListResponse = z.infer<typeof assignmentListResponse>;
+
+export const submissionStatus = z.enum(['submitted', 'late', 'graded', 'returned']);
+export type SubmissionStatus = z.infer<typeof submissionStatus>;
+
+/** A student submits work — text content and/or an uploaded storage object. */
+export const createSubmissionRequest = z
+  .object({
+    content: z.string().min(1).max(10000).optional(),
+    storageObjectId: z.string().uuid().optional(),
+  })
+  .refine((v) => v.content !== undefined || v.storageObjectId !== undefined, {
+    message: 'A submission must include content or an attached file',
+    path: ['content'],
+  });
+export type CreateSubmissionRequest = z.infer<typeof createSubmissionRequest>;
+
+export const gradeSubmissionRequest = z.object({
+  score: z.number().int().min(0).max(1000),
+  feedback: z.string().min(1).max(2000).optional(),
+});
+export type GradeSubmissionRequest = z.infer<typeof gradeSubmissionRequest>;
+
+export const submissionResponse = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
+  assignmentId: z.string().uuid(),
+  studentId: z.string().uuid(),
+  content: z.string().nullable(),
+  storageObjectId: z.string().uuid().nullable(),
+  status: submissionStatus,
+  isLate: z.boolean(),
+  submittedAt: z.string().datetime(),
+  score: z.number().int().nullable(),
+  feedback: z.string().nullable(),
+  gradedByStaffProfileId: z.string().uuid().nullable(),
+  gradedAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+export type SubmissionResponse = z.infer<typeof submissionResponse>;
+
+export const submissionListResponse = z.object({
+  submissions: z.array(submissionResponse),
+});
+export type SubmissionListResponse = z.infer<typeof submissionListResponse>;

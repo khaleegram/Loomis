@@ -536,3 +536,280 @@ export const results = academicSchema.table(
     statusValid: check('results_status_valid', sql`${table.status} IN ('published', 'withdrawn')`),
   }),
 );
+
+/**
+ * Attendance records (SRS §4.5 FR-ACA-002; CON-003; US-ACA-005). One row per
+ * student per session per day. Attendance marking is EXCLUSIVELY a Class Teacher
+ * capability — enforced at the route (requireRole('class_teacher')) and again in
+ * the service layer; regular Teachers have no attendance access at all.
+ *
+ * Offline entries captured on the mobile app arrive via the sync endpoint signed
+ * with a per-tenant device key (see `attendanceDeviceKeys`); `source`,
+ * `deviceId`, `signatureVerified`, and `capturedAt` record that provenance. A
+ * submitted day's record may be amended only within the same day; each amendment
+ * stores `previousStatus`/`amendmentReason`/`amendedAt` and increments
+ * `amendmentCount`, and is additionally written to the immutable audit log.
+ *
+ * `studentId` / `markedByStaffProfileId` reference the Student and HRM modules and
+ * are stored without DB FKs (cross-module), mirroring the existing gradebook rows.
+ */
+export const attendanceRecords = academicSchema.table(
+  'attendance_records',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id),
+    termId: uuid('term_id')
+      .notNull()
+      .references(() => academicTerms.id),
+    classArmId: uuid('class_arm_id')
+      .notNull()
+      .references(() => classArms.id),
+    studentId: uuid('student_id').notNull(),
+    attendanceDate: date('attendance_date').notNull(),
+    session: varchar('session', { length: 20 }).notNull().default('full_day'),
+    status: varchar('status', { length: 20 }).notNull(),
+    source: varchar('source', { length: 20 }).notNull().default('online'),
+    deviceId: uuid('device_id'),
+    signatureVerified: boolean('signature_verified').notNull().default(false),
+    markedByStaffProfileId: uuid('marked_by_staff_profile_id').notNull(),
+    markedByUserId: uuid('marked_by_user_id').notNull(),
+    capturedAt: timestamp('captured_at', { withTimezone: true }),
+    syncedAt: timestamp('synced_at', { withTimezone: true }),
+    amendedAt: timestamp('amended_at', { withTimezone: true }),
+    amendedByUserId: uuid('amended_by_user_id'),
+    previousStatus: varchar('previous_status', { length: 20 }),
+    amendmentReason: varchar('amendment_reason', { length: 500 }),
+    amendmentCount: integer('amendment_count').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    studentSessionUnique: uniqueIndex('attendance_records_student_session_unique').on(
+      table.tenantId,
+      table.termId,
+      table.classArmId,
+      table.studentId,
+      table.attendanceDate,
+      table.session,
+    ),
+    classDateIdx: index('attendance_records_class_date_idx').on(
+      table.tenantId,
+      table.termId,
+      table.classArmId,
+      table.attendanceDate,
+    ),
+    studentIdx: index('attendance_records_student_idx').on(
+      table.tenantId,
+      table.termId,
+      table.studentId,
+    ),
+    statusValid: check(
+      'attendance_records_status_valid',
+      sql`${table.status} IN ('present', 'absent', 'late', 'excused')`,
+    ),
+    sessionValid: check(
+      'attendance_records_session_valid',
+      sql`${table.session} IN ('morning', 'afternoon', 'full_day')`,
+    ),
+    sourceValid: check(
+      'attendance_records_source_valid',
+      sql`${table.source} IN ('online', 'offline_sync')`,
+    ),
+  }),
+);
+
+/**
+ * Per-tenant device signing keys (MOB-007). The mobile client generates an ECDSA
+ * P-256 key pair, keeps the private key in the device secure keystore, and
+ * registers the SPKI public key here. The server verifies offline attendance
+ * signatures against this key at sync time. A revoked key can no longer sync.
+ */
+export const attendanceDeviceKeys = academicSchema.table(
+  'attendance_device_keys',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id),
+    deviceId: uuid('device_id').notNull(),
+    publicKeyPem: varchar('public_key_pem', { length: 2000 }).notNull(),
+    label: varchar('label', { length: 120 }),
+    registeredByUserId: uuid('registered_by_user_id').notNull(),
+    revoked: boolean('revoked').notNull().default(false),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    // One ACTIVE signing key per device; a revoked key can be replaced (rotation).
+    tenantDeviceActiveUnique: uniqueIndex('attendance_device_keys_tenant_device_active_unique')
+      .on(table.tenantId, table.deviceId)
+      .where(sql`${table.revoked} = false`),
+    tenantDeviceIdx: index('attendance_device_keys_tenant_device_idx').on(
+      table.tenantId,
+      table.deviceId,
+    ),
+  }),
+);
+
+/**
+ * Timetable period slots (SRS §4.5 FR-ACA-001; US-ACA-006). The set of rows for a
+ * (term, class arm) is the class timetable. Conflict detection (a teacher, class
+ * arm, or venue double-booked in an overlapping window on the same weekday) runs
+ * in the service before insert and refuses to save on conflict. Times are stored
+ * as minutes-from-midnight so overlap maths is exact and timezone-free.
+ */
+export const timetables = academicSchema.table(
+  'timetables',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id),
+    termId: uuid('term_id')
+      .notNull()
+      .references(() => academicTerms.id),
+    classArmId: uuid('class_arm_id')
+      .notNull()
+      .references(() => classArms.id),
+    subjectId: uuid('subject_id').notNull(),
+    teacherStaffProfileId: uuid('teacher_staff_profile_id').notNull(),
+    dayOfWeek: integer('day_of_week').notNull(),
+    startMinute: integer('start_minute').notNull(),
+    endMinute: integer('end_minute').notNull(),
+    venue: varchar('venue', { length: 120 }),
+    status: varchar('status', { length: 20 }).notNull().default('draft'),
+    createdById: uuid('created_by_id').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    classDayIdx: index('timetables_class_day_idx').on(
+      table.tenantId,
+      table.termId,
+      table.classArmId,
+      table.dayOfWeek,
+    ),
+    teacherDayIdx: index('timetables_teacher_day_idx').on(
+      table.tenantId,
+      table.termId,
+      table.teacherStaffProfileId,
+      table.dayOfWeek,
+    ),
+    dayValid: check('timetables_day_valid', sql`${table.dayOfWeek} BETWEEN 1 AND 7`),
+    timeValid: check(
+      'timetables_time_valid',
+      sql`${table.startMinute} >= 0 AND ${table.startMinute} < 1440 AND ${table.endMinute} > ${table.startMinute} AND ${table.endMinute} <= 1440`,
+    ),
+    statusValid: check('timetables_status_valid', sql`${table.status} IN ('draft', 'published')`),
+  }),
+);
+
+/**
+ * Assignments (SRS §4.5 FR-ACA-003; US-ACA-007). A Teacher creates an assignment
+ * for their own assigned subject/class (verified at the service layer against the
+ * HRM subject assignment). `instructions` is stored as a long varchar to avoid a
+ * separate `text` import; it is bounded by the Zod contract.
+ */
+export const assignments = academicSchema.table(
+  'assignments',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id),
+    termId: uuid('term_id')
+      .notNull()
+      .references(() => academicTerms.id),
+    classArmId: uuid('class_arm_id')
+      .notNull()
+      .references(() => classArms.id),
+    subjectId: uuid('subject_id').notNull(),
+    teacherStaffProfileId: uuid('teacher_staff_profile_id').notNull(),
+    title: varchar('title', { length: 200 }).notNull(),
+    instructions: varchar('instructions', { length: 5000 }).notNull(),
+    dueAt: timestamp('due_at', { withTimezone: true }).notNull(),
+    maxScore: integer('max_score').notNull().default(100),
+    status: varchar('status', { length: 20 }).notNull().default('draft'),
+    createdById: uuid('created_by_id').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    classSubjectIdx: index('assignments_class_subject_idx').on(
+      table.tenantId,
+      table.termId,
+      table.classArmId,
+      table.subjectId,
+    ),
+    classStatusIdx: index('assignments_class_status_idx').on(
+      table.tenantId,
+      table.classArmId,
+      table.status,
+    ),
+    statusValid: check(
+      'assignments_status_valid',
+      sql`${table.status} IN ('draft', 'published', 'closed')`,
+    ),
+    maxScoreValid: check('assignments_max_score_valid', sql`${table.maxScore} > 0`),
+  }),
+);
+
+/**
+ * Assignment submissions (SRS §4.5 FR-ACA-003; US-ACA-007). One row per student
+ * per assignment. A submission after the assignment due date is flagged `isLate`
+ * automatically by the service. Teachers grade against the individual submission.
+ */
+export const submissions = academicSchema.table(
+  'submissions',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id),
+    assignmentId: uuid('assignment_id')
+      .notNull()
+      .references(() => assignments.id),
+    studentId: uuid('student_id').notNull(),
+    content: varchar('content', { length: 10000 }),
+    storageObjectId: uuid('storage_object_id'),
+    status: varchar('status', { length: 20 }).notNull().default('submitted'),
+    isLate: boolean('is_late').notNull().default(false),
+    submittedAt: timestamp('submitted_at', { withTimezone: true }).notNull().defaultNow(),
+    score: integer('score'),
+    feedback: varchar('feedback', { length: 2000 }),
+    gradedByStaffProfileId: uuid('graded_by_staff_profile_id'),
+    gradedAt: timestamp('graded_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    assignmentStudentUnique: uniqueIndex('submissions_assignment_student_unique').on(
+      table.tenantId,
+      table.assignmentId,
+      table.studentId,
+    ),
+    assignmentStatusIdx: index('submissions_assignment_status_idx').on(
+      table.tenantId,
+      table.assignmentId,
+      table.status,
+    ),
+    statusValid: check(
+      'submissions_status_valid',
+      sql`${table.status} IN ('submitted', 'late', 'graded', 'returned')`,
+    ),
+    scoreValid: check('submissions_score_valid', sql`${table.score} IS NULL OR ${table.score} >= 0`),
+  }),
+);
