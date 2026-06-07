@@ -55,6 +55,12 @@ export const SCHOOL_NAV: SchoolNavItem[] = [
     capabilities: ['fee.configure', 'payment.log', 'payment.verify', 'refund.initiate', 'refund.approve'],
   },
   {
+    label: 'PSF Obligations',
+    href: '/school/finance/psf',
+    icon: ShieldCheck,
+    capabilities: ['fee.configure'],
+  },
+  {
     label: 'Exams',
     href: '/school/exams',
     icon: ClipboardList,
