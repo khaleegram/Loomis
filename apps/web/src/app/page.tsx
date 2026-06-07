@@ -9,8 +9,8 @@ export default function Home() {
           School management platform for Nigerian private schools.
         </p>
       </div>
-      <Button variant="outline" disabled>
-        Sign in (coming soon)
+      <Button variant="outline" asChild>
+        <a href="/login">Sign in</a>
       </Button>
     </main>
   );

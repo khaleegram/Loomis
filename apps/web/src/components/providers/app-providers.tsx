@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 
 import { createWebApiClient } from '@/lib/api/create-web-api-client';
+import { AuthProvider } from '@/lib/auth/auth-context';
 
 interface AppProvidersProps {
   children: ReactNode;
@@ -27,7 +28,9 @@ export function AppProviders({ children }: AppProvidersProps) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ApiClientProvider client={apiClient}>{children}</ApiClientProvider>
+      <ApiClientProvider client={apiClient}>
+        <AuthProvider>{children}</AuthProvider>
+      </ApiClientProvider>
     </QueryClientProvider>
   );
 }

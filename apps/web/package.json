@@ -11,6 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.4.0",
     "@loomis/api-client": "workspace:*",
     "@loomis/contracts": "workspace:*",
     "@loomis/core": "workspace:*",
@@ -20,6 +21,8 @@
     "next": "15.5.19",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-hook-form": "^7.77.0",
+    "zod": "^3.23.8",
     "zustand": "^4.5.5"
   },
   "devDependencies": {
