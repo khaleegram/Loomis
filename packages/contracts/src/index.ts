@@ -34,3 +34,6 @@ export * from './workflow/workflow.schema.js';
 
 // Storage
 export * from './storage/storage.schema.js';
+
+// Risk / IVP
+export * from './risk/risk.schema.js';
