@@ -6,6 +6,7 @@ import {
   buildAttestationHash,
   buildStudentListHash,
 } from '../../student/utils/attestation-hash.js';
+import { configurationRepository } from '../../tenant/repository/configuration.repository.js';
 import { psfRateService } from '../../tenant/services/psf-rate.service.js';
 import { tenantRepository } from '../../tenant/repository/tenant.repository.js';
 import type { TermCensusLockedPayload } from '../events/types.js';
@@ -18,7 +19,68 @@ import { requireTenant, requireTerm } from './_shared.js';
 /** Variance tolerance before a documented reason is required (System Design §8.1 step 3). */
 const VARIANCE_TOLERANCE = 0.02;
 
+const MTC_CONFIG_KEY = 'minimum_term_commitment';
+
+function parseMinimumTermCommitment(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isInteger(value) && value >= 0) {
+    return value;
+  }
+  if (typeof value === 'string' && /^\d+$/.test(value)) {
+    return Number.parseInt(value, 10);
+  }
+  return null;
+}
+
 export const censusService = {
+  /**
+   * Read-only census review (US-ASM-003). Returns the system billable count,
+   * class-level breakdown, MTC, and effective PSF rate without locking.
+   */
+  async previewCensus(tenantId: string, termId: string, actor: ActorContext) {
+    requireTenant(actor, tenantId);
+    const term = await requireTerm(tenantId, termId);
+
+    if (term.status === 'census_locked' || term.status === 'closed') {
+      throw new LoomisError(
+        'ACADEMIC_CENSUS_ALREADY_LOCKED',
+        409,
+        'The census for this term has already been locked',
+      );
+    }
+    if (term.status !== 'open') {
+      throw new LoomisError(
+        'ACADEMIC_CENSUS_NOT_READY',
+        409,
+        'The term must be open before its census can be reviewed (FR-ASM-005)',
+      );
+    }
+
+    const tenant = await tenantRepository.findById(tenantId);
+    if (!tenant) {
+      throw new LoomisError('TENANT_NOT_FOUND', 404, 'Tenant not found');
+    }
+
+    const [studentIds, classLevelBreakdown, mtcConfig] = await Promise.all([
+      studentRepository.listBillableStudentIds(tenantId, termId),
+      studentRepository.listBillableCountByClassLevel(tenantId, termId),
+      configurationRepository.findByKey(tenantId, MTC_CONFIG_KEY),
+    ]);
+
+    const psfRateMinor = await psfRateService.resolveEffectiveRateMinor(tenantId, tenant.tierId);
+
+    return {
+      termId: term.id,
+      academicYearId: term.academicYearId,
+      termName: term.name,
+      termStatus: term.status,
+      systemBillableCount: studentIds.length,
+      classLevelBreakdown,
+      minimumTermCommitment: parseMinimumTermCommitment(mtcConfig?.value ?? null),
+      psfRateMinor: psfRateMinor !== null && psfRateMinor > 0 ? psfRateMinor : null,
+      varianceTolerance: VARIANCE_TOLERANCE,
+    };
+  },
+
   /**
    * Locks the enrollment census (FR-SIS-006 / FR-ASM-005 / US-ASM-003; System
    * Design §8.1). Step-up MFA and the Idempotency-Key are enforced at the route.

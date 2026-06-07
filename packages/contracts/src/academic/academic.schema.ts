@@ -170,6 +170,32 @@ export const censusLockResponse = z.object({
 });
 export type CensusLockResponse = z.infer<typeof censusLockResponse>;
 
+/** Billable enrollment count grouped by class level (US-ASM-003 preview). */
+export const censusClassLevelBreakdown = z.object({
+  classLevelId: z.string().uuid(),
+  classLevelCode: z.string(),
+  classLevelName: z.string(),
+  billableCount: z.number().int(),
+});
+export type CensusClassLevelBreakdown = z.infer<typeof censusClassLevelBreakdown>;
+
+/**
+ * Pre-lock census review payload (US-ASM-003). Read-only; does not create
+ * obligations. `minimumTermCommitment` is null when not configured for the tenant.
+ */
+export const censusPreviewResponse = z.object({
+  termId: z.string().uuid(),
+  academicYearId: z.string().uuid(),
+  termName: z.string(),
+  termStatus: academicTermStatus,
+  systemBillableCount: z.number().int(),
+  classLevelBreakdown: z.array(censusClassLevelBreakdown),
+  minimumTermCommitment: z.number().int().nullable(),
+  psfRateMinor: z.number().int().nullable(),
+  varianceTolerance: z.number(),
+});
+export type CensusPreviewResponse = z.infer<typeof censusPreviewResponse>;
+
 // ── Class Structure (FR-ASM-009) ─────────────────────────────────────────────────
 
 export const createClassLevelRequest = z.object({

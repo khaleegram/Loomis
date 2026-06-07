@@ -6,7 +6,7 @@ import { requireRole } from '../../../middleware/require-role.js';
 import { requireStepUp } from '../../../middleware/require-step-up.js';
 import { requireTenantMatch } from '../../../middleware/require-tenant-match.js';
 import { validateBody } from '../../../shared/validation.js';
-import { censusLockHandler } from '../handlers/index.js';
+import { censusLockHandler, censusPreviewHandler } from '../handlers/index.js';
 
 /**
  * Census lock route (FR-SIS-006 / FR-ASM-005 / US-ASM-003; System Design §8.1).
@@ -16,7 +16,21 @@ import { censusLockHandler } from '../handlers/index.js';
  * requireRole → requireStepUp('census_lock') → requireIdempotencyKey. Only the
  * School Owner or Principal may attest.
  */
+const censusReaders = ['school_owner', 'principal'] as const;
+
 export async function censusRoutes(app: FastifyInstance): Promise<void> {
+  app.get<{ Params: { tenantId: string; termId: string } }>(
+    '/tenants/:tenantId/terms/:termId/census/preview',
+    {
+      preHandler: [
+        authenticate,
+        requireTenantMatch,
+        requireRole(...censusReaders),
+      ],
+    },
+    censusPreviewHandler,
+  );
+
   app.post<{ Params: { tenantId: string; termId: string }; Body: CensusLockRequest }>(
     '/tenants/:tenantId/terms/:termId/census/lock',
     {

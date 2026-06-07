@@ -1,4 +1,5 @@
 import { and, asc, count, eq, inArray } from 'drizzle-orm';
+import { classArms, classLevels } from '../../../../drizzle/schema/academic.js';
 import {
   admissions,
   enrollments,
@@ -388,6 +389,48 @@ export const studentRepository = {
         ),
       );
     return rows.map((row) => row.studentId);
+  },
+
+  /** Billable enrollments grouped by class level for census preview (US-ASM-003). */
+  async listBillableCountByClassLevel(
+    tenantId: string,
+    termId: string,
+  ): Promise<
+    Array<{
+      classLevelId: string;
+      classLevelCode: string;
+      classLevelName: string;
+      billableCount: number;
+    }>
+  > {
+    return withTenantContext(tenantId, async (tx) => {
+      const rows = await tx
+        .select({
+          classLevelId: classLevels.id,
+          classLevelCode: classLevels.code,
+          classLevelName: classLevels.name,
+          billableCount: count(enrollments.id),
+        })
+        .from(enrollments)
+        .innerJoin(classArms, eq(enrollments.classArmId, classArms.id))
+        .innerJoin(classLevels, eq(classArms.classLevelId, classLevels.id))
+        .where(
+          and(
+            eq(enrollments.tenantId, tenantId),
+            eq(enrollments.termId, termId),
+            eq(enrollments.status, 'active_billable'),
+          ),
+        )
+        .groupBy(classLevels.id, classLevels.code, classLevels.name)
+        .orderBy(asc(classLevels.rank));
+
+      return rows.map((row) => ({
+        classLevelId: row.classLevelId,
+        classLevelCode: row.classLevelCode,
+        classLevelName: row.classLevelName,
+        billableCount: Number(row.billableCount),
+      }));
+    });
   },
 
   async createEnrollmentTx(

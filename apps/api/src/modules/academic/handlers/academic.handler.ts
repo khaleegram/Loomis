@@ -162,6 +162,18 @@ export async function closeTermHandler(
 
 // ── Census lock (Revenue Integrity) ──────────────────────────────────────────────
 
+export async function censusPreviewHandler(
+  req: FastifyRequest<{ Params: TermParams }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const preview = await censusService.previewCensus(
+    req.params.tenantId,
+    req.params.termId,
+    requireActor(req),
+  );
+  return sendSuccess(reply, preview);
+}
+
 export async function censusLockHandler(
   req: FastifyRequest<{ Params: TermParams; Body: CensusLockRequest }>,
   reply: FastifyReply,
