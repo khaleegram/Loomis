@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { users } from '../../../../drizzle/schema/identity.js';
 import type { Executor } from '../../../shared/db.js';
 

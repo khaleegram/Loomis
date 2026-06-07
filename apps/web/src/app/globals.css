@@ -20,3 +20,44 @@ h4 {
   letter-spacing: var(--tracking-tight);
   line-height: var(--leading-tight);
 }
+
+/* Liquid blob floating keyframes */
+@keyframes blob-float-1 {
+  0% { transform: translate(0px, 0px) scale(1); }
+  33% { transform: translate(50px, -60px) scale(1.15); }
+  66% { transform: translate(-30px, 40px) scale(0.85); }
+  100% { transform: translate(0px, 0px) scale(1); }
+}
+@keyframes blob-float-2 {
+  0% { transform: translate(0px, 0px) scale(1.1); }
+  50% { transform: translate(-60px, 50px) scale(0.9); }
+  100% { transform: translate(0px, 0px) scale(1.1); }
+}
+@keyframes blob-float-3 {
+  0% { transform: translate(0px, 0px) scale(1); }
+  50% { transform: translate(40px, 40px) scale(1.1); }
+  100% { transform: translate(0px, 0px) scale(1); }
+}
+
+.animate-blob-1 {
+  animation: blob-float-1 25s infinite ease-in-out;
+}
+.animate-blob-2 {
+  animation: blob-float-2 30s infinite ease-in-out;
+}
+.animate-blob-3 {
+  animation: blob-float-3 22s infinite ease-in-out;
+}
+
+/* 3D Glass border & surface styles */
+.glass-beveled-3d {
+  background: rgba(20, 32, 26, 0.45); /* Tinted forest/midnight backdrop */
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    inset 1px 1px 0px rgba(255, 255, 255, 0.15),   /* Top-left gloss */
+    inset -1px -1px 0px rgba(0, 0, 0, 0.3),          /* Bottom-right shadow edge */
+    inset 0 0 20px rgba(74, 222, 128, 0.03),        /* Subtle internal mint glow */
+    0 25px 50px -12px rgba(0, 0, 0, 0.5);            /* Deep outer floor shadow */
+}

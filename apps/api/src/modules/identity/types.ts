@@ -21,18 +21,13 @@ export type SessionRevokeReason =
   | 'token_replay'
   | 'admin_revoke';
 
-/** Roles that require MFA enrollment before any access (SEC-AUTH-002, SEC-AUTH-003). */
+/** Platform roles that require MFA at login (SEC-AUTH-002/003). School staff log in with password only. */
 export const MFA_MANDATORY_ROLES: ReadonlySet<Role> = new Set<Role>([
   'platform_owner',
   'platform_admin',
   'dpo',
   'regional_manager',
   'regional_subordinate',
-  'school_owner',
-  'principal',
-  'accountant',
-  'admin_officer',
-  'exam_officer',
 ]);
 
 export interface AccessTokenPayload {

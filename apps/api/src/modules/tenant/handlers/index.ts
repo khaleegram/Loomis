@@ -10,6 +10,8 @@ export {
 } from './psf-rate.handler.js';
 export {
   getTenantHandler,
+  listTenantsHandler,
+  listTiersHandler,
   provisionTenantHandler,
   reinstateTenantHandler,
   suspendTenantHandler,

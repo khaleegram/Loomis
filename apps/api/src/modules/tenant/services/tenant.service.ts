@@ -1,4 +1,4 @@
-import type { TenantResponse } from '@loomis/contracts';
+import type { TenantListResponse, TenantResponse, TierSummary } from '@loomis/contracts';
 import { LoomisError } from '../../../shared/errors.js';
 import { tenantEvents } from '../events/index.js';
 import { psfRateSnapshotRepository } from '../repository/psf-rate.repository.js';
@@ -86,6 +86,26 @@ export const tenantService = {
     });
 
     return result;
+  },
+
+  /** Lists all tenants for the platform console (US-PLT-001). */
+  async listTenants(): Promise<TenantListResponse> {
+    const rows = await tenantRepository.listAll();
+    const tenantResponses = await Promise.all(rows.map((row) => this.toResponse(row)));
+    return { tenants: tenantResponses, total: tenantResponses.length };
+  },
+
+  async listTiers(): Promise<TierSummary[]> {
+    const rows = await tierRepository.list();
+    return rows.map((tier) => ({
+      id: tier.id,
+      code: tier.code,
+      name: tier.name,
+      description: tier.description ?? null,
+      defaultPsfRateMinor: tier.defaultPsfRateMinor,
+      maxStudents: tier.maxStudents ?? null,
+      createdAt: tier.createdAt.toISOString(),
+    }));
   },
 
   async getTenant(id: string): Promise<TenantRow> {

@@ -277,7 +277,7 @@ export const paymentRepository = {
         .returning();
       if (!updatedPayment) throw new Error('Failed to verify payment');
 
-      let receipt: ReceiptRow | null = null;
+      let receipt: ReceiptRow | null;
       const [existingReceipt] = await tx
         .select()
         .from(receipts)

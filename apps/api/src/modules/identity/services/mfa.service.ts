@@ -72,12 +72,24 @@ export const mfaService = {
 
   verifyTotp(encryptedSecret: string, code: string): boolean {
     const secret = this.decryptSecret(encryptedSecret);
+    const encoding = this.totpEncodingForSecret(secret);
     return speakeasy.totp.verify({
       secret,
-      encoding: 'ascii',
+      encoding,
       token: code,
       window: TOTP_WINDOW,
     });
+  },
+
+  /**
+   * Enrollment stores speakeasy `ascii` secrets (may include punctuation).
+   * Dev seed stores a fixed base32 secret for authenticator apps — detect which encoding applies.
+   */
+  totpEncodingForSecret(plainSecret: string): 'ascii' | 'base32' {
+    if (/^[A-Z2-7]+=*$/i.test(plainSecret) && plainSecret.length >= 16) {
+      return 'base32';
+    }
+    return 'ascii';
   },
 
   async generateBackupCodes(): Promise<{ plain: string[]; hashed: string[] }> {

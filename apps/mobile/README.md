@@ -16,6 +16,6 @@ Then wire up:
 - Offline engine: `offline/db.ts` (encrypted SQLite), `offline/queue.ts`, `offline/sync-engine.ts`, `offline/crypto.ts` (§8.2–8.6)
 - Token storage via `expo-secure-store`
 - Biometrics via `expo-local-authentication`
-- NativeWind preset from `@loomis/design-tokens`
+- Regent Emerald theme via `@loomis/design-tokens/mobile` in `global.css` (light + `.dark` class)
 
 See `Loomis_Frontend_Architecture_v1.md` §8 for the full mobile spec, especially the offline-first sync protocol.

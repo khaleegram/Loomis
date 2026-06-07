@@ -45,7 +45,7 @@ describe('PSF billing entitlement pipeline (integration)', () => {
     expect(attestation?.studentListHash).toHaveLength(64);
     expect(attestation?.attestationHash).toHaveLength(64);
 
-    let drained = 0;
+    let drained: number;
     do {
       drained = await drainOutbox();
     } while (drained > 0);
@@ -141,7 +141,7 @@ describe('PSF billing entitlement pipeline (integration)', () => {
       fixture.actor,
     );
 
-    let drained = 0;
+    let drained: number;
     do {
       drained = await drainOutbox();
     } while (drained > 0);

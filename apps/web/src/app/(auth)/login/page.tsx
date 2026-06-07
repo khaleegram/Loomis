@@ -16,7 +16,7 @@ import {
 } from '@loomis/ui-web';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { AuthFormCard } from '@/components/auth/auth-form-card';
@@ -61,6 +61,11 @@ export default function LoginPage() {
     }
   });
 
+  const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void onSubmit(event);
+  };
+
   return (
     <AuthFormCard
       title="Sign in"
@@ -74,7 +79,7 @@ export default function LoginPage() {
       }
     >
       <Form {...form}>
-        <form onSubmit={onSubmit} noValidate className="space-y-4">
+        <form onSubmit={handleFormSubmit} noValidate className="space-y-4">
           {formError ? (
             <Alert variant="destructive">
               <AlertDescription>{formError}</AlertDescription>

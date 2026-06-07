@@ -5,7 +5,6 @@ import { LoomisError } from '../../../shared/errors.js';
 import type {
   InitializePaymentInput,
   InitializePaymentResult,
-  ParsedWebhookEvent,
   PaymentGateway,
 } from './types.js';
 

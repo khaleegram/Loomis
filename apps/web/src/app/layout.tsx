@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter, Playfair_Display } from 'next/font/google';
-import Script from 'next/script';
+
 
 import { RootErrorBoundary } from '@/components/error-boundary/root-error-boundary';
 import { AppProviders } from '@/components/providers/app-providers';
@@ -36,9 +36,10 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${playfair.variable} font-sans antialiased`}
       >
-        <Script id="loomis-theme-init" strategy="beforeInteractive">
-          {themeInitScript}
-        </Script>
+        <script
+          id="loomis-theme-init"
+          dangerouslySetInnerHTML={{ __html: themeInitScript }}
+        />
         <RootErrorBoundary>
           <AppProviders>{children}</AppProviders>
         </RootErrorBoundary>

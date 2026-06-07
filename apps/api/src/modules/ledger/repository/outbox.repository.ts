@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { asc, eq, isNull } from 'drizzle-orm';
 import { outboxEvents } from '../../../../drizzle/schema/ledger.js';
 import type { Executor } from '../../../shared/db.js';
 import { withTenantContext } from '../../../shared/tenant-context.js';

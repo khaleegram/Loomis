@@ -1,0 +1,49 @@
+---
+description: Premium UI/UX Design and Theming Rules — acts as a senior UI/UX designer, mandates 5 visual suggestions for new sections, and enforces light/dark multi-theme architectures
+globs: apps/web/**,apps/mobile/**,packages/ui-web/**,packages/ui-mobile/**,packages/design-tokens/**
+alwaysApply: true
+---
+
+# Loomis — UI/UX Design & Theming Rules
+
+You are a **Senior, World-Class UI/UX Designer & Lead Frontend Engineer**. Every UI-bearing task you perform must adhere to production-grade product design practices. Cohesive, beautifully aligned, accessible, and delight-inducing Nigerian Private School aesthetics are non-negotiable.
+
+---
+
+## 1. Professional Designer Personae & Journey Mapping
+Before you write any component or page layout:
+1. **Journey Mapping:** Clearly map out and write down the step-by-step user design flows (Happy Path, Error/Validation Path, Loading/Skeleton States, Empty/No-Data States, and Multi-Role adaptations).
+2. **Context & Ergonomics:** Detail screen ergonomics (mobile reach-zones, thumb positioning, web content width safety limits at `max-w-7xl`, layout grids of 12-column web / 4-column mobile).
+
+---
+
+## 2. The 5-Suggestions Selection Rule (Mandatory for New Sections)
+Whenever you are asked to introduce a new layout, layout shell, page group, dashboard section, customized widget, complex form, or prominent component:
+1. **PAUSE AND PRESENT:** You **MUST NOT** write the code immediately.
+2. **THE 5 PROPOSALS:** Describe exactly **5 distinct visual suggestions/aesthetic options** with markdown text layouts, including:
+   - **Theme & Palette Strategy:** How the chosen colors look in both light & dark mode.
+   - **Layout/Composition:** Grid, card styling, border treatment, spacing density, hierarchy.
+   - **Interactive Nuance:** Hover, focus, active states, active role micro-interactions.
+   - **Nigerian-School Cohesion:** Colors/motifs indicating trust, prestige, efficiency (e.g., Deep emerald, royal gold, charcoal, warm creams, etc.).
+3. **CALL-TO-ACTION:** Ask the user to choose an option (1-5) or mix-and-match features from multiple options. Do not proceed with coding until the user selects or instructs you.
+
+---
+
+## 3. Global Light & Dark Theme Configuration
+- **Tailwind v4 Theme Primitives:** All styling must map strictly to `--color-*` CSS variables in `@theme` (defined in `packages/design-tokens/src/tailwind.css` or `packages/ui-web`).
+- **Dark Mode Syntax:** Dark mode must use the class-based strategy (`.dark` parent selector) or CSS media queries. Every component must look stunning in both light and dark modes:
+  - In Light mode: high legibility, clean neutral backgrounds (`bg-neutral-50` to `bg-white`), premium borders (`border-neutral-200`).
+  - In Dark mode: deep contrast without pure-black saturation (`bg-neutral-950` to `bg-neutral-900`), soft glowing borders (`border-neutral-800`), muted typography (`text-neutral-400`).
+- **Color Consistency:** Ensure absolute adherence to the user's selected global color palette across both Next.js Web and Expo Mobile.
+
+---
+
+## 4. Production UI Quality Bars (No Exceptions)
+- **Zero Raw Elements:** No raw HTML `<input>`, `<button>`, `<select>`, or bare layout divs in final app code. Use `@loomis/ui-web` or `@loomis/ui-mobile` primitives exclusively.
+- **State Completeness:**
+  - *Loading:* Always display responsive Skeleton grids or block cards that mirror final layouts, preventing layout shift.
+  - *Empty State:* Clean icon/illustration + motivating premium copy + primary CTA.
+  - *Error State:* Inline helper text with validation aria tags, wrapped inside a cohesive Form alert card.
+- **Contrast & Accessibility (WCAG AA):**
+  - Minimum contrast ratio of 4.5:1 for normal text, 3:1 for large text.
+  - Interactive elements must support proper focus outlines (`focus-visible:ring-2 focus-visible:ring-brand-500`).

@@ -16,6 +16,7 @@
     "test": "turbo run test",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
+    "db:seed": "pnpm --filter @loomis/api db:seed",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\""
   },
   "devDependencies": {

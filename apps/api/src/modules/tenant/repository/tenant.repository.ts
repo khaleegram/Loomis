@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { tenants } from '../../../../drizzle/schema/tenant.js';
 import { db, type Executor } from '../../../shared/db.js';
 import type { ProvisionTenantInput } from '../types.js';
@@ -9,6 +9,11 @@ import type { ProvisionTenantInput } from '../types.js';
  * (mirrors identity.users). Tenant-bound tables in this module carry RLS.
  */
 export const tenantRepository = {
+  async listAll(tx?: Executor) {
+    const executor = tx ?? db;
+    return executor.select().from(tenants).orderBy(desc(tenants.createdAt));
+  },
+
   async findById(id: string, tx?: Executor) {
     const executor = tx ?? db;
     const [tenant] = await executor.select().from(tenants).where(eq(tenants.id, id)).limit(1);

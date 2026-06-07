@@ -1,6 +1,6 @@
 import { RISK_EVENT_TYPES } from '@loomis/contracts';
 import { LoomisError } from '../../../shared/errors.js';
-import { withTenantContext } from '../../../shared/tenant-context.js';
+
 import { caseRepository, riskOutboxRepository } from '../repository/index.js';
 import type { ActorContext, RequestIvpRecountInput, UpdateIvpCaseInput } from '../types.js';
 import { ACTIVE_IVP_STATUSES } from '../types.js';

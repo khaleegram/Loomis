@@ -30,6 +30,7 @@ const mockSessionService = {
 const mockTokenService = {
   hashRefreshToken: vi.fn((raw: string) => `hash:${raw}`),
   generateRefreshToken: vi.fn(() => 'new-refresh-token'),
+  getRefreshTokenExpiresAt: vi.fn(() => new Date('2026-12-31T00:00:00.000Z')),
   signAccessToken: vi.fn(async () => ({
     token: 'new-access-token',
     jti: 'jti-new',
@@ -63,10 +64,18 @@ vi.mock('./token.service.js', () => ({
   tokenService: mockTokenService,
 }));
 
+const mockMfaRepository = {
+  findByUserId: vi.fn(),
+};
+
+const mockPasswordService = {
+  verify: vi.fn(),
+};
+
 vi.mock('./device.service.js', () => ({ deviceService: {} }));
 vi.mock('./mfa.service.js', () => ({ mfaService: {} }));
-vi.mock('./password.service.js', () => ({ passwordService: {} }));
-vi.mock('../repository/mfa.repository.js', () => ({ mfaRepository: {} }));
+vi.mock('./password.service.js', () => ({ passwordService: mockPasswordService }));
+vi.mock('../repository/mfa.repository.js', () => ({ mfaRepository: mockMfaRepository }));
 vi.mock('../../../shared/redis.js', () => ({
   getRedis: () => ({
     get: vi.fn(),
@@ -195,5 +204,62 @@ describe('authService lockout', () => {
       code: 'IDENTITY_ACCOUNT_LOCKED',
       statusCode: 423,
     });
+  });
+});
+
+describe('authService.login MFA policy', () => {
+  const activePrincipal = {
+    id: 'user-principal',
+    email: 'principal@school.ng',
+    passwordHash: 'hash',
+    role: 'principal',
+    tenantId: 'tenant-1',
+    userVer: 1,
+    status: 'active',
+    lockedUntil: null,
+    mfaRequired: true,
+    phone: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUserRepository.isAccountLocked.mockResolvedValue(false);
+    mockUserRepository.findByEmail.mockResolvedValue(activePrincipal);
+    mockUserRepository.recordLoginAttempt.mockResolvedValue(undefined);
+    mockPasswordService.verify.mockResolvedValue(true);
+    mockSessionService.createSession.mockResolvedValue({
+      session: { id: 'session-1' },
+      displacedSessionId: null,
+    });
+    mockTokenRepository.create.mockResolvedValue(undefined);
+    mockTokenService.generateRefreshToken.mockReturnValue('refresh-token');
+  });
+
+  it('issues tokens for school staff even when MFA is active on the account', async () => {
+    mockMfaRepository.findByUserId.mockResolvedValue({ status: 'active' });
+
+    const result = await authService.login('principal@school.ng', 'password', { platform: 'web' });
+
+    expect(result.kind).toBe('authenticated');
+    if (result.kind === 'authenticated') {
+      expect(result.bundle.accessToken).toBe('new-access-token');
+    }
+  });
+
+  it('requires MFA challenge for platform roles with active MFA', async () => {
+    mockUserRepository.findByEmail.mockResolvedValue({
+      ...activePrincipal,
+      id: 'user-admin',
+      email: 'admin@loomis.ng',
+      role: 'platform_admin',
+      tenantId: null,
+    });
+    mockMfaRepository.findByUserId.mockResolvedValue({ status: 'active' });
+
+    const result = await authService.login('admin@loomis.ng', 'password', { platform: 'web' });
+
+    expect(result.kind).toBe('mfa_required');
   });
 });

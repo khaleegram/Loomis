@@ -66,12 +66,10 @@ export const attributionService = {
         throw new LoomisError('REFERRAL_PARTICIPANT_NOT_FOUND', 404, 'Participant not found');
       }
 
-      let managerParticipantId = validation.managerParticipantId ?? null;
-      if (directParticipant.participantType === 'regional_subordinate') {
-        managerParticipantId = directParticipant.managerParticipantId;
-      } else {
-        managerParticipantId = null;
-      }
+      const managerParticipantId =
+        directParticipant.participantType === 'regional_subordinate'
+          ? directParticipant.managerParticipantId
+          : null;
 
       let status: 'active' | 'flagged' = 'active';
       let flagReason: string | null = null;

@@ -11,12 +11,14 @@ export function PageHeader({ title, description, actions, breadcrumbs }: PageHea
   return (
     <header className="border-b border-border bg-card px-6 py-5 shadow-xs">
       {breadcrumbs ? <div className="mb-3 text-sm text-muted-foreground">{breadcrumbs}</div> : null}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="min-w-0">
           <h1 className="font-serif text-xl font-semibold tracking-tight text-foreground">{title}</h1>
           {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
         </div>
-        {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+        {actions ? (
+          <div className="flex w-full shrink-0 items-center justify-end gap-2 sm:w-auto">{actions}</div>
+        ) : null}
       </div>
     </header>
   );

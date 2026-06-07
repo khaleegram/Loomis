@@ -1,6 +1,6 @@
 import { uuidv7 } from 'uuidv7';
 import type { PaymentGatewayProvider } from '@loomis/contracts';
-import { LoomisError } from '../../../shared/errors.js';
+
 import { dispatchEvent } from '../../../shared/events/registry.js';
 import { FINANCE_EVENT_TYPES } from '../events/types.js';
 import { gatewayAbstractionLayer } from '../gateway/index.js';

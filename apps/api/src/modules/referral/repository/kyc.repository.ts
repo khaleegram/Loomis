@@ -2,7 +2,7 @@ import { and, desc, eq } from 'drizzle-orm';
 import { kycRecords } from '../../../../drizzle/schema/referral.js';
 import type { Executor } from '../../../shared/db.js';
 import { withTenantContext } from '../../../shared/tenant-context.js';
-import type { KycStatus } from '@loomis/contracts';
+
 
 export const kycRepository = {
   async findById(tx: Executor, id: string) {

@@ -8,6 +8,24 @@ interface TenantParams {
   tenantId: string;
 }
 
+/** GET /platform/tenants — list all school tenants (platform console). */
+export async function listTenantsHandler(
+  _req: FastifyRequest,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const result = await tenantService.listTenants();
+  return sendSuccess(reply, result);
+}
+
+/** GET /platform/tiers — list platform pricing tiers (provisioning form). */
+export async function listTiersHandler(
+  _req: FastifyRequest,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const tiers = await tenantService.listTiers();
+  return sendSuccess(reply, { tiers });
+}
+
 /** POST /tenants — provision a new school tenant (US-PLT-001). */
 export async function provisionTenantHandler(
   req: FastifyRequest<{ Body: ProvisionTenantRequest }>,

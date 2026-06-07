@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull, lt, notInArray, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, lt, sql } from 'drizzle-orm';
 import { dsars } from '../../../../drizzle/schema/compliance.js';
 import type { DsarStatus } from '@loomis/contracts';
 import type { Executor } from '../../../shared/db.js';

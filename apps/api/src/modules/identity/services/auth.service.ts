@@ -78,8 +78,8 @@ export const authService = {
    * Email + password login (SEC-AUTH-001). Resolves to one of three outcomes:
    *  - authenticated:             tokens issued (no MFA, or reduced-friction device).
    *  - mfa_required:              active MFA — a TOTP challenge must be solved.
-   *  - mfa_enrollment_required:   mandatory-MFA role without active MFA; account is
-   *                               locked until enrolled (SEC-AUTH-002/003).
+   *  - mfa_enrollment_required:   platform role without active MFA; account is locked
+   *                               until enrolled (SEC-AUTH-002/003).
    */
   async login(email: string, password: string, ctx: LoginContext): Promise<LoginResult> {
     if (await userRepository.isAccountLocked(email)) {
@@ -118,33 +118,38 @@ export const authService = {
       ...(ctx.userAgent !== undefined ? { userAgent: ctx.userAgent } : {}),
     });
 
-    const mfaConfig = await mfaRepository.findByUserId(user.id);
-    const mfaMandatory = user.mfaRequired || MFA_MANDATORY_ROLES.has(user.role as Role);
-    const mfaActive = mfaConfig?.status === 'active';
+    const role = user.role as Role;
+    const loginRequiresMfa = MFA_MANDATORY_ROLES.has(role);
 
-    if (mfaActive) {
-      // Reduced MFA friction for a recognised device (SEC-AUTH-014).
-      if (ctx.persistentToken && ctx.deviceFingerprint) {
-        const deviceId = await deviceService.verifyPersistentToken(
-          user.id,
-          ctx.deviceFingerprint,
-          ctx.persistentToken,
-        );
-        if (deviceId) {
-          const bundle = await this.issueAuthenticatedSession(user, ctx, {
-            mfaCompleted: true,
-            deviceId,
-          });
-          return { kind: 'authenticated', bundle };
+    if (loginRequiresMfa) {
+      const mfaConfig = await mfaRepository.findByUserId(user.id);
+      const mfaMandatory = user.mfaRequired || MFA_MANDATORY_ROLES.has(role);
+      const mfaActive = mfaConfig?.status === 'active';
+
+      if (mfaActive) {
+        // Reduced MFA friction for a recognised device (SEC-AUTH-014).
+        if (ctx.persistentToken && ctx.deviceFingerprint) {
+          const deviceId = await deviceService.verifyPersistentToken(
+            user.id,
+            ctx.deviceFingerprint,
+            ctx.persistentToken,
+          );
+          if (deviceId) {
+            const bundle = await this.issueAuthenticatedSession(user, ctx, {
+              mfaCompleted: true,
+              deviceId,
+            });
+            return { kind: 'authenticated', bundle };
+          }
         }
+        const mfaChallengeId = await this.createMfaChallenge(user.id, ctx);
+        return { kind: 'mfa_required', mfaChallengeId };
       }
-      const mfaChallengeId = await this.createMfaChallenge(user.id, ctx);
-      return { kind: 'mfa_required', mfaChallengeId };
-    }
 
-    if (mfaMandatory) {
-      const { token } = await tokenService.signEnrollmentToken(user.id);
-      return { kind: 'mfa_enrollment_required', enrollmentToken: token };
+      if (mfaMandatory) {
+        const { token } = await tokenService.signEnrollmentToken(user.id);
+        return { kind: 'mfa_enrollment_required', enrollmentToken: token };
+      }
     }
 
     const bundle = await this.issueAuthenticatedSession(user, ctx, { mfaCompleted: false });
