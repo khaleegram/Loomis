@@ -12,4 +12,5 @@ export * from './platform.js';
 export * from './regional.js';
 export * from './compliance.js';
 export * from './comms.js';
+export * from './parent.js';
 export * from './audit.js';
