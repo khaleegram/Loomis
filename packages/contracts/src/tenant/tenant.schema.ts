@@ -144,3 +144,16 @@ export const configurationListResponse = z.object({
   configurations: z.array(configurationResponse),
 });
 export type ConfigurationListResponse = z.infer<typeof configurationListResponse>;
+
+// ── Tenant list (platform) ──────────────────────────────────────────────────────
+
+export const tenantListResponse = z.object({
+  tenants: z.array(tenantResponse),
+  total: z.number().int(),
+});
+export type TenantListResponse = z.infer<typeof tenantListResponse>;
+
+export const tierListResponse = z.object({
+  tiers: z.array(tierSummary),
+});
+export type TierListResponse = z.infer<typeof tierListResponse>;

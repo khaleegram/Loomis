@@ -7,3 +7,4 @@ export * from './gradebook.js';
 export * from './attendance.js';
 export * from './workflow.js';
 export * from './finance.js';
+export * from './platform.js';

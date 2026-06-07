@@ -123,6 +123,27 @@ export const queryKeys = {
     refund: (tenantId: string, refundId: string) =>
       ['finance', tenantId, 'refunds', 'detail', refundId] as const,
   },
+  /** Platform-level keys — no tenant context (platform actors have null tenant_id). */
+  platform: {
+    all: () => ['platform'] as const,
+    revenueSummary: () => ['platform', 'revenue', 'summary'] as const,
+    revenueChart: (period: string) => ['platform', 'revenue', 'chart', period] as const,
+    tenants: () => ['platform', 'tenants'] as const,
+    tenant: (tenantId: string) => ['platform', 'tenants', tenantId] as const,
+    tiers: () => ['platform', 'tiers'] as const,
+    psfRates: () => ['platform', 'psf-rates'] as const,
+    psfRateHistory: (tenantId: string | null) =>
+      ['platform', 'psf-rates', 'history', tenantId] as const,
+    riskCases: (filters?: { status?: string; priority?: string }) =>
+      ['platform', 'risk', 'cases', filters ?? {}] as const,
+    riskCase: (caseId: string) => ['platform', 'risk', 'cases', caseId] as const,
+    privilegedChanges: (status?: string) =>
+      ['platform', 'privileged-changes', status ?? 'all'] as const,
+    privilegedChange: (id: string) => ['platform', 'privileged-changes', id] as const,
+    referralParticipants: () => ['platform', 'referrals', 'participants'] as const,
+    payoutCycles: () => ['platform', 'referrals', 'payout-cycles'] as const,
+    breakGlassSessions: () => ['platform', 'break-glass', 'sessions'] as const,
+  },
 } as const;
 
 /** Asserts tenant-scoped roots place tenantId at index 1 (security invariant). */
