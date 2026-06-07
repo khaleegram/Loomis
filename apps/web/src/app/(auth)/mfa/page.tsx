@@ -14,6 +14,7 @@ import {
   FormMessage,
   Input,
 } from '@loomis/ui-web';
+import { Loader2, ShieldCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -27,12 +28,12 @@ import { homePathForRole } from '@/lib/auth/route-groups';
 
 type CodeForm = Pick<MfaVerifyRequest, 'code'>;
 
-/** US-XC-001 — second factor: enter the TOTP code from the authenticator app. */
 export default function MfaVerifyPage() {
   const router = useRouter();
   const { completeAuthentication } = useAuth();
   const { mfaChallengeId, reset } = useAuthFlow();
   const [formError, setFormError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (!mfaChallengeId) router.replace('/login');
@@ -46,6 +47,7 @@ export default function MfaVerifyPage() {
   const onSubmit = form.handleSubmit(async ({ code }) => {
     if (!mfaChallengeId) return;
     setFormError(null);
+    setIsSubmitting(true);
     try {
       const session = await verifyMfa({ mfaChallengeId, code });
       reset();
@@ -53,6 +55,8 @@ export default function MfaVerifyPage() {
       router.replace(homePathForRole(session.role));
     } catch (err) {
       setFormError(authErrorMessage(err));
+    } finally {
+      setIsSubmitting(false);
     }
   });
 
@@ -61,25 +65,35 @@ export default function MfaVerifyPage() {
       title="Two-step verification"
       subtitle="Enter the 6-digit code from your authenticator app"
     >
+      <div className="mb-5 flex justify-center">
+        <div className="flex size-14 items-center justify-center rounded-2xl bg-gold-400/10 ring-1 ring-gold-400/20">
+          <ShieldCheck className="size-7 text-gold-400" />
+        </div>
+      </div>
+
       <Form {...form}>
-        <form onSubmit={onSubmit} noValidate className="space-y-4">
+        <form onSubmit={onSubmit} noValidate className="space-y-5">
           {formError ? (
             <Alert variant="destructive">
               <AlertDescription>{formError}</AlertDescription>
             </Alert>
           ) : null}
+
           <FormField
             control={form.control}
             name="code"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Authentication code</FormLabel>
+                <FormLabel className="text-neutral-300 text-xs uppercase tracking-wider font-semibold">
+                  Authentication code
+                </FormLabel>
                 <FormControl>
                   <Input
                     inputMode="numeric"
                     autoComplete="one-time-code"
                     maxLength={6}
-                    className="font-mono tracking-widest"
+                    placeholder="000000"
+                    className="h-14 text-center font-mono text-2xl tracking-[0.5em] bg-white/5 border-white/10 text-white placeholder:text-neutral-600 focus:border-gold-400/50 focus:ring-1 focus:ring-gold-400/30"
                     {...field}
                   />
                 </FormControl>
@@ -87,9 +101,26 @@ export default function MfaVerifyPage() {
               </FormItem>
             )}
           />
-          <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? 'Verifying…' : 'Verify'}
+
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full h-12 font-semibold tracking-wide bg-gold-400 hover:bg-gold-500 text-forest-900 transition-all duration-200 shadow-[0_0_20px_rgba(212,175,55,0.15)] hover:shadow-[0_0_30px_rgba(212,175,55,0.25)]"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 aria-hidden className="mr-2 size-4 animate-spin" />
+                Verifying…
+              </>
+            ) : (
+              'Verify'
+            )}
           </Button>
+
+          <p className="text-center text-xs text-neutral-500">
+            Open your authenticator app to find your 6-digit code.
+          </p>
         </form>
       </Form>
     </AuthFormCard>

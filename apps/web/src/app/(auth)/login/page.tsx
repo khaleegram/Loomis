@@ -6,14 +6,16 @@ import {
   Alert,
   AlertDescription,
   Button,
+  Checkbox,
   Form,
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
   Input,
+  cn,
 } from '@loomis/ui-web';
+import { Eye, EyeOff, Loader2, Lock, Mail } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
@@ -26,12 +28,13 @@ import { useAuth } from '@/lib/auth/auth-context';
 import { useAuthFlow } from '@/lib/auth/auth-flow-store';
 import { homePathForRole } from '@/lib/auth/route-groups';
 
-/** US-XC-001 — password step of login (MFA handled on the next screen). */
 export default function LoginPage() {
   const router = useRouter();
   const { completeAuthentication } = useAuth();
   const { setMfaChallenge, setEnrollmentToken } = useAuthFlow();
   const [formError, setFormError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<LoginRequest>({
     resolver: zodResolver(loginRequest),
@@ -40,6 +43,7 @@ export default function LoginPage() {
 
   const onSubmit = form.handleSubmit(async (values) => {
     setFormError(null);
+    setIsSubmitting(true);
     try {
       const result = await login(values);
       switch (result.outcome) {
@@ -58,6 +62,8 @@ export default function LoginPage() {
       }
     } catch (err) {
       setFormError(authErrorMessage(err));
+    } finally {
+      setIsSubmitting(false);
     }
   });
 
@@ -68,51 +74,108 @@ export default function LoginPage() {
 
   return (
     <AuthFormCard
-      title="Sign in"
-      subtitle="Access your Loomis console"
+      title="Welcome back"
+      subtitle="Sign in to your school management console."
       footer={
-        <p className="w-full py-4 text-center text-sm text-muted-foreground">
-          <Link href="/reset-password" className="text-primary hover:underline">
-            Forgot your password?
-          </Link>
+        <p className="w-full py-4 text-center text-sm text-neutral-400">
+          Need access?{' '}
+          <span className="text-neutral-500">Contact your school administrator.</span>
         </p>
       }
     >
       <Form {...form}>
-        <form onSubmit={handleFormSubmit} noValidate className="space-y-4">
+        <form onSubmit={handleFormSubmit} noValidate className="space-y-5">
           {formError ? (
             <Alert variant="destructive">
               <AlertDescription>{formError}</AlertDescription>
             </Alert>
           ) : null}
+
           <FormField
             control={form.control}
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Email</FormLabel>
-                <FormControl>
-                  <Input type="email" autoComplete="email" {...field} />
-                </FormControl>
+                <div className="relative">
+                  <Mail
+                    aria-hidden
+                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-neutral-500"
+                  />
+                  <FormControl>
+                    <Input
+                      type="email"
+                      autoComplete="email"
+                      placeholder="Email address"
+                      className="pl-10 h-12 bg-white/5 border-white/10 text-white placeholder:text-neutral-500 focus:border-gold-400/50 focus:ring-1 focus:ring-gold-400/30 dark:bg-forest-900 dark:border-forest-700"
+                      {...field}
+                    />
+                  </FormControl>
+                </div>
                 <FormMessage />
               </FormItem>
             )}
           />
+
           <FormField
             control={form.control}
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Password</FormLabel>
-                <FormControl>
-                  <Input type="password" autoComplete="current-password" {...field} />
-                </FormControl>
-                <FormMessage />
+                <div className="relative">
+                  <Lock
+                    aria-hidden
+                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-neutral-500"
+                  />
+                  <FormControl>
+                    <Input
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete="current-password"
+                      placeholder="Password"
+                      className="pl-10 pr-12 h-12 bg-white/5 border-white/10 text-white placeholder:text-neutral-500 focus:border-gold-400/50 focus:ring-1 focus:ring-gold-400/30"
+                      {...field}
+                    />
+                  </FormControl>
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300 transition-colors"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    tabIndex={-1}
+                  >
+                    {showPassword ? (
+                      <EyeOff aria-hidden className="size-4" />
+                    ) : (
+                      <Eye aria-hidden className="size-4" />
+                    )}
+                  </button>
+                </div>
+                <div className="flex items-center justify-between pt-1">
+                  <FormMessage />
+                  <Link
+                    href="/reset-password"
+                    className="ml-auto text-xs text-neutral-400 hover:text-gold-300 transition-colors"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
               </FormItem>
             )}
           />
-          <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? 'Signing in…' : 'Sign in'}
+
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full h-12 font-semibold tracking-wide bg-gold-400 hover:bg-gold-500 text-forest-900 transition-all duration-200 shadow-[0_0_20px_rgba(212,175,55,0.15)] hover:shadow-[0_0_30px_rgba(212,175,55,0.25)]"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 aria-hidden className="mr-2 size-4 animate-spin" />
+                Signing in…
+              </>
+            ) : (
+              'Sign in'
+            )}
           </Button>
         </form>
       </Form>
