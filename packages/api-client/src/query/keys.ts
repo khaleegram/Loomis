@@ -23,6 +23,12 @@ export const queryKeys = {
     profile: (tenantId: string, studentId: string) =>
       ['students', tenantId, 'profile', studentId] as const,
   },
+  hrm: {
+    all: (tenantId: string) => ['hrm', tenantId] as const,
+    staffList: (tenantId: string) => ['hrm', tenantId, 'staff', 'list'] as const,
+    staffDetail: (tenantId: string, staffProfileId: string) =>
+      ['hrm', tenantId, 'staff', 'detail', staffProfileId] as const,
+  },
 } as const;
 
 /** Asserts tenant-scoped roots place tenantId at index 1 (security invariant). */

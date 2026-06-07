@@ -1,6 +1,7 @@
 import { createApiClient, type ApiClient } from '@loomis/api-client';
 
 import { memoryTokenStore } from '@/lib/auth/memory-token-store';
+import { getActiveTenantId } from '@/lib/tenant/active-tenant-store';
 
 const BFF_REFRESH_PATH = '/api/auth/refresh';
 
@@ -70,6 +71,6 @@ export function createWebApiClient(): ApiClient {
         window.location.assign('/login');
       }
     },
-    getActiveTenantId: () => null,
+    getActiveTenantId,
   });
 }

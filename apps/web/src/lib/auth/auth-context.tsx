@@ -16,6 +16,7 @@ import {
 import { memoryTokenStore } from '@/lib/auth/memory-token-store';
 import * as authClient from '@/lib/auth/auth-client';
 import { homePathForRole } from '@/lib/auth/route-groups';
+import { useActiveTenantStore } from '@/lib/tenant/active-tenant-store';
 
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 
@@ -50,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const applySession = useCallback(
     (next: authClient.AuthenticatedSession) => {
       memoryTokenStore.setAccessToken(next.accessToken);
+      useActiveTenantStore.getState().setActiveTenantId(next.tenantId);
       setSession(next);
       setStatus('authenticated');
     },
@@ -59,6 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const clearSession = useCallback(() => {
     clearTimer();
     memoryTokenStore.setAccessToken(null);
+    useActiveTenantStore.getState().clear();
     setSession(null);
     setStatus('unauthenticated');
   }, [clearTimer]);
