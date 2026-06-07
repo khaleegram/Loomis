@@ -4,6 +4,7 @@ import { Inter, Playfair_Display } from 'next/font/google';
 
 import { RootErrorBoundary } from '@/components/error-boundary/root-error-boundary';
 import { AppProviders } from '@/components/providers/app-providers';
+import { Toaster } from '@/lib/toast';
 
 import './globals.css';
 
@@ -42,6 +43,7 @@ export default function RootLayout({
         />
         <RootErrorBoundary>
           <AppProviders>{children}</AppProviders>
+          <Toaster />
         </RootErrorBoundary>
       </body>
     </html>

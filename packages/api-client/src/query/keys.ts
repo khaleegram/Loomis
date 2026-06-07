@@ -115,6 +115,12 @@ export const queryKeys = {
       ['academic', tenantId, 'gradebook', 'entries', filters] as const,
     attendance: (tenantId: string, filters: AttendanceListFilters) =>
       ['academic', tenantId, 'attendance', filters] as const,
+    timetable: (tenantId: string, termId: string) =>
+      ['academic', tenantId, 'timetable', termId] as const,
+    assignments: (tenantId: string, classArmId: string) =>
+      ['academic', tenantId, 'assignments', classArmId] as const,
+    promotions: (tenantId: string, yearId: string) =>
+      ['academic', tenantId, 'promotions', yearId] as const,
   },
   workflow: {
     all: (tenantId: string) => ['workflow', tenantId] as const,
@@ -143,6 +149,8 @@ export const queryKeys = {
       ['finance', tenantId, 'refunds', filters] as const,
     refund: (tenantId: string, refundId: string) =>
       ['finance', tenantId, 'refunds', 'detail', refundId] as const,
+    reconciliationExceptions: (tenantId: string) =>
+      ['finance', tenantId, 'reconciliation', 'exceptions'] as const,
   },
   /** Platform-level keys — no tenant context (platform actors have null tenant_id). */
   platform: {
@@ -189,6 +197,14 @@ export const queryKeys = {
     consentVersions: () => ['compliance', 'consent-versions'] as const,
     retentionSchedules: () => ['compliance', 'retention-schedules'] as const,
   },
+  /** Comms — tenant-scoped notifications and messaging. */
+  comms: {
+    all: (tenantId: string) => ['comms', tenantId] as const,
+    notifications: (tenantId: string) => ['comms', tenantId, 'notifications'] as const,
+    thread: (tenantId: string, messageId: string) =>
+      ['comms', tenantId, 'threads', messageId] as const,
+  },
+
 } as const;
 
 /** Asserts tenant-scoped roots place tenantId at index 1 (security invariant). */

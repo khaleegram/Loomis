@@ -9,6 +9,12 @@ import {
   PriorityBadge,
   SegmentedControl,
   Skeleton,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
   cn,
   dsarPriority,
 } from '@loomis/ui-web';
@@ -91,50 +97,50 @@ export default function DsarQueuePage() {
             ))}
           </div>
         ) : (
-          <div className="overflow-hidden rounded-lg border border-neutral-300 dark:border-forest-700">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-neutral-300 bg-neutral-50 font-serif dark:border-forest-700 dark:bg-forest-950">
-                  <th className="px-4 py-3 text-left font-semibold">Deadline</th>
-                  <th className="px-4 py-3 text-left font-semibold">Requester</th>
-                  <th className="px-4 py-3 text-left font-semibold">Categories</th>
-                  <th className="px-4 py-3 text-left font-semibold">Received</th>
-                  <th className="px-4 py-3 text-left font-semibold">Status</th>
-                  <th className="px-4 py-3 text-left font-semibold">Priority</th>
-                </tr>
-              </thead>
-              <tbody>
+          <div className="overflow-hidden rounded-lg border border-neutral-300 dark:border-forest-700 bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Deadline</TableHead>
+                  <TableHead>Requester</TableHead>
+                  <TableHead>Categories</TableHead>
+                  <TableHead>Received</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Priority</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {sorted.map((dsar) => (
-                  <tr
+                  <TableRow
                     key={dsar.id}
-                    className="cursor-pointer border-b border-neutral-200 hover:bg-neutral-50 dark:border-forest-800 dark:hover:bg-forest-900"
+                    className="cursor-pointer"
                     onClick={() => setSelectedId(dsar.id)}
                   >
-                    <td className="px-4 py-3">
+                    <TableCell>
                       <CountdownRing
                         progress={deadlineProgress(dsar)}
                         label={formatDeadline(dsar)}
                         urgent={dsar.daysRemaining <= 7}
                         size={40}
                       />
-                    </td>
-                    <td className="px-4 py-3 capitalize">{dsar.requesterType}</td>
-                    <td className="max-w-[200px] truncate px-4 py-3 text-xs">
+                    </TableCell>
+                    <TableCell className="capitalize">{dsar.requesterType}</TableCell>
+                    <TableCell className="max-w-[200px] truncate text-xs">
                       {dsar.dataCategories.join(', ')}
-                    </td>
-                    <td className="px-4 py-3 tabular-nums">
+                    </TableCell>
+                    <TableCell className="tabular-nums">
                       {format(new Date(dsar.receivedAt), 'dd/MM/yyyy')}
-                    </td>
-                    <td className="px-4 py-3">
+                    </TableCell>
+                    <TableCell>
                       <Badge variant="outline">{dsar.status}</Badge>
-                    </td>
-                    <td className="px-4 py-3">
+                    </TableCell>
+                    <TableCell>
                       <PriorityBadge priority={dsarPriority(dsar.daysRemaining)} />
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </PageBody>

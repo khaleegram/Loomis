@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useRegionalAnalytics } from '@loomis/api-client';
 import { can } from '@loomis/core';
-import { Button, Card, CardContent, CardHeader, CardTitle, Skeleton } from '@loomis/ui-web';
+import { Button, Card, CardContent, CardHeader, CardTitle, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@loomis/ui-web';
 import { Plus } from 'lucide-react';
 
 import { KpiCard } from '@/components/platform/kpi-card';
@@ -126,39 +126,36 @@ export default function RegionalDashboardPage() {
                     <CardTitle className="font-serif text-base">School Comparison</CardTitle>
                   </CardHeader>
                   <CardContent className="overflow-x-auto">
-                    <table className="w-full min-w-[540px] text-sm">
-                      <thead>
-                        <tr className="border-b border-neutral-200 text-left text-xs uppercase tracking-wider text-neutral-500 dark:border-forest-800">
-                          <th className="pb-2 pr-4 font-semibold">School</th>
-                          <th className="pb-2 pr-4 font-semibold">State</th>
-                          <th className="pb-2 pr-4 font-semibold">Attendance</th>
-                          <th className="pb-2 pr-4 font-semibold">Fee Coll.</th>
-                          <th className="pb-2 font-semibold">Enrollments</th>
-                        </tr>
-                      </thead>
-                      <tbody>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>School</TableHead>
+                          <TableHead>State</TableHead>
+                          <TableHead>Attendance</TableHead>
+                          <TableHead>Fee Coll.</TableHead>
+                          <TableHead>Enrollments</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {[...filteredTenants]
                           .sort((a, b) => b.attendanceRateMilli - a.attendanceRateMilli)
                           .map((t, idx) => (
-                            <tr
-                              key={t.tenantId}
-                              className="border-b border-neutral-100 dark:border-forest-800"
-                            >
-                              <td className="py-2.5 pr-4 font-mono text-xs">
+                            <TableRow key={t.tenantId}>
+                              <TableCell className="font-mono text-xs">
                                 {idx + 1}. {t.tenantId.slice(0, 8)}…
-                              </td>
-                              <td className="py-2.5 pr-4">{t.region}</td>
-                              <td className="py-2.5 pr-4 tabular-nums">
+                              </TableCell>
+                              <TableCell>{t.region}</TableCell>
+                              <TableCell className="tabular-nums">
                                 {(t.attendanceRateMilli / 10_000).toFixed(1)}%
-                              </td>
-                              <td className="py-2.5 pr-4 tabular-nums">
+                              </TableCell>
+                              <TableCell className="tabular-nums">
                                 {(t.feeCollectionRateMilli / 10_000).toFixed(1)}%
-                              </td>
-                              <td className="py-2.5 tabular-nums">{t.activeEnrollments}</td>
-                            </tr>
+                              </TableCell>
+                              <TableCell className="tabular-nums">{t.activeEnrollments}</TableCell>
+                            </TableRow>
                           ))}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </CardContent>
                 </Card>
               ) : null}

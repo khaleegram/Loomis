@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useStaffDirectory } from '@loomis/api-client';
-import { Button } from '@loomis/ui-web';
+import { Badge, Button, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@loomis/ui-web';
 
 import {
   formatRoleLabel,
@@ -14,6 +14,22 @@ import { useCan, useCanAny } from '@/lib/auth/use-capability';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 
 type StatusFilter = 'all' | 'active' | 'pending' | 'deactivated';
+
+const STATUS_VARIANT: Record<string, 'success' | 'warning' | 'neutral' | 'default' | 'destructive'> = {
+  active: 'success',
+  pending: 'warning',
+  deactivated: 'neutral',
+};
+
+function StaffTableSkeleton() {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <Skeleton key={i} className="h-14 w-full" />
+      ))}
+    </div>
+  );
+}
 
 export default function StaffDirectoryPage() {
   const tenantId = useTenantId();
@@ -60,10 +76,10 @@ export default function StaffDirectoryPage() {
               key={filter}
               type="button"
               onClick={() => setStatusFilter(filter)}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium capitalize ${
+              className={`rounded-full px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
                 statusFilter === filter
-                  ? 'bg-brand-100 text-brand-800'
-                  : 'bg-white text-neutral-600 ring-1 ring-neutral-200 hover:bg-neutral-50'
+                  ? 'bg-brand-600 text-white shadow-sm'
+                  : 'bg-white text-neutral-600 ring-1 ring-neutral-200 hover:bg-neutral-50 dark:bg-forest-900 dark:text-neutral-300 dark:ring-forest-700 dark:hover:bg-forest-800'
               }`}
             >
               {filter === 'all' ? 'All' : formatStaffStatus(filter)}
@@ -72,77 +88,74 @@ export default function StaffDirectoryPage() {
         </div>
 
         {isLoading ? (
-          <p className="text-sm text-neutral-500">Loading staff…</p>
+          <StaffTableSkeleton />
         ) : isError ? (
           <p className="text-sm text-red-600" role="alert">
             {(error as Error).message ?? 'Failed to load staff directory.'}
           </p>
         ) : staff.length === 0 ? (
-          <p className="text-sm text-neutral-500">No staff members match this filter.</p>
+          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-neutral-200 bg-white py-16 dark:border-forest-700 dark:bg-forest-900">
+            <p className="text-sm text-neutral-500">No staff members match this filter.</p>
+            {canOnboard ? (
+              <Button variant="outline" size="sm" className="mt-4" asChild>
+                <Link href="/school/staff/invite">Invite staff</Link>
+              </Button>
+            ) : null}
+          </div>
         ) : (
-          <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm">
-            <table className="min-w-full divide-y divide-neutral-200 text-sm">
-              <thead className="bg-neutral-50">
-                <tr>
-                  <th className="px-4 py-3 text-left font-medium text-neutral-700">Name</th>
-                  <th className="px-4 py-3 text-left font-medium text-neutral-700">Role</th>
-                  <th className="px-4 py-3 text-left font-medium text-neutral-700">Status</th>
-                  <th className="px-4 py-3 text-left font-medium text-neutral-700">Joined</th>
-                  {canAssign ? (
-                    <th className="px-4 py-3 text-right font-medium text-neutral-700">Actions</th>
-                  ) : null}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-100">
+          <div className="overflow-hidden rounded-lg bg-white dark:bg-forest-900 shadow-sm">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Joined</TableHead>
+                  {canAssign ? <TableHead className="text-right">Actions</TableHead> : null}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {staff.map((member) => (
-                  <tr key={member.id} className="hover:bg-neutral-50/80">
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-neutral-900">{member.fullName}</div>
-                      <div className="text-xs text-neutral-500">{member.email}</div>
-                    </td>
-                    <td className="px-4 py-3 text-neutral-700">
+                  <TableRow key={member.id}>
+                    <TableCell>
+                      <div className="font-medium text-foreground">{member.fullName}</div>
+                      <div className="text-xs text-muted-foreground">{member.email}</div>
+                    </TableCell>
+                    <TableCell>
                       {formatRoleLabel(member.primaryRole)}
                       {member.roleExtensions.length > 0 ? (
-                        <span className="ml-1 text-xs text-neutral-400">
+                        <span className="ml-1 text-xs text-muted-foreground">
                           +{member.roleExtensions.map((r) => formatRoleLabel(r)).join(', ')}
                         </span>
                       ) : null}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                          member.status === 'active'
-                            ? 'bg-green-50 text-green-700'
-                            : member.status === 'pending'
-                              ? 'bg-amber-50 text-amber-700'
-                              : 'bg-neutral-100 text-neutral-600'
-                        }`}
-                      >
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={STATUS_VARIANT[member.status] ?? 'default'}>
                         {formatStaffStatus(member.status)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-neutral-600">
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
                       {member.joinedAt
                         ? new Date(member.joinedAt).toLocaleDateString()
                         : member.status === 'pending'
                           ? 'Awaiting setup'
                           : '—'}
-                    </td>
+                    </TableCell>
                     {canAssign ? (
-                      <td className="px-4 py-3 text-right">
+                      <TableCell className="text-right">
                         {member.status === 'active' ? (
                           <Button variant="ghost" size="sm" asChild>
                             <Link href={`/school/staff/${member.id}/assignments`}>Assignments</Link>
                           </Button>
                         ) : member.status === 'pending' ? (
-                          <span className="text-xs text-neutral-400">Invitation pending</span>
+                          <span className="text-xs text-muted-foreground">Invitation pending</span>
                         ) : null}
-                      </td>
+                      </TableCell>
                     ) : null}
-                  </tr>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </PageBody>

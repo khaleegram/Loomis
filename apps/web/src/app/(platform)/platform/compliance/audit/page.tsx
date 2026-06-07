@@ -31,8 +31,13 @@ import {
   SelectTrigger,
   SelectValue,
   Skeleton,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
   Textarea,
-  cn,
 } from '@loomis/ui-web';
 import { Download, Search } from 'lucide-react';
 import { uuidv7 } from 'uuidv7';
@@ -213,58 +218,50 @@ export default function AuditLogPage() {
             </AlertDescription>
           </Alert>
         ) : (
-          <div className="overflow-hidden rounded-lg border border-neutral-200 dark:border-forest-800">
-            <table className="w-full font-mono text-xs">
-              <thead>
-                <tr className="border-b border-neutral-200 bg-neutral-100 text-left uppercase tracking-wider text-neutral-500 dark:border-forest-800 dark:bg-forest-950">
-                  <th className="px-4 py-2.5">Timestamp</th>
-                  <th className="px-4 py-2.5">Action</th>
-                  <th className="px-4 py-2.5">Resource</th>
-                  <th className="px-4 py-2.5">Sensitivity</th>
-                  <th className="px-4 py-2.5">Result</th>
-                </tr>
-              </thead>
-              <tbody>
+          <div className="overflow-hidden rounded-lg border border-neutral-200 dark:border-forest-800 bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Timestamp</TableHead>
+                  <TableHead>Action</TableHead>
+                  <TableHead>Resource</TableHead>
+                  <TableHead>Sensitivity</TableHead>
+                  <TableHead>Result</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {isLoading ? (
                   Array.from({ length: 8 }).map((_, i) => (
-                    <tr key={i} className="border-b border-neutral-100 dark:border-forest-900">
-                      <td colSpan={5} className="px-4 py-3">
+                    <TableRow key={i}>
+                      <TableCell colSpan={5}>
                         <Skeleton className="h-4 w-full" />
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))
                 ) : (data?.entries ?? []).length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-12 text-center font-sans text-sm text-muted-foreground">
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center font-sans text-sm text-muted-foreground">
                       No audit events match your filters
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ) : (
-                  (data?.entries ?? []).map((entry: AuditLogEntryResponse, idx: number) => (
-                    <tr
-                      key={entry.id}
-                      className={cn(
-                        'border-b border-neutral-100 dark:border-forest-900',
-                        idx % 2 === 0
-                          ? 'bg-white dark:bg-forest-900'
-                          : 'bg-neutral-50/80 dark:bg-forest-950/80',
-                      )}
-                    >
-                      <td className="px-4 py-2 tabular-nums">
+                  (data?.entries ?? []).map((entry: AuditLogEntryResponse) => (
+                    <TableRow key={entry.id}>
+                      <TableCell className="font-mono text-xs tabular-nums">
                         {new Date(entry.createdAt).toISOString().replace('T', ' ').slice(0, 19)}
-                      </td>
-                      <td className="px-4 py-2">{entry.action}</td>
-                      <td className="px-4 py-2">
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">{entry.action}</TableCell>
+                      <TableCell className="font-mono text-xs">
                         {entry.resourceType}
                         {entry.resourceId ? ` · ${entry.resourceId.slice(0, 8)}` : ''}
-                      </td>
-                      <td className="px-4 py-2">{entry.sensitivity}</td>
-                      <td className="px-4 py-2">{entry.result}</td>
-                    </tr>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">{entry.sensitivity}</TableCell>
+                      <TableCell className="font-mono text-xs">{entry.result}</TableCell>
+                    </TableRow>
                   ))
                 )}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </PageBody>

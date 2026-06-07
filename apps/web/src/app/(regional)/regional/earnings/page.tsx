@@ -14,6 +14,12 @@ import {
   Badge,
   ProgressStrip,
   Skeleton,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
   cn,
 } from '@loomis/ui-web';
 
@@ -180,28 +186,28 @@ export default function ReferralEarningsPage() {
                       </Badge>
                     ) : null}
                   </div>
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-neutral-100 text-left text-[10px] uppercase tracking-wider text-neutral-400 dark:border-forest-800">
-                        <th className="px-6 py-2 font-semibold">School</th>
-                        <th className="px-4 py-2 font-semibold">PSF Settled</th>
-                        <th className="px-4 py-2 font-semibold">Your Share</th>
-                        <th className="px-6 py-2 font-semibold">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>School</TableHead>
+                        <TableHead>PSF Settled</TableHead>
+                        <TableHead>Your Share</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {entries.map((e) => (
-                        <tr
+                        <TableRow
                           key={e.id}
                           className={cn(
-                            'border-b border-neutral-50 font-mono tabular-nums dark:border-forest-800/50',
+                            'font-mono tabular-nums',
                             e.status === 'held' && 'bg-danger/5',
                           )}
                         >
-                          <td className="px-6 py-2.5 text-xs">{e.tenantId.slice(0, 8)}…</td>
-                          <td className="px-4 py-2.5">{formatKobo(e.psfSettledAmountMinor)}</td>
-                          <td className="px-4 py-2.5">{formatKobo(e.amountMinor)}</td>
-                          <td className="px-6 py-2.5">
+                          <TableCell className="text-xs">{e.tenantId.slice(0, 8)}…</TableCell>
+                          <TableCell>{formatKobo(e.psfSettledAmountMinor)}</TableCell>
+                          <TableCell>{formatKobo(e.amountMinor)}</TableCell>
+                          <TableCell>
                             <span
                               className={cn(
                                 'text-xs',
@@ -216,11 +222,11 @@ export default function ReferralEarningsPage() {
                                 {e.holdReason}
                               </p>
                             ) : null}
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
               ))
             )}

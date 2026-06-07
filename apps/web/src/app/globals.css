@@ -49,6 +49,12 @@ h4 {
   animation: blob-float-3 22s infinite ease-in-out;
 }
 
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
 /* 3D Glass border & surface styles */
 .glass-beveled-3d {
   background: rgba(20, 32, 26, 0.45); /* Tinted forest/midnight backdrop */

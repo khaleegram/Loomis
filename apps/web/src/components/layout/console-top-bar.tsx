@@ -15,6 +15,19 @@ import {
 import { useAuth } from '@/lib/auth/auth-context';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 
+const ROLE_LABELS: Record<string, string> = {
+  school_owner: 'School Owner',
+  principal: 'Principal',
+  admin_officer: 'Admin Officer',
+  accountant: 'Accountant',
+  cashier: 'Cashier',
+  exam_officer: 'Exam Officer',
+  deputy_exam_officer: 'Deputy Exam Officer',
+  timetable_officer: 'Timetable Officer',
+  teacher: 'Teacher',
+  class_teacher: 'Class Teacher',
+};
+
 interface ConsoleTopBarProps {
   breadcrumbs?: ReactNode;
 }
@@ -25,19 +38,23 @@ export function ConsoleTopBar({ breadcrumbs }: ConsoleTopBarProps) {
 
   if (!session) return null;
 
-  const roleLabel = session.role.replace(/_/g, ' ');
+  const roleLabel = ROLE_LABELS[session.role] ?? session.role.replace(/_/g, ' ');
 
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-card px-6">
-      <div className="min-w-0 text-sm text-muted-foreground">
-        {breadcrumbs ?? <span className="capitalize">{roleLabel} console</span>}
-      </div>
-      <div className="flex items-center gap-3">
+      <div className="flex min-w-0 items-center gap-3 text-sm text-muted-foreground">
+        {breadcrumbs ?? <span className="font-medium text-foreground capitalize">{roleLabel} Console</span>}
         {tenantId ? (
-          <span className="hidden rounded-sm border border-border bg-muted px-2.5 py-1 font-mono text-xs text-muted-foreground sm:inline">
-            {tenantId.slice(0, 8)}…
-          </span>
+          <>
+            <span className="text-neutral-300 dark:text-neutral-700" aria-hidden>·</span>
+            <span className="hidden rounded-full bg-muted px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground sm:inline">
+              {tenantId.slice(0, 8)}…
+            </span>
+          </>
         ) : null}
+      </div>
+
+      <div className="flex items-center gap-3">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="gap-2">

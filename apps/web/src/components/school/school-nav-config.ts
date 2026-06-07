@@ -1,60 +1,90 @@
+import {
+  BookOpen,
+  Building2,
+  GraduationCap,
+  LayoutDashboard,
+  Percent,
+  ShieldCheck,
+  Users,
+  UserCheck,
+  Settings,
+  ClipboardList,
+  type LucideIcon,
+} from 'lucide-react';
 import type { Capability } from '@loomis/core';
 
 export interface SchoolNavItem {
   label: string;
   href: string;
-  /** When set, the item is shown if the role has any of these capabilities. */
+  icon: LucideIcon;
   capabilities?: Capability[];
-  /** When true, always shown to authenticated school users. */
   always?: boolean;
 }
 
-/**
- * School console navigation (Frontend Architecture §7.1).
- * Each item is gated by the capability map (§9) — never by raw role checks.
- */
 export const SCHOOL_NAV: SchoolNavItem[] = [
-  { label: 'Dashboard', href: '/school/dashboard', always: true },
-  {
-    label: 'Staff',
-    href: '/school/staff',
-    capabilities: ['staff.onboard'],
-  },
+  { label: 'Dashboard', href: '/school/dashboard', icon: LayoutDashboard, always: true },
+  { label: 'Staff', href: '/school/staff', icon: Users, capabilities: ['staff.onboard'] },
   {
     label: 'Students',
     href: '/school/students',
+    icon: GraduationCap,
     capabilities: ['admissions.manage', 'admissions.approve', 'student.promote'],
   },
   {
     label: 'Academic',
     href: '/school/sessions',
+    icon: BookOpen,
     capabilities: ['academic_year.manage', 'term.manage', 'census.lock'],
+  },
+  {
+    label: 'Timetable',
+    href: '/school/timetable',
+    icon: BookOpen,
+    capabilities: ['academic_year.manage', 'term.manage'],
+  },
+  {
+    label: 'Assignments',
+    href: '/school/assignments',
+    icon: ClipboardList,
+    capabilities: ['gradebook.write', 'gradebook.read'],
   },
   {
     label: 'Finance',
     href: '/school/finance',
+    icon: Percent,
     capabilities: ['fee.configure', 'payment.log', 'payment.verify', 'refund.initiate', 'refund.approve'],
   },
   {
     label: 'Exams',
     href: '/school/exams',
+    icon: ClipboardList,
     capabilities: ['grading_scheme.configure', 'result.publish', 'gradebook.read'],
   },
   {
     label: 'Gradebook',
     href: '/school/gradebook',
+    icon: BookOpen,
     capabilities: ['gradebook.write', 'gradebook.read'],
   },
   {
     label: 'Attendance',
     href: '/school/attendance',
+    icon: UserCheck,
     capabilities: ['attendance.mark', 'attendance.view'],
   },
   {
-    label: 'Settings',
-    href: '/school/settings',
-    always: true,
+    label: 'Workflows',
+    href: '/school/workflows',
+    icon: ShieldCheck,
+    capabilities: ['staff.onboard', 'refund.approve', 'result.publish'],
   },
+  {
+    label: 'Communications',
+    href: '/school/comms',
+    icon: Users,
+    capabilities: ['staff.onboard', 'attendance.mark', 'gradebook.read'],
+  },
+  { label: 'Settings', href: '/school/settings', icon: Settings, always: true },
 ];
 
 export const STAFF_PRIMARY_ROLE_LABELS: Record<string, string> = {

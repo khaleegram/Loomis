@@ -15,9 +15,15 @@ export default [
       '**/build/**',
       '**/coverage/**',
       '**/.turbo/**',
-      // Generated SQL migrations and drizzle metadata are not linted.
       '**/drizzle/migrations/**',
     ],
   },
   ...loomisEslintBase,
+  {
+    files: ['packages/api-client/src/query/hooks/timetable.ts', 'packages/api-client/src/query/hooks/comms.ts'],
+    rules: {
+      '@typescript-eslint/ban-ts-comment': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
 ];

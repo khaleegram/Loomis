@@ -9,6 +9,12 @@ import {
   PriorityBadge,
   SegmentedControl,
   Skeleton,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
   breachPriority,
   cn,
 } from '@loomis/ui-web';
@@ -99,25 +105,25 @@ export default function BreachQueuePage() {
             ))}
           </div>
         ) : (
-          <div className="overflow-hidden rounded-lg border-2 border-neutral-300 dark:border-forest-700">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b-2 border-neutral-300 bg-neutral-50 font-serif dark:border-forest-700 dark:bg-forest-950">
-                  <th className="px-4 py-3 text-left font-semibold">NDPC Clock</th>
-                  <th className="px-4 py-3 text-left font-semibold">Discovery</th>
-                  <th className="px-4 py-3 text-left font-semibold">Type</th>
-                  <th className="px-4 py-3 text-left font-semibold">Scope</th>
-                  <th className="px-4 py-3 text-left font-semibold">Status</th>
-                </tr>
-              </thead>
-              <tbody>
+          <div className="overflow-hidden rounded-lg border border-neutral-300 dark:border-forest-700 bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>NDPC Clock</TableHead>
+                  <TableHead>Discovery</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Scope</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {sorted.map((breach) => (
-                  <tr
+                  <TableRow
                     key={breach.id}
-                    className="cursor-pointer border-b border-neutral-200 hover:bg-neutral-50 dark:border-forest-800 dark:hover:bg-forest-900"
+                    className="cursor-pointer"
                     onClick={() => setSelectedId(breach.id)}
                   >
-                    <td className="px-4 py-3">
+                    <TableCell>
                       {breach.ndpcNotificationRequired && breach.ndpcHoursRemaining != null ? (
                         <CountdownRing
                           progress={ndpcProgress(breach)}
@@ -127,22 +133,22 @@ export default function BreachQueuePage() {
                       ) : (
                         <span className="text-xs text-muted-foreground">N/A</span>
                       )}
-                    </td>
-                    <td className="px-4 py-3 tabular-nums">
+                    </TableCell>
+                    <TableCell className="tabular-nums">
                       {format(new Date(breach.discoveredAt), 'dd/MM/yyyy')}
-                    </td>
-                    <td className="px-4 py-3">{breach.breachType}</td>
-                    <td className="px-4 py-3 text-xs">
+                    </TableCell>
+                    <TableCell>{breach.breachType}</TableCell>
+                    <TableCell className="text-xs">
                       {breach.affectedDataCategories.slice(0, 2).join(', ')}
                       {breach.affectedDataCategories.length > 2 ? '…' : ''}
-                    </td>
-                    <td className="px-4 py-3">
+                    </TableCell>
+                    <TableCell>
                       <Badge variant="outline">{breach.status}</Badge>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </PageBody>

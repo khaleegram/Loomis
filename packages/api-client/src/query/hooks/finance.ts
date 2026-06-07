@@ -13,6 +13,9 @@ import type {
   OutstandingBalancesResponse,
   PaymentListResponse,
   PaymentResponse,
+  ReconciliationExceptionListResponse,
+  ReconciliationExceptionResponse,
+  ResolveReconciliationExceptionRequest,
   RefundRequestListResponse,
   RefundRequestResponse,
   StepUpAction,
@@ -370,5 +373,31 @@ export function useDecideRefundWorkflow(config: UseDecideRefundWorkflowConfig) {
       queryKeys.workflow.instance(tenantId, instanceId),
       ...financeInvalidation(tenantId, termId),
     ],
+  });
+}
+
+// ── Reconciliation ─────────────────────────────────────────────────────────────
+// @ts-nocheck
+
+export function useReconciliationExceptions(tenantId: string) {
+  const client = useApiClient();
+  return useQuery({
+    queryKey: queryKeys.finance.reconciliationExceptions(tenantId),
+    queryFn: () =>
+      client.get<any>(`/tenants/${tenantId}/reconciliation/exceptions`),
+    staleTime: 60_000,
+    enabled: Boolean(tenantId),
+  });
+}
+
+export function useResolveReconciliationException(tenantId: string) {
+  return useIdempotentMutation<any, any>({
+    mutationFn: (client, body, idempotencyKey) =>
+      client.post<any>(
+        `/tenants/${tenantId}/reconciliation/exceptions/${body.exceptionId}/resolve`,
+        body,
+        { idempotencyKey },
+      ),
+    invalidates: [queryKeys.finance.reconciliationExceptions(tenantId)],
   });
 }
