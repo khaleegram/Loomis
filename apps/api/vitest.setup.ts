@@ -11,6 +11,7 @@ process.env.JWT_PRIVATE_KEY =
 process.env.JWT_PUBLIC_KEY =
   '-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzhvNYEMtGmnee8obWcwq\ndDg972mQFfgO5UUygyRxzuMNKWYhWQwkvArC9MmgiCa1oG8Jvvj5zAUqtcK9qvwN\nm/FxjR6B2ssebygwjzR6slFjjWXyB5kJ//Bt2rdJBNC+lBiA4h3RYRiJ75KIY9YD\nO46BVmZJRidDcwaxxxr+og8inJRmKK0nHfAFCQGlhfOne/KtEx8dJmaH6slN3Ipj\nYLanT8QFeyxTxbq6766EGTagYvAeW0nBVh96LJ+kpekD1Y/fpUkKxN7lJldJRc0m\n4FJEe9RAv8AawpFTomW/L+p6MuMOpU21uszfaXJbLwVeVuejdu2rAZdwcmYbP3hE\nHwIDAQAB\n-----END PUBLIC KEY-----';
 process.env.REFRESH_TOKEN_HMAC_SECRET = 'GNJ6h1OvTpOp+bBJXXjsBDfWzJoM26sHRRGNx216u/A=';
+process.env.REFERRAL_CODE_HMAC_SECRET = 'referral-hmac-test-secret-min-32-chars!!';
 process.env.TOTP_ENCRYPTION_KEY = 'UOYfOoj5UsHbKzH68Pvaw1Z0GFhMK6W8AJuWTbh7HDU=';
 process.env.S3_BUCKET = 'loomis-test';
 process.env.S3_REGION = 'af-south-1';

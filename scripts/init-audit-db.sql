@@ -3,3 +3,7 @@
 -- separate database in the same Postgres instance.
 SELECT 'CREATE DATABASE loomis_audit'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'loomis_audit')\gexec
+
+\connect loomis_audit
+
+\i /docker-entrypoint-initdb.d/audit-schema.sql

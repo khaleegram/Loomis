@@ -16,6 +16,8 @@ import { workflowModule } from './modules/workflow/index.js';
 import { storageModule } from './modules/storage/index.js';
 import { referralModule } from './modules/referral/index.js';
 import { commsModule } from './modules/comms/index.js';
+import { complianceModule } from './modules/compliance/index.js';
+import { readModelsModule } from './modules/read-models/index.js';
 
 /**
  * Fastify bootstrap. Domain modules register as plugins under /api/v1
@@ -55,6 +57,8 @@ async function buildServer() {
   await app.register(storageModule, { prefix: '/api/v1' });
   await app.register(referralModule, { prefix: '/api/v1' });
   await app.register(commsModule, { prefix: '/api/v1' });
+  await app.register(complianceModule, { prefix: '/api/v1' });
+  await app.register(readModelsModule, { prefix: '/api/v1' });
 
   return app;
 }

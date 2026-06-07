@@ -10,6 +10,7 @@ import {
   type VerifyOfflinePaymentRequest,
 } from '@loomis/contracts';
 import { authenticate } from '../../../middleware/authenticate.js';
+import { requireAuditAvailable } from '../../../middleware/require-audit-available.js';
 import { requireIdempotencyKey } from '../../../middleware/require-idempotency-key.js';
 import { requireRole } from '../../../middleware/require-role.js';
 import { requireTenantMatch } from '../../../middleware/require-tenant-match.js';
@@ -35,6 +36,7 @@ export async function paymentsRoutes(app: FastifyInstance): Promise<void> {
         authenticate,
         requireTenantMatch,
         requireRole('cashier'),
+        requireAuditAvailable,
         requireIdempotencyKey,
       ],
       preValidation: [validateBody(logOfflinePaymentRequest)],
@@ -49,6 +51,7 @@ export async function paymentsRoutes(app: FastifyInstance): Promise<void> {
         authenticate,
         requireTenantMatch,
         requireRole('accountant'),
+        requireAuditAvailable,
         requireIdempotencyKey,
       ],
       preValidation: [validateBody(verifyOfflinePaymentRequest)],
@@ -59,7 +62,7 @@ export async function paymentsRoutes(app: FastifyInstance): Promise<void> {
   app.post<{ Params: { tenantId: string }; Body: InitializeOnlinePaymentRequest }>(
     '/tenants/:tenantId/payments/online/initialize',
     {
-      preHandler: [authenticate, requireTenantMatch, requireRole('parent'), requireIdempotencyKey],
+      preHandler: [authenticate, requireTenantMatch, requireRole('parent'), requireAuditAvailable, requireIdempotencyKey],
       preValidation: [validateBody(initializeOnlinePaymentRequest)],
     },
     initializeOnlinePaymentHandler,

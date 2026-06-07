@@ -10,7 +10,8 @@ services:
       - "15432:5432"
     volumes:
       - ./pgdata:/var/lib/postgresql/data
-      - ./scripts/init-audit-db.sql:/docker-entrypoint-initdb.d/init-audit-db.sql:ro
+      - ./scripts/init-audit-db.sql:/docker-entrypoint-initdb.d/01-init-audit-db.sql:ro
+      - ./scripts/audit-schema.sql:/docker-entrypoint-initdb.d/audit-schema.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U loomis"]
       interval: 5s

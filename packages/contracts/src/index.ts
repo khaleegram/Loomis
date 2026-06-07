@@ -43,3 +43,9 @@ export * from './referral/referral.schema.js';
 
 // Comms
 export * from './comms/comms.schema.js';
+
+// Compliance
+export * from './compliance/compliance.schema.js';
+
+// Read models
+export * from './read-models/read-models.schema.js';

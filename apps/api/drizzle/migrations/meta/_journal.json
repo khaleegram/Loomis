@@ -232,6 +232,34 @@
       "when": 1780836900001,
       "tag": "0032_comms_constraints_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1780837000000,
+      "tag": "0033_compliance",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1780837000001,
+      "tag": "0034_compliance_constraints_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1780837100000,
+      "tag": "0035_read_models",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1780837100001,
+      "tag": "0036_read_models_constraints_rls",
+      "breakpoints": true
     }
   ]
 }

@@ -12,6 +12,7 @@ import {
   type ResolveReconciliationExceptionRequest,
 } from '@loomis/contracts';
 import { authenticate } from '../../../middleware/authenticate.js';
+import { requireAuditAvailable } from '../../../middleware/require-audit-available.js';
 import { requireIdempotencyKey } from '../../../middleware/require-idempotency-key.js';
 import { requireRole } from '../../../middleware/require-role.js';
 import { requireStepUp } from '../../../middleware/require-step-up.js';
@@ -40,6 +41,7 @@ export async function refundsRoutes(app: FastifyInstance): Promise<void> {
         authenticate,
         requireTenantMatch,
         requireRole('cashier'),
+        requireAuditAvailable,
         requireIdempotencyKey,
       ],
       preValidation: [validateBody(createRefundRequest)],
@@ -80,6 +82,7 @@ export async function refundsRoutes(app: FastifyInstance): Promise<void> {
         requireTenantMatch,
         requireRole('platform_admin', 'platform_owner'),
         requireStepUp('ledger_adjustment'),
+        requireAuditAvailable,
         requireIdempotencyKey,
       ],
       preValidation: [validateBody(requestPsfReversalRequest)],
@@ -113,6 +116,7 @@ export async function reconciliationRoutes(app: FastifyInstance): Promise<void> 
         authenticate,
         requireTenantMatch,
         requireRole('accountant', 'platform_admin', 'platform_owner'),
+        requireAuditAvailable,
         requireIdempotencyKey,
       ],
       preValidation: [validateBody(resolveReconciliationExceptionRequest)],
@@ -127,6 +131,7 @@ export async function reconciliationRoutes(app: FastifyInstance): Promise<void> 
         authenticate,
         requireTenantMatch,
         requireRole('platform_admin', 'platform_owner'),
+        requireAuditAvailable,
       ],
     },
     runReconciliationHandler,
