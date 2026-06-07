@@ -284,7 +284,7 @@ export function usePlatformReferralParticipants() {
   return useQuery({
     queryKey: queryKeys.platform.referralParticipants(),
     queryFn: () =>
-      client.get<ReferralParticipantsListResponse>('/platform/referrals/participants'),
+      client.get<ReferralParticipantsListResponse>('/platform/referral/participants'),
     staleTime: PLATFORM_STALE_MS,
   });
 }
@@ -295,7 +295,7 @@ export function usePlatformPayoutCycles() {
     queryKey: queryKeys.platform.payoutCycles(),
     queryFn: () =>
       client.get<{ cycles: import('@loomis/contracts').PayoutCycleResponse[] }>(
-        '/platform/referrals/payout-cycles',
+        '/platform/referral/payout-cycles',
       ),
     staleTime: PLATFORM_STALE_MS,
   });

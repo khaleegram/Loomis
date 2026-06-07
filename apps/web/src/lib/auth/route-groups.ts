@@ -45,6 +45,7 @@ export const ROLE_GROUP: Record<Role, RouteGroup> = {
 
 /** The landing path a role should be sent to after login / on a group mismatch. */
 export function homePathForRole(role: Role): string {
+  if (role === 'dpo') return '/platform/compliance';
   return GROUP_PREFIX[ROLE_GROUP[role]];
 }
 

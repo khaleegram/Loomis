@@ -110,4 +110,13 @@ export {
   type LedgerEntryRow,
   type LedgerEntryTableProps,
 } from './components/ui/ledger-entry-table.js';
+export {
+  PriorityBadge,
+  breachPriority,
+  dsarPriority,
+  type PriorityBadgeProps,
+} from './components/ui/priority-badge.js';
+export { CountdownRing, type CountdownRingProps } from './components/ui/countdown-ring.js';
+export { FilterChipBar, type FilterChip, type FilterChipBarProps } from './components/ui/filter-chip-bar.js';
+export { ProgressStrip, type ProgressStripProps } from './components/ui/progress-strip.js';
 export { cn } from './lib/utils.js';

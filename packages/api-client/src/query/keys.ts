@@ -44,6 +44,27 @@ export type OutstandingBalancesFilters = {
   status?: string;
 };
 
+import type { AuditSensitivity } from '@loomis/contracts';
+
+export type AuditLogFilters = {
+  actorUserId?: string;
+  tenantId?: string;
+  action?: string;
+  sensitivity?: AuditSensitivity;
+  from?: string;
+  to?: string;
+  cursor?: string;
+  limit?: number;
+};
+
+export type DsarListFilters = {
+  status?: string;
+};
+
+export type BreachListFilters = {
+  status?: string;
+};
+
 export const queryKeys = {
   identity: {
     /** User-scoped — not tenant-partitioned. */
@@ -143,6 +164,30 @@ export const queryKeys = {
     referralParticipants: () => ['platform', 'referrals', 'participants'] as const,
     payoutCycles: () => ['platform', 'referrals', 'payout-cycles'] as const,
     breakGlassSessions: () => ['platform', 'break-glass', 'sessions'] as const,
+    auditLog: (filters: AuditLogFilters = {}) => ['platform', 'audit', 'events', filters] as const,
+  },
+  /** Regional layer — platform actors have null tenant_id. */
+  regional: {
+    all: () => ['regional'] as const,
+    analytics: (region?: string) => ['regional', 'analytics', region ?? 'all'] as const,
+    participant: () => ['regional', 'participant', 'me'] as const,
+    subordinates: () => ['regional', 'subordinates'] as const,
+    referralCode: () => ['regional', 'referral-code', 'me'] as const,
+    kyc: () => ['regional', 'kyc', 'me'] as const,
+    earnings: () => ['regional', 'earnings'] as const,
+    earningsSummary: () => ['regional', 'earnings', 'summary'] as const,
+    payoutCycles: () => ['regional', 'payout-cycles'] as const,
+  },
+  /** DPO compliance — global scope (null tenant_id). */
+  compliance: {
+    all: () => ['compliance'] as const,
+    dashboard: () => ['compliance', 'dashboard'] as const,
+    dsars: (filters: DsarListFilters = {}) => ['compliance', 'dsars', filters] as const,
+    dsar: (dsarId: string) => ['compliance', 'dsars', dsarId] as const,
+    breaches: (filters: BreachListFilters = {}) => ['compliance', 'breaches', filters] as const,
+    breach: (breachId: string) => ['compliance', 'breaches', breachId] as const,
+    consentVersions: () => ['compliance', 'consent-versions'] as const,
+    retentionSchedules: () => ['compliance', 'retention-schedules'] as const,
   },
 } as const;
 

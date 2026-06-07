@@ -8,3 +8,6 @@ export * from './attendance.js';
 export * from './workflow.js';
 export * from './finance.js';
 export * from './platform.js';
+export * from './regional.js';
+export * from './compliance.js';
+export * from './audit.js';

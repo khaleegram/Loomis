@@ -43,6 +43,7 @@ describe('route-groups', () => {
     expect(homePathForRole('principal')).toBe('/school');
     expect(homePathForRole('regional_manager')).toBe('/regional');
     expect(homePathForRole('platform_owner')).toBe('/platform');
+    expect(homePathForRole('dpo')).toBe('/platform/compliance');
     expect(homePathForRole('parent')).toBe('/parent');
   });
 });

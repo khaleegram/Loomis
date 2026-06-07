@@ -49,3 +49,6 @@ export * from './compliance/compliance.schema.js';
 
 // Read models
 export * from './read-models/read-models.schema.js';
+
+// Audit
+export * from './audit/audit.schema.js';
