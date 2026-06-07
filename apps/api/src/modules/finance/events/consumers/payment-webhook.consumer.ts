@@ -34,7 +34,7 @@ export async function handlePaymentWebhookReceived(
     return;
   }
 
-  const provider = payload.provider as 'paystack' | 'flutterwave';
+  const provider = payload.provider as 'paystack';
   const gateway = gatewayAbstractionLayer.get(provider);
   const parsed = gateway.parseWebhookEvent(JSON.stringify(webhookRow.payload));
 

@@ -347,7 +347,7 @@ export const webhookEvents = financeSchema.table(
     statusIdx: index('webhook_events_status_idx').on(table.status, table.createdAt),
     providerValid: check(
       'webhook_events_provider_valid',
-      sql`${table.provider} IN ('paystack', 'flutterwave')`,
+      sql`${table.provider} IN ('paystack')`,
     ),
     statusValid: check(
       'webhook_events_status_valid',

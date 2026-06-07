@@ -130,7 +130,7 @@ export function paymentToResponse(data: PaymentWithReceipt) {
     paymentDate: payment.paymentDate,
     channelReference: payment.channelReference ?? null,
     evidenceStorageObjectId: payment.evidenceStorageObjectId ?? null,
-    gatewayProvider: (payment.gatewayProvider as 'paystack' | 'flutterwave' | null) ?? null,
+    gatewayProvider: (payment.gatewayProvider as 'paystack' | null) ?? null,
     gatewayReference: payment.gatewayReference ?? null,
     gatewayAuthorizationUrl: payment.gatewayAuthorizationUrl ?? null,
     receipt: receipt ? receiptToResponse(receipt) : null,

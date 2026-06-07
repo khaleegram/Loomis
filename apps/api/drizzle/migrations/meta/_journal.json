@@ -141,6 +141,13 @@
       "when": 1780708000001,
       "tag": "0018_finance_payments_constraints_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1780709000000,
+      "tag": "0019_paystack_only_provider",
+      "breakpoints": true
     }
   ]
 }

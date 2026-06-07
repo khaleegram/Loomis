@@ -243,7 +243,7 @@ export type OfflinePaymentMethod = z.infer<typeof offlinePaymentMethod>;
 export const onlinePaymentMethod = z.enum(['card', 'bank_transfer', 'ussd']);
 export type OnlinePaymentMethod = z.infer<typeof onlinePaymentMethod>;
 
-export const paymentGatewayProvider = z.enum(['paystack', 'flutterwave']);
+export const paymentGatewayProvider = z.enum(['paystack']);
 export type PaymentGatewayProvider = z.infer<typeof paymentGatewayProvider>;
 
 export const paymentStatus = z.enum([
@@ -279,7 +279,8 @@ export type VerifyOfflinePaymentRequest = z.infer<typeof verifyOfflinePaymentReq
 export const initializeOnlinePaymentRequest = z.object({
   invoiceId: z.string().uuid(),
   amountMinor: positiveKoboAmount,
-  provider: paymentGatewayProvider,
+  /** Only Paystack is supported; field kept for forward-compatible clients. */
+  provider: paymentGatewayProvider.default('paystack'),
   method: onlinePaymentMethod.default('card'),
   payerEmail: z.string().email(),
 });
