@@ -2,20 +2,21 @@
 
 Next.js 15 (App Router) web application. School-staff and platform consoles are web-first.
 
-## Initialise (one-time)
+## Stack
 
-This package is a stub. To scaffold the Next.js app in place:
+- **Framework:** Next.js 15 App Router (`src/app`)
+- **State:** TanStack Query v5 (server state) + Zustand (client UI state)
+- **API:** `@loomis/api-client` with in-memory access token store
+- **UI:** `@loomis/ui-web` (Shadcn/UI + Tailwind) on `@loomis/design-tokens`
+
+## Development
 
 ```bash
-cd apps/web
-pnpm dlx create-next-app@latest . --typescript --tailwind --app --src-dir --import-alias "@/*"
+pnpm --filter @loomis/web dev
 ```
 
-Then wire up:
-- Route groups: `(auth)`, `(platform)`, `(regional)`, `(school)`, `(parent)` (Frontend Architecture §7.1)
-- `middleware.ts` edge auth gate (§7.2)
-- BFF route handlers under `app/api/auth/*` for httpOnly cookie token storage (§7.3)
-- TanStack Query provider + the shared `@loomis/api-client`
-- Tailwind preset from `@loomis/design-tokens`
+Set `NEXT_PUBLIC_API_URL` to point at the Fastify API (defaults to `http://localhost:4000`).
 
-See `Loomis_Frontend_Architecture_v1.md` §7 for the full web spec.
+## Route groups (planned)
+
+`(auth)`, `(platform)`, `(regional)`, `(school)`, `(parent)` — see `Loomis_Frontend_Architecture_v1.md` §7.1.

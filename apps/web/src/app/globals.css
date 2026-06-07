@@ -1,0 +1,9 @@
+@import "tailwindcss";
+@import "@loomis/design-tokens/tailwind";
+@import "@loomis/ui-web/styles";
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
