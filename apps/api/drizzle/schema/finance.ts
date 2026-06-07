@@ -355,3 +355,114 @@ export const webhookEvents = financeSchema.table(
     ),
   }),
 );
+
+/**
+ * Refund requests (SRS §4.6 FR-FIN-007; US-FIN-006). Cashier initiates; approval
+ * flows through Workflow (`refund_request`: Accountant → Principal → Owner).
+ * PSF is NOT reversed on school-fee refunds. PSF reversal is a separate platform
+ * workflow (`psf_reversal_on_refund`) for duplicate/error/chargeback/legal only.
+ */
+export const refundRequests = financeSchema.table(
+  'refund_requests',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id),
+    paymentId: uuid('payment_id')
+      .notNull()
+      .references(() => payments.id),
+    invoiceId: uuid('invoice_id')
+      .notNull()
+      .references(() => invoices.id),
+    termId: uuid('term_id').notNull(),
+    studentId: uuid('student_id').notNull(),
+    amountMinor: bigint('amount_minor', { mode: 'number' }).notNull(),
+    reasonCode: varchar('reason_code', { length: 30 }).notNull(),
+    reasonNotes: varchar('reason_notes', { length: 1000 }),
+    psfTreatment: varchar('psf_treatment', { length: 30 }).notNull().default('not_reversed'),
+    status: varchar('status', { length: 20 }).notNull().default('pending'),
+    workflowInstanceId: uuid('workflow_instance_id').notNull(),
+    psfReversalWorkflowId: uuid('psf_reversal_workflow_id'),
+    requestedById: uuid('requested_by_id').notNull(),
+    approvedById: uuid('approved_by_id'),
+    executedAt: timestamp('executed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    tenantStatusIdx: index('refund_requests_tenant_status_idx').on(table.tenantId, table.status),
+    paymentIdx: index('refund_requests_payment_idx').on(table.tenantId, table.paymentId),
+    workflowUnique: uniqueIndex('refund_requests_workflow_unique').on(table.workflowInstanceId),
+    amountPositive: check('refund_requests_amount_positive', sql`${table.amountMinor} > 0`),
+    reasonValid: check(
+      'refund_requests_reason_valid',
+      sql`${table.reasonCode} IN (
+        'duplicate', 'overpayment', 'student_withdrawal',
+        'service_failure', 'chargeback', 'platform_error', 'legal_compulsion'
+      )`,
+    ),
+    psfTreatmentValid: check(
+      'refund_requests_psf_treatment_valid',
+      sql`${table.psfTreatment} IN ('not_reversed', 'reversal_pending', 'reversed')`,
+    ),
+    statusValid: check(
+      'refund_requests_status_valid',
+      sql`${table.status} IN ('pending', 'approved', 'rejected', 'executed', 'cancelled')`,
+    ),
+  }),
+);
+
+/**
+ * Gateway reconciliation exceptions (SRS §10.1; US-FIN-007). Created by the nightly
+ * BullMQ job when gateway settlement records diverge from internal payment records.
+ * `tenant_id` is populated when the exception can be tied to a platform payment.
+ */
+export const reconciliationExceptions = financeSchema.table(
+  'reconciliation_exceptions',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    tenantId: uuid('tenant_id').references(() => tenants.id),
+    provider: varchar('provider', { length: 20 }).notNull(),
+    exceptionType: varchar('exception_type', { length: 30 }).notNull(),
+    gatewayReference: varchar('gateway_reference', { length: 120 }),
+    paymentId: uuid('payment_id').references(() => payments.id),
+    gatewayAmountMinor: bigint('gateway_amount_minor', { mode: 'number' }),
+    platformAmountMinor: bigint('platform_amount_minor', { mode: 'number' }),
+    settlementDate: date('settlement_date').notNull(),
+    reconciliationRunId: uuid('reconciliation_run_id').notNull(),
+    status: varchar('status', { length: 20 }).notNull().default('open'),
+    resolutionNotes: varchar('resolution_notes', { length: 1000 }),
+    resolvedById: uuid('resolved_by_id'),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    tenantStatusIdx: index('reconciliation_exceptions_tenant_status_idx').on(
+      table.tenantId,
+      table.status,
+    ),
+    runIdx: index('reconciliation_exceptions_run_idx').on(table.reconciliationRunId),
+    providerReferenceIdx: index('reconciliation_exceptions_provider_ref_idx').on(
+      table.provider,
+      table.gatewayReference,
+    ),
+    providerValid: check(
+      'reconciliation_exceptions_provider_valid',
+      sql`${table.provider} IN ('paystack')`,
+    ),
+    exceptionTypeValid: check(
+      'reconciliation_exceptions_type_valid',
+      sql`${table.exceptionType} IN ('gateway_only', 'platform_only', 'amount_mismatch')`,
+    ),
+    statusValid: check(
+      'reconciliation_exceptions_status_valid',
+      sql`${table.status} IN ('open', 'resolved', 'ignored')`,
+    ),
+  }),
+);

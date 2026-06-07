@@ -88,12 +88,15 @@ export async function decideHandler(
 ): Promise<FastifyReply> {
   const actor = requireActor(req);
   const tenantId = resolveRouteTenantId(req.params.tenantId, actor.tenantId);
+  const mfaHeader = req.headers['x-mfa-token'];
+  const mfaToken = Array.isArray(mfaHeader) ? mfaHeader[0] : mfaHeader;
   const instance = await workflowService.decide(
     tenantId,
     req.params.instanceId,
     req.params.stepId,
     req.body,
     actor,
+    mfaToken ? { mfaToken } : undefined,
   );
   return sendSuccess(reply, workflowInstanceToResponse(instance));
 }

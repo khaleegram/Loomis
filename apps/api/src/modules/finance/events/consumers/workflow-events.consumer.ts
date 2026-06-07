@@ -2,6 +2,7 @@ import type { FeeItemCategory } from '@loomis/contracts';
 import { getRedis } from '../../../../shared/redis.js';
 import type { WorkflowCompletedEvent } from '../../../workflow/events/types.js';
 import { feeStructureService } from '../../services/fee-structure.service.js';
+import { refundService } from '../../services/refund.service.js';
 
 const PROCESSED_EVENT_TTL_SECONDS = 7 * 24 * 60 * 60;
 
@@ -28,13 +29,30 @@ interface AmendmentPayloadItem {
 }
 
 /**
- * Consumes `workflow.completed` and applies an approved fee-structure amendment
- * (US-FIN-001). The amendment is NOT applied at request time — only here, after
- * the Principal approves. Rejected/returned amendments are silently discarded.
+ * Consumes `workflow.completed` for Finance-owned workflow types:
+ * - `fee_structure_change` — applies approved amendment (US-FIN-001)
+ * - `refund_request` — executes approved refund (US-FIN-006)
+ * - `psf_reversal_on_refund` — applies platform PSF reversal (FR-FIN-007)
  */
 export async function handleWorkflowCompleted(payload: WorkflowCompletedEvent): Promise<void> {
-  if (payload.workflowType !== 'fee_structure_change') return;
   if (!(await claimEvent(payload.eventId))) return;
+
+  if (payload.workflowType === 'fee_structure_change') {
+    await handleFeeStructureChange(payload);
+    return;
+  }
+
+  if (payload.workflowType === 'refund_request') {
+    await handleRefundRequest(payload);
+    return;
+  }
+
+  if (payload.workflowType === 'psf_reversal_on_refund') {
+    await handlePsfReversal(payload);
+  }
+}
+
+async function handleFeeStructureChange(payload: WorkflowCompletedEvent): Promise<void> {
   if (payload.status !== 'approved') return;
   if (!payload.tenantId || !payload.approvedById) return;
 
@@ -52,6 +70,50 @@ export async function handleWorkflowCompleted(payload: WorkflowCompletedEvent): 
       category: item.category as FeeItemCategory,
       amountMinor: item.amountMinor,
     })),
+    requestedById: payload.requestedById,
+    approvedById: payload.approvedById,
+    workflowInstanceId: payload.workflowInstanceId,
+    eventId: payload.eventId,
+  });
+}
+
+async function handleRefundRequest(payload: WorkflowCompletedEvent): Promise<void> {
+  if (!payload.tenantId) return;
+
+  const refundId = payload.payload.refundId;
+  if (typeof refundId !== 'string') return;
+
+  if (payload.status === 'approved' && payload.approvedById) {
+    await refundService.applyApprovedRefund({
+      tenantId: payload.tenantId,
+      refundId,
+      requestedById: payload.requestedById,
+      approvedById: payload.approvedById,
+      workflowInstanceId: payload.workflowInstanceId,
+      eventId: payload.eventId,
+    });
+    return;
+  }
+
+  if (payload.status === 'rejected' || payload.status === 'returned') {
+    await refundService.markRefundRejected({
+      tenantId: payload.tenantId,
+      refundId,
+      eventId: payload.eventId,
+    });
+  }
+}
+
+async function handlePsfReversal(payload: WorkflowCompletedEvent): Promise<void> {
+  if (payload.status !== 'approved') return;
+  if (!payload.tenantId || !payload.approvedById) return;
+
+  const refundId = payload.payload.refundId;
+  if (typeof refundId !== 'string') return;
+
+  await refundService.applyApprovedPsfReversal({
+    tenantId: payload.tenantId,
+    refundId,
     requestedById: payload.requestedById,
     approvedById: payload.approvedById,
     workflowInstanceId: payload.workflowInstanceId,

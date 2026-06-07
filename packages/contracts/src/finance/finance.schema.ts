@@ -351,3 +351,160 @@ export const paymentsQuery = z.object({
   channel: paymentChannel.optional(),
 });
 export type PaymentsQuery = z.infer<typeof paymentsQuery>;
+
+// ── Refunds (US-FIN-006 / FR-FIN-007) ────────────────────────────────────────
+
+export const refundReasonCode = z.enum([
+  'duplicate',
+  'overpayment',
+  'student_withdrawal',
+  'service_failure',
+  'chargeback',
+  'platform_error',
+  'legal_compulsion',
+]);
+export type RefundReasonCode = z.infer<typeof refundReasonCode>;
+
+/** PSF reversal is permitted only for these reason codes (loomis-financial-integrity). */
+export const PSF_REVERSAL_ELIGIBLE_REASONS: RefundReasonCode[] = [
+  'duplicate',
+  'platform_error',
+  'chargeback',
+  'legal_compulsion',
+];
+
+export const refundPsfTreatment = z.enum(['not_reversed', 'reversal_pending', 'reversed']);
+export type RefundPsfTreatment = z.infer<typeof refundPsfTreatment>;
+
+export const refundRequestStatus = z.enum([
+  'pending',
+  'approved',
+  'rejected',
+  'executed',
+  'cancelled',
+]);
+export type RefundRequestStatus = z.infer<typeof refundRequestStatus>;
+
+/** US-FIN-006. Cashier initiates a refund against a verified payment. */
+export const createRefundRequest = z.object({
+  paymentId: z.string().uuid(),
+  amountMinor: positiveKoboAmount,
+  reasonCode: refundReasonCode,
+  reasonNotes: z.string().min(10).max(1000),
+});
+export type CreateRefundRequest = z.infer<typeof createRefundRequest>;
+
+export const refundRequestResponse = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
+  paymentId: z.string().uuid(),
+  invoiceId: z.string().uuid(),
+  termId: z.string().uuid(),
+  studentId: z.string().uuid(),
+  amountMinor: koboAmount,
+  reasonCode: refundReasonCode,
+  reasonNotes: z.string().nullable(),
+  psfTreatment: refundPsfTreatment,
+  status: refundRequestStatus,
+  workflowInstanceId: z.string().uuid(),
+  psfReversalWorkflowId: z.string().uuid().nullable(),
+  requestedById: z.string().uuid(),
+  approvedById: z.string().uuid().nullable(),
+  executedAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+export type RefundRequestResponse = z.infer<typeof refundRequestResponse>;
+
+export const refundRequestListResponse = z.object({
+  refunds: z.array(refundRequestResponse),
+});
+export type RefundRequestListResponse = z.infer<typeof refundRequestListResponse>;
+
+/** Returned when a refund request is routed to Workflow for approval. */
+export const createRefundResponse = z.object({
+  refund: refundRequestResponse,
+  workflowInstanceId: z.string().uuid(),
+  status: z.literal('pending'),
+});
+export type CreateRefundResponse = z.infer<typeof createRefundResponse>;
+
+/** Request platform PSF reversal for an executed refund (dual platform approval). */
+export const requestPsfReversalRequest = z.object({
+  justification: z.string().min(10).max(500),
+});
+export type RequestPsfReversalRequest = z.infer<typeof requestPsfReversalRequest>;
+
+export const psfReversalResponse = z.object({
+  refundId: z.string().uuid(),
+  psfReversalWorkflowId: z.string().uuid(),
+  status: z.literal('reversal_pending'),
+});
+export type PsfReversalResponse = z.infer<typeof psfReversalResponse>;
+
+export const refundsQuery = z.object({
+  termId: z.string().uuid().optional(),
+  paymentId: z.string().uuid().optional(),
+  status: refundRequestStatus.optional(),
+});
+export type RefundsQuery = z.infer<typeof refundsQuery>;
+
+// ── Reconciliation (US-FIN-007 / SRS §10.1) ──────────────────────────────────
+
+export const reconciliationExceptionType = z.enum([
+  'gateway_only',
+  'platform_only',
+  'amount_mismatch',
+]);
+export type ReconciliationExceptionType = z.infer<typeof reconciliationExceptionType>;
+
+export const reconciliationExceptionStatus = z.enum(['open', 'resolved', 'ignored']);
+export type ReconciliationExceptionStatus = z.infer<typeof reconciliationExceptionStatus>;
+
+export const reconciliationExceptionResponse = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().uuid().nullable(),
+  provider: paymentGatewayProvider,
+  exceptionType: reconciliationExceptionType,
+  gatewayReference: z.string().nullable(),
+  paymentId: z.string().uuid().nullable(),
+  gatewayAmountMinor: koboAmount.nullable(),
+  platformAmountMinor: koboAmount.nullable(),
+  settlementDate: calendarDate,
+  reconciliationRunId: z.string().uuid(),
+  status: reconciliationExceptionStatus,
+  resolutionNotes: z.string().nullable(),
+  resolvedById: z.string().uuid().nullable(),
+  resolvedAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+export type ReconciliationExceptionResponse = z.infer<typeof reconciliationExceptionResponse>;
+
+export const reconciliationExceptionListResponse = z.object({
+  exceptions: z.array(reconciliationExceptionResponse),
+});
+export type ReconciliationExceptionListResponse = z.infer<
+  typeof reconciliationExceptionListResponse
+>;
+
+export const resolveReconciliationExceptionRequest = z.object({
+  status: z.enum(['resolved', 'ignored']),
+  resolutionNotes: z.string().min(10).max(1000),
+});
+export type ResolveReconciliationExceptionRequest = z.infer<
+  typeof resolveReconciliationExceptionRequest
+>;
+
+export const reconciliationExceptionsQuery = z.object({
+  status: reconciliationExceptionStatus.optional(),
+  provider: paymentGatewayProvider.optional(),
+});
+export type ReconciliationExceptionsQuery = z.infer<typeof reconciliationExceptionsQuery>;
+
+export const runReconciliationResponse = z.object({
+  runId: z.string().uuid(),
+  exceptionsCreated: z.number().int(),
+  settlementDate: calendarDate,
+});
+export type RunReconciliationResponse = z.infer<typeof runReconciliationResponse>;

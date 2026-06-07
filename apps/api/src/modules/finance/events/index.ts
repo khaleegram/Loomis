@@ -22,4 +22,6 @@ export type {
   InvoiceIssuedPayload,
   PaymentVerifiedPayload,
   PaymentWebhookReceivedPayload,
+  RefundApprovedPayload,
+  PsfReversalApprovedPayload,
 } from './types.js';

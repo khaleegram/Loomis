@@ -119,4 +119,62 @@ export const paystackGateway: PaymentGateway = {
       gatewayReference: body.data.reference ?? input.reference,
     };
   },
+
+  async fetchSuccessfulTransactions(fromDate: string, toDate: string) {
+    const secret = requirePaystackSecret();
+    const records: import('./types.js').GatewaySettlementRecord[] = [];
+    let page = 1;
+    let hasMore = true;
+
+    while (hasMore) {
+      const url = new URL(`${PAYSTACK_API}/transaction`);
+      url.searchParams.set('from', fromDate);
+      url.searchParams.set('to', toDate);
+      url.searchParams.set('status', 'success');
+      url.searchParams.set('perPage', '100');
+      url.searchParams.set('page', String(page));
+
+      const response = await fetch(url.toString(), {
+        headers: { Authorization: `Bearer ${secret}` },
+      });
+
+      const body = (await response.json()) as {
+        status?: boolean;
+        message?: string;
+        data?: Array<{
+          reference?: string;
+          amount?: number;
+          paid_at?: string;
+        }>;
+        meta?: { nextPage?: number | null; pageCount?: number };
+      };
+
+      if (!response.ok || !body.status) {
+        throw new LoomisError(
+          'FINANCE_GATEWAY_RECONCILIATION_FAILED',
+          502,
+          body.message ?? 'Paystack transaction fetch failed during reconciliation',
+        );
+      }
+
+      for (const txn of body.data ?? []) {
+        if (typeof txn.reference !== 'string' || typeof txn.amount !== 'number') continue;
+        const settledAt = typeof txn.paid_at === 'string' ? txn.paid_at.slice(0, 10) : fromDate;
+        records.push({
+          gatewayReference: txn.reference,
+          amountMinor: txn.amount,
+          settledAt,
+        });
+      }
+
+      const nextPage = body.meta?.nextPage;
+      if (nextPage && nextPage > page) {
+        page = nextPage;
+      } else {
+        hasMore = false;
+      }
+    }
+
+    return records;
+  },
 };

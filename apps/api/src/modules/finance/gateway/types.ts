@@ -25,9 +25,17 @@ export interface ParsedWebhookEvent {
   raw: Record<string, unknown>;
 }
 
+/** A successful gateway settlement record used for nightly reconciliation. */
+export interface GatewaySettlementRecord {
+  gatewayReference: string;
+  amountMinor: number;
+  settledAt: string;
+}
+
 export interface PaymentGateway {
   readonly provider: PaymentGatewayProvider;
   verifyWebhookSignature(headers: Record<string, string | string[] | undefined>, rawBody: string): boolean;
   parseWebhookEvent(rawBody: string): ParsedWebhookEvent;
   initializePayment(input: InitializePaymentInput): Promise<InitializePaymentResult>;
+  fetchSuccessfulTransactions(fromDate: string, toDate: string): Promise<GatewaySettlementRecord[]>;
 }

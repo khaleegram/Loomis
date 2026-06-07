@@ -2,11 +2,14 @@ import type {
   AmendFeeStructureRequest,
   BatchIssueInvoicesRequest,
   CreateFeeStructureRequest,
+  CreateRefundRequest,
   FeeItemInput,
   InitializeOnlinePaymentRequest,
   IssueInvoiceRequest,
   LogOfflinePaymentRequest,
   PaymentsQuery,
+  RequestPsfReversalRequest,
+  ResolveReconciliationExceptionRequest,
   UpdateFeeStructureRequest,
   VerifyOfflinePaymentRequest,
 } from '@loomis/contracts';
@@ -35,6 +38,9 @@ export type LogOfflinePaymentInput = LogOfflinePaymentRequest;
 export type VerifyOfflinePaymentInput = VerifyOfflinePaymentRequest;
 export type InitializeOnlinePaymentInput = InitializeOnlinePaymentRequest;
 export type PaymentsListQuery = PaymentsQuery;
+export type CreateRefundInput = CreateRefundRequest;
+export type RequestPsfReversalInput = RequestPsfReversalRequest;
+export type ResolveReconciliationExceptionInput = ResolveReconciliationExceptionRequest;
 
 /** A single durable outbox event row to insert inside a producer's transaction. */
 export interface OutboxEventInput {

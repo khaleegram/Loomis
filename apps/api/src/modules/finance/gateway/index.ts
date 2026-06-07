@@ -5,6 +5,7 @@ import type { PaymentGateway } from './types.js';
 export type {
   InitializePaymentInput,
   InitializePaymentResult,
+  GatewaySettlementRecord,
   ParsedWebhookEvent,
   PaymentGateway,
 } from './types.js';

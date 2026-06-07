@@ -13,6 +13,10 @@ export const FINANCE_EVENT_TYPES = {
   paymentLogged: 'finance.payment.logged',
   paymentVerified: 'payment.verified',
   paymentWebhookReceived: 'payment.webhook.received',
+  refundRequested: 'finance.refund.requested',
+  refundApproved: 'refund.approved',
+  psfReversalApproved: 'finance.psf_reversal.approved',
+  reconciliationRunCompleted: 'finance.reconciliation.completed',
 } as const;
 
 export interface FeeStructureEventPayload extends Record<string, unknown> {
@@ -54,4 +58,28 @@ export interface PaymentWebhookReceivedPayload extends Record<string, unknown> {
   tenantId: string | null;
   paymentId: string | null;
   gatewayReference: string | null;
+}
+
+export interface RefundApprovedPayload extends Record<string, unknown> {
+  tenantId: string;
+  refundId: string;
+  paymentId: string;
+  invoiceId: string;
+  studentId: string;
+  termId: string;
+  amountMinor: number;
+  reasonCode: string;
+  psfTreatment: string;
+  approvedById: string;
+  executedAt: string;
+}
+
+export interface PsfReversalApprovedPayload extends Record<string, unknown> {
+  tenantId: string;
+  refundId: string;
+  paymentId: string;
+  termId: string;
+  reasonCode: string;
+  approvedById: string;
+  workflowInstanceId: string;
 }

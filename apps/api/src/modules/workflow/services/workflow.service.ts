@@ -6,6 +6,7 @@ import {
 } from '@loomis/contracts';
 import { LoomisError } from '../../../shared/errors.js';
 import { dispatchEvent } from '../../../shared/events/registry.js';
+import { tokenService } from '../../identity/services/token.service.js';
 import {
   WORKFLOW_EVENT_TYPES,
   type WorkflowCompletedEvent,
@@ -163,6 +164,7 @@ export const workflowService = {
     stepId: string,
     input: DecideInput,
     actor: ActorContext,
+    opts?: { mfaToken?: string },
   ) {
     const ctx = tenantContextFor(tenantId);
     const instance = await workflowRepository.findInstanceById(ctx, instanceId);
@@ -175,6 +177,24 @@ export const workflowService = {
         409,
         'This workflow has already been completed',
       );
+    }
+
+    if (instance.workflowType === 'refund_request' && input.decision === 'approve') {
+      if (!opts?.mfaToken) {
+        throw new LoomisError('IDENTITY_STEPUP_REQUIRED', 401, 'Step-up MFA required for refund approval');
+      }
+      await tokenService.verifyStepUpToken(opts.mfaToken, 'refund_approve', actor.userId);
+    }
+
+    if (instance.workflowType === 'psf_reversal_on_refund' && input.decision === 'approve') {
+      if (!opts?.mfaToken) {
+        throw new LoomisError(
+          'IDENTITY_STEPUP_REQUIRED',
+          401,
+          'Step-up MFA required for PSF reversal approval',
+        );
+      }
+      await tokenService.verifyStepUpToken(opts.mfaToken, 'ledger_adjustment', actor.userId);
     }
 
     const activeStep = await workflowRepository.findActiveStep(ctx, instanceId);
