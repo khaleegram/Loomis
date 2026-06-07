@@ -1,81 +1,79 @@
 /**
- * Regent Emerald — Loomis global Tailwind v4 theme (Frontend Architecture §7.5, §8.7).
- * Import in app globals.css: @import "@loomis/design-tokens/tailwind";
+ * Warm Brown Primary — Loomis global Tailwind v4 theme.
+ * Elegant, authoritative palette with rich warm accents.
  */
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  /* Brand — Deep Emerald (#0A4226) */
-  --color-brand-50: #ecfdf3;
-  --color-brand-100: #d1fae5;
-  --color-brand-200: #a7f3d0;
-  --color-brand-300: #6ee7b7;
-  --color-brand-400: #34d399;
-  --color-brand-500: #10b981;
-  --color-brand-600: #0a4226;
-  --color-brand-700: #083520;
-  --color-brand-800: #062a18;
-  --color-brand-900: #041a0f;
+  /* Brand — Warm Brown */
+  --color-brand-50: hsl(35 33% 97%);
+  --color-brand-100: hsl(35 33% 90%);
+  --color-brand-200: hsl(35 33% 80%);
+  --color-brand-300: hsl(35 33% 70%);
+  --color-brand-400: hsl(35 33% 60%);
+  --color-brand-500: hsl(35 33% 55%);
+  --color-brand-600: hsl(35 33% 45%);
+  --color-brand-700: hsl(35 33% 35%);
+  --color-brand-800: hsl(35 33% 25%);
+  --color-brand-900: hsl(35 33% 15%);
 
-  /* Accent — Antique Gold (#D4AF37) */
-  --color-gold-50: #fdf8e8;
-  --color-gold-100: #f9edc4;
-  --color-gold-200: #f2da88;
-  --color-gold-300: #e8c547;
-  --color-gold-400: #d4af37;
-  --color-gold-500: #b8962e;
-  --color-gold-600: #92700c;
-  --color-gold-700: #6b5209;
-  --color-gold-800: #4a3806;
-  --color-gold-900: #2e2304;
+  /* Accent — Warm Gold */
+  --color-gold-50: hsl(35 33% 97%);
+  --color-gold-100: hsl(35 33% 90%);
+  --color-gold-200: hsl(35 33% 80%);
+  --color-gold-300: hsl(35 33% 65%);
+  --color-gold-400: hsl(35 33% 55%);
+  --color-gold-500: hsl(35 33% 45%);
+  --color-gold-600: hsl(35 33% 35%);
+  --color-gold-700: hsl(35 33% 25%);
+  --color-gold-800: hsl(35 33% 20%);
+  --color-gold-900: hsl(35 33% 15%);
 
-  /* Dark-mode active mint (#4ADE80) */
-  --color-mint-400: #4ade80;
-  --color-mint-500: #22c55e;
-  --color-mint-600: #16a34a;
+  /* Dark-mode active accent */
+  --color-mint-400: hsl(35 33% 55%);
+  --color-mint-500: hsl(35 33% 45%);
+  --color-mint-600: hsl(35 33% 35%);
 
-  /* Neutrals — Warm Linen canvas + Deep Slate text */
-  --color-neutral-50: #fdfbf7;
-  --color-neutral-100: #f5f2eb;
-  --color-neutral-200: #e8e4dc;
-  --color-neutral-300: #d6d0c4;
-  --color-neutral-400: #94a3b8;
-  --color-neutral-500: #64748b;
-  --color-neutral-600: #475569;
-  --color-neutral-700: #334155;
-  --color-neutral-800: #1e293b;
-  --color-neutral-900: #0f172a;
+  /* Neutrals — Light airy canvas + Deep ink text */
+  --color-neutral-50: hsl(240 5.3% 94.9%);
+  --color-neutral-100: hsl(210 40% 96.1%);
+  --color-neutral-200: hsl(214.3 31.8% 91.4%);
+  --color-neutral-300: hsl(212.7 26.8% 83.9%);
+  --color-neutral-400: hsl(215.4 16.3% 46.9%);
+  --color-neutral-500: hsl(217.2 32.6% 20%);
+  --color-neutral-600: hsl(222.2 47.4% 15%);
+  --color-neutral-700: hsl(222.2 47.4% 11.2%);
+  --color-neutral-800: hsl(224 71.4% 4.1%);
+  --color-neutral-900: hsl(224 71.4% 4.1%);
 
-  /* Midnight Forest surfaces */
-  --color-forest-950: #0b1410;
-  --color-forest-900: #14201a;
-  --color-forest-800: #1a2b22;
-  --color-forest-700: #243b2f;
-  --color-forest-600: #2f4d3c;
+  /* Dark surface palette */
+  --color-forest-950: hsl(222 39% 11%);
+  --color-forest-900: hsl(222 39% 13%);
+  --color-forest-800: hsl(240 3.7% 15.9%);
+  --color-forest-700: hsl(240 3.7% 15.9%);
+  --color-forest-600: hsl(215 27.9% 16.9%);
 
   /* Semantic status */
-  --color-success: #15803d;
+  --color-success: hsl(142 76% 36%);
   --color-success-foreground: #ffffff;
-  --color-warning: #b45309;
+  --color-warning: hsl(35 92% 40%);
   --color-warning-foreground: #ffffff;
-  --color-danger: #b91c1c;
+  --color-danger: hsl(0 84.2% 60.2%);
   --color-danger-foreground: #ffffff;
 
-  /* Regent Emerald: elegant sharpness — default radius is sm (4px) */
-  /* NOTE: Do NOT define --spacing-sm/md/etc. here — it overrides Tailwind
-     max-w-sm, w-sm, p-sm, gap-sm (24rem → 8px) and breaks layouts. */
+  /* Radii */
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;
   --radius-xl: 12px;
   --radius-full: 9999px;
 
-  /* Soft, diffused depth — premium heavy-stock paper */
-  --shadow-xs: 0 1px 2px rgb(10 66 38 / 0.04);
-  --shadow-sm: 0 1px 3px rgb(10 66 38 / 0.06), 0 1px 2px rgb(10 66 38 / 0.04);
-  --shadow-md: 0 4px 12px rgb(30 41 59 / 0.06), 0 2px 4px rgb(10 66 38 / 0.04);
-  --shadow-lg: 0 8px 24px rgb(30 41 59 / 0.08), 0 4px 8px rgb(10 66 38 / 0.04);
-  --shadow-card: 0 2px 8px rgb(30 41 59 / 0.05), 0 1px 2px rgb(10 66 38 / 0.03);
+  /* Soft diffused shadows */
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.04);
+  --shadow-sm: 0 1px 3px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.04);
+  --shadow-md: 0 4px 12px rgb(0 0 0 / 0.06), 0 2px 4px rgb(0 0 0 / 0.04);
+  --shadow-lg: 0 8px 24px rgb(0 0 0 / 0.08), 0 4px 8px rgb(0 0 0 / 0.04);
+  --shadow-card: 0 2px 8px rgb(0 0 0 / 0.05), 0 1px 2px rgb(0 0 0 / 0.03);
 
   --font-sans: var(--font-inter), Inter, system-ui, -apple-system, sans-serif;
   --font-serif: var(--font-playfair), "Playfair Display", Georgia, "Times New Roman", serif;

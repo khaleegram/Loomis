@@ -1,94 +1,92 @@
 /**
- * Regent Emerald semantic tokens — light (:root) and dark (.dark) modes.
- * Consumed by @loomis/ui-web and NativeWind mobile preset.
+ * Regent Emerald — semantic tokens (Light and Dark modes).
+ * Warm brown primary accent. Light airy backgrounds. Deep navy dark mode.
  */
-
 :root {
   color-scheme: light;
 
-  --background: var(--color-neutral-50);
-  --foreground: var(--color-neutral-800);
+  --background: hsl(240 5.3% 94.9%);
+  --foreground: hsl(224 71.4% 4.1%);
 
-  --card: #ffffff;
-  --card-foreground: var(--color-neutral-800);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(224 71.4% 4.1%);
 
-  --popover: #ffffff;
-  --popover-foreground: var(--color-neutral-800);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(224 71.4% 4.1%);
 
-  --primary: var(--color-brand-600);
-  --primary-foreground: #ffffff;
+  --primary: hsl(35 33% 45%);
+  --primary-foreground: hsl(0 0% 100%);
 
-  --secondary: var(--color-neutral-100);
-  --secondary-foreground: var(--color-neutral-800);
+  --secondary: hsl(210 40% 96.1%);
+  --secondary-foreground: hsl(224 71.4% 4.1%);
 
-  --muted: var(--color-neutral-100);
-  --muted-foreground: var(--color-neutral-500);
+  --muted: hsl(210 40% 96.1%);
+  --muted-foreground: hsl(215.4 16.3% 46.9%);
 
-  --accent: var(--color-gold-50);
-  --accent-foreground: var(--color-gold-700);
+  --accent: hsl(35 33% 55%);
+  --accent-foreground: hsl(224 71.4% 4.1%);
 
-  --destructive: var(--color-danger);
-  --destructive-foreground: var(--color-danger-foreground);
+  --destructive: hsl(0 84.2% 60.2%);
+  --destructive-foreground: hsl(0 0% 100%);
 
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: var(--color-brand-500);
+  --border: hsl(214.3 31.8% 91.4%);
+  --input: hsl(214.3 31.8% 91.4%);
+  --ring: hsl(35 33% 45%);
 
-  --gold: var(--color-gold-400);
-  --gold-foreground: var(--color-neutral-800);
+  --gold: hsl(35 33% 55%);
+  --gold-foreground: hsl(224 71.4% 4.1%);
 
-  --surface-elevated: #ffffff;
-  --sidebar: var(--color-neutral-50);
-  --sidebar-foreground: var(--color-neutral-800);
-  --sidebar-border: var(--border);
-  --sidebar-accent: var(--color-brand-50);
-  --sidebar-accent-foreground: var(--color-brand-700);
+  --surface-elevated: hsl(0 0% 100%);
+  --sidebar: hsl(224 71.4% 4.1%);
+  --sidebar-foreground: hsl(240 5.3% 94.9%);
+  --sidebar-border: hsl(215 27.9% 16.9%);
+  --sidebar-accent: hsl(215 27.9% 16.9%);
+  --sidebar-accent-foreground: hsl(0 0% 100%);
 
-  --radius: var(--radius-sm);
-  --shadow-elevated: var(--shadow-card);
+  --radius: 4px;
+  --shadow-elevated: 0 2px 8px rgb(0 0 0 / 0.05), 0 1px 2px rgb(0 0 0 / 0.03);
 }
 
 .dark {
   color-scheme: dark;
 
-  --background: var(--color-forest-950);
-  --foreground: #f1f5f9;
+  --background: hsl(222 39% 11%);
+  --foreground: hsl(0 0% 98%);
 
-  --card: var(--color-forest-900);
-  --card-foreground: #f1f5f9;
+  --card: hsl(222 39% 11%);
+  --card-foreground: hsl(0 0% 98%);
 
-  --popover: var(--color-forest-900);
-  --popover-foreground: #f1f5f9;
+  --popover: hsl(222 39% 11%);
+  --popover-foreground: hsl(0 0% 98%);
 
-  /* Midnight Forest: mint replaces deep emerald for active states */
-  --primary: var(--color-mint-400);
-  --primary-foreground: var(--color-forest-950);
+  --primary: hsl(35 33% 55%);
+  --primary-foreground: hsl(224 71.4% 4.1%);
 
-  --secondary: var(--color-forest-800);
-  --secondary-foreground: #e2e8f0;
+  --secondary: hsl(240 3.7% 15.9%);
+  --secondary-foreground: hsl(0 0% 98%);
 
-  --muted: var(--color-forest-800);
-  --muted-foreground: #94a3b8;
+  --muted: hsl(240 3.7% 15.9%);
+  --muted-foreground: hsl(215.4 16.3% 46.9%);
 
-  --accent: var(--color-forest-800);
-  --accent-foreground: var(--color-gold-300);
+  --accent: hsl(35 33% 55%);
+  --accent-foreground: hsl(224 71.4% 4.1%);
 
-  --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
+  --destructive: hsl(0 84.2% 60.2%);
+  --destructive-foreground: hsl(0 0% 100%);
 
-  --border: var(--color-forest-700);
-  --input: var(--color-forest-700);
-  --ring: var(--color-mint-400);
+  --border: hsl(240 3.7% 15.9%);
+  --input: hsl(240 3.7% 15.9%);
+  --ring: hsl(35 33% 55%);
 
-  --gold: var(--color-gold-300);
-  --gold-foreground: var(--color-forest-950);
+  --gold: hsl(35 33% 55%);
+  --gold-foreground: hsl(224 71.4% 4.1%);
 
-  --surface-elevated: var(--color-forest-800);
-  --sidebar: var(--color-forest-900);
-  --sidebar-foreground: #f1f5f9;
-  --sidebar-border: var(--color-forest-700);
-  --sidebar-accent: var(--color-forest-800);
-  --sidebar-accent-foreground: var(--color-mint-400);
+  --surface-elevated: hsl(240 3.7% 15.9%);
+  --sidebar: hsl(222 39% 11%);
+  --sidebar-foreground: hsl(0 0% 98%);
+  --sidebar-border: hsl(240 3.7% 15.9%);
+  --sidebar-accent: hsl(240 3.7% 15.9%);
+  --sidebar-accent-foreground: hsl(0 0% 98%);
 
   --shadow-elevated: 0 4px 16px rgb(0 0 0 / 0.25), 0 1px 3px rgb(0 0 0 / 0.15);
 }
