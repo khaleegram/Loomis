@@ -218,6 +218,20 @@
       "when": 1780836800001,
       "tag": "0030_referral_constraints_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1780836900000,
+      "tag": "0031_comms",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1780836900001,
+      "tag": "0032_comms_constraints_rls",
+      "breakpoints": true
     }
   ]
 }

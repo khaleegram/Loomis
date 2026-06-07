@@ -40,3 +40,6 @@ export * from './risk/risk.schema.js';
 
 // Referral
 export * from './referral/referral.schema.js';
+
+// Comms
+export * from './comms/comms.schema.js';

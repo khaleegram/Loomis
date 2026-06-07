@@ -13,11 +13,12 @@ export default defineConfig({
     './drizzle/schema/storage.ts',
     './drizzle/schema/risk.ts',
     './drizzle/schema/referral.ts',
+    './drizzle/schema/comms.ts',
   ],
   out: './drizzle/migrations',
   dialect: 'postgresql',
   dbCredentials: {
     url: process.env.DATABASE_URL!,
   },
-  schemaFilter: ['identity', 'tenant', 'hrm', 'academic', 'ledger', 'finance', 'student', 'workflow', 'storage', 'risk', 'referral'],
+  schemaFilter: ['identity', 'tenant', 'hrm', 'academic', 'ledger', 'finance', 'student', 'workflow', 'storage', 'risk', 'referral', 'comms'],
 });

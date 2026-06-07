@@ -1,0 +1,75 @@
+import type { Role } from '@loomis/contracts';
+import type {
+  RegisterPushSubscriptionRequest,
+  ReplyToMessageRequest,
+  SendAnnouncementRequest,
+  SendClassMessageRequest,
+  UpsertNotificationTemplateRequest,
+} from '@loomis/contracts';
+
+export interface ActorContext {
+  userId: string;
+  role: Role;
+  tenantId: string | null;
+}
+
+export type SendAnnouncementInput = SendAnnouncementRequest;
+export type SendClassMessageInput = SendClassMessageRequest;
+export type ReplyToMessageInput = ReplyToMessageRequest;
+export type RegisterPushSubscriptionInput = RegisterPushSubscriptionRequest;
+export type UpsertNotificationTemplateInput = UpsertNotificationTemplateRequest;
+
+export interface SafeNotificationCopy {
+  title: string;
+  body: string;
+  deepLinkResourceType: string;
+}
+
+/** Pre-approved opaque notification copy — no PII, grades, or amounts (loomis-security). */
+export const SAFE_NOTIFICATION_COPY = {
+  schoolAnnouncement: {
+    title: 'School announcement',
+    body: 'A new announcement is available. Tap to read.',
+    deepLinkResourceType: 'announcement',
+  },
+  classMessage: {
+    title: 'New class message',
+    body: 'You have a new message from your class teacher. Tap to read.',
+    deepLinkResourceType: 'message',
+  },
+  parentReply: {
+    title: 'Parent reply',
+    body: 'A parent replied to your message. Tap to read.',
+    deepLinkResourceType: 'message',
+  },
+  paymentVerified: {
+    title: 'Payment confirmed',
+    body: 'A payment was confirmed. Open the app for details.',
+    deepLinkResourceType: 'payment',
+  },
+  breakGlassAlert: {
+    title: 'Support access alert',
+    body: 'Platform support access was activated for your school. Review immediately.',
+    deepLinkResourceType: 'security',
+  },
+  assignmentReminder: {
+    title: 'Assignment reminder',
+    body: 'You have an upcoming assignment deadline. Tap to view.',
+    deepLinkResourceType: 'assignment',
+  },
+  newMessage: {
+    title: 'New message',
+    body: 'You have a new school message. Tap to read.',
+    deepLinkResourceType: 'message',
+  },
+} as const satisfies Record<string, SafeNotificationCopy>;
+
+export interface OutboxEventInput {
+  tenantId: string | null;
+  aggregateType: string;
+  aggregateId: string;
+  eventType: string;
+  payload: Record<string, unknown>;
+}
+
+export const ANNOUNCEMENT_ROLES = new Set(['school_owner', 'principal', 'admin_officer']);

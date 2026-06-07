@@ -36,6 +36,23 @@ const envSchema = z.object({
 
   /** Base URL for gateway redirect after online payment (parent portal). */
   PAYMENT_REDIRECT_BASE_URL: z.string().url().optional(),
+
+  /** AWS SES (SRS §10.3). Required for email delivery when email channel is used. */
+  SES_REGION: z.string().min(1).optional(),
+  SES_FROM_EMAIL: z.string().email().optional(),
+
+  /** Termii SMS (SRS §10.3). Required for SMS delivery when SMS channel is used. */
+  TERMII_API_KEY: z.string().min(1).optional(),
+  TERMII_SENDER_ID: z.string().min(1).optional(),
+
+  /** Firebase Cloud Messaging (SRS §10.4 / MOB-004). Required for Android push. */
+  FCM_SERVICE_ACCOUNT_JSON: z.string().min(1).optional(),
+
+  /** Apple Push Notification Service (SRS §10.4 / MOB-004). Required for iOS push. */
+  APNS_KEY_ID: z.string().min(1).optional(),
+  APNS_TEAM_ID: z.string().min(1).optional(),
+  APNS_BUNDLE_ID: z.string().min(1).optional(),
+  APNS_PRIVATE_KEY: z.string().min(1).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
