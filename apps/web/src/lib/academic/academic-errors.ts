@@ -36,6 +36,29 @@ export function academicErrorMessage(err: unknown): string {
       return 'MFA must be enrolled before this action. Check Settings → Security.';
     case 'VALIDATION_ERROR':
       return 'Please check the details you entered.';
+    case 'ACADEMIC_GRADING_SCHEME_CONFLICT':
+      return 'A grading scheme with this name already exists.';
+    case 'ACADEMIC_GRADEBOOK_FORBIDDEN':
+      return 'You do not have permission to access this gradebook.';
+    case 'ACADEMIC_EXAM_CONFIG_NOT_FOUND':
+      return 'No exam configuration found for this class and subject.';
+    case 'ACADEMIC_EXAM_CONFIG_CONFLICT':
+      return 'An exam configuration already exists for this class and subject.';
+    case 'ACADEMIC_GRADE_CORRECTION_PENDING':
+      return 'A grade correction is already pending for this entry.';
+    case 'ACADEMIC_RESULTS_EMPTY':
+      return 'No gradebook entries found. Complete grade entry before publishing.';
+    case 'ACADEMIC_RESULTS_CORRECTION_PENDING':
+      return 'Resolve pending grade corrections before publishing results.';
+    case 'ACADEMIC_ATTENDANCE_DATE_INVALID':
+      return 'Attendance can only be marked online for today.';
+    case 'ACADEMIC_ATTENDANCE_FORBIDDEN_ROLE':
+    case 'ACADEMIC_ATTENDANCE_NOT_ASSIGNED':
+      return 'You are not the active class teacher for this class.';
+    case 'WORKFLOW_FORBIDDEN':
+      return 'You cannot action this workflow step.';
+    case 'WORKFLOW_STEP_NOT_ACTIVE':
+      return 'This workflow step is no longer active.';
     default:
       return err instanceof Error ? err.message : 'Something went wrong. Try again.';
   }

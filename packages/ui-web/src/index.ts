@@ -90,4 +90,13 @@ export {
 export { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs.js';
 export { Textarea } from './components/ui/textarea.js';
 export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './components/ui/tooltip.js';
+export {
+  WeightLedgerBar,
+  type WeightLedgerBarProps,
+} from './components/ui/weight-ledger-bar.js';
+export {
+  SegmentedControl,
+  type SegmentedControlOption,
+  type SegmentedControlProps,
+} from './components/ui/segmented-control.js';
 export { cn } from './lib/utils.js';

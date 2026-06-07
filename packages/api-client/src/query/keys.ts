@@ -13,6 +13,19 @@ export type AdmissionListFilters = {
   search?: string;
 };
 
+export type GradebookListFilters = {
+  termId: string;
+  classArmId: string;
+  subjectId?: string;
+};
+
+export type AttendanceListFilters = {
+  termId: string;
+  classArmId: string;
+  attendanceDate?: string;
+  studentId?: string;
+};
+
 export const queryKeys = {
   identity: {
     /** User-scoped — not tenant-partitioned. */
@@ -55,6 +68,21 @@ export const queryKeys = {
     classLevels: (tenantId: string) => ['academic', tenantId, 'class-levels'] as const,
     classStructure: (tenantId: string, yearId: string) =>
       ['academic', tenantId, 'years', yearId, 'class-structure'] as const,
+    gradingSchemes: (tenantId: string) =>
+      ['academic', tenantId, 'grading-schemes'] as const,
+    examConfigs: (tenantId: string, termId: string) =>
+      ['academic', tenantId, 'terms', termId, 'exam-configs'] as const,
+    gradebookEntries: (tenantId: string, filters: GradebookListFilters) =>
+      ['academic', tenantId, 'gradebook', 'entries', filters] as const,
+    attendance: (tenantId: string, filters: AttendanceListFilters) =>
+      ['academic', tenantId, 'attendance', filters] as const,
+  },
+  workflow: {
+    all: (tenantId: string) => ['workflow', tenantId] as const,
+    inbox: (tenantId: string) => ['workflow', tenantId, 'inbox'] as const,
+    mine: (tenantId: string) => ['workflow', tenantId, 'mine'] as const,
+    instance: (tenantId: string, instanceId: string) =>
+      ['workflow', tenantId, 'instances', instanceId] as const,
   },
 } as const;
 
