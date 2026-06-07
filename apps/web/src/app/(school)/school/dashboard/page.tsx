@@ -52,6 +52,18 @@ const DASHBOARD_CARDS: DashboardCard[] = [
     capability: 'payment.verify',
   },
   {
+    title: 'Outstanding balances',
+    description: 'View charged, paid, and balance per student for the term.',
+    href: '/school/finance/balances',
+    capability: 'fee.configure',
+  },
+  {
+    title: 'Refund approvals',
+    description: 'Review and approve refund requests through the workflow.',
+    href: '/school/finance/refunds',
+    capability: 'refund.approve',
+  },
+  {
     title: 'Gradebook',
     description: 'Enter or review grades for assigned subjects.',
     href: '/school/gradebook',

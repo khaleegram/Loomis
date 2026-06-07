@@ -26,6 +26,24 @@ export type AttendanceListFilters = {
   studentId?: string;
 };
 
+export type PaymentsListFilters = {
+  termId?: string;
+  studentId?: string;
+  status?: string;
+  channel?: string;
+};
+
+export type RefundsListFilters = {
+  termId?: string;
+  paymentId?: string;
+  status?: string;
+};
+
+export type OutstandingBalancesFilters = {
+  classLevelId?: string;
+  status?: string;
+};
+
 export const queryKeys = {
   identity: {
     /** User-scoped — not tenant-partitioned. */
@@ -83,6 +101,27 @@ export const queryKeys = {
     mine: (tenantId: string) => ['workflow', tenantId, 'mine'] as const,
     instance: (tenantId: string, instanceId: string) =>
       ['workflow', tenantId, 'instances', instanceId] as const,
+  },
+  finance: {
+    all: (tenantId: string) => ['finance', tenantId] as const,
+    feeStructures: (tenantId: string, termId: string) =>
+      ['finance', tenantId, 'fee-structures', termId] as const,
+    feeStructure: (tenantId: string, feeStructureId: string) =>
+      ['finance', tenantId, 'fee-structures', 'detail', feeStructureId] as const,
+    invoices: (tenantId: string, termId: string) =>
+      ['finance', tenantId, 'invoices', termId] as const,
+    invoice: (tenantId: string, invoiceId: string) =>
+      ['finance', tenantId, 'invoices', 'detail', invoiceId] as const,
+    outstandingBalances: (tenantId: string, termId: string, filters: OutstandingBalancesFilters = {}) =>
+      ['finance', tenantId, 'outstanding-balances', termId, filters] as const,
+    payments: (tenantId: string, filters: PaymentsListFilters = {}) =>
+      ['finance', tenantId, 'payments', filters] as const,
+    payment: (tenantId: string, paymentId: string) =>
+      ['finance', tenantId, 'payments', 'detail', paymentId] as const,
+    refunds: (tenantId: string, filters: RefundsListFilters = {}) =>
+      ['finance', tenantId, 'refunds', filters] as const,
+    refund: (tenantId: string, refundId: string) =>
+      ['finance', tenantId, 'refunds', 'detail', refundId] as const,
   },
 } as const;
 

@@ -33,7 +33,7 @@ export const SCHOOL_NAV: SchoolNavItem[] = [
   {
     label: 'Finance',
     href: '/school/finance',
-    capabilities: ['fee.configure', 'payment.log', 'payment.verify'],
+    capabilities: ['fee.configure', 'payment.log', 'payment.verify', 'refund.initiate', 'refund.approve'],
   },
   {
     label: 'Exams',
