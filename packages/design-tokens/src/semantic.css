@@ -1,93 +1,94 @@
 /**
- * Chancellor Navy — semantic tokens (Light and Dark modes).
- * Flat-minimalist, zero-radius, high-contrast, 1px gridlines.
+ * Regent Emerald semantic tokens — light (:root) and dark (.dark) modes.
+ * Consumed by @loomis/ui-web and NativeWind mobile preset.
  */
+
 :root {
   color-scheme: light;
 
-  --background: #F4F7FA;
-  --foreground: #0F172A;
+  --background: var(--color-neutral-50);
+  --foreground: var(--color-neutral-800);
 
-  --card: #FFFFFF;
-  --card-foreground: #0F172A;
+  --card: #ffffff;
+  --card-foreground: var(--color-neutral-800);
 
-  --popover: #FFFFFF;
-  --popover-foreground: #0F172A;
+  --popover: #ffffff;
+  --popover-foreground: var(--color-neutral-800);
 
-  --primary: #0F1E36;
-  --primary-foreground: #FFFFFF;
+  --primary: var(--color-brand-600);
+  --primary-foreground: #ffffff;
 
-  --secondary: #f0f4f8;
-  --secondary-foreground: #0F172A;
+  --secondary: var(--color-neutral-100);
+  --secondary-foreground: var(--color-neutral-800);
 
-  --muted: #f0f4f8;
-  --muted-foreground: #64748b;
+  --muted: var(--color-neutral-100);
+  --muted-foreground: var(--color-neutral-500);
 
-  --accent: #E6DFD3;
-  --accent-foreground: #0F1E36;
+  --accent: var(--color-gold-50);
+  --accent-foreground: var(--color-gold-700);
 
-  --destructive: #b91c1c;
-  --destructive-foreground: #ffffff;
+  --destructive: var(--color-danger);
+  --destructive-foreground: var(--color-danger-foreground);
 
   --border: #e2e8f0;
   --input: #e2e8f0;
-  --ring: #0F1E36;
+  --ring: var(--color-brand-500);
 
-  --sand: #E6DFD3;
-  --sand-foreground: #0F1E36;
+  --gold: var(--color-gold-400);
+  --gold-foreground: var(--color-neutral-800);
 
-  --surface-elevated: #FFFFFF;
-  --sidebar: #0F1E36;
-  --sidebar-foreground: #F4F7FA;
-  --sidebar-border: #243b53;
-  --sidebar-accent: #243b53;
-  --sidebar-accent-foreground: #FFFFFF;
+  --surface-elevated: #ffffff;
+  --sidebar: var(--color-neutral-50);
+  --sidebar-foreground: var(--color-neutral-800);
+  --sidebar-border: var(--border);
+  --sidebar-accent: var(--color-brand-50);
+  --sidebar-accent-foreground: var(--color-brand-700);
 
-  --radius: 0px;
-  --shadow-elevated: none;
+  --radius: var(--radius-sm);
+  --shadow-elevated: var(--shadow-card);
 }
 
 .dark {
   color-scheme: dark;
 
-  --background: #0A0F1D;
-  --foreground: #F8FAFC;
+  --background: var(--color-forest-950);
+  --foreground: #f1f5f9;
 
-  --card: #161F30;
-  --card-foreground: #F8FAFC;
+  --card: var(--color-forest-900);
+  --card-foreground: #f1f5f9;
 
-  --popover: #161F30;
-  --popover-foreground: #F8FAFC;
+  --popover: var(--color-forest-900);
+  --popover-foreground: #f1f5f9;
 
-  /* Deep Ocean: sky blue replaces navy for active states */
-  --primary: #38BDF8;
-  --primary-foreground: #0A0F1D;
+  /* Midnight Forest: mint replaces deep emerald for active states */
+  --primary: var(--color-mint-400);
+  --primary-foreground: var(--color-forest-950);
 
-  --secondary: #161F30;
+  --secondary: var(--color-forest-800);
   --secondary-foreground: #e2e8f0;
 
-  --muted: #161F30;
+  --muted: var(--color-forest-800);
   --muted-foreground: #94a3b8;
 
-  --accent: #1e293b;
-  --accent-foreground: #38BDF8;
+  --accent: var(--color-forest-800);
+  --accent-foreground: var(--color-gold-300);
 
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
 
-  --border: #1e293b;
-  --input: #1e293b;
-  --ring: #38BDF8;
+  --border: var(--color-forest-700);
+  --input: var(--color-forest-700);
+  --ring: var(--color-mint-400);
 
-  --sand: #38BDF8;
-  --sand-foreground: #0A0F1D;
+  --gold: var(--color-gold-300);
+  --gold-foreground: var(--color-forest-950);
 
-  --surface-elevated: #111827;
-  --sidebar: #0A0F1D;
-  --sidebar-foreground: #F8FAFC;
-  --sidebar-border: #1e293b;
-  --sidebar-accent: #161F30;
-  --sidebar-accent-foreground: #38BDF8;
+  --surface-elevated: var(--color-forest-800);
+  --sidebar: var(--color-forest-900);
+  --sidebar-foreground: #f1f5f9;
+  --sidebar-border: var(--color-forest-700);
+  --sidebar-accent: var(--color-forest-800);
+  --sidebar-accent-foreground: var(--color-mint-400);
 
-  --shadow-elevated: none;
+  --shadow-elevated: 0 4px 16px rgb(0 0 0 / 0.25), 0 1px 3px rgb(0 0 0 / 0.15);
 }

@@ -55,15 +55,15 @@ h4 {
   100% { transform: translateX(100%); }
 }
 
-/* 3D Glass border & surface styles — Chancellor Navy */
+/* 3D Glass border & surface styles */
 .glass-beveled-3d {
-  background: rgba(22, 31, 48, 0.45); /* Deep Ocean surface backdrop */
+  background: rgba(20, 32, 26, 0.45); /* Tinted forest/midnight backdrop */
   backdrop-filter: blur(24px) saturate(140%);
   -webkit-backdrop-filter: blur(24px) saturate(140%);
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 
-    inset 1px 1px 0px rgba(255, 255, 255, 0.15),
-    inset -1px -1px 0px rgba(0, 0, 0, 0.3),
-    inset 0 0 20px rgba(56, 189, 248, 0.03),
-    0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    inset 1px 1px 0px rgba(255, 255, 255, 0.15),   /* Top-left gloss */
+    inset -1px -1px 0px rgba(0, 0, 0, 0.3),          /* Bottom-right shadow edge */
+    inset 0 0 20px rgba(74, 222, 128, 0.03),        /* Subtle internal mint glow */
+    0 25px 50px -12px rgba(0, 0, 0, 0.5);            /* Deep outer floor shadow */
 }

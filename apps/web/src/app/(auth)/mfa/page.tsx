@@ -66,8 +66,8 @@ export default function MfaVerifyPage() {
       subtitle="Enter the 6-digit code from your authenticator app"
     >
       <div className="mb-5 flex justify-center">
-        <div className="flex size-14 items-center justify-center bg-sky-400/10 ring-1 ring-sky-400/20">
-          <ShieldCheck className="size-7 text-sky-400" />
+        <div className="flex size-14 items-center justify-center rounded-2xl bg-gold-400/10 ring-1 ring-gold-400/20">
+          <ShieldCheck className="size-7 text-gold-400" />
         </div>
       </div>
 
@@ -93,7 +93,7 @@ export default function MfaVerifyPage() {
                     autoComplete="one-time-code"
                     maxLength={6}
                     placeholder="000000"
-                    className="h-14 text-center font-mono text-2xl tracking-[0.5em] bg-white/5 border-white/10 text-white placeholder:text-neutral-600 focus:border-sky-400/50 focus:ring-1 focus:ring-sky-400/30"
+                    className="h-14 text-center font-mono text-2xl tracking-[0.5em] bg-white/5 border-white/10 text-white placeholder:text-neutral-600 focus:border-gold-400/50 focus:ring-1 focus:ring-gold-400/30"
                     {...field}
                   />
                 </FormControl>
@@ -105,7 +105,7 @@ export default function MfaVerifyPage() {
           <Button
             type="submit"
             size="lg"
-            className="w-full h-12 font-semibold tracking-wide bg-sky-400 hover:bg-sky-500 text-navy-900 transition-all duration-200"
+            className="w-full h-12 font-semibold tracking-wide bg-gold-400 hover:bg-gold-500 text-forest-900 transition-all duration-200 shadow-[0_0_20px_rgba(212,175,55,0.15)] hover:shadow-[0_0_30px_rgba(212,175,55,0.25)]"
             disabled={isSubmitting}
           >
             {isSubmitting ? (

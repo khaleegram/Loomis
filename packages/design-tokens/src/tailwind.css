@@ -1,67 +1,57 @@
 /**
- * Chancellor Navy — Loomis global Tailwind v4 theme.
- * Flat-minimalist, zero-shadow, high-contrast design tokens.
+ * Regent Emerald — Loomis global Tailwind v4 theme (Frontend Architecture §7.5, §8.7).
+ * Import in app globals.css: @import "@loomis/design-tokens/tailwind";
  */
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  /* Brand — Royal Navy (#0F1E36) */
-  --color-brand-50: #f0f4f8;
-  --color-brand-100: #d9e2ec;
-  --color-brand-200: #9fb3c8;
-  --color-brand-300: #829ab1;
-  --color-brand-400: #627d98;
-  --color-brand-500: #486581;
-  --color-brand-600: #334e68;
-  --color-brand-700: #243b53;
-  --color-brand-800: #1a334a;
-  --color-brand-900: #0F1E36;
+  /* Brand — Deep Emerald (#0A4226) */
+  --color-brand-50: #ecfdf3;
+  --color-brand-100: #d1fae5;
+  --color-brand-200: #a7f3d0;
+  --color-brand-300: #6ee7b7;
+  --color-brand-400: #34d399;
+  --color-brand-500: #10b981;
+  --color-brand-600: #0a4226;
+  --color-brand-700: #083520;
+  --color-brand-800: #062a18;
+  --color-brand-900: #041a0f;
 
-  /* Accent — Warm Sand (#E6DFD3) */
-  --color-sand-50: #fcfbf8;
-  --color-sand-100: #f5f1e9;
-  --color-sand-200: #E6DFD3;
-  --color-sand-300: #d4cbbd;
-  --color-sand-400: #b8ae9e;
-  --color-sand-500: #9e9485;
-  --color-sand-600: #847b6e;
-  --color-sand-700: #6b6358;
-  --color-sand-800: #514b43;
-  --color-sand-900: #383430;
+  /* Accent — Antique Gold (#D4AF37) */
+  --color-gold-50: #fdf8e8;
+  --color-gold-100: #f9edc4;
+  --color-gold-200: #f2da88;
+  --color-gold-300: #e8c547;
+  --color-gold-400: #d4af37;
+  --color-gold-500: #b8962e;
+  --color-gold-600: #92700c;
+  --color-gold-700: #6b5209;
+  --color-gold-800: #4a3806;
+  --color-gold-900: #2e2304;
 
-  /* Dark-mode active accent — Sky Blue (#38BDF8) */
-  --color-sky-400: #38BDF8;
-  --color-sky-500: #0ea5e9;
-  --color-sky-600: #0284c7;
+  /* Dark-mode active mint (#4ADE80) */
+  --color-mint-400: #4ade80;
+  --color-mint-500: #22c55e;
+  --color-mint-600: #16a34a;
 
-  /* Dark surface palette — Deep Ocean */
-  --color-navy-50: #e8edf3;
-  --color-navy-100: #c2d0e0;
-  --color-navy-200: #9cb3cc;
-  --color-navy-300: #7596b9;
-  --color-navy-400: #4f79a5;
-  --color-navy-500: #3a5f88;
-  --color-navy-600: #2c4a6e;
-  --color-navy-700: #1f3652;
-  --color-navy-800: #132439;
-  --color-navy-900: #0A0F1D;
-
-  /* Neutrals — Crisp Blue-White canvas + Ink Black text */
-  --color-neutral-50: #F4F7FA;
-  --color-neutral-100: #e2e8f0;
-  --color-neutral-200: #cbd5e1;
-  --color-neutral-300: #94a3b8;
+  /* Neutrals — Warm Linen canvas + Deep Slate text */
+  --color-neutral-50: #fdfbf7;
+  --color-neutral-100: #f5f2eb;
+  --color-neutral-200: #e8e4dc;
+  --color-neutral-300: #d6d0c4;
   --color-neutral-400: #94a3b8;
   --color-neutral-500: #64748b;
   --color-neutral-600: #475569;
   --color-neutral-700: #334155;
   --color-neutral-800: #1e293b;
-  --color-neutral-900: #0F172A;
+  --color-neutral-900: #0f172a;
 
-  /* Surfaces */
-  --color-surface-light: #FFFFFF;
-  --color-surface-dark: #161F30;
-  --color-surface-darker: #111827;
+  /* Midnight Forest surfaces */
+  --color-forest-950: #0b1410;
+  --color-forest-900: #14201a;
+  --color-forest-800: #1a2b22;
+  --color-forest-700: #243b2f;
+  --color-forest-600: #2f4d3c;
 
   /* Semantic status */
   --color-success: #15803d;
@@ -71,41 +61,24 @@
   --color-danger: #b91c1c;
   --color-danger-foreground: #ffffff;
 
-  /* Chancellor Navy: zero radius, zero shadow — flat-minimalist authority */
-  --radius-sm: 0px;
-  --radius-md: 0px;
-  --radius-lg: 0px;
-  --radius-xl: 0px;
-  --radius-full: 0px;
+  /* Regent Emerald: elegant sharpness — default radius is sm (4px) */
+  /* NOTE: Do NOT define --spacing-sm/md/etc. here — it overrides Tailwind
+     max-w-sm, w-sm, p-sm, gap-sm (24rem → 8px) and breaks layouts. */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
 
-  --shadow-xs: none;
-  --shadow-sm: none;
-  --shadow-md: none;
-  --shadow-lg: none;
-  --shadow-card: none;
+  /* Soft, diffused depth — premium heavy-stock paper */
+  --shadow-xs: 0 1px 2px rgb(10 66 38 / 0.04);
+  --shadow-sm: 0 1px 3px rgb(10 66 38 / 0.06), 0 1px 2px rgb(10 66 38 / 0.04);
+  --shadow-md: 0 4px 12px rgb(30 41 59 / 0.06), 0 2px 4px rgb(10 66 38 / 0.04);
+  --shadow-lg: 0 8px 24px rgb(30 41 59 / 0.08), 0 4px 8px rgb(10 66 38 / 0.04);
+  --shadow-card: 0 2px 8px rgb(30 41 59 / 0.05), 0 1px 2px rgb(10 66 38 / 0.03);
 
-  /* Backward-compatible aliases (Regent Emerald → Chancellor Navy) */
-  --color-gold-50: #f0f9ff;
-  --color-gold-100: #e0f2fe;
-  --color-gold-200: #bae6fd;
-  --color-gold-300: #38BDF8;
-  --color-gold-400: #38BDF8;
-  --color-gold-500: #0ea5e9;
-  --color-gold-600: #0284c7;
-  --color-gold-700: #FFFFFF;
-  --color-gold-800: #F4F7FA;
-  --color-gold-900: #e2e8f0;
-  --color-mint-400: #38BDF8;
-  --color-mint-500: #0ea5e9;
-  --color-mint-600: #0284c7;
-  --color-forest-950: #0A0F1D;
-  --color-forest-900: #161F30;
-  --color-forest-800: #1e293b;
-  --color-forest-700: #1e293b;
-  --color-forest-600: #334155;
-
-  --font-sans: var(--font-sans), "SF Pro Display", "Roboto", system-ui, -apple-system, sans-serif;
-  --font-serif: var(--font-serif), "New York", Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-inter), Inter, system-ui, -apple-system, sans-serif;
+  --font-serif: var(--font-playfair), "Playfair Display", Georgia, "Times New Roman", serif;
   --font-mono: ui-monospace, "SF Mono", "Cascadia Code", monospace;
 
   --text-xs: 0.75rem;
