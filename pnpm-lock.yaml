@@ -227,6 +227,9 @@ importers:
       react:
         specifier: '>=18'
         version: 18.3.1
+      uuidv7:
+        specifier: ^1.0.2
+        version: 1.2.1
     devDependencies:
       '@loomis/config':
         specifier: workspace:*

@@ -16,7 +16,9 @@ export class LoomisClientError extends Error {
     this.code = error.code;
     this.status = status;
     this.requestId = error.requestId;
-    this.details = error.details;
+    if (error.details !== undefined) {
+      this.details = error.details;
+    }
   }
 
   /** Token aged out — eligible for single-flight refresh + retry. */
