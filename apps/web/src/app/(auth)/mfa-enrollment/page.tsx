@@ -20,6 +20,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { QRCodeSVG } from 'qrcode.react';
 
 import { AuthFormCard } from '@/components/auth/auth-form-card';
 import { confirmMfaEnrollment, startMfaEnrollment } from '@/lib/auth/auth-client';
@@ -37,6 +38,8 @@ export default function MfaEnrollmentPage() {
   const [provisioningUri, setProvisioningUri] = useState<string | null>(null);
   const [backupCodes, setBackupCodes] = useState<string[] | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [showManualKey, setShowManualKey] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!enrollmentToken) {
@@ -75,6 +78,17 @@ export default function MfaEnrollmentPage() {
     }
   });
 
+  async function handleCopySecret() {
+    if (!secret) return;
+    try {
+      await navigator.clipboard.writeText(secret);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard may not be available
+    }
+  }
+
   if (backupCodes) {
     return (
       <AuthFormCard
@@ -108,27 +122,65 @@ export default function MfaEnrollmentPage() {
   return (
     <AuthFormCard
       title="Set up two-step verification"
-      subtitle="Scan the key in your authenticator app, then enter a code."
+      subtitle="Scan this QR code with your authenticator app, then enter the code."
     >
       {formError ? (
         <Alert variant="destructive" className="mb-4">
           <AlertDescription>{formError}</AlertDescription>
         </Alert>
       ) : null}
-      {secret ? (
-        <div className="mb-4 rounded-md border border-border bg-muted p-4 text-sm">
-          <p className="text-muted-foreground">Manual setup key</p>
-          <p className="mt-1 break-all font-mono text-foreground">{secret}</p>
-          {provisioningUri ? (
-            <p className="mt-2 break-all text-xs text-muted-foreground">{provisioningUri}</p>
-          ) : null}
-        </div>
+
+      {secret && provisioningUri ? (
+        <>
+          <div className="my-4 flex justify-center">
+            <div className="rounded-xl border border-white/10 bg-white/5 p-5">
+              <QRCodeSVG
+                value={provisioningUri}
+                size={200}
+                level="M"
+                includeMargin
+                bgColor="transparent"
+                fgColor="#ffffff"
+              />
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <button
+              type="button"
+              onClick={() => setShowManualKey(!showManualKey)}
+              className="w-full text-center text-xs text-neutral-400 hover:text-neutral-300 transition-colors"
+            >
+              {showManualKey ? 'Hide' : 'Can\'t scan? Enter key manually'}
+            </button>
+            {showManualKey ? (
+              <div className="mt-2 rounded-md border border-white/10 bg-white/5 p-3">
+                <p className="text-xs text-neutral-400 mb-2">Manual setup key:</p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 break-all font-mono text-sm text-neutral-200">{secret}</code>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="shrink-0 text-xs"
+                    onClick={handleCopySecret}
+                  >
+                    {copied ? 'Copied' : 'Copy'}
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </>
       ) : (
-        <div className="mb-4 space-y-2">
-          <Skeleton className="h-4 w-32" />
+        <div className="my-4 space-y-3">
+          <div className="flex justify-center">
+            <Skeleton className="h-[232px] w-[232px] rounded-xl" />
+          </div>
           <Skeleton className="h-10 w-full" />
         </div>
       )}
+
       <Form {...form}>
         <form onSubmit={onSubmit} noValidate className="space-y-4">
           <FormField
@@ -151,7 +203,7 @@ export default function MfaEnrollmentPage() {
             )}
           />
           <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || !secret}>
-            {form.formState.isSubmitting ? 'Confirming…' : 'Confirm'}
+            {form.formState.isSubmitting ? 'Verifying…' : 'Verify & Activate'}
           </Button>
         </form>
       </Form>
