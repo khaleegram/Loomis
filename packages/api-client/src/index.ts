@@ -3,9 +3,10 @@ export * from './http/errors.js';
 export * from './http/interceptors.js';
 export * from './http/refresh.js';
 export * from './http/client.js';
-
-// NOTE: This package is being built out incrementally.
-// Next to implement (Frontend Architecture §3+):
-//   - query/keys.ts         tenant-partitioned query key factory
-//   - query/hooks/*         TanStack Query hooks per module
-//   - mutations/useFinancialMutation.ts  idempotency + step-up MFA wrapper
+export * from './query/keys.js';
+export * from './query/context.js';
+export * from './query/hooks/index.js';
+export * from './mutations/idempotency.js';
+export * from './mutations/step-up-cache.js';
+export * from './mutations/financial-mutation.js';
+export * from './mutations/useFinancialMutation.js';

@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ApiClientConfig, TokenStore } from './types.js';
 import { createApiClient } from './client.js';
-import { LoomisClientError } from './errors.js';
 
 function envelopeSuccess<T>(data: T, requestId = 'req-success') {
   return {
@@ -93,7 +92,7 @@ describe('createApiClient — single-flight refresh', () => {
     let refreshCalls = 0;
     let resourceCalls = 0;
 
-    const fetchFn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const fetchFn = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
       const url = String(input);
 
       if (url.endsWith('/auth/refresh')) {
