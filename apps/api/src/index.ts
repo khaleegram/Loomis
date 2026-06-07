@@ -50,6 +50,7 @@ async function buildServer() {
   await app.register(hrmModule, { prefix: '/api/v1' });
   await app.register(academicModule, { prefix: '/api/v1' });
   await app.register(studentModule, { prefix: '/api/v1' });
+  await app.register(readModelsModule, { prefix: '/api/v1' });
   await app.register(workflowModule, { prefix: '/api/v1' });
   await app.register(ledgerModule, { prefix: '/api/v1' });
   await app.register(riskModule, { prefix: '/api/v1' });
@@ -58,7 +59,6 @@ async function buildServer() {
   await app.register(referralModule, { prefix: '/api/v1' });
   await app.register(commsModule, { prefix: '/api/v1' });
   await app.register(complianceModule, { prefix: '/api/v1' });
-  await app.register(readModelsModule, { prefix: '/api/v1' });
 
   return app;
 }
