@@ -17,7 +17,7 @@ interface AuthFormCardProps {
 
 export function AuthFormCard({ title, subtitle, children, footer }: AuthFormCardProps) {
   return (
-    <Card className="shadow-elevated">
+    <Card className="w-full shadow-elevated ring-1 ring-border/60">
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         {subtitle ? <CardDescription>{subtitle}</CardDescription> : null}

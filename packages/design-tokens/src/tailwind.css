@@ -61,13 +61,9 @@
   --color-danger: #b91c1c;
   --color-danger-foreground: #ffffff;
 
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
-
   /* Regent Emerald: elegant sharpness — default radius is sm (4px) */
+  /* NOTE: Do NOT define --spacing-sm/md/etc. here — it overrides Tailwind
+     max-w-sm, w-sm, p-sm, gap-sm (24rem → 8px) and breaks layouts. */
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;

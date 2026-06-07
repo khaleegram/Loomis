@@ -32,9 +32,9 @@ interface AuthShellProps {
 /** Regent Split — branded product panel + form column (Option 1). */
 export function AuthShell({ children, step }: AuthShellProps) {
   return (
-    <div className="flex min-h-screen flex-col lg:flex-row">
+    <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
       {/* Product panel */}
-      <aside className="relative flex flex-col justify-between bg-gradient-to-br from-brand-600 via-brand-700 to-brand-800 px-8 py-10 text-white lg:w-1/2 lg:px-12 lg:py-14 dark:from-forest-900 dark:via-forest-950 dark:to-forest-900">
+      <aside className="relative flex min-h-[280px] flex-col justify-between bg-gradient-to-br from-brand-600 via-brand-700 to-brand-800 px-8 py-10 text-white lg:min-h-screen lg:px-12 lg:py-14 dark:from-forest-900 dark:via-forest-950 dark:to-forest-900">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgb(212_175_55/0.12),transparent_55%)] dark:bg-[radial-gradient(ellipse_at_bottom_left,rgb(74_222_128/0.08),transparent_50%)]"
@@ -52,7 +52,7 @@ export function AuthShell({ children, step }: AuthShellProps) {
           <h1 className="mt-6 max-w-md font-serif text-3xl font-semibold leading-tight tracking-tight lg:text-4xl">
             School management, elevated.
           </h1>
-          <p className="mt-4 max-w-sm text-sm leading-relaxed text-brand-100 dark:text-neutral-400">
+          <p className="mt-4 max-w-md text-pretty text-sm leading-relaxed text-brand-100 dark:text-neutral-400">
             The modern console for Nigerian private schools — from enrollment to end-of-term results.
           </p>
           <Separator className="my-8 w-16 border-gold/40 bg-gold/40" />
@@ -81,8 +81,8 @@ export function AuthShell({ children, step }: AuthShellProps) {
       </aside>
 
       {/* Form column */}
-      <div className="flex flex-1 flex-col items-center justify-center bg-background px-6 py-10 lg:px-12">
-        <div className="w-full max-w-sm">{children}</div>
+      <div className="flex items-center justify-center bg-background px-6 py-10 lg:min-h-screen lg:px-12">
+        <div className="w-full max-w-md">{children}</div>
       </div>
     </div>
   );
