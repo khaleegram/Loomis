@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Inter, Playfair_Display } from 'next/font/google';
+import Script from 'next/script';
 
 import { RootErrorBoundary } from '@/components/error-boundary/root-error-boundary';
 import { AppProviders } from '@/components/providers/app-providers';
@@ -9,7 +10,16 @@ import './globals.css';
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
+  display: 'swap',
 });
+
+const playfair = Playfair_Display({
+  subsets: ['latin'],
+  variable: '--font-playfair',
+  display: 'swap',
+});
+
+const themeInitScript = `(function(){try{var t=localStorage.getItem('loomis-theme');var d=t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);document.documentElement.style.colorScheme=d?'dark':'light';}catch(e){}})();`;
 
 export const metadata: Metadata = {
   title: 'Loomis',
@@ -22,8 +32,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${inter.variable} antialiased`}>
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={`${inter.variable} ${playfair.variable} font-sans antialiased`}
+      >
+        <Script id="loomis-theme-init" strategy="beforeInteractive">
+          {themeInitScript}
+        </Script>
         <RootErrorBoundary>
           <AppProviders>{children}</AppProviders>
         </RootErrorBoundary>

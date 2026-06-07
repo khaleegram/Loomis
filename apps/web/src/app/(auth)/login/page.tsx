@@ -2,13 +2,24 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginRequest, type LoginRequest } from '@loomis/contracts';
-import { Button } from '@loomis/ui-web';
+import {
+  Alert,
+  AlertDescription,
+  Button,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  Input,
+} from '@loomis/ui-web';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 
-import { AuthCard, FormError, TextField } from '@/components/auth/auth-ui';
+import { AuthFormCard } from '@/components/auth/auth-form-card';
 import { login } from '@/lib/auth/auth-client';
 import { authErrorMessage } from '@/lib/auth/auth-errors';
 import { useAuth } from '@/lib/auth/auth-context';
@@ -22,16 +33,12 @@ export default function LoginPage() {
   const { setMfaChallenge, setEnrollmentToken } = useAuthFlow();
   const [formError, setFormError] = useState<string | null>(null);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<LoginRequest>({
+  const form = useForm<LoginRequest>({
     resolver: zodResolver(loginRequest),
     defaultValues: { email: '', password: '' },
   });
 
-  const onSubmit = handleSubmit(async (values) => {
+  const onSubmit = form.handleSubmit(async (values) => {
     setFormError(null);
     try {
       const result = await login(values);
@@ -55,32 +62,55 @@ export default function LoginPage() {
   });
 
   return (
-    <AuthCard title="Sign in" subtitle="Access your Loomis console">
-      <form onSubmit={onSubmit} noValidate>
-        <FormError message={formError} />
-        <TextField
-          label="Email"
-          type="email"
-          autoComplete="email"
-          error={errors.email?.message}
-          {...register('email')}
-        />
-        <TextField
-          label="Password"
-          type="password"
-          autoComplete="current-password"
-          error={errors.password?.message}
-          {...register('password')}
-        />
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
-          {isSubmitting ? 'Signing in…' : 'Sign in'}
-        </Button>
-      </form>
-      <p className="mt-4 text-center text-sm text-neutral-500">
-        <Link href="/reset-password" className="text-brand-700 hover:underline">
-          Forgot your password?
-        </Link>
-      </p>
-    </AuthCard>
+    <AuthFormCard
+      title="Sign in"
+      subtitle="Access your Loomis console"
+      footer={
+        <p className="w-full py-4 text-center text-sm text-muted-foreground">
+          <Link href="/reset-password" className="text-primary hover:underline">
+            Forgot your password?
+          </Link>
+        </p>
+      }
+    >
+      <Form {...form}>
+        <form onSubmit={onSubmit} noValidate className="space-y-4">
+          {formError ? (
+            <Alert variant="destructive">
+              <AlertDescription>{formError}</AlertDescription>
+            </Alert>
+          ) : null}
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <Input type="email" autoComplete="email" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Password</FormLabel>
+                <FormControl>
+                  <Input type="password" autoComplete="current-password" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting ? 'Signing in…' : 'Sign in'}
+          </Button>
+        </form>
+      </Form>
+    </AuthFormCard>
   );
 }

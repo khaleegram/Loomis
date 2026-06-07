@@ -2,13 +2,26 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { mfaEnrollConfirmRequest } from '@loomis/contracts';
-import { Button } from '@loomis/ui-web';
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  Button,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  Input,
+  Skeleton,
+} from '@loomis/ui-web';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
-import { AuthCard, FormError, TextField } from '@/components/auth/auth-ui';
+import { AuthFormCard } from '@/components/auth/auth-form-card';
 import { confirmMfaEnrollment, startMfaEnrollment } from '@/lib/auth/auth-client';
 import { authErrorMessage } from '@/lib/auth/auth-errors';
 import { useAuthFlow } from '@/lib/auth/auth-flow-store';
@@ -46,16 +59,12 @@ export default function MfaEnrollmentPage() {
     };
   }, [enrollmentToken, router]);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<CodeForm>({
+  const form = useForm<CodeForm>({
     resolver: zodResolver(codeForm),
     defaultValues: { code: '' },
   });
 
-  const onSubmit = handleSubmit(async ({ code }) => {
+  const onSubmit = form.handleSubmit(async ({ code }) => {
     if (!enrollmentToken) return;
     setFormError(null);
     try {
@@ -68,8 +77,17 @@ export default function MfaEnrollmentPage() {
 
   if (backupCodes) {
     return (
-      <AuthCard title="Save your backup codes" subtitle="Store these somewhere safe. Each code works once.">
-        <ul className="mb-6 grid grid-cols-2 gap-2 rounded-md bg-neutral-50 p-3 font-mono text-sm text-neutral-800">
+      <AuthFormCard
+        title="Save your backup codes"
+        subtitle="Store these somewhere safe. Each code works once."
+      >
+        <Alert className="mb-4 border-gold/30 bg-accent">
+          <AlertTitle>Keep these codes private</AlertTitle>
+          <AlertDescription>
+            You will not be able to view these codes again. Store them in a secure location.
+          </AlertDescription>
+        </Alert>
+        <ul className="mb-6 grid grid-cols-2 gap-2 rounded-md border border-border bg-muted p-4 font-mono text-sm">
           {backupCodes.map((c) => (
             <li key={c}>{c}</li>
           ))}
@@ -83,37 +101,60 @@ export default function MfaEnrollmentPage() {
         >
           Continue to sign in
         </Button>
-      </AuthCard>
+      </AuthFormCard>
     );
   }
 
   return (
-    <AuthCard title="Set up two-step verification" subtitle="Scan the key in your authenticator app, then enter a code.">
-      <FormError message={formError} />
+    <AuthFormCard
+      title="Set up two-step verification"
+      subtitle="Scan the key in your authenticator app, then enter a code."
+    >
+      {formError ? (
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{formError}</AlertDescription>
+        </Alert>
+      ) : null}
       {secret ? (
-        <div className="mb-4 rounded-md bg-neutral-50 p-3 text-sm">
-          <p className="text-neutral-500">Manual setup key</p>
-          <p className="mt-1 break-all font-mono text-neutral-900">{secret}</p>
+        <div className="mb-4 rounded-md border border-border bg-muted p-4 text-sm">
+          <p className="text-muted-foreground">Manual setup key</p>
+          <p className="mt-1 break-all font-mono text-foreground">{secret}</p>
           {provisioningUri ? (
-            <p className="mt-2 break-all text-xs text-neutral-400">{provisioningUri}</p>
+            <p className="mt-2 break-all text-xs text-muted-foreground">{provisioningUri}</p>
           ) : null}
         </div>
       ) : (
-        <p className="mb-4 text-sm text-neutral-500">Loading setup key…</p>
+        <div className="mb-4 space-y-2">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-10 w-full" />
+        </div>
       )}
-      <form onSubmit={onSubmit} noValidate>
-        <TextField
-          label="Authentication code"
-          inputMode="numeric"
-          autoComplete="one-time-code"
-          maxLength={6}
-          error={errors.code?.message}
-          {...register('code')}
-        />
-        <Button type="submit" className="w-full" disabled={isSubmitting || !secret}>
-          {isSubmitting ? 'Confirming…' : 'Confirm'}
-        </Button>
-      </form>
-    </AuthCard>
+      <Form {...form}>
+        <form onSubmit={onSubmit} noValidate className="space-y-4">
+          <FormField
+            control={form.control}
+            name="code"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Authentication code</FormLabel>
+                <FormControl>
+                  <Input
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    className="font-mono tracking-widest"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || !secret}>
+            {form.formState.isSubmitting ? 'Confirming…' : 'Confirm'}
+          </Button>
+        </form>
+      </Form>
+    </AuthFormCard>
   );
 }

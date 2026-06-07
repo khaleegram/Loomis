@@ -52,7 +52,7 @@ export const SCHOOL_NAV: SchoolNavItem[] = [
   },
   {
     label: 'Settings',
-    href: '/school/settings/security',
+    href: '/school/settings',
     always: true,
   },
 ];

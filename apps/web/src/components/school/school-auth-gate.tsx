@@ -1,5 +1,6 @@
 'use client';
 
+import { Skeleton } from '@loomis/ui-web';
 import { useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
 
@@ -22,8 +23,26 @@ export function SchoolAuthGate({ children }: SchoolAuthGateProps) {
 
   if (status === 'loading') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-neutral-50">
-        <p className="text-sm text-neutral-500">Loading session…</p>
+      <div className="flex min-h-screen bg-background">
+        <div className="hidden w-56 shrink-0 border-r border-border bg-sidebar p-4 lg:block">
+          <Skeleton className="mb-4 h-6 w-24" />
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
+          </div>
+        </div>
+        <div className="flex flex-1 flex-col">
+          <Skeleton className="h-14 w-full" />
+          <div className="space-y-4 p-6">
+            <Skeleton className="h-8 w-48" />
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <Skeleton className="h-32 w-full" />
+              <Skeleton className="h-32 w-full" />
+              <Skeleton className="h-32 w-full" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

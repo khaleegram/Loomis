@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { can, type Capability } from '@loomis/core';
-import { Button } from '@loomis/ui-web';
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@loomis/ui-web';
 
-import { PageBody, PageHeader } from '@/components/school/school-shell';
+import { PageBody, PageHeader } from '@/components/layout/page-header';
 import { useAuth } from '@/lib/auth/auth-context';
 
 interface DashboardCard {
@@ -76,14 +76,14 @@ const DASHBOARD_CARDS: DashboardCard[] = [
     capability: 'result.publish',
   },
   {
-    title: 'Security settings',
-    description: 'Review active sessions and registered devices.',
-    href: '/school/settings/security',
-    capability: 'attendance.view', // shown via alwaysInclude below
+    title: 'Settings',
+    description: 'Appearance, theme, sessions, and registered devices.',
+    href: '/school/settings',
+    capability: 'attendance.view',
   },
 ];
 
-const ALWAYS_VISIBLE_HREFS = new Set(['/school/settings/security']);
+const ALWAYS_VISIBLE_HREFS = new Set(['/school/settings']);
 
 export default function SchoolDashboardPage() {
   const { session } = useAuth();
@@ -103,22 +103,34 @@ export default function SchoolDashboardPage() {
       />
       <PageBody>
         {cards.length === 0 ? (
-          <p className="text-sm text-neutral-500">
-            No quick actions are available for your role yet. Use Settings to manage your account
-            security.
-          </p>
+          <Card>
+            <CardHeader>
+              <CardTitle>No quick actions yet</CardTitle>
+              <CardDescription>
+                No modules are available for your role. Use Settings to manage your account security.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/school/settings">Open settings</Link>
+              </Button>
+            </CardContent>
+          </Card>
         ) : (
           <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {cards.map((card) => (
-              <li
-                key={card.href}
-                className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm"
-              >
-                <h2 className="font-medium text-neutral-900">{card.title}</h2>
-                <p className="mt-1 text-sm text-neutral-500">{card.description}</p>
-                <Button variant="outline" size="sm" className="mt-4" asChild>
-                  <Link href={card.href}>Open</Link>
-                </Button>
+              <li key={card.href}>
+                <Card className="h-full shadow-card">
+                  <CardHeader>
+                    <CardTitle className="text-base">{card.title}</CardTitle>
+                    <CardDescription>{card.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={card.href}>Open</Link>
+                    </Button>
+                  </CardContent>
+                </Card>
               </li>
             ))}
           </ul>

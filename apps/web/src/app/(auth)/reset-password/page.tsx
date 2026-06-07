@@ -6,13 +6,24 @@ import {
   passwordResetRequest,
   type PasswordResetRequest,
 } from '@loomis/contracts';
-import { Button } from '@loomis/ui-web';
+import {
+  Alert,
+  AlertDescription,
+  Button,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  Input,
+} from '@loomis/ui-web';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
-import { AuthCard, FormError, TextField } from '@/components/auth/auth-ui';
+import { AuthFormCard } from '@/components/auth/auth-form-card';
 import { confirmPasswordReset, requestPasswordReset } from '@/lib/auth/auth-client';
 import { authErrorMessage } from '@/lib/auth/auth-errors';
 
@@ -60,65 +71,105 @@ export default function ResetPasswordPage() {
 
   if (done) {
     return (
-      <AuthCard title="Password updated" subtitle="Your other sessions have been signed out.">
-        <Link href="/login">
-          <Button className="w-full">Back to sign in</Button>
-        </Link>
-      </AuthCard>
+      <AuthFormCard title="Password updated" subtitle="Your other sessions have been signed out.">
+        <Button className="w-full" asChild>
+          <Link href="/login">Back to sign in</Link>
+        </Button>
+      </AuthFormCard>
     );
   }
 
   if (otpId) {
     return (
-      <AuthCard
+      <AuthFormCard
         title="Enter reset code"
         subtitle={`We sent a 6-digit code to your registered ${channel ?? 'contact'}.`}
       >
-        <form onSubmit={onConfirm} noValidate>
-          <FormError message={formError} />
-          <TextField
-            label="Reset code"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            maxLength={6}
-            error={confirmFormState.formState.errors.otp?.message}
-            {...confirmFormState.register('otp')}
-          />
-          <TextField
-            label="New password"
-            type="password"
-            autoComplete="new-password"
-            error={confirmFormState.formState.errors.newPassword?.message}
-            {...confirmFormState.register('newPassword')}
-          />
-          <Button type="submit" className="w-full" disabled={confirmFormState.formState.isSubmitting}>
-            {confirmFormState.formState.isSubmitting ? 'Updating…' : 'Set new password'}
-          </Button>
-        </form>
-      </AuthCard>
+        <Form {...confirmFormState}>
+          <form onSubmit={onConfirm} noValidate className="space-y-4">
+            {formError ? (
+              <Alert variant="destructive">
+                <AlertDescription>{formError}</AlertDescription>
+              </Alert>
+            ) : null}
+            <FormField
+              control={confirmFormState.control}
+              name="otp"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Reset code</FormLabel>
+                  <FormControl>
+                    <Input
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      maxLength={6}
+                      className="font-mono tracking-widest"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={confirmFormState.control}
+              name="newPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>New password</FormLabel>
+                  <FormControl>
+                    <Input type="password" autoComplete="new-password" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="submit" className="w-full" disabled={confirmFormState.formState.isSubmitting}>
+              {confirmFormState.formState.isSubmitting ? 'Updating…' : 'Set new password'}
+            </Button>
+          </form>
+        </Form>
+      </AuthFormCard>
     );
   }
 
   return (
-    <AuthCard title="Reset password" subtitle="We'll send a one-time code to your registered contact.">
-      <form onSubmit={onRequest} noValidate>
-        <FormError message={formError} />
-        <TextField
-          label="Email"
-          type="email"
-          autoComplete="email"
-          error={requestForm.formState.errors.email?.message}
-          {...requestForm.register('email')}
-        />
-        <Button type="submit" className="w-full" disabled={requestForm.formState.isSubmitting}>
-          {requestForm.formState.isSubmitting ? 'Sending…' : 'Send reset code'}
-        </Button>
-      </form>
-      <p className="mt-4 text-center text-sm text-neutral-500">
-        <Link href="/login" className="text-brand-700 hover:underline">
-          Back to sign in
-        </Link>
-      </p>
-    </AuthCard>
+    <AuthFormCard
+      title="Reset password"
+      subtitle="We'll send a one-time code to your registered contact."
+      footer={
+        <p className="w-full py-4 text-center text-sm text-muted-foreground">
+          <Link href="/login" className="text-primary hover:underline">
+            Back to sign in
+          </Link>
+        </p>
+      }
+    >
+      <Form {...requestForm}>
+        <form onSubmit={onRequest} noValidate className="space-y-4">
+          {formError ? (
+            <Alert variant="destructive">
+              <AlertDescription>{formError}</AlertDescription>
+            </Alert>
+          ) : null}
+          <FormField
+            control={requestForm.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <Input type="email" autoComplete="email" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Button type="submit" className="w-full" disabled={requestForm.formState.isSubmitting}>
+            {requestForm.formState.isSubmitting ? 'Sending…' : 'Send reset code'}
+          </Button>
+        </form>
+      </Form>
+    </AuthFormCard>
   );
 }

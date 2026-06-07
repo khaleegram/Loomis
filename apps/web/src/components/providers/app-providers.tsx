@@ -7,6 +7,8 @@ import { useState, type ReactNode } from 'react';
 import { createWebApiClient } from '@/lib/api/create-web-api-client';
 import { AuthProvider } from '@/lib/auth/auth-context';
 
+import { ThemeProvider } from './theme-provider';
+
 interface AppProvidersProps {
   children: ReactNode;
 }
@@ -27,10 +29,12 @@ export function AppProviders({ children }: AppProvidersProps) {
   const [apiClient] = useState(() => createWebApiClient());
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ApiClientProvider client={apiClient}>
-        <AuthProvider>{children}</AuthProvider>
-      </ApiClientProvider>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <ApiClientProvider client={apiClient}>
+          <AuthProvider>{children}</AuthProvider>
+        </ApiClientProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }

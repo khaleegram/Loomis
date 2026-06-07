@@ -3,8 +3,6 @@
 import { useDeregisterDevice, useDevices, useRevokeSession, useSessions } from '@loomis/api-client';
 import { Button } from '@loomis/ui-web';
 
-import { PageBody, PageHeader } from '@/components/school/school-shell';
-
 export default function SecuritySettingsPage() {
   const sessions = useSessions();
   const devices = useDevices();
@@ -13,12 +11,10 @@ export default function SecuritySettingsPage() {
 
   return (
     <>
-      <PageHeader
-        title="Security"
-        description="Manage your active sessions and registered devices (US-HRM-008)."
-      />
-      <PageBody>
-        <section className="mb-8">
+      <p className="mb-6 text-sm text-muted-foreground">
+        Manage your active sessions and registered devices (US-HRM-008).
+      </p>
+      <section className="mb-8">
           <h2 className="mb-3 text-sm font-semibold text-neutral-900">Active sessions</h2>
           {sessions.isLoading ? (
             <p className="text-sm text-neutral-500">Loading sessions…</p>
@@ -102,8 +98,7 @@ export default function SecuritySettingsPage() {
               ))}
             </ul>
           )}
-        </section>
-      </PageBody>
+      </section>
     </>
   );
 }

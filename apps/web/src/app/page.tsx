@@ -1,17 +1,96 @@
-import { Button } from '@loomis/ui-web';
+import Link from 'next/link';
+import { Building2, GraduationCap, ShieldCheck } from 'lucide-react';
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Separator } from '@loomis/ui-web';
+
+const FEATURES = [
+  {
+    icon: GraduationCap,
+    title: 'Academic excellence',
+    description: 'Sessions, attendance, gradebook, and exam results — unified.',
+  },
+  {
+    icon: Building2,
+    title: 'School operations',
+    description: 'Staff onboarding, admissions, and parent communication.',
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Trust & compliance',
+    description: 'Tenant isolation, audit trails, and role-based access.',
+  },
+] as const;
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-neutral-50 p-8">
-      <div className="flex flex-col items-center gap-2 text-center">
-        <h1 className="text-3xl font-semibold tracking-tight text-brand-700">Loomis</h1>
-        <p className="max-w-md text-neutral-500">
-          School management platform for Nigerian private schools.
-        </p>
-      </div>
-      <Button variant="outline" asChild>
-        <a href="/login">Sign in</a>
-      </Button>
-    </main>
+    <div className="flex min-h-screen flex-col lg:flex-row">
+      {/* Brand story — 55% */}
+      <section className="relative flex flex-col justify-center bg-gradient-to-br from-brand-600 via-brand-700 to-brand-800 px-8 py-14 text-white lg:w-[55%] lg:px-16 dark:from-forest-900 dark:via-forest-950 dark:to-brand-900">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgb(212_175_55/0.14),transparent_60%)]"
+        />
+        <div className="relative max-w-xl">
+          <div className="flex items-center gap-3">
+            <div className="flex size-11 items-center justify-center rounded-sm border border-gold/40 bg-gold/10">
+              <span className="font-serif text-xl font-bold text-gold-200">L</span>
+            </div>
+            <span className="font-serif text-3xl font-semibold tracking-tight">Loomis</span>
+          </div>
+          <h1 className="mt-8 font-serif text-4xl font-semibold leading-tight tracking-tight lg:text-5xl">
+            The modern console for Nigerian private schools.
+          </h1>
+          <p className="mt-5 text-base leading-relaxed text-brand-100 dark:text-neutral-400">
+            From admissions and fee collection to attendance and end-of-term results — one
+            trusted platform built for prestige, efficiency, and financial integrity.
+          </p>
+          <Separator className="my-8 w-20 border-gold/50 bg-gold/50" />
+          <ul className="space-y-5">
+            {FEATURES.map((feature) => {
+              const Icon = feature.icon;
+              return (
+                <li key={feature.title} className="flex gap-4">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-sm bg-white/10">
+                    <Icon aria-hidden className="size-4 text-gold-200" />
+                  </div>
+                  <div>
+                    <p className="font-medium">{feature.title}</p>
+                    <p className="mt-0.5 text-sm text-brand-100/90 dark:text-neutral-500">
+                      {feature.description}
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </section>
+
+      {/* Sign-in preview — 45% */}
+      <section className="flex flex-1 flex-col items-center justify-center bg-background px-8 py-14">
+        <div className="w-full max-w-md">
+          <Card className="shadow-elevated">
+            <CardHeader>
+              <CardTitle>Sign in to your console</CardTitle>
+              <CardDescription>
+                Access admissions, finance, academics, and settings for your school.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-md border border-dashed border-border bg-muted/50 px-4 py-6 text-center">
+                <p className="text-sm text-muted-foreground">
+                  Secure sign-in with email, password, and two-step verification.
+                </p>
+              </div>
+              <Button className="w-full" size="lg" asChild>
+                <Link href="/login">Sign in</Link>
+              </Button>
+            </CardContent>
+          </Card>
+          <p className="mt-6 text-center text-xs text-muted-foreground">
+            Need access? Contact your school administrator.
+          </p>
+        </div>
+      </section>
+    </div>
   );
 }

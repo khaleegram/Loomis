@@ -22,16 +22,46 @@ import {
   type ChangeStaffRoleRequest,
   type CreateSubjectAssignmentRequest,
 } from '@loomis/contracts';
-import { Button } from '@loomis/ui-web';
+import {
+  Alert,
+  AlertDescription,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Checkbox,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Skeleton,
+} from '@loomis/ui-web';
 import type { z } from 'zod';
 
 import { formatRoleLabel } from '@/components/school/school-nav-config';
 import { PageBody, PageHeader } from '@/components/school/school-shell';
-import { FormError, TextField } from '@/components/auth/auth-ui';
 import { useCan } from '@/lib/auth/use-capability';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 
 const PRIMARY_ROLES = staffPrimaryRole.options;
+
+function RootFormError({ message }: { message?: string }) {
+  if (!message) return null;
+  return (
+    <Alert variant="destructive">
+      <AlertDescription>{message}</AlertDescription>
+    </Alert>
+  );
+}
 
 export default function StaffAssignmentsPage() {
   const params = useParams<{ id: string }>();
@@ -87,7 +117,9 @@ export default function StaffAssignmentsPage() {
       <>
         <PageHeader title="Staff assignments" />
         <PageBody>
-          <p className="text-sm text-red-600">No tenant context. Sign in again.</p>
+          <Alert variant="destructive">
+            <AlertDescription>No tenant context. Sign in again.</AlertDescription>
+          </Alert>
         </PageBody>
       </>
     );
@@ -98,7 +130,7 @@ export default function StaffAssignmentsPage() {
       <>
         <PageHeader title="Staff assignments" />
         <PageBody>
-          <p className="text-sm text-neutral-500">Loading staff profile…</p>
+          <Skeleton className="h-32 w-full" />
         </PageBody>
       </>
     );
@@ -109,7 +141,9 @@ export default function StaffAssignmentsPage() {
       <>
         <PageHeader title="Staff assignments" />
         <PageBody>
-          <p className="text-sm text-red-600">Staff member not found.</p>
+          <Alert variant="destructive">
+            <AlertDescription>Staff member not found.</AlertDescription>
+          </Alert>
           <Button variant="outline" className="mt-4" asChild>
             <Link href="/school/staff">Back to directory</Link>
           </Button>
@@ -125,7 +159,7 @@ export default function StaffAssignmentsPage() {
     <>
       <PageHeader
         title={staff.fullName}
-        description={`Role assignments and teaching allocations (US-HRM-002..005).`}
+        description="Role assignments and teaching allocations (US-HRM-002..005)."
         actions={
           <Button variant="outline" asChild>
             <Link href="/school/staff">Back to directory</Link>
@@ -133,39 +167,43 @@ export default function StaffAssignmentsPage() {
         }
       />
       <PageBody>
-        <section className="mb-8 rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
-          <h2 className="text-sm font-semibold text-neutral-900">Profile</h2>
-          <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-            <div>
-              <dt className="text-neutral-500">Primary role</dt>
-              <dd className="font-medium text-neutral-900">{formatRoleLabel(staff.primaryRole)}</dd>
-            </div>
-            <div>
-              <dt className="text-neutral-500">Status</dt>
-              <dd className="font-medium capitalize text-neutral-900">{staff.status}</dd>
-            </div>
-            <div>
-              <dt className="text-neutral-500">Email</dt>
-              <dd className="text-neutral-900">{staff.email}</dd>
-            </div>
-            <div>
-              <dt className="text-neutral-500">Phone</dt>
-              <dd className="text-neutral-900">{staff.phone ?? '—'}</dd>
-            </div>
-          </dl>
-        </section>
+        <Card className="mb-8 shadow-card">
+          <CardHeader>
+            <CardTitle className="text-base">Profile</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <dl className="grid gap-2 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-muted-foreground">Primary role</dt>
+                <dd className="font-medium">{formatRoleLabel(staff.primaryRole)}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Status</dt>
+                <dd className="font-medium capitalize">{staff.status}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Email</dt>
+                <dd>{staff.email}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Phone</dt>
+                <dd>{staff.phone ?? '—'}</dd>
+              </div>
+            </dl>
+          </CardContent>
+        </Card>
 
         {!hasAnyAction ? (
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-muted-foreground">
             You do not have permission to manage assignments for this staff member.
           </p>
         ) : null}
 
         {canChangeRole && staff.status === 'active' ? (
           <AssignmentSection title="Change primary role (US-HRM-004)">
-            <form
-              onSubmit={(e) =>
-                void roleForm.handleSubmit(async (values) => {
+            <Form {...roleForm}>
+              <form
+                onSubmit={roleForm.handleSubmit(async (values) => {
                   try {
                     await changeRole.mutateAsync(values);
                     roleForm.reset(values);
@@ -174,39 +212,47 @@ export default function StaffAssignmentsPage() {
                       message: err instanceof Error ? err.message : 'Role change failed.',
                     });
                   }
-                })(e)
-              }
-              className="space-y-4"
-            >
-              <FormError message={roleForm.formState.errors.root?.message ?? null} />
-              <div>
-                <label htmlFor="newRole" className="mb-1 block text-sm font-medium text-neutral-700">
-                  New primary role
-                </label>
-                <select
-                  id="newRole"
-                  className="block w-full max-w-xs rounded-md border border-neutral-300 px-3 py-2 text-sm"
-                  {...roleForm.register('primaryRole')}
-                >
-                  {PRIMARY_ROLES.map((role) => (
-                    <option key={role} value={role}>
-                      {formatRoleLabel(role)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <Button type="submit" disabled={changeRole.isPending} size="sm">
-                {changeRole.isPending ? 'Saving…' : 'Change role'}
-              </Button>
-            </form>
+                })}
+                className="space-y-4"
+              >
+                <RootFormError message={roleForm.formState.errors.root?.message} />
+                <FormField
+                  control={roleForm.control}
+                  name="primaryRole"
+                  render={({ field }) => (
+                    <FormItem className="max-w-xs">
+                      <FormLabel>New primary role</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {PRIMARY_ROLES.map((role) => (
+                            <SelectItem key={role} value={role}>
+                              {formatRoleLabel(role)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" disabled={changeRole.isPending} size="sm">
+                  {changeRole.isPending ? 'Saving…' : 'Change role'}
+                </Button>
+              </form>
+            </Form>
           </AssignmentSection>
         ) : null}
 
         {canAssignSubject && staff.status === 'active' ? (
           <AssignmentSection title="Assign subject (US-HRM-002)">
-            <form
-              onSubmit={(e) =>
-                void subjectForm.handleSubmit(async (values) => {
+            <Form {...subjectForm}>
+              <form
+                onSubmit={subjectForm.handleSubmit(async (values) => {
                   try {
                     await createSubject.mutateAsync({ ...values, staffProfileId });
                     subjectForm.reset({ staffProfileId, termId: '', classArmId: '', subjectId: '' });
@@ -215,38 +261,45 @@ export default function StaffAssignmentsPage() {
                       message: err instanceof Error ? err.message : 'Assignment failed.',
                     });
                   }
-                })(e)
-              }
-              className="space-y-4"
-            >
-              <FormError message={subjectForm.formState.errors.root?.message ?? null} />
-              <TextField
-                label="Term ID"
-                error={subjectForm.formState.errors.termId?.message}
-                {...subjectForm.register('termId')}
-              />
-              <TextField
-                label="Class arm ID"
-                error={subjectForm.formState.errors.classArmId?.message}
-                {...subjectForm.register('classArmId')}
-              />
-              <TextField
-                label="Subject ID"
-                error={subjectForm.formState.errors.subjectId?.message}
-                {...subjectForm.register('subjectId')}
-              />
-              <Button type="submit" disabled={createSubject.isPending} size="sm">
-                {createSubject.isPending ? 'Assigning…' : 'Assign subject'}
-              </Button>
-            </form>
+                })}
+                className="space-y-4"
+              >
+                <RootFormError message={subjectForm.formState.errors.root?.message} />
+                {(['termId', 'classArmId', 'subjectId'] as const).map((name) => (
+                  <FormField
+                    key={name}
+                    control={subjectForm.control}
+                    name={name}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          {name === 'termId'
+                            ? 'Term ID'
+                            : name === 'classArmId'
+                              ? 'Class arm ID'
+                              : 'Subject ID'}
+                        </FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ))}
+                <Button type="submit" disabled={createSubject.isPending} size="sm">
+                  {createSubject.isPending ? 'Assigning…' : 'Assign subject'}
+                </Button>
+              </form>
+            </Form>
           </AssignmentSection>
         ) : null}
 
         {canAssignClassTeacher && staff.status === 'active' ? (
           <AssignmentSection title="Assign class teacher (US-HRM-003)">
-            <form
-              onSubmit={(e) =>
-                void classTeacherForm.handleSubmit(async (values) => {
+            <Form {...classTeacherForm}>
+              <form
+                onSubmit={classTeacherForm.handleSubmit(async (values) => {
                   try {
                     await assignClassTeacher.mutateAsync({ ...values, staffProfileId });
                     classTeacherForm.reset({ staffProfileId, termId: '', classArmId: '' });
@@ -255,33 +308,39 @@ export default function StaffAssignmentsPage() {
                       message: err instanceof Error ? err.message : 'Assignment failed.',
                     });
                   }
-                })(e)
-              }
-              className="space-y-4"
-            >
-              <FormError message={classTeacherForm.formState.errors.root?.message ?? null} />
-              <TextField
-                label="Term ID"
-                error={classTeacherForm.formState.errors.termId?.message}
-                {...classTeacherForm.register('termId')}
-              />
-              <TextField
-                label="Class arm ID"
-                error={classTeacherForm.formState.errors.classArmId?.message}
-                {...classTeacherForm.register('classArmId')}
-              />
-              <Button type="submit" disabled={assignClassTeacher.isPending} size="sm">
-                {assignClassTeacher.isPending ? 'Assigning…' : 'Assign class teacher'}
-              </Button>
-            </form>
+                })}
+                className="space-y-4"
+              >
+                <RootFormError message={classTeacherForm.formState.errors.root?.message} />
+                {(['termId', 'classArmId'] as const).map((name) => (
+                  <FormField
+                    key={name}
+                    control={classTeacherForm.control}
+                    name={name}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{name === 'termId' ? 'Term ID' : 'Class arm ID'}</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ))}
+                <Button type="submit" disabled={assignClassTeacher.isPending} size="sm">
+                  {assignClassTeacher.isPending ? 'Assigning…' : 'Assign class teacher'}
+                </Button>
+              </form>
+            </Form>
           </AssignmentSection>
         ) : null}
 
         {canDeactivate && staff.status === 'active' ? (
           <AssignmentSection title="Deactivate staff (US-HRM-005)">
-            <form
-              onSubmit={(e) =>
-                void deactivateForm.handleSubmit(async (values) => {
+            <Form {...deactivateForm}>
+              <form
+                onSubmit={deactivateForm.handleSubmit(async (values) => {
                   try {
                     await deactivate.mutateAsync(deactivateStaffRequest.parse(values));
                   } catch (err) {
@@ -289,24 +348,42 @@ export default function StaffAssignmentsPage() {
                       message: err instanceof Error ? err.message : 'Deactivation failed.',
                     });
                   }
-                })(e)
-              }
-              className="space-y-4"
-            >
-              <FormError message={deactivateForm.formState.errors.root?.message ?? null} />
-              <TextField
-                label="Reason"
-                error={deactivateForm.formState.errors.reason?.message}
-                {...deactivateForm.register('reason')}
-              />
-              <label className="flex items-center gap-2 text-sm text-neutral-700">
-                <input type="checkbox" {...deactivateForm.register('singletonOverrideConfirmed')} />
-                I confirm a deputy or replacement is available for singleton roles
-              </label>
-              <Button type="submit" variant="destructive" disabled={deactivate.isPending} size="sm">
-                {deactivate.isPending ? 'Deactivating…' : 'Deactivate staff member'}
-              </Button>
-            </form>
+                })}
+                className="space-y-4"
+              >
+                <RootFormError message={deactivateForm.formState.errors.root?.message} />
+                <FormField
+                  control={deactivateForm.control}
+                  name="reason"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Reason</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={deactivateForm.control}
+                  name="singletonOverrideConfirmed"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start gap-3 space-y-0">
+                      <FormControl>
+                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                      </FormControl>
+                      <FormLabel className="font-normal leading-snug">
+                        I confirm a deputy or replacement is available for singleton roles
+                      </FormLabel>
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" variant="destructive" disabled={deactivate.isPending} size="sm">
+                  {deactivate.isPending ? 'Deactivating…' : 'Deactivate staff member'}
+                </Button>
+              </form>
+            </Form>
           </AssignmentSection>
         ) : null}
       </PageBody>
@@ -316,9 +393,11 @@ export default function StaffAssignmentsPage() {
 
 function AssignmentSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="mb-6 rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
-      <h2 className="mb-4 text-sm font-semibold text-neutral-900">{title}</h2>
-      {children}
-    </section>
+    <Card className="mb-6 shadow-card">
+      <CardHeader>
+        <CardTitle className="text-base">{title}</CardTitle>
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
   );
 }

@@ -6,11 +6,30 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { useInviteStaff } from '@loomis/api-client';
 import { inviteStaffRequest, staffPrimaryRole, type InviteStaffRequest } from '@loomis/contracts';
-import { Button } from '@loomis/ui-web';
+import {
+  Alert,
+  AlertDescription,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@loomis/ui-web';
 
 import { formatRoleLabel } from '@/components/school/school-nav-config';
 import { PageBody, PageHeader } from '@/components/school/school-shell';
-import { FormError, TextField } from '@/components/auth/auth-ui';
 import { useCan } from '@/lib/auth/use-capability';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 
@@ -22,12 +41,7 @@ export default function InviteStaffPage() {
   const canOnboard = useCan('staff.onboard');
   const invite = useInviteStaff(tenantId ?? '');
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-    setError,
-  } = useForm<InviteStaffRequest>({
+  const form = useForm<InviteStaffRequest>({
     resolver: zodResolver(inviteStaffRequest),
     defaultValues: {
       fullName: '',
@@ -42,7 +56,7 @@ export default function InviteStaffPage() {
       <>
         <PageHeader title="Invite staff" />
         <PageBody>
-          <p className="text-sm text-neutral-500">You do not have permission to invite staff.</p>
+          <p className="text-sm text-muted-foreground">You do not have permission to invite staff.</p>
         </PageBody>
       </>
     );
@@ -53,22 +67,24 @@ export default function InviteStaffPage() {
       <>
         <PageHeader title="Invite staff" />
         <PageBody>
-          <p className="text-sm text-red-600">No tenant context. Sign in again.</p>
+          <Alert variant="destructive">
+            <AlertDescription>No tenant context. Sign in again.</AlertDescription>
+          </Alert>
         </PageBody>
       </>
     );
   }
 
-  async function onSubmit(values: InviteStaffRequest) {
+  const onSubmit = form.handleSubmit(async (values) => {
     try {
       await invite.mutateAsync(values);
       router.push('/school/staff');
     } catch (err) {
-      setError('root', {
+      form.setError('root', {
         message: err instanceof Error ? err.message : 'Failed to send invitation.',
       });
     }
-  }
+  });
 
   return (
     <>
@@ -82,60 +98,94 @@ export default function InviteStaffPage() {
         }
       />
       <PageBody>
-        <form
-          onSubmit={(e) => void handleSubmit(onSubmit)(e)}
-          className="mx-auto max-w-md rounded-lg border border-neutral-200 bg-white p-6 shadow-sm"
-          noValidate
-        >
-          <FormError message={errors.root?.message ?? null} />
-
-          <TextField
-            label="Full name"
-            autoComplete="name"
-            error={errors.fullName?.message}
-            {...register('fullName')}
-          />
-          <TextField
-            label="Email"
-            type="email"
-            autoComplete="email"
-            error={errors.email?.message}
-            {...register('email')}
-          />
-          <TextField
-            label="Phone"
-            type="tel"
-            autoComplete="tel"
-            error={errors.phone?.message}
-            {...register('phone')}
-          />
-
-          <div className="mb-4">
-            <label htmlFor="primaryRole" className="mb-1 block text-sm font-medium text-neutral-700">
-              Primary role
-            </label>
-            <select
-              id="primaryRole"
-              className="block w-full rounded-md border border-neutral-300 px-3 py-2 text-sm text-neutral-900 outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100"
-              {...register('primaryRole')}
-            >
-              {PRIMARY_ROLES.map((role) => (
-                <option key={role} value={role}>
-                  {formatRoleLabel(role)}
-                </option>
-              ))}
-            </select>
-            {errors.primaryRole?.message ? (
-              <p role="alert" className="mt-1 text-xs text-red-600">
-                {errors.primaryRole.message}
-              </p>
-            ) : null}
-          </div>
-
-          <Button type="submit" disabled={isSubmitting || invite.isPending} className="w-full">
-            {isSubmitting || invite.isPending ? 'Sending invitation…' : 'Send invitation'}
-          </Button>
-        </form>
+        <Card className="mx-auto max-w-md shadow-card">
+          <CardHeader>
+            <CardTitle className="text-base">New staff invitation</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={onSubmit} className="space-y-4" noValidate>
+                {form.formState.errors.root?.message ? (
+                  <Alert variant="destructive">
+                    <AlertDescription>{form.formState.errors.root.message}</AlertDescription>
+                  </Alert>
+                ) : null}
+                <FormField
+                  control={form.control}
+                  name="fullName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Full name</FormLabel>
+                      <FormControl>
+                        <Input autoComplete="name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input type="email" autoComplete="email" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone</FormLabel>
+                      <FormControl>
+                        <Input type="tel" autoComplete="tel" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="primaryRole"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Primary role</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a role" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {PRIMARY_ROLES.map((role) => (
+                            <SelectItem key={role} value={role}>
+                              {formatRoleLabel(role)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button
+                  type="submit"
+                  disabled={form.formState.isSubmitting || invite.isPending}
+                  className="w-full"
+                >
+                  {form.formState.isSubmitting || invite.isPending
+                    ? 'Sending invitation…'
+                    : 'Send invitation'}
+                </Button>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
       </PageBody>
     </>
   );

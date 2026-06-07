@@ -2,12 +2,23 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { mfaVerifyRequest, type MfaVerifyRequest } from '@loomis/contracts';
-import { Button } from '@loomis/ui-web';
+import {
+  Alert,
+  AlertDescription,
+  Button,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  Input,
+} from '@loomis/ui-web';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
-import { AuthCard, FormError, TextField } from '@/components/auth/auth-ui';
+import { AuthFormCard } from '@/components/auth/auth-form-card';
 import { verifyMfa } from '@/lib/auth/auth-client';
 import { authErrorMessage } from '@/lib/auth/auth-errors';
 import { useAuth } from '@/lib/auth/auth-context';
@@ -23,21 +34,16 @@ export default function MfaVerifyPage() {
   const { mfaChallengeId, reset } = useAuthFlow();
   const [formError, setFormError] = useState<string | null>(null);
 
-  // No challenge in memory (e.g. page reloaded) → restart the flow.
   useEffect(() => {
     if (!mfaChallengeId) router.replace('/login');
   }, [mfaChallengeId, router]);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<CodeForm>({
+  const form = useForm<CodeForm>({
     resolver: zodResolver(mfaVerifyRequest.pick({ code: true })),
     defaultValues: { code: '' },
   });
 
-  const onSubmit = handleSubmit(async ({ code }) => {
+  const onSubmit = form.handleSubmit(async ({ code }) => {
     if (!mfaChallengeId) return;
     setFormError(null);
     try {
@@ -51,21 +57,41 @@ export default function MfaVerifyPage() {
   });
 
   return (
-    <AuthCard title="Two-step verification" subtitle="Enter the 6-digit code from your authenticator app">
-      <form onSubmit={onSubmit} noValidate>
-        <FormError message={formError} />
-        <TextField
-          label="Authentication code"
-          inputMode="numeric"
-          autoComplete="one-time-code"
-          maxLength={6}
-          error={errors.code?.message}
-          {...register('code')}
-        />
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
-          {isSubmitting ? 'Verifying…' : 'Verify'}
-        </Button>
-      </form>
-    </AuthCard>
+    <AuthFormCard
+      title="Two-step verification"
+      subtitle="Enter the 6-digit code from your authenticator app"
+    >
+      <Form {...form}>
+        <form onSubmit={onSubmit} noValidate className="space-y-4">
+          {formError ? (
+            <Alert variant="destructive">
+              <AlertDescription>{formError}</AlertDescription>
+            </Alert>
+          ) : null}
+          <FormField
+            control={form.control}
+            name="code"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Authentication code</FormLabel>
+                <FormControl>
+                  <Input
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    className="font-mono tracking-widest"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting ? 'Verifying…' : 'Verify'}
+          </Button>
+        </form>
+      </Form>
+    </AuthFormCard>
   );
 }

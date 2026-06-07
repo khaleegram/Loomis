@@ -1,0 +1,8 @@
+/**
+ * Regent Emerald — NativeWind / Expo mobile preset.
+ * Import in apps/mobile/global.css once the Expo app is scaffolded:
+ *   @import "tailwindcss";
+ *   @import "@loomis/design-tokens/tailwind";
+ *   @import "@loomis/design-tokens/mobile";
+ */
+@import "./tailwind.css";
