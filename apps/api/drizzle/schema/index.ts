@@ -8,3 +8,4 @@ export * from './student.js';
 export * from './workflow.js';
 export * from './storage.js';
 export * from './risk.js';
+export * from './referral.js';

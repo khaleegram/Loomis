@@ -204,6 +204,20 @@
       "when": 1780836700000,
       "tag": "0028_risk_constraints_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1780836800000,
+      "tag": "0029_referral",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1780836800001,
+      "tag": "0030_referral_constraints_rls",
+      "breakpoints": true
     }
   ]
 }

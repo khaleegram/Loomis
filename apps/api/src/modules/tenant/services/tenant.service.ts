@@ -6,6 +6,7 @@ import { tenantRepository } from '../repository/tenant.repository.js';
 import { tierRepository } from '../repository/tier.repository.js';
 import type { ActorContext, ProvisionTenantInput, SuspendTenantInput } from '../types.js';
 import { psfRateService } from './psf-rate.service.js';
+import { attributionService } from '../../referral/services/attribution.service.js';
 
 type TenantRow = NonNullable<Awaited<ReturnType<typeof tenantRepository.findById>>>;
 
@@ -30,12 +31,16 @@ export const tenantService = {
       );
     }
 
-    // BLOCKED: referral code validation/attribution requires the Referral module
-    // (Phase 2 / Chat 16), which is not built yet. US-PLT-001 says an invalid or
-    // unverified referral code blocks activation and flags Platform Operations.
-    // We persist the code (permanently linked, CON-009) but cannot verify it or
-    // create attribution here. Do NOT fake referral validation. Once Referral
-    // ships, validate before activation and gate `status` accordingly.
+    if (input.referralCode) {
+      const validation = await attributionService.validateReferralCode(input.referralCode);
+      if (!validation.valid) {
+        throw new LoomisError(
+          'REFERRAL_CODE_INVALID',
+          422,
+          'Referral code is invalid or participant is not KYC-verified; tenant activation blocked (US-PLT-001)',
+        );
+      }
+    }
 
     const tenant = await tenantRepository.create({
       ...input,

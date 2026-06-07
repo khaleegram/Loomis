@@ -18,6 +18,8 @@ const envSchema = z.object({
   JWT_ACCESS_TTL_SECONDS: z.coerce.number().int().default(28_800),
   JWT_REFRESH_TTL_SECONDS: z.coerce.number().int().default(2_592_000),
   REFRESH_TOKEN_HMAC_SECRET: z.string().min(1),
+  /** HMAC key for referral code hashing (FR-REF-003). Raw codes are never stored. */
+  REFERRAL_CODE_HMAC_SECRET: z.string().min(1),
   TOTP_ENCRYPTION_KEY: z.string().min(1),
   TOTP_ISSUER: z.string().default('Loomis'),
 

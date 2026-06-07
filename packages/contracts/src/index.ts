@@ -37,3 +37,6 @@ export * from './storage/storage.schema.js';
 
 // Risk / IVP
 export * from './risk/risk.schema.js';
+
+// Referral
+export * from './referral/referral.schema.js';
