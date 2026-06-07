@@ -1,7 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import { staffRoutes } from './routes/staff.routes.js';
+import { invitationRoutes } from './routes/invitation.routes.js';
 
-/** HRM module plugin — staff onboarding, assignments, roles, and deactivation. */
 export async function hrmModule(app: FastifyInstance): Promise<void> {
   await app.register(staffRoutes);
+  await app.register(invitationRoutes);
 }
