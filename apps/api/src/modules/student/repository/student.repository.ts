@@ -225,15 +225,24 @@ export const studentRepository = {
   },
 
   async updateStudentStatus(tenantId: string, studentId: string, status: string) {
-    return withTenantContext(tenantId, async (tx) => {
-      const now = new Date();
-      const [row] = await tx
-        .update(students)
-        .set({ status, updatedAt: now })
-        .where(and(eq(students.tenantId, tenantId), eq(students.id, studentId)))
-        .returning();
-      return row ?? null;
-    });
+    return withTenantContext(tenantId, async (tx) =>
+      this.updateStudentStatusTx(tx, tenantId, studentId, status),
+    );
+  },
+
+  async updateStudentStatusTx(
+    tx: import('../../../shared/db.js').Executor,
+    tenantId: string,
+    studentId: string,
+    status: string,
+  ) {
+    const now = new Date();
+    const [row] = await tx
+      .update(students)
+      .set({ status, updatedAt: now })
+      .where(and(eq(students.tenantId, tenantId), eq(students.id, studentId)))
+      .returning();
+    return row ?? null;
   },
 
   async markTransferredOut(
@@ -358,19 +367,52 @@ export const studentRepository = {
 
   /** Student IDs with active billable enrollment for a term (Ledger census consumer). */
   async listBillableStudentIds(tenantId: string, termId: string): Promise<string[]> {
-    return withTenantContext(tenantId, async (tx) => {
-      const rows = await tx
-        .select({ studentId: enrollments.studentId })
-        .from(enrollments)
-        .where(
-          and(
-            eq(enrollments.tenantId, tenantId),
-            eq(enrollments.termId, termId),
-            eq(enrollments.status, 'active_billable'),
-          ),
-        );
-      return rows.map((row) => row.studentId);
-    });
+    return withTenantContext(tenantId, async (tx) =>
+      this.listBillableStudentIdsTx(tx, tenantId, termId),
+    );
+  },
+
+  async listBillableStudentIdsTx(
+    tx: import('../../../shared/db.js').Executor,
+    tenantId: string,
+    termId: string,
+  ): Promise<string[]> {
+    const rows = await tx
+      .select({ studentId: enrollments.studentId })
+      .from(enrollments)
+      .where(
+        and(
+          eq(enrollments.tenantId, tenantId),
+          eq(enrollments.termId, termId),
+          eq(enrollments.status, 'active_billable'),
+        ),
+      );
+    return rows.map((row) => row.studentId);
+  },
+
+  async createEnrollmentTx(
+    tx: import('../../../shared/db.js').Executor,
+    tenantId: string,
+    studentId: string,
+    input: CreateEnrollmentInput,
+    enrolledById: string,
+    billable: boolean,
+  ) {
+    const now = new Date();
+    const [row] = await tx
+      .insert(enrollments)
+      .values({
+        tenantId,
+        studentId,
+        termId: input.termId,
+        classArmId: input.classArmId,
+        status: billable ? 'active_billable' : 'active',
+        enrolledById,
+        enrolledAt: now,
+      })
+      .returning();
+    if (!row) throw new Error('Failed to create enrollment');
+    return row;
   },
 
   // ── Parent identities (global — no tenant context) ───────────────────────────

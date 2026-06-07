@@ -2,6 +2,8 @@
 export const STUDENT_EVENT_TYPES = {
   ADMITTED: 'student.admitted',
   ENROLLED: 'student.enrolled',
+  /** Post-census billable enrollment — Ledger creates a PSF obligation immediately. */
+  LATE_ENROLLED: 'student.late_enrolled',
   TRANSFERRED_OUT: 'student.transferred_out',
   PARENT_LINK_INITIATED: 'parent.link.initiated',
   PARENT_LINK_VERIFIED: 'parent.link.verified',
@@ -23,6 +25,18 @@ export interface StudentEnrolledPayload {
   termId: string;
   classArmId: string;
   status: string;
+  enrolledById: string;
+  enrolledAt: string;
+}
+
+export interface StudentLateEnrolledPayload extends Record<string, unknown> {
+  tenantId: string;
+  studentId: string;
+  enrollmentId: string;
+  termId: string;
+  classArmId: string;
+  rateSnapshotId: string;
+  psfRateMinor: number;
   enrolledById: string;
   enrolledAt: string;
 }

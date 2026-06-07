@@ -39,20 +39,29 @@ export const obligationRepository = {
   },
 
   async findByStudentTerm(tenantId: string, studentId: string, termId: string) {
-    return withTenantContext(tenantId, async (tx) => {
-      const [row] = await tx
-        .select()
-        .from(psfObligations)
-        .where(
-          and(
-            eq(psfObligations.tenantId, tenantId),
-            eq(psfObligations.studentId, studentId),
-            eq(psfObligations.termId, termId),
-          ),
-        )
-        .limit(1);
-      return row ?? null;
-    });
+    return withTenantContext(tenantId, async (tx) =>
+      this.findByStudentTermInTx(tx, tenantId, studentId, termId),
+    );
+  },
+
+  async findByStudentTermInTx(
+    tx: Executor,
+    tenantId: string,
+    studentId: string,
+    termId: string,
+  ) {
+    const [row] = await tx
+      .select()
+      .from(psfObligations)
+      .where(
+        and(
+          eq(psfObligations.tenantId, tenantId),
+          eq(psfObligations.studentId, studentId),
+          eq(psfObligations.termId, termId),
+        ),
+      )
+      .limit(1);
+    return row ?? null;
   },
 
   async countUnsettledForTerm(tenantId: string, termId: string): Promise<number> {
@@ -85,6 +94,18 @@ export const obligationRepository = {
           total: sql<number>`coalesce(sum(${psfObligations.amountMinor}), 0)::bigint`,
         })
         .from(psfObligations);
+      return Number(row?.total ?? 0);
+    });
+  },
+
+  async countForTerm(tenantId: string, termId: string): Promise<number> {
+    return withTenantContext(tenantId, async (tx) => {
+      const [row] = await tx
+        .select({
+          total: sql<number>`count(*)::int`,
+        })
+        .from(psfObligations)
+        .where(and(eq(psfObligations.tenantId, tenantId), eq(psfObligations.termId, termId)));
       return Number(row?.total ?? 0);
     });
   },

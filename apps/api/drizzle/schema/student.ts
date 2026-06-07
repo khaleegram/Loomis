@@ -1,9 +1,11 @@
 import { sql } from 'drizzle-orm';
 import {
+  bigint,
   boolean,
   check,
   date,
   index,
+  integer,
   pgSchema,
   text,
   timestamp,
@@ -13,7 +15,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { uuidv7 } from 'uuidv7';
 import { classLevels } from './academic';
-import { tenants } from './tenant';
+import { psfRateSnapshots, tenants } from './tenant';
 
 export const studentSchema = pgSchema('student');
 
@@ -216,6 +218,50 @@ export const enrollments = studentSchema.table(
     endReasonValid: check(
       'enrollments_end_reason_valid',
       sql`${table.endReason} IS NULL OR ${table.endReason} IN ('transfer', 'withdrawal', 'graduation', 'suspension')`,
+    ),
+  }),
+);
+
+/**
+ * Census enrollment attestation (Revenue Integrity §A / System Design §8.1 step 6).
+ * INSERT-only legal declaration at census lock: attested counts, rate snapshot,
+ * and SHA-256 hashes of the attested figures and billable student list.
+ */
+export const enrollmentAttestations = studentSchema.table(
+  'enrollment_attestations',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id),
+    termId: uuid('term_id').notNull(),
+    declaredBillableCount: integer('declared_billable_count').notNull(),
+    systemBillableCount: integer('system_billable_count').notNull(),
+    attestedById: uuid('attested_by_id').notNull(),
+    attestedAt: timestamp('attested_at', { withTimezone: true }).notNull(),
+    /** SHA-256 of the sorted billable student ID list at lock time. */
+    studentListHash: varchar('student_list_hash', { length: 64 }).notNull(),
+    /** Tamper-evident digest of attested figures (includes studentListHash). */
+    attestationHash: varchar('attestation_hash', { length: 64 }).notNull(),
+    rateSnapshotId: uuid('rate_snapshot_id')
+      .notNull()
+      .references(() => psfRateSnapshots.id),
+    psfRateMinor: bigint('psf_rate_minor', { mode: 'number' }).notNull(),
+    attestationStatus: varchar('attestation_status', { length: 20 }).notNull().default('submitted'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    tenantTermUnique: uniqueIndex('enrollment_attestations_tenant_term_unique').on(
+      table.tenantId,
+      table.termId,
+    ),
+    statusIdx: index('enrollment_attestations_status_idx').on(table.attestationStatus),
+    ratePositive: check('enrollment_attestations_rate_positive', sql`${table.psfRateMinor} > 0`),
+    statusValid: check(
+      'enrollment_attestations_status_valid',
+      sql`${table.attestationStatus} IN ('submitted', 'verified', 'disputed')`,
     ),
   }),
 );

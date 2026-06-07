@@ -1,5 +1,6 @@
 import type { TermCensusLockedPayload } from '../../academic/events/types.js';
 import type { PaymentVerifiedPayload } from '../../finance/events/types.js';
+import type { StudentLateEnrolledPayload } from '../../student/events/types.js';
 
 /** CloudEvents-style envelope dispatched by the outbox relay and in-process registry. */
 export interface LedgerEventEnvelope<T extends Record<string, unknown> = Record<string, unknown>> {
@@ -12,6 +13,7 @@ export interface LedgerEventEnvelope<T extends Record<string, unknown> = Record<
 }
 
 export type CensusLockedEvent = LedgerEventEnvelope<TermCensusLockedPayload>;
+export type LateEnrolledEvent = LedgerEventEnvelope<StudentLateEnrolledPayload>;
 export type PaymentVerifiedEvent = LedgerEventEnvelope<PaymentVerifiedPayload>;
 
 export const LEDGER_ACCOUNT_CODES = {

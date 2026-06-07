@@ -1,7 +1,9 @@
 import type { CreateEnrollmentRequest, EnrollmentResponse } from '@loomis/contracts';
 import { academicRepository } from '../../academic/repository/academic.repository.js';
 import { LoomisError } from '../../../shared/errors.js';
+import { withTenantContext } from '../../../shared/tenant-context.js';
 import { STUDENT_EVENT_TYPES } from '../events/types.js';
+import { attestationRepository } from '../repository/attestation.repository.js';
 import { studentOutboxRepository } from '../repository/outbox.repository.js';
 import { studentRepository } from '../repository/student.repository.js';
 import type { ActorContext } from '../types.js';
@@ -27,8 +29,9 @@ function serializeEnrollment(
 
 export const enrollmentService = {
   /**
-   * US-SIS-003. Enroll an admitted student into a class arm for the open term.
-   * Billable status requires identity attestation on file (FR-SIS-002).
+   * US-SIS-003. Enroll an admitted student into a class arm for the open term,
+   * or into a census-locked term as a late billable enrollment (System Design
+   * §8.1). Billable status requires identity attestation on file (FR-SIS-002).
    */
   async enrollStudent(
     tenantId: string,
@@ -54,11 +57,12 @@ export const enrollmentService = {
     if (!term) {
       throw new LoomisError('ACADEMIC_TERM_NOT_FOUND', 404, 'Academic term not found');
     }
-    if (term.status !== 'open') {
+    const isLateEnrollment = term.status === 'census_locked';
+    if (term.status !== 'open' && !isLateEnrollment) {
       throw new LoomisError(
         'STUDENT_TERM_NOT_OPEN',
         409,
-        'Enrollment is only allowed while the term is open',
+        'Enrollment is only allowed while the term is open or after census lock for late enrollments',
       );
     }
 
@@ -85,6 +89,64 @@ export const enrollmentService = {
     }
 
     const billable = student.identityAttestationType !== null;
+    if (isLateEnrollment && !billable) {
+      throw new LoomisError(
+        'STUDENT_LATE_ENROLLMENT_NOT_BILLABLE',
+        422,
+        'Late enrollment after census lock requires identity attestation for PSF billing',
+      );
+    }
+
+    const attestation = isLateEnrollment
+      ? await attestationRepository.findByTerm(tenantId, input.termId)
+      : null;
+    if (isLateEnrollment && !attestation) {
+      throw new LoomisError(
+        'STUDENT_CENSUS_ATTESTATION_MISSING',
+        422,
+        'Cannot bill a late enrollment without a census attestation for this term',
+      );
+    }
+
+    if (isLateEnrollment && attestation) {
+      const enrollment = await withTenantContext(tenantId, async (tx) => {
+        const row = await studentRepository.createEnrollmentTx(
+          tx,
+          tenantId,
+          studentId,
+          input,
+          actor.userId,
+          true,
+        );
+
+        if (student.status === 'admitted') {
+          await studentRepository.updateStudentStatusTx(tx, tenantId, studentId, 'enrolled');
+        }
+
+        await studentOutboxRepository.append(tx, {
+          tenantId,
+          aggregateType: 'enrollment',
+          aggregateId: row.id,
+          eventType: STUDENT_EVENT_TYPES.LATE_ENROLLED,
+          payload: {
+            tenantId,
+            studentId,
+            enrollmentId: row.id,
+            termId: input.termId,
+            classArmId: input.classArmId,
+            rateSnapshotId: attestation.rateSnapshotId,
+            psfRateMinor: attestation.psfRateMinor,
+            enrolledById: actor.userId,
+            enrolledAt: row.enrolledAt.toISOString(),
+          },
+        });
+
+        return row;
+      });
+
+      return serializeEnrollment(enrollment);
+    }
+
     const enrollment = await studentRepository.createEnrollment(
       tenantId,
       studentId,

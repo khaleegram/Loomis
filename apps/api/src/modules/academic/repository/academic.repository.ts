@@ -12,8 +12,8 @@ import {
   results,
   studentPromotionRecords,
 } from '../../../../drizzle/schema/academic.js';
+import type { Executor } from '../../../shared/db.js';
 import { withTenantContext } from '../../../shared/tenant-context.js';
-import { ACADEMIC_EVENT_TYPES, type TermCensusLockedPayload } from '../events/types.js';
 import type {
   ConfigureTermInput,
   CreateAcademicYearInput,
@@ -25,7 +25,6 @@ import type {
   RequestGradeCorrectionInput,
   UpsertGradebookEntryInput,
 } from '../types.js';
-import { outboxRepository } from './outbox.repository.js';
 
 /** Default placeholder term names created at year activation (FR-ASM-002). */
 function defaultTermName(sequence: number): string {
@@ -297,60 +296,41 @@ export const academicRepository = {
   },
 
   /**
-   * The census lock (System Design §8.1) — a single SERIALIZABLE transaction:
-   * update the term to `census_locked`, write the attested figures, AND append
-   * the `academic.term.census_locked` outbox event so the Ledger module creates
-   * one PSF obligation per billable student plus the balanced ledger postings.
-   *
-   * The conditional UPDATE (WHERE status = 'open') is the race guard: if a
-   * concurrent request already locked the census, zero rows update and we return
-   * null so the service surfaces ACADEMIC_CENSUS_ALREADY_LOCKED.
+   * Flips a term to `census_locked` inside the caller's SERIALIZABLE transaction.
+   * Attestation and outbox append are orchestrated by censusService.
    */
-  async lockCensus(params: {
-    tenantId: string;
-    termId: string;
-    declaredBillableCount: number;
-    systemBillableCount: number | null;
-    varianceReason: string | null;
-    eventPayload: TermCensusLockedPayload;
-  }) {
-    return withTenantContext(
-      params.tenantId,
-      async (tx) => {
-        const now = new Date();
-        const [term] = await tx
-          .update(academicTerms)
-          .set({
-            status: 'census_locked',
-            declaredBillableCount: params.declaredBillableCount,
-            systemBillableCount: params.systemBillableCount,
-            censusVarianceReason: params.varianceReason,
-            censusLockedAt: now,
-            censusLockedById: params.eventPayload.attestedById,
-            updatedAt: now,
-          })
-          .where(
-            and(
-              eq(academicTerms.tenantId, params.tenantId),
-              eq(academicTerms.id, params.termId),
-              eq(academicTerms.status, 'open'),
-            ),
-          )
-          .returning();
-        if (!term) return null;
-
-        await outboxRepository.append(tx, {
-          aggregateType: 'academic_term',
-          aggregateId: params.termId,
-          eventType: ACADEMIC_EVENT_TYPES.termCensusLocked,
-          tenantId: params.tenantId,
-          payload: { ...params.eventPayload, censusLockedAt: now.toISOString() },
-        });
-
-        return term;
-      },
-      { isolationLevel: 'serializable' },
-    );
+  async lockCensusInTx(
+    tx: Executor,
+    params: {
+      tenantId: string;
+      termId: string;
+      declaredBillableCount: number;
+      systemBillableCount: number;
+      varianceReason: string | null;
+      attestedById: string;
+      lockedAt: Date;
+    },
+  ) {
+    const [term] = await tx
+      .update(academicTerms)
+      .set({
+        status: 'census_locked',
+        declaredBillableCount: params.declaredBillableCount,
+        systemBillableCount: params.systemBillableCount,
+        censusVarianceReason: params.varianceReason,
+        censusLockedAt: params.lockedAt,
+        censusLockedById: params.attestedById,
+        updatedAt: params.lockedAt,
+      })
+      .where(
+        and(
+          eq(academicTerms.tenantId, params.tenantId),
+          eq(academicTerms.id, params.termId),
+          eq(academicTerms.status, 'open'),
+        ),
+      )
+      .returning();
+    return term ?? null;
   },
 
   // ── Class structure ────────────────────────────────────────────────────────────
