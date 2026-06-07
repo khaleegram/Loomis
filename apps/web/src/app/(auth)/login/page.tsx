@@ -106,7 +106,7 @@ export default function LoginPage() {
                       type="email"
                       autoComplete="email"
                       placeholder="Email address"
-                      className="pl-10 h-12 bg-white/5 border-white/10 text-white placeholder:text-neutral-500 focus:border-gold-400/50 focus:ring-1 focus:ring-gold-400/30 dark:bg-forest-900 dark:border-forest-700"
+                      className="pl-10 h-12 bg-white/5 border-white/10 text-white placeholder:text-neutral-500 focus:border-sky-400/50 focus:ring-1 focus:ring-sky-400/30 dark:bg-navy-800 dark:border-navy-700"
                       {...field}
                     />
                   </FormControl>
@@ -131,7 +131,7 @@ export default function LoginPage() {
                       type={showPassword ? 'text' : 'password'}
                       autoComplete="current-password"
                       placeholder="Password"
-                      className="pl-10 pr-12 h-12 bg-white/5 border-white/10 text-white placeholder:text-neutral-500 focus:border-gold-400/50 focus:ring-1 focus:ring-gold-400/30"
+                      className="pl-10 pr-12 h-12 bg-white/5 border-white/10 text-white placeholder:text-neutral-500 focus:border-sky-400/50 focus:ring-1 focus:ring-sky-400/30"
                       {...field}
                     />
                   </FormControl>
@@ -153,7 +153,7 @@ export default function LoginPage() {
                   <FormMessage />
                   <Link
                     href="/reset-password"
-                    className="ml-auto text-xs text-neutral-400 hover:text-gold-300 transition-colors"
+                    className="ml-auto text-xs text-neutral-400 hover:text-sky-400 transition-colors"
                   >
                     Forgot password?
                   </Link>
@@ -165,7 +165,7 @@ export default function LoginPage() {
           <Button
             type="submit"
             size="lg"
-            className="w-full h-12 font-semibold tracking-wide bg-gold-400 hover:bg-gold-500 text-forest-900 transition-all duration-200 shadow-[0_0_20px_rgba(212,175,55,0.15)] hover:shadow-[0_0_30px_rgba(212,175,55,0.25)]"
+            className="w-full h-12 font-semibold tracking-wide bg-sky-400 hover:bg-sky-500 text-navy-900 transition-all duration-200"
             disabled={isSubmitting}
           >
             {isSubmitting ? (

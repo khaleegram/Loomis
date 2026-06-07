@@ -86,7 +86,7 @@ export default function ResetPasswordPage() {
             <CheckCircle2 className="size-7 text-green-400" />
           </div>
         </div>
-        <Button className="w-full h-12 font-semibold bg-gold-400 hover:bg-gold-500 text-forest-900 shadow-[0_0_20px_rgba(212,175,55,0.15)]" asChild>
+        <Button className="w-full h-12 font-semibold bg-sky-400 hover:bg-sky-500 text-navy-900" asChild>
           <Link href="/login">Back to sign in</Link>
         </Button>
       </AuthFormCard>
@@ -121,7 +121,7 @@ export default function ResetPasswordPage() {
                       autoComplete="one-time-code"
                       maxLength={6}
                       placeholder="000000"
-                      className="h-14 text-center font-mono text-2xl tracking-[0.5em] bg-white/5 border-white/10 text-white placeholder:text-neutral-600 focus:border-gold-400/50 focus:ring-1 focus:ring-gold-400/30"
+                      className="h-14 text-center font-mono text-2xl tracking-[0.5em] bg-white/5 border-white/10 text-white placeholder:text-neutral-600 focus:border-sky-400/50 focus:ring-1 focus:ring-sky-400/30"
                       {...field}
                     />
                   </FormControl>
@@ -145,7 +145,7 @@ export default function ResetPasswordPage() {
                         type={showPassword ? 'text' : 'password'}
                         autoComplete="new-password"
                         placeholder="Choose a strong password"
-                        className="pl-10 pr-12 h-12 bg-white/5 border-white/10 text-white placeholder:text-neutral-500 focus:border-gold-400/50 focus:ring-1 focus:ring-gold-400/30"
+                        className="pl-10 pr-12 h-12 bg-white/5 border-white/10 text-white placeholder:text-neutral-500 focus:border-sky-400/50 focus:ring-1 focus:ring-sky-400/30"
                         {...field}
                       />
                     </FormControl>
@@ -167,7 +167,7 @@ export default function ResetPasswordPage() {
             <Button
               type="submit"
               size="lg"
-              className="w-full h-12 font-semibold tracking-wide bg-gold-400 hover:bg-gold-500 text-forest-900 transition-all duration-200 shadow-[0_0_20px_rgba(212,175,55,0.15)] hover:shadow-[0_0_30px_rgba(212,175,55,0.25)]"
+              className="w-full h-12 font-semibold tracking-wide bg-sky-400 hover:bg-sky-500 text-navy-900 transition-all duration-200"
               disabled={isConfirming}
             >
               {isConfirming ? (
@@ -191,7 +191,7 @@ export default function ResetPasswordPage() {
       subtitle="Enter your email and we'll send a one-time reset code."
       footer={
         <p className="w-full py-4 text-center text-sm text-neutral-400">
-          <Link href="/login" className="text-gold-400 hover:text-gold-300 transition-colors">
+          <Link href="/login" className="text-sky-400 hover:text-sky-300 transition-colors">
             Back to sign in
           </Link>
         </p>
@@ -217,7 +217,7 @@ export default function ResetPasswordPage() {
                       type="email"
                       autoComplete="email"
                       placeholder="Email address"
-                      className="pl-10 h-12 bg-white/5 border-white/10 text-white placeholder:text-neutral-500 focus:border-gold-400/50 focus:ring-1 focus:ring-gold-400/30"
+                      className="pl-10 h-12 bg-white/5 border-white/10 text-white placeholder:text-neutral-500 focus:border-sky-400/50 focus:ring-1 focus:ring-sky-400/30"
                       {...field}
                     />
                   </FormControl>
@@ -230,7 +230,7 @@ export default function ResetPasswordPage() {
           <Button
             type="submit"
             size="lg"
-            className="w-full h-12 font-semibold tracking-wide bg-gold-400 hover:bg-gold-500 text-forest-900 transition-all duration-200 shadow-[0_0_20px_rgba(212,175,55,0.15)] hover:shadow-[0_0_30px_rgba(212,175,55,0.25)]"
+            className="w-full h-12 font-semibold tracking-wide bg-sky-400 hover:bg-sky-500 text-navy-900 transition-all duration-200"
             disabled={isRequesting}
           >
             {isRequesting ? (
