@@ -8,6 +8,11 @@ export type StudentListFilters = {
   classArmId?: string;
 };
 
+export type AdmissionListFilters = {
+  status?: string;
+  search?: string;
+};
+
 export const queryKeys = {
   identity: {
     /** User-scoped — not tenant-partitioned. */
@@ -22,6 +27,13 @@ export const queryKeys = {
       ['students', tenantId, 'detail', studentId] as const,
     profile: (tenantId: string, studentId: string) =>
       ['students', tenantId, 'profile', studentId] as const,
+  },
+  admissions: {
+    all: (tenantId: string) => ['admissions', tenantId] as const,
+    list: (tenantId: string, filters: AdmissionListFilters = {}) =>
+      ['admissions', tenantId, 'list', filters] as const,
+    detail: (tenantId: string, admissionId: string) =>
+      ['admissions', tenantId, 'detail', admissionId] as const,
   },
   hrm: {
     all: (tenantId: string) => ['hrm', tenantId] as const,
@@ -40,6 +52,9 @@ export const queryKeys = {
       ['academic', tenantId, 'terms', termId] as const,
     censusPreview: (tenantId: string, termId: string) =>
       ['academic', tenantId, 'terms', termId, 'census', 'preview'] as const,
+    classLevels: (tenantId: string) => ['academic', tenantId, 'class-levels'] as const,
+    classStructure: (tenantId: string, yearId: string) =>
+      ['academic', tenantId, 'years', yearId, 'class-structure'] as const,
   },
 } as const;
 

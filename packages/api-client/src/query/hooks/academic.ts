@@ -7,6 +7,8 @@ import type {
   CensusLockRequest,
   CensusLockResponse,
   CensusPreviewResponse,
+  ClassLevelListResponse,
+  ClassStructureResponse,
   CloseTermRequest,
   ConfigureTermRequest,
   CreateAcademicYearRequest,
@@ -141,6 +143,52 @@ export function useCensusPreview(tenantId: string, termId: string) {
   return useQuery({
     ...censusPreviewQueryOptions(client, tenantId, termId),
     enabled: Boolean(tenantId && termId),
+  });
+}
+
+export function classLevelsQueryOptions(client: ApiClient, tenantId: string) {
+  const queryKey = queryKeys.academic.classLevels(tenantId);
+  assertTenantScopedKey(queryKey, tenantId);
+  return {
+    queryKey,
+    queryFn: () =>
+      client.get<ClassLevelListResponse>(`/tenants/${tenantId}/class-levels`),
+    staleTime: ACADEMIC_STALE_MS,
+  };
+}
+
+export function classStructureQueryOptions(
+  client: ApiClient,
+  tenantId: string,
+  yearId: string,
+) {
+  const queryKey = queryKeys.academic.classStructure(tenantId, yearId);
+  assertTenantScopedKey(queryKey, tenantId);
+  return {
+    queryKey,
+    queryFn: () =>
+      client.get<ClassStructureResponse>(
+        `/tenants/${tenantId}/academic-years/${yearId}/class-structure`,
+      ),
+    staleTime: ACADEMIC_STALE_MS,
+  };
+}
+
+/** Class levels for admission forms (FR-ASM-009). */
+export function useClassLevels(tenantId: string) {
+  const client = useApiClient();
+  return useQuery({
+    ...classLevelsQueryOptions(client, tenantId),
+    enabled: Boolean(tenantId),
+  });
+}
+
+/** Class structure (levels + arms) for an academic year. */
+export function useClassStructure(tenantId: string, yearId: string) {
+  const client = useApiClient();
+  return useQuery({
+    ...classStructureQueryOptions(client, tenantId, yearId),
+    enabled: Boolean(tenantId && yearId),
   });
 }
 

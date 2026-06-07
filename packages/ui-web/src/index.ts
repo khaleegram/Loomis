@@ -88,5 +88,6 @@ export {
   TableRow,
 } from './components/ui/table.js';
 export { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs.js';
+export { Textarea } from './components/ui/textarea.js';
 export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './components/ui/tooltip.js';
 export { cn } from './lib/utils.js';

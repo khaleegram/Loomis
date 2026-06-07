@@ -218,6 +218,11 @@ export const classLevelResponse = z.object({
 });
 export type ClassLevelResponse = z.infer<typeof classLevelResponse>;
 
+export const classLevelListResponse = z.object({
+  levels: z.array(classLevelResponse),
+});
+export type ClassLevelListResponse = z.infer<typeof classLevelListResponse>;
+
 export const createClassArmRequest = z.object({
   academicYearId: z.string().uuid(),
   classLevelId: z.string().uuid(),

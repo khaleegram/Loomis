@@ -10,3 +10,4 @@ export * from './mutations/idempotency.js';
 export * from './mutations/step-up-cache.js';
 export * from './mutations/financial-mutation.js';
 export * from './mutations/useFinancialMutation.js';
+export * from './mutations/useIdempotentMutation.js';

@@ -119,6 +119,12 @@ export const studentResponse = z.object({
 });
 export type StudentResponse = z.infer<typeof studentResponse>;
 
+export const admissionDecisionResponse = z.object({
+  admission: admissionResponse,
+  student: studentResponse.nullable(),
+});
+export type AdmissionDecisionResponse = z.infer<typeof admissionDecisionResponse>;
+
 export const studentListResponse = z.object({
   students: z.array(studentResponse),
 });

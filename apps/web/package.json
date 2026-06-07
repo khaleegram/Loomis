@@ -18,11 +18,12 @@
     "@loomis/design-tokens": "workspace:*",
     "@loomis/ui-web": "workspace:*",
     "@tanstack/react-query": "^5.56.2",
+    "@tanstack/react-table": "^8.21.3",
+    "lucide-react": "^0.468.0",
     "next": "15.5.19",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.77.0",
-    "lucide-react": "^0.468.0",
     "zod": "^3.23.8",
     "zustand": "^4.5.5"
   },
