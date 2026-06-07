@@ -169,6 +169,69 @@ export const psfRateService = {
     return tier?.defaultPsfRateMinor ?? null;
   },
 
+  /**
+   * Resolves the immutable snapshot row for billing. Materializes a tenant snapshot
+   * from the tier default when no snapshot exists yet (provisioning without an
+   * explicit initial rate).
+   */
+  async ensureBillingSnapshot(
+    tenantId: string,
+    expectedRateMinor: number,
+  ): Promise<{ id: string; rateMinor: number }> {
+    assertRateNonZero(expectedRateMinor);
+
+    const tenantSnapshot = await psfRateSnapshotRepository.findLatestForTenant(tenantId);
+    if (tenantSnapshot) {
+      if (tenantSnapshot.rateMinor !== expectedRateMinor) {
+        throw new LoomisError(
+          'LEDGER_PSF_SNAPSHOT_REQUIRED',
+          409,
+          'Effective PSF rate changed since census lock attestation',
+          { expectedRateMinor, snapshotRateMinor: tenantSnapshot.rateMinor },
+        );
+      }
+      return { id: tenantSnapshot.id, rateMinor: tenantSnapshot.rateMinor };
+    }
+
+    const globalSnapshot = await psfRateSnapshotRepository.findLatestGlobal();
+    if (globalSnapshot) {
+      if (globalSnapshot.rateMinor !== expectedRateMinor) {
+        throw new LoomisError(
+          'LEDGER_PSF_SNAPSHOT_REQUIRED',
+          409,
+          'Effective PSF rate changed since census lock attestation',
+          { expectedRateMinor, snapshotRateMinor: globalSnapshot.rateMinor },
+        );
+      }
+      return { id: globalSnapshot.id, rateMinor: globalSnapshot.rateMinor };
+    }
+
+    const tenant = await tenantRepository.findById(tenantId);
+    if (!tenant) {
+      throw new LoomisError('TENANT_NOT_FOUND', 404, 'Tenant not found');
+    }
+    const tier = await tierRepository.findById(tenant.tierId);
+    if (!tier || tier.defaultPsfRateMinor !== expectedRateMinor) {
+      throw new LoomisError(
+        'LEDGER_PSF_SNAPSHOT_REQUIRED',
+        422,
+        'No PSF rate snapshot exists for billing; configure a platform or tenant rate',
+      );
+    }
+
+    const snapshot = await psfRateSnapshotRepository.create({
+      scope: 'tenant',
+      tenantId,
+      rateMinor: expectedRateMinor,
+      previousRateMinor: null,
+      effectiveFrom: new Date(),
+      reason: 'Materialized from tier default at census lock',
+      changedById: tenant.provisionedById ?? tenant.id,
+    });
+
+    return { id: snapshot.id, rateMinor: snapshot.rateMinor };
+  },
+
   async getGlobalHistory() {
     return psfRateSnapshotRepository.listGlobalHistory();
   },

@@ -23,6 +23,9 @@ export * from './academic/gradebook.schema.js';
 // Finance
 export * from './finance/finance.schema.js';
 
+// Ledger
+export * from './ledger/ledger.schema.js';
+
 // Student
 export * from './student/student.schema.js';
 

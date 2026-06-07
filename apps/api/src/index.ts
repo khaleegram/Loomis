@@ -10,6 +10,7 @@ import { hrmModule } from './modules/hrm/index.js';
 import { academicModule } from './modules/academic/index.js';
 import { studentModule } from './modules/student/index.js';
 import { financeModule } from './modules/finance/index.js';
+import { ledgerModule } from './modules/ledger/index.js';
 import { workflowModule } from './modules/workflow/index.js';
 import { storageModule } from './modules/storage/index.js';
 
@@ -45,6 +46,7 @@ async function buildServer() {
   await app.register(academicModule, { prefix: '/api/v1' });
   await app.register(studentModule, { prefix: '/api/v1' });
   await app.register(workflowModule, { prefix: '/api/v1' });
+  await app.register(ledgerModule, { prefix: '/api/v1' });
   await app.register(financeModule, { prefix: '/api/v1' });
   await app.register(storageModule, { prefix: '/api/v1' });
 

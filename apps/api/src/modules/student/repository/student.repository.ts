@@ -356,6 +356,23 @@ export const studentRepository = {
     });
   },
 
+  /** Student IDs with active billable enrollment for a term (Ledger census consumer). */
+  async listBillableStudentIds(tenantId: string, termId: string): Promise<string[]> {
+    return withTenantContext(tenantId, async (tx) => {
+      const rows = await tx
+        .select({ studentId: enrollments.studentId })
+        .from(enrollments)
+        .where(
+          and(
+            eq(enrollments.tenantId, tenantId),
+            eq(enrollments.termId, termId),
+            eq(enrollments.status, 'active_billable'),
+          ),
+        );
+      return rows.map((row) => row.studentId);
+    });
+  },
+
   // ── Parent identities (global — no tenant context) ───────────────────────────
 
   async findParentIdentityByEmail(emailNormalized: string) {

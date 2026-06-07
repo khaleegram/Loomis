@@ -127,4 +127,9 @@ export const enrollmentService = {
   async countBillableForTerm(tenantId: string, termId: string): Promise<number> {
     return studentRepository.countBillableEnrollments(tenantId, termId);
   },
+
+  /** Ledger census consumer reads billable student IDs (cross-module service read). */
+  async listBillableStudentIdsForTerm(tenantId: string, termId: string): Promise<string[]> {
+    return studentRepository.listBillableStudentIds(tenantId, termId);
+  },
 };

@@ -162,6 +162,20 @@
       "when": 1780710000001,
       "tag": "0021_finance_refunds_reconciliation_constraints_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1780830285201,
+      "tag": "0023_common_starfox",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1780830285202,
+      "tag": "0024_ledger_constraints_rls",
+      "breakpoints": true
     }
   ]
 }

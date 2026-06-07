@@ -1,4 +1,5 @@
 import { paymentRepository } from '../../finance/repository/payment.repository.js';
+import { obligationRepository } from '../../ledger/repository/index.js';
 
 /**
  * Term closure gate (FR-ASM-006 / US-ASM-004 / CON-021).
@@ -25,9 +26,14 @@ export interface TermClosureEvaluation {
 
 export const termClosureGate = {
   async evaluate(tenantId: string, termId: string): Promise<TermClosureEvaluation> {
-    const financialBlockers: string[] = [
-      'PENDING_LEDGER: PSF obligation settlement status cannot be verified (Ledger module not built)',
-    ];
+    const financialBlockers: string[] = [];
+
+    const unsettledObligations = await obligationRepository.countUnsettledForTerm(tenantId, termId);
+    if (unsettledObligations > 0) {
+      financialBlockers.push(
+        `LEDGER_UNSETTLED_PSF_OBLIGATIONS: ${unsettledObligations} PSF obligation(s) remain unsettled for this term`,
+      );
+    }
 
     const unverifiedOffline = await paymentRepository.countUnverifiedOfflinePayments(
       tenantId,
