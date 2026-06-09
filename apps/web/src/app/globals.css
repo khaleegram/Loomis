@@ -3,7 +3,7 @@
 @import "@loomis/ui-web/styles";
 
 body {
-  background: var(--background);
+  background: #ffffff;
   color: var(--foreground);
   font-family: var(--font-sans);
   font-size: var(--text-sm);
@@ -12,58 +12,59 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Dashboard canvas */
+.dashboard-canvas {
+  background: var(--background);
+}
+
+/* Modern premium card — subtle shadow stack + inner highlight */
+.card {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.05);
+  border-radius: 16px;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.015),
+    0 4px 16px rgba(15, 23, 42, 0.025),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transition: box-shadow 250ms cubic-bezier(0.4, 0, 0.2, 1), transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 2px 4px rgba(15, 23, 42, 0.02),
+    0 8px 24px rgba(15, 23, 42, 0.045),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.card-dark {
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 16px;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.15),
+    0 12px 32px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: box-shadow 250ms cubic-bezier(0.4, 0, 0.2, 1), transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-dark:hover {
+  transform: translateY(-1.5px);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.15),
+    0 18px 48px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
 h1,
 h2,
 h3,
 h4 {
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   letter-spacing: var(--tracking-tight);
   line-height: var(--leading-tight);
 }
 
-/* Liquid blob floating keyframes */
-@keyframes blob-float-1 {
-  0% { transform: translate(0px, 0px) scale(1); }
-  33% { transform: translate(50px, -60px) scale(1.15); }
-  66% { transform: translate(-30px, 40px) scale(0.85); }
-  100% { transform: translate(0px, 0px) scale(1); }
-}
-@keyframes blob-float-2 {
-  0% { transform: translate(0px, 0px) scale(1.1); }
-  50% { transform: translate(-60px, 50px) scale(0.9); }
-  100% { transform: translate(0px, 0px) scale(1.1); }
-}
-@keyframes blob-float-3 {
-  0% { transform: translate(0px, 0px) scale(1); }
-  50% { transform: translate(40px, 40px) scale(1.1); }
-  100% { transform: translate(0px, 0px) scale(1); }
-}
-
-.animate-blob-1 {
-  animation: blob-float-1 25s infinite ease-in-out;
-}
-.animate-blob-2 {
-  animation: blob-float-2 30s infinite ease-in-out;
-}
-.animate-blob-3 {
-  animation: blob-float-3 22s infinite ease-in-out;
-}
-
-/* Skeleton shimmer */
 @keyframes shimmer {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
-}
-
-/* 3D Glass border & surface styles */
-.glass-beveled-3d {
-  background: rgba(20, 32, 26, 0.45); /* Tinted forest/midnight backdrop */
-  backdrop-filter: blur(24px) saturate(140%);
-  -webkit-backdrop-filter: blur(24px) saturate(140%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 
-    inset 1px 1px 0px rgba(255, 255, 255, 0.15),   /* Top-left gloss */
-    inset -1px -1px 0px rgba(0, 0, 0, 0.3),          /* Bottom-right shadow edge */
-    inset 0 0 20px rgba(74, 222, 128, 0.03),        /* Subtle internal mint glow */
-    0 25px 50px -12px rgba(0, 0, 0, 0.5);            /* Deep outer floor shadow */
 }
