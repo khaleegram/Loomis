@@ -1,17 +1,20 @@
 'use client';
 
 import Link from 'next/link';
+import { useMemo, useState } from 'react';
 import {
   usePlatformPrivilegedChanges,
+  usePlatformRevenueChart,
   usePlatformRevenueSummary,
   usePlatformRiskCases,
+  usePlatformTenants,
+  useDsars,
 } from '@loomis/api-client';
 import {
   AlertTriangle,
   ArrowUpRight,
   Building2,
   CheckCircle2,
-  ChevronDown,
   Download,
   FileText,
   ShieldCheck,
@@ -22,7 +25,20 @@ import {
 } from 'lucide-react';
 
 import { PageBody } from '@/components/platform/platform-shell';
+import {
+  DashboardFilterMenu,
+  DashboardToolbar,
+  formatPercentChange,
+} from '@/components/dashboard/dashboard-primitives';
 import { useAuth } from '@/lib/auth/auth-context';
+
+const PERIOD_CHART_MAP = {
+  'This Term': '6m',
+  'Last Term': '12m',
+  YTD: '24m',
+} as const;
+
+type DashboardPeriod = keyof typeof PERIOD_CHART_MAP;
 
 const ROLE_LABELS: Record<string, string> = {
   platform_owner: 'Platform Owner',
@@ -67,9 +83,24 @@ function Spark({ data, stroke, height = 48 }: { data: number[]; stroke: string; 
 
 export default function PlatformDashboard() {
   const { session } = useAuth();
+  const [selectedPeriod, setSelectedPeriod] = useState<DashboardPeriod>('This Term');
+  const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
+
   const { data: summary, isLoading } = usePlatformRevenueSummary();
+  const { data: revenueChart } = usePlatformRevenueChart(PERIOD_CHART_MAP[selectedPeriod]);
+  const { data: tenantsData } = usePlatformTenants();
   const { data: riskCases } = usePlatformRiskCases({ status: 'OPEN' });
-  const { data: pendingApprovals } = usePlatformPrivilegedChanges('pending');
+  const { data: pendingApprovals } = usePlatformPrivilegedChanges('requested');
+  const { data: dsars } = useDsars();
+
+  const tenantOptions = useMemo(
+    () => (tenantsData?.tenants ?? []).map((tenant) => ({ value: tenant.id, label: tenant.name })),
+    [tenantsData?.tenants],
+  );
+  const selectedTenant = selectedTenantId
+    ? tenantsData?.tenants.find((tenant) => tenant.id === selectedTenantId)
+    : undefined;
+  const scopedSchoolCount = selectedTenant ? 1 : (summary?.activeTenants ?? 0);
 
   const roleLabel =
     session?.role != null
@@ -81,16 +112,18 @@ export default function PlatformDashboard() {
       ? Math.round((summary.settledMinor / summary.billedMinor) * 100)
       : null;
 
-  const openCases = riskCases?.cases.length ?? 0;
-  const pendingCount = pendingApprovals?.changes.length ?? 0;
+  const openCases = riskCases?.openCount ?? riskCases?.cases.length ?? 0;
+  const pendingCount = pendingApprovals?.total ?? pendingApprovals?.changes.length ?? 0;
+  const openDsarCount =
+    dsars?.filter((item) => item.status === 'received' || item.status === 'in_progress').length ?? 0;
+  const billedChange = formatPercentChange(summary?.billedChangePct);
+  const settledChange = formatPercentChange(summary?.settledChangePct, 'settled vs last term');
 
-  const revenueData = summary
-    ? [0.55, 0.62, 0.68, 0.73, 0.80, 0.88, 0.93, 1].map((m) => summary.billedMinor * m)
-    : [550, 620, 680, 730, 800, 880, 930, 1000];
-
-  const schoolData = summary
-    ? [0.70, 0.76, 0.82, 0.87, 0.91, 0.95, 0.98, 1].map((m) => Math.round(summary.activeTenants * m))
-    : [700, 760, 820, 870, 910, 950, 980, 1000];
+  const revenueData =
+    revenueChart?.points.map((point) => point.billedMinor).filter((value) => value >= 0) ?? [];
+  const schoolData =
+    revenueChart?.points.map((point) => point.settledMinor).filter((value) => value >= 0) ?? [];
+  const systemHealthy = openCases === 0 && pendingCount === 0 && openDsarCount === 0;
 
   return (
     <PageBody className="max-w-[1200px] px-7 py-7">
@@ -116,47 +149,37 @@ export default function PlatformDashboard() {
         </p>
       </div>
 
-      {/* ── Action toolbar — period + export ────────────── */}
-      <div className="mb-5 flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          {['This Term', 'Last Term', 'YTD'].map((label, i) => (
-            <button
-              key={label}
-              type="button"
-              className={`rounded-lg px-3 py-1.5 text-[12px] font-semibold transition ${
-                i === 0
-                  ? 'bg-black text-white'
-                  : 'border border-neutral-200 bg-white text-neutral-500 hover:border-neutral-300 hover:text-neutral-800'
-              }`}
+      <DashboardToolbar
+        selectedPeriod={selectedPeriod}
+        onPeriodChange={(period) => setSelectedPeriod(period as DashboardPeriod)}
+        actions={
+          <>
+            <DashboardFilterMenu
+              value={selectedTenantId}
+              onValueChange={setSelectedTenantId}
+              options={tenantOptions}
+              allLabel="All Schools"
+              searchPlaceholder="Search schools…"
+              disabled={tenantOptions.length === 0}
+            />
+            <Link
+              href={selectedTenant ? `/platform/tenants/${selectedTenant.id}` : '/platform/tenants'}
+              className="flex items-center gap-1.5 rounded-lg bg-black px-3.5 py-1.5 text-[12px] font-semibold text-white hover:bg-neutral-800"
             >
-              {label}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-neutral-500 hover:border-neutral-300"
-          >
-            All Schools <ChevronDown aria-hidden className="size-3.5" />
-          </button>
-          <Link
-            href="/platform/tenants"
-            className="flex items-center gap-1.5 rounded-lg bg-black px-3.5 py-1.5 text-[12px] font-semibold text-white hover:bg-neutral-800"
-          >
-            <Download aria-hidden className="size-3.5" />
-            Export
-          </Link>
-        </div>
-      </div>
+              <Download aria-hidden className="size-3.5" />
+              {selectedTenant ? 'View School' : 'Export'}
+            </Link>
+          </>
+        }
+      />
 
       {/* ── Stat strip ───────────────────────────────────── */}
       <div className="card mb-5 grid grid-cols-4 divide-x divide-neutral-100 rounded-2xl">
         {[
-          { label: 'Active Schools', value: isLoading ? '—' : (summary?.activeTenants.toLocaleString() ?? '—'), sub: '+14.2% this term', subColor: '#16a34a', icon: Building2, color: 'linear-gradient(135deg,hsl(35,35%,52%),hsl(35,32%,40%))' },
-          { label: 'PSF Billed',     value: isLoading ? '—' : (summary ? fmtBig(summary.billedMinor) : '—'),    sub: 'Term revenue',      subColor: '#9ca3af', icon: TrendingUp, color: 'linear-gradient(135deg,hsl(30,28%,38%),hsl(28,26%,28%))' },
-          { label: 'Settlement',     value: settlementPct != null ? `${settlementPct}%` : (isLoading ? '—' : '—'), sub: 'On target',       subColor: '#16a34a', icon: Wallet,     color: 'linear-gradient(135deg,hsl(40,38%,54%),hsl(38,34%,42%))' },
-          { label: 'Network Nodes',  value: isLoading ? '—' : ((summary?.activeTenants ?? 0) + 128).toLocaleString(), sub: 'Schools + entities', subColor: '#9ca3af', icon: Users, color: 'linear-gradient(135deg,hsl(28,33%,46%),hsl(24,30%,34%))' },
+          { label: 'Active Schools', value: isLoading ? '—' : scopedSchoolCount.toLocaleString(), sub: selectedTenant ? selectedTenant.name : (billedChange?.text ?? 'Active tenants'), subColor: billedChange?.color ?? '#9ca3af', icon: Building2, color: 'linear-gradient(135deg,hsl(35,35%,52%),hsl(35,32%,40%))' },
+          { label: 'PSF Billed',     value: isLoading ? '—' : (summary ? fmtBig(summary.billedMinor) : '—'),    sub: 'Ledger obligations',      subColor: '#9ca3af', icon: TrendingUp, color: 'linear-gradient(135deg,hsl(30,28%,38%),hsl(28,26%,28%))' },
+          { label: 'Settlement',     value: settlementPct != null ? `${settlementPct}%` : (isLoading ? '—' : '—'), sub: settledChange?.text ?? 'Of billed PSF',       subColor: settledChange?.color ?? (settlementPct != null && settlementPct >= 80 ? '#16a34a' : '#9ca3af'), icon: Wallet,     color: 'linear-gradient(135deg,hsl(40,38%,54%),hsl(38,34%,42%))' },
+          { label: 'Outstanding',  value: isLoading ? '—' : (summary ? fmtBig(summary.outstandingMinor) : '—'), sub: 'Unsettled PSF', subColor: summary && summary.outstandingMinor > 0 ? '#f59e0b' : '#16a34a', icon: Users, color: 'linear-gradient(135deg,hsl(28,33%,46%),hsl(24,30%,34%))' },
         ].map((item) => {
           const Icon = item.icon;
           return (
@@ -197,10 +220,12 @@ export default function PlatformDashboard() {
                 {isLoading ? '—' : (summary ? fmtBig(summary.billedMinor) : '—')}
               </p>
               <div className="mt-1 flex items-center gap-2">
-                <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-600">
-                  <ArrowUpRight aria-hidden className="size-3" />
-                  {summary?.billedChangePct != null ? Math.abs(summary.billedChangePct).toFixed(1) : '8.1'}% vs last term
-                </span>
+                {billedChange ? (
+                  <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-600">
+                    <ArrowUpRight aria-hidden className="size-3" />
+                    {billedChange.text}
+                  </span>
+                ) : null}
               </div>
             </div>
             <div className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-neutral-50 px-2.5 py-1.5 text-[11px] font-semibold text-neutral-500">
@@ -209,7 +234,13 @@ export default function PlatformDashboard() {
             </div>
           </div>
           <div className="px-1 pb-1">
-            <Spark data={revenueData} stroke="hsl(35, 33%, 45%)" height={120} />
+            {revenueData.length >= 2 ? (
+              <Spark data={revenueData} stroke="hsl(35, 33%, 45%)" height={120} />
+            ) : (
+              <div className="flex h-[120px] items-center justify-center text-[12px] text-neutral-400">
+                No revenue trend data yet
+              </div>
+            )}
           </div>
           <div className="flex items-center justify-between border-t border-neutral-100 px-6 py-3.5">
             <div className="flex gap-5">
@@ -240,25 +271,26 @@ export default function PlatformDashboard() {
             <div className="px-5 pt-5 pb-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="flex size-7 items-center justify-center rounded-lg text-white" style={{ background: 'linear-gradient(135deg,#3B82F6,#1D4ED8)' }}>
+                  <span className="flex size-7 items-center justify-center rounded-lg text-white" style={{ background: 'linear-gradient(135deg,hsl(35,35%,52%),hsl(35,32%,40%))' }}>
                     <Building2 aria-hidden className="size-3.5" />
                   </span>
                   <p className="text-[12px] font-bold text-neutral-700">School Growth</p>
                 </div>
-                <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-600">
-                  <ArrowUpRight aria-hidden className="size-2.5" />
-                  +12.4%
+                <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-semibold text-neutral-600">
+                  {scopedSchoolCount.toLocaleString()} schools
                 </span>
               </div>
               <p
                 className="mt-2 tabular-nums text-neutral-900"
                 style={{ fontSize: '1.625rem', fontWeight: 800, letterSpacing: '-0.025em' }}
               >
-                {isLoading ? '—' : (summary?.activeTenants.toLocaleString() ?? '—')}
+                {isLoading ? '—' : scopedSchoolCount.toLocaleString()}
               </p>
-              <p className="text-[11px] text-neutral-400">Active schools</p>
+              <p className="text-[11px] text-neutral-400">
+                {selectedTenant ? selectedTenant.region : 'Active schools'}
+              </p>
             </div>
-            <Spark data={schoolData} stroke="hsl(35, 33%, 55%)" height={52} />
+            <Spark data={schoolData.length >= 2 ? schoolData : []} stroke="hsl(35, 33%, 55%)" height={52} />
           </div>
 
           {/* Dark compliance card */}
@@ -276,8 +308,8 @@ export default function PlatformDashboard() {
               {[
                 { label: 'IVP Cases',       value: openCases === 0 ? 'Clear'   : `${openCases} Open`,        color: openCases === 0    ? '#34d399' : '#f87171', href: '/platform/risk'        },
                 { label: 'KYC Queue',       value: pendingCount === 0 ? 'Optimal' : `${pendingCount} Pending`, color: pendingCount === 0 ? '#34d399' : '#fbbf24', href: '/platform/approvals'   },
-                { label: 'DSAR Backlog',    value: '0 items',                                                  color: '#34d399',                                  href: '/platform/compliance'  },
-                { label: 'Ledger Integrity',value: '100%',                                                     color: '#34d399',                                  href: '/platform/ledger'      },
+                { label: 'DSAR Backlog',    value: openDsarCount === 0 ? 'Clear' : `${openDsarCount} Open`, color: openDsarCount === 0 ? '#34d399' : '#fbbf24', href: '/platform/compliance/dsar'  },
+                { label: 'Ledger Integrity',value: settlementPct != null ? `${settlementPct}% settled` : '—',                                                     color: settlementPct != null && settlementPct >= 80 ? '#34d399' : '#fbbf24',                                  href: '/platform/ledger'      },
               ].map((row) => (
                 <Link key={row.label} href={row.href}
                   className="flex items-center justify-between rounded-xl px-3 py-2 text-[11px] transition hover:bg-white/10"
@@ -336,14 +368,16 @@ export default function PlatformDashboard() {
             </span>
             <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-600">
               <span className="size-1.5 rounded-full bg-emerald-500" />
-              Operational
+              {systemHealthy ? 'Operational' : 'Attention needed'}
             </span>
           </div>
           <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-neutral-400">System Health</p>
           <p className="mt-1 text-neutral-900" style={{ fontSize: '1.875rem', fontWeight: 800, letterSpacing: '-0.025em' }}>
-            100%
+            {systemHealthy ? 'Clear' : `${openCases + pendingCount + openDsarCount} flags`}
           </p>
-          <p className="mt-0.5 text-[11px] text-neutral-400">Uptime this term</p>
+          <p className="mt-0.5 text-[11px] text-neutral-400">
+            {systemHealthy ? 'No open risk or compliance flags' : 'Review risk, approvals, or DSAR queue'}
+          </p>
         </div>
 
       </div>

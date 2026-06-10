@@ -25,6 +25,32 @@ import type { StepUpAction } from '@loomis/contracts';
 
 const PLATFORM_STALE_MS = 30_000;
 
+const OPEN_IVP_STATUSES = new Set(['OPEN', 'INVESTIGATING']);
+
+function toIvpCasesListResponse(cases: IvpAnomalyCaseResponse[]): IvpCasesListResponse {
+  const openCases = cases.filter((item) => OPEN_IVP_STATUSES.has(item.caseStatus));
+  const investigatingCases = cases.filter((item) => item.caseStatus === 'INVESTIGATING');
+  const resolvedCases = cases.filter((item) => item.caseStatus.startsWith('RESOLVED_') || item.caseStatus === 'DISMISSED');
+
+  return {
+    cases: openCases.map((item) => ({
+      id: item.id,
+      tenantId: item.tenantId,
+      tenantName: item.tenantId.slice(0, 8),
+      priority: item.priority,
+      caseStatus: item.caseStatus,
+      anomalyScore: item.anomalyScore,
+      reportedEnrollment: item.reportedEnrollment,
+      detectedAt: item.detectedAt,
+      assignedToId: item.assignedToId,
+    })),
+    total: cases.length,
+    openCount: openCases.length,
+    investigatingCount: investigatingCases.length,
+    resolvedCount: resolvedCases.length,
+  };
+}
+
 // ── Revenue dashboard ──────────────────────────────────────────────────────────
 
 export function usePlatformRevenueSummary() {
@@ -193,8 +219,12 @@ export function usePlatformRiskCases(filters?: { status?: string; priority?: str
   const qs = params.toString();
   return useQuery({
     queryKey: queryKeys.platform.riskCases(filters),
-    queryFn: () =>
-      client.get<IvpCasesListResponse>(`/platform/risk/cases${qs ? `?${qs}` : ''}`),
+    queryFn: async () => {
+      const cases = await client.get<IvpAnomalyCaseResponse[]>(
+        `/platform/ivp/anomalies${qs ? `?${qs}` : ''}`,
+      );
+      return toIvpCasesListResponse(cases);
+    },
     staleTime: 15_000,
   });
 }
@@ -203,7 +233,7 @@ export function usePlatformRiskCase(caseId: string) {
   const client = useApiClient();
   return useQuery({
     queryKey: queryKeys.platform.riskCase(caseId),
-    queryFn: () => client.get<IvpAnomalyCaseResponse>(`/platform/risk/cases/${caseId}`),
+    queryFn: () => client.get<IvpAnomalyCaseResponse>(`/platform/ivp/anomalies/${caseId}`),
     staleTime: 15_000,
     enabled: Boolean(caseId),
   });
@@ -214,7 +244,7 @@ export function useUpdateRiskCase(caseId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body: UpdateIvpCaseRequest) =>
-      client.patch<IvpAnomalyCaseResponse>(`/platform/risk/cases/${caseId}`, body),
+      client.patch<IvpAnomalyCaseResponse>(`/platform/ivp/anomalies/${caseId}`, body),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.platform.riskCases() });
       void queryClient.invalidateQueries({ queryKey: queryKeys.platform.riskCase(caseId) });
@@ -226,13 +256,13 @@ export function useUpdateRiskCase(caseId: string) {
 
 export function usePlatformPrivilegedChanges(status?: string) {
   const client = useApiClient();
-  const qs = status ? `?status=${status}` : '';
   return useQuery({
     queryKey: queryKeys.platform.privilegedChanges(status),
-    queryFn: () =>
-      client.get<{ changes: PrivilegedChangeResponse[]; total: number }>(
-        `/platform/risk/privileged-changes${qs}`,
-      ),
+    queryFn: async () => {
+      const changes = await client.get<PrivilegedChangeResponse[]>('/platform/privileged-changes');
+      const filtered = status ? changes.filter((change) => change.status === status) : changes;
+      return { changes: filtered, total: filtered.length };
+    },
     staleTime: 20_000,
   });
 }
@@ -245,7 +275,7 @@ export interface UseDecidePrivilegedChangeConfig {
 export function useDecidePrivilegedChange(config: UseDecidePrivilegedChangeConfig) {
   const { changeId, ensureStepUpToken } = config;
   return useFinancialMutation<DecidePrivilegedChangeRequest, PrivilegedChangeResponse>({
-    endpoint: `/platform/risk/privileged-changes/${changeId}/decide`,
+    endpoint: `/platform/privileged-changes/${changeId}/decide`,
     action: 'psf_rate_change',
     ensureStepUpToken,
     invalidates: [

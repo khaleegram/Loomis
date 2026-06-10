@@ -11,11 +11,12 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { SegmentedControl, Skeleton } from '@loomis/ui-web';
+import { ChartCard, SegmentedControl, Skeleton } from '@loomis/ui-web';
 import { usePlatformRevenueChart } from '@loomis/api-client';
 import type { PlatformRevenueDataPointResponse } from '@loomis/contracts';
 
-import { SCHOOLHUB } from '@/components/platform/schoolhub-stat-card';
+const CHART_BLUE = 'hsl(221 83% 53%)';
+const CHART_GREEN = 'hsl(142 76% 36%)';
 
 function formatKoboCompact(minor: number): string {
   const naira = minor / 100;
@@ -45,19 +46,17 @@ function toChartData(points: PlatformRevenueDataPointResponse[]) {
   }));
 }
 
-/** SchoolHub-style earnings line chart — PSF Billed vs Settled. */
+/** PSF billed vs settled line chart for platform dashboard. */
 export function PlatformRevenueLineChart() {
   const [period, setPeriod] = useState('12m');
   const { data, isLoading } = usePlatformRevenueChart(period);
   const chartData = data ? toChartData(data.points) : [];
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-base font-semibold text-[#1E293B]">Platform Earnings</p>
-          <p className="text-xs text-[#64748B]">PSF billed vs settled</p>
-        </div>
+    <ChartCard
+      title="Platform Earnings"
+      description="PSF billed vs settled"
+      action={
         <SegmentedControl
           value={period}
           onValueChange={setPeriod}
@@ -65,27 +64,22 @@ export function PlatformRevenueLineChart() {
           size="sm"
           aria-label="Revenue chart period"
         />
-      </div>
-
+      }
+    >
       {isLoading ? (
         <Skeleton className="h-56 w-full rounded-xl" />
       ) : chartData.length === 0 ? (
-        <div className="flex h-56 items-center justify-center text-sm text-[#64748B]">
+        <div className="flex h-56 items-center justify-center text-sm text-muted-foreground">
           No revenue data for this period.
         </div>
       ) : (
         <ResponsiveContainer width="100%" height={224}>
           <LineChart data={chartData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-            <XAxis
-              dataKey="month"
-              tick={{ fontSize: 11, fill: '#94A3B8' }}
-              tickLine={false}
-              axisLine={false}
-            />
+            <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
+            <XAxis dataKey="month" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
             <YAxis
               tickFormatter={formatKoboCompact}
-              tick={{ fontSize: 11, fill: '#94A3B8' }}
+              tick={{ fontSize: 11 }}
               tickLine={false}
               axisLine={false}
               width={52}
@@ -94,20 +88,15 @@ export function PlatformRevenueLineChart() {
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
                 return (
-                  <div className="rounded-xl border border-[#E2E8F0] bg-white p-3 text-xs shadow-lg">
-                    <p className="mb-1 font-semibold text-[#64748B]">{label}</p>
+                  <div className="rounded-xl border border-border bg-card p-3 text-xs shadow-lg">
+                    <p className="mb-1 font-semibold text-muted-foreground">{label}</p>
                     {payload.map((entry) => (
-                      <p key={String(entry.name)} className="text-[#1E293B]">
+                      <p key={String(entry.name)} className="text-foreground">
                         {entry.name}: {formatKoboCompact(Number(entry.value ?? 0))}
                       </p>
                     ))}
                   </div>
                 );
-              }}
-              contentStyle={{
-                borderRadius: 12,
-                border: '1px solid #E2E8F0',
-                fontSize: 12,
               }}
             />
             <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
@@ -115,7 +104,7 @@ export function PlatformRevenueLineChart() {
               type="monotone"
               dataKey="billedMinor"
               name="PSF Billed"
-              stroke={SCHOOLHUB.chartBlue}
+              stroke={CHART_BLUE}
               strokeWidth={2.5}
               dot={false}
               activeDot={{ r: 4 }}
@@ -124,7 +113,7 @@ export function PlatformRevenueLineChart() {
               type="monotone"
               dataKey="settledMinor"
               name="Settled"
-              stroke={SCHOOLHUB.chartPurple}
+              stroke={CHART_GREEN}
               strokeWidth={2.5}
               dot={false}
               activeDot={{ r: 4 }}
@@ -132,6 +121,6 @@ export function PlatformRevenueLineChart() {
           </LineChart>
         </ResponsiveContainer>
       )}
-    </div>
+    </ChartCard>
   );
 }

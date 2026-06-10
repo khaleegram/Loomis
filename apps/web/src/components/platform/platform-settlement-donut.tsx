@@ -1,9 +1,10 @@
 'use client';
 
 import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
-import { Skeleton } from '@loomis/ui-web';
+import { ChartCard, Skeleton } from '@loomis/ui-web';
 
-import { SCHOOLHUB } from '@/components/platform/schoolhub-stat-card';
+const CHART_BLUE = 'hsl(221 83% 53%)';
+const CHART_MUTED = 'hsl(214 32% 91%)';
 
 interface PlatformSettlementDonutProps {
   settledMinor: number;
@@ -18,7 +19,7 @@ function formatKoboCompact(minor: number): string {
   return `₦${naira.toFixed(0)}`;
 }
 
-/** Settlement split donut — SchoolHub "Students" chart pattern. */
+/** Settlement split donut for platform dashboard. */
 export function PlatformSettlementDonut({
   settledMinor,
   outstandingMinor,
@@ -29,62 +30,56 @@ export function PlatformSettlementDonut({
   const outstandingPct = total > 0 ? 100 - settledPct : 0;
 
   const data = [
-    { name: 'Settled', value: settledMinor, color: SCHOOLHUB.chartBlue },
-    { name: 'Outstanding', value: outstandingMinor, color: SCHOOLHUB.chartYellow },
+    { name: 'Settled', value: settledMinor, color: CHART_BLUE },
+    { name: 'Outstanding', value: outstandingMinor, color: CHART_MUTED },
   ];
 
-  if (isLoading) {
-    return <Skeleton className="h-[220px] w-full rounded-[20px]" />;
-  }
-
   return (
-    <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="relative h-[180px] w-[180px] shrink-0">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={data}
-              dataKey="value"
-              innerRadius={58}
-              outerRadius={82}
-              paddingAngle={2}
-              strokeWidth={0}
-            >
-              {data.map((entry) => (
-                <Cell key={entry.name} fill={entry.color} />
-              ))}
-            </Pie>
-          </PieChart>
-        </ResponsiveContainer>
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl font-bold text-[#1E293B]">{settledPct}%</span>
-          <span className="text-xs text-[#64748B]">Settled</span>
-        </div>
-      </div>
-      <div className="space-y-3 text-sm">
-        <div className="flex items-center gap-2">
-          <span
-            aria-hidden
-            className="size-3 rounded-full"
-            style={{ backgroundColor: SCHOOLHUB.chartBlue }}
-          />
-          <div>
-            <p className="font-semibold text-[#1E293B]">Settled ({settledPct}%)</p>
-            <p className="text-[#64748B]">{formatKoboCompact(settledMinor)}</p>
+    <ChartCard title="Settlement Split" description="Settled vs outstanding PSF">
+      {isLoading ? (
+        <Skeleton className="h-[220px] w-full rounded-xl" />
+      ) : (
+        <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative h-[180px] w-[180px] shrink-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={data}
+                  dataKey="value"
+                  innerRadius={58}
+                  outerRadius={82}
+                  paddingAngle={2}
+                  strokeWidth={0}
+                >
+                  {data.map((entry) => (
+                    <Cell key={entry.name} fill={entry.color} />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-2xl font-bold text-foreground">{settledPct}%</span>
+              <span className="text-xs text-muted-foreground">Settled</span>
+            </div>
+          </div>
+          <div className="space-y-3 text-sm">
+            <div className="flex items-center gap-2">
+              <span aria-hidden className="size-3 rounded-full bg-brand-600" />
+              <div>
+                <p className="font-semibold text-foreground">Settled ({settledPct}%)</p>
+                <p className="text-muted-foreground">{formatKoboCompact(settledMinor)}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span aria-hidden className="size-3 rounded-full bg-muted" />
+              <div>
+                <p className="font-semibold text-foreground">Outstanding ({outstandingPct}%)</p>
+                <p className="text-muted-foreground">{formatKoboCompact(outstandingMinor)}</p>
+              </div>
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span
-            aria-hidden
-            className="size-3 rounded-full"
-            style={{ backgroundColor: SCHOOLHUB.chartYellow }}
-          />
-          <div>
-            <p className="font-semibold text-[#1E293B]">Outstanding ({outstandingPct}%)</p>
-            <p className="text-[#64748B]">{formatKoboCompact(outstandingMinor)}</p>
-          </div>
-        </div>
-      </div>
-    </div>
+      )}
+    </ChartCard>
   );
 }
