@@ -13,39 +13,29 @@ interface RegionalAuthGateProps {
 }
 
 export function RegionalAuthGate({ children }: RegionalAuthGateProps) {
-  const { status, session } = useAuth();
+  const { status, session, signOut } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (status === 'unauthenticated') {
-      router.replace('/login?next=/regional/dashboard');
+      void signOut();
       return;
     }
     if (status === 'authenticated' && session && !REGIONAL_ROLES.has(session.role)) {
       router.replace('/login');
     }
-  }, [status, session, router]);
+  }, [status, session, router, signOut]);
 
   if (status === 'loading') {
     return (
-      <div className="flex min-h-screen bg-neutral-50 dark:bg-forest-950">
-        <div className="hidden w-60 shrink-0 border-r border-neutral-200 bg-neutral-100 p-4 dark:border-forest-800 dark:bg-forest-950 lg:block">
-          <Skeleton className="mb-6 h-8 w-36 bg-neutral-200 dark:bg-forest-800" />
-          <div className="space-y-2">
+      <div className="flex h-screen flex-col overflow-hidden bg-neutral-50 dark:bg-forest-950">
+        <Skeleton className="h-14 w-full shrink-0 rounded-none bg-neutral-200 dark:bg-forest-900" />
+        <div className="flex-1 space-y-6 overflow-y-auto p-6">
+          <Skeleton className="h-64 w-full rounded-lg" />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-9 w-full bg-neutral-200 dark:bg-forest-800" />
+              <Skeleton key={i} className="h-28 w-full rounded-lg" />
             ))}
-          </div>
-        </div>
-        <div className="flex flex-1 flex-col">
-          <Skeleton className="h-14 w-full rounded-none bg-neutral-200 dark:bg-forest-900" />
-          <div className="space-y-6 p-6">
-            <Skeleton className="h-64 w-full rounded-lg" />
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-28 w-full rounded-lg" />
-              ))}
-            </div>
           </div>
         </div>
       </div>
