@@ -118,5 +118,42 @@ export {
 } from './components/ui/priority-badge.js';
 export { CountdownRing, type CountdownRingProps } from './components/ui/countdown-ring.js';
 export { FilterChipBar, type FilterChip, type FilterChipBarProps } from './components/ui/filter-chip-bar.js';
+export {
+  SmartSearchSelect,
+  type SmartSearchOption,
+  type SmartSearchSelectProps,
+} from './components/ui/smart-search-select.js';
 export { ProgressStrip, type ProgressStripProps } from './components/ui/progress-strip.js';
 export { cn } from './lib/utils.js';
+
+/* ── Layout (V2) ── */
+export { AppShell, type AppShellProps } from './components/layout/app-shell.js';
+export {
+  SidebarFrame,
+  SidebarBrand,
+  SidebarNavItem,
+  SidebarSectionLabel,
+  SidebarTrustCard,
+  SidebarUserProfile,
+  type SidebarBrandProps,
+  type SidebarNavItemProps,
+  type SidebarSectionLabelProps,
+  type SidebarFrameProps,
+  type SidebarUserProfileProps,
+} from './components/layout/sidebar.js';
+export { ScopeBar, type ScopeBarProps } from './components/layout/scope-bar.js';
+export {
+  DashboardPageHeader,
+  type DashboardPageHeaderProps,
+} from './components/layout/dashboard-page-header.js';
+export { PageHeader, PageBody, type PageHeaderProps } from './components/layout/page-chrome.js';
+
+/* ── Dashboard (V2) ── */
+export { MetricCard, type MetricCardProps, type MetricAccent } from './components/dashboard/metric-card.js';
+export { ChartCard, type ChartCardProps } from './components/dashboard/chart-card.js';
+export { QuickActionList, type QuickActionItem, type QuickActionListProps } from './components/dashboard/quick-action-list.js';
+export { SectionLabel, type SectionLabelProps } from './components/dashboard/section-label.js';
+export { Sparkline, type SparklineProps, type SparklineTrend } from './components/dashboard/sparkline.js';
+export { TrendBadge, type TrendBadgeProps } from './components/dashboard/trend-badge.js';
+export { MetricStrip, MetricStripCard, type MetricStripCardProps } from './components/dashboard/metric-strip.js';
+export { EmptyState, type EmptyStateProps } from './components/dashboard/empty-state.js';

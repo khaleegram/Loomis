@@ -17,6 +17,7 @@ const badgeVariants = cva(
         gold: 'border-gold/30 bg-gold/10 text-gold-700 dark:text-gold-300',
         success: 'border-transparent bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300',
         warning: 'border-transparent bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300',
+        info: 'border-transparent bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300',
         neutral: 'border-transparent bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300',
       },
     },

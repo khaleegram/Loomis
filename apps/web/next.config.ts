@@ -13,6 +13,9 @@ const nextConfig: NextConfig = {
     '@loomis/design-tokens',
     '@loomis/ui-web',
   ],
+  experimental: {
+    optimizePackageImports: ['lucide-react', '@loomis/ui-web'],
+  },
   webpack: (config) => {
     config.resolve.extensionAlias = {
       '.js': ['.ts', '.tsx', '.js'],
