@@ -2,71 +2,50 @@
 
 import {
   createContext,
-  useCallback,
   useContext,
   useEffect,
   useMemo,
-  useState,
   type ReactNode,
 } from 'react';
 
-export type Theme = 'light' | 'dark' | 'system';
-type ResolvedTheme = 'light' | 'dark';
+/** V2 is light-mode only. */
+export type Theme = 'light';
+type ResolvedTheme = 'light';
 
 const STORAGE_KEY = 'loomis-theme';
 
 interface ThemeContextValue {
   theme: Theme;
   resolvedTheme: ResolvedTheme;
+  /** No-op — light mode is fixed in V2. */
   setTheme: (theme: Theme) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-function resolveTheme(theme: Theme): ResolvedTheme {
-  if (theme === 'light' || theme === 'dark') return theme;
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
-
-function applyTheme(resolved: ResolvedTheme) {
+function applyLightTheme() {
   const root = document.documentElement;
-  root.classList.toggle('dark', resolved === 'dark');
-  root.style.colorScheme = resolved;
+  root.classList.remove('dark');
+  root.style.colorScheme = 'light';
+  try {
+    localStorage.setItem(STORAGE_KEY, 'light');
+  } catch {
+    /* ignore */
+  }
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('system');
-  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>('light');
-
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === 'light' || stored === 'dark' || stored === 'system') {
-      setThemeState(stored);
-    }
+    applyLightTheme();
   }, []);
 
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-
-    const sync = () => {
-      const resolved = resolveTheme(theme);
-      setResolvedTheme(resolved);
-      applyTheme(resolved);
-    };
-
-    sync();
-    mq.addEventListener('change', sync);
-    return () => mq.removeEventListener('change', sync);
-  }, [theme]);
-
-  const setTheme = useCallback((next: Theme) => {
-    setThemeState(next);
-    localStorage.setItem(STORAGE_KEY, next);
-  }, []);
-
-  const value = useMemo(
-    () => ({ theme, resolvedTheme, setTheme }),
-    [theme, resolvedTheme, setTheme],
+  const value = useMemo<ThemeContextValue>(
+    () => ({
+      theme: 'light',
+      resolvedTheme: 'light',
+      setTheme: () => applyLightTheme(),
+    }),
+    [],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

@@ -10,10 +10,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Input,
   cn,
 } from '@loomis/ui-web';
 
+import { SmartSearchPalette, type SmartSearchItem } from '@/components/layout/smart-search-palette';
 import { useAuth } from '@/lib/auth/auth-context';
 import type { ActiveBreakGlassSession } from '@/lib/platform/break-glass-store';
 
@@ -81,6 +81,7 @@ export interface AppBarProps {
   workspace: AppBarWorkspaceProps;
   searchPlaceholder: string;
   searchAriaLabel: string;
+  searchItems: SmartSearchItem[];
   roleLabel: string;
   scopeLine: string;
   notificationCount?: number;
@@ -101,6 +102,7 @@ export function AppBar({
   workspace,
   searchPlaceholder,
   searchAriaLabel,
+  searchItems,
   roleLabel,
   scopeLine,
   notificationCount = 0,
@@ -108,15 +110,6 @@ export function AppBar({
   workspaceMenu,
 }: AppBarProps) {
   const { session, signOut } = useAuth();
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const scrollEl = document.querySelector('[data-scroll-content]');
-    if (!scrollEl) return;
-    const handleScroll = () => setScrolled(scrollEl.scrollTop > 10);
-    scrollEl.addEventListener('scroll', handleScroll, { passive: true });
-    return () => scrollEl.removeEventListener('scroll', handleScroll);
-  }, []);
 
   if (!session) return null;
 
@@ -137,14 +130,7 @@ export function AppBar({
 
   return (
     <>
-      <div
-        className={cn(
-          'fixed inset-x-0 top-0 z-50 flex flex-col transition-all duration-200',
-          scrolled
-            ? 'border-b border-black/[0.07] bg-white shadow-[0_1px_0_rgba(0,0,0,0.04),0_4px_16px_rgba(15,23,42,0.05)]'
-            : 'border-b border-black/[0.04] bg-white',
-        )}
-      >
+      <div className="fixed inset-x-0 top-0 z-50 flex flex-col border-b border-black/[0.06] bg-white">
         {topSlot}
 
         <div className="flex h-14 items-center gap-3 px-4 lg:gap-4 lg:px-6">
@@ -152,7 +138,7 @@ export function AppBar({
           {workspaceMenu ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>{workspaceButton}</DropdownMenuTrigger>
-              <DropdownMenuContent align="start" sideOffset={8} className="w-80 rounded-2xl border border-black/[0.07] bg-white p-2 shadow-[0_8px_32px_rgba(15,23,42,0.10),0_2px_8px_rgba(15,23,42,0.06)]">
+              <DropdownMenuContent align="start" sideOffset={8} className="max-h-[min(80vh,520px)] w-80 overflow-y-auto rounded-2xl border border-black/[0.07] bg-white p-2 shadow-[0_8px_32px_rgba(15,23,42,0.10),0_2px_8px_rgba(15,23,42,0.06)] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                 {workspaceMenu}
               </DropdownMenuContent>
             </DropdownMenu>
@@ -160,26 +146,12 @@ export function AppBar({
             workspaceButton
           )}
 
-        {/* Search */}
         <div className="relative min-w-0 flex-1">
-          <div
-            className="flex items-center gap-2.5 rounded-xl border border-black/[0.06] bg-neutral-50 px-3.5 py-1.5 transition-all duration-150 focus-within:border-brand-600/30 focus-within:bg-white focus-within:shadow-[0_0_0_3px_rgba(153,121,77,0.10),0_1px_2px_rgba(0,0,0,0.04)]"
-          >
-            <svg aria-hidden className="size-4 shrink-0 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M16.65 16.65A7.5 7.5 0 1116.65 2a7.5 7.5 0 010 14.65z" />
-            </svg>
-            <Input
-              type="search"
-              placeholder={searchPlaceholder}
-              className="h-auto flex-1 border-0 bg-transparent p-0 text-[13.5px] shadow-none placeholder:text-neutral-400 focus-visible:ring-0"
-              aria-label={searchAriaLabel}
-            />
-            <kbd
-              className="hidden shrink-0 rounded-md border border-black/[0.08] bg-white px-1.5 py-0.5 font-mono text-[10px] text-neutral-400 shadow-[0_1px_1px_rgba(0,0,0,0.04)] lg:block"
-            >
-              ⌘K
-            </kbd>
-          </div>
+          <SmartSearchPalette
+            items={searchItems}
+            placeholder={searchPlaceholder}
+            ariaLabel={searchAriaLabel}
+          />
         </div>
 
         {/* Right actions */}

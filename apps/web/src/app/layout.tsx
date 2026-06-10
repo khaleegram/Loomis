@@ -1,10 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter, Playfair_Display } from 'next/font/google';
 
-
-import { RootErrorBoundary } from '@/components/error-boundary/root-error-boundary';
-import { AppProviders } from '@/components/providers/app-providers';
-import { Toaster } from '@/lib/toast';
+import { ClientRoot } from '@/components/providers/client-root';
 
 import './globals.css';
 
@@ -20,7 +17,10 @@ const playfair = Playfair_Display({
   display: 'swap',
 });
 
-const themeInitScript = `(function(){try{var t=localStorage.getItem('loomis-theme');var d=t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);document.documentElement.style.colorScheme=d?'dark':'light';}catch(e){}})();`;
+const themeInitScript = `(function(){try{document.documentElement.classList.remove('dark');document.documentElement.style.colorScheme='light';localStorage.setItem('loomis-theme','light');}catch(e){}})();`;
+
+/** Recover from stale dev chunks after a hot reload (common on WSL). */
+const chunkRecoveryScript = `(function(){try{var k='loomis-chunk-reload';window.addEventListener('error',function(e){var m=(e&&e.message)||'';if(m.indexOf('Loading chunk')!==-1&&!sessionStorage.getItem(k)){sessionStorage.setItem(k,'1');window.location.reload();}});window.addEventListener('load',function(){sessionStorage.removeItem(k);});}catch(e){}})();`;
 
 export const metadata: Metadata = {
   title: 'Loomis',
@@ -33,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className="light" style={{ colorScheme: 'light' }}>
       <body
         className={`${inter.variable} ${playfair.variable} font-sans antialiased`}
       >
@@ -41,10 +41,11 @@ export default function RootLayout({
           id="loomis-theme-init"
           dangerouslySetInnerHTML={{ __html: themeInitScript }}
         />
-        <RootErrorBoundary>
-          <AppProviders>{children}</AppProviders>
-          <Toaster />
-        </RootErrorBoundary>
+        <script
+          id="loomis-chunk-recovery"
+          dangerouslySetInnerHTML={{ __html: chunkRecoveryScript }}
+        />
+        <ClientRoot>{children}</ClientRoot>
       </body>
     </html>
   );
