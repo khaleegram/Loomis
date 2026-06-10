@@ -7,6 +7,7 @@ import { requireStepUp } from '../../../middleware/require-step-up.js';
 import { requireTenantMatch } from '../../../middleware/require-tenant-match.js';
 import { psfObligations, ledgerEntries } from '../../../../drizzle/schema/ledger.js';
 import { db } from '../../../shared/db.js';
+import { platformRevenueReadService } from '../services/platform-revenue.read-service.js';
 
 export async function ledgerRoutes(app: FastifyInstance): Promise<void> {
   app.get<{ Params: { tenantId: string } }>(
@@ -53,6 +54,24 @@ export async function ledgerRoutes(app: FastifyInstance): Promise<void> {
         .set({ status: 'waived', notes: reason } as any)
         .where(eq(psfObligations.id, obligationId));
       return reply.send({ status: 'waived', obligationId });
+    },
+  );
+
+  app.get(
+    '/platform/ledger/revenue/summary',
+    { preHandler: [authenticate, requireRole('platform_owner', 'platform_admin', 'dpo')] },
+    async (_req, reply) => {
+      const summary = await platformRevenueReadService.getSummary();
+      return reply.send({ status: 'success', data: summary });
+    },
+  );
+
+  app.get<{ Querystring: { period?: string } }>(
+    '/platform/ledger/revenue/chart',
+    { preHandler: [authenticate, requireRole('platform_owner', 'platform_admin', 'dpo')] },
+    async (req, reply) => {
+      const chart = await platformRevenueReadService.getChart(req.query.period ?? '12m');
+      return reply.send({ status: 'success', data: chart });
     },
   );
 

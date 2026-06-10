@@ -157,6 +157,16 @@ export const regionalAnalyticsRepository = {
       );
   },
 
+  async listForSnapshot(snapshotDate: string) {
+    return withTenantContext(null, async (tx) =>
+      tx
+        .select()
+        .from(regionalTenantAnalytics)
+        .where(eq(regionalTenantAnalytics.snapshotDate, snapshotDate))
+        .orderBy(regionalTenantAnalytics.region, regionalTenantAnalytics.tenantId),
+    );
+  },
+
   async listByRegion(region: string, snapshotDate: string) {
     return withTenantContext(null, async (tx) =>
       tx

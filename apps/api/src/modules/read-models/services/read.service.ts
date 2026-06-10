@@ -25,12 +25,11 @@ export const regionalAnalyticsReadService = {
     if (actor.role !== 'regional_manager' && actor.role !== 'regional_subordinate') {
       throw new LoomisError('FORBIDDEN', 403, 'Regional role required');
     }
-    if (!region) {
-      throw new LoomisError('VALIDATION_ERROR', 422, 'Region query parameter is required');
-    }
 
     const snapshotDate = todayDate();
-    const tenants = await regionalAnalyticsRepository.listByRegion(region, snapshotDate);
+    const tenants = region
+      ? await regionalAnalyticsRepository.listByRegion(region, snapshotDate)
+      : await regionalAnalyticsRepository.listForSnapshot(snapshotDate);
 
     const totals = tenants.reduce(
       (acc, row) => ({
@@ -41,6 +40,6 @@ export const regionalAnalyticsReadService = {
       { totalStudents: 0, activeEnrollments: 0, feeCollectedMinor: 0 },
     );
 
-    return { region, snapshotDate, tenants, totals };
+    return { region: region ?? null, snapshotDate, tenants, totals };
   },
 };
