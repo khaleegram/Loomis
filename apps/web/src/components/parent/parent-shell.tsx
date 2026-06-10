@@ -1,16 +1,20 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { AppShell, PageBody, PageHeader } from '@loomis/ui-web';
 
-import { ConsoleShell } from '@/components/layout/console-shell';
-import { ParentSidebar } from '@/components/parent/parent-sidebar';
+import { ParentTopBar } from '@/components/parent/parent-sidebar';
 
 interface ParentShellProps {
   children: ReactNode;
 }
 
 export function ParentShell({ children }: ParentShellProps) {
-  return <ConsoleShell sidebar={<ParentSidebar />}>{children}</ConsoleShell>;
+  return (
+    <AppShell sidebar={null} topBar={<ParentTopBar />} contentClassName="dashboard-canvas">
+      {children}
+    </AppShell>
+  );
 }
 
-export { PageBody, PageHeader } from '@/components/layout/page-header';
+export { PageBody, PageHeader };
