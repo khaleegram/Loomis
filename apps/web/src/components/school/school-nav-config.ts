@@ -1,6 +1,5 @@
 import {
   BookOpen,
-  Building2,
   GraduationCap,
   LayoutDashboard,
   Percent,
@@ -19,6 +18,8 @@ export interface SchoolNavItem {
   icon: LucideIcon;
   capabilities?: Capability[];
   always?: boolean;
+  /** Groups sidebar items under Ledger Flows when set to ledger. */
+  section?: 'workspace' | 'ledger';
 }
 
 export const SCHOOL_NAV: SchoolNavItem[] = [
@@ -52,12 +53,14 @@ export const SCHOOL_NAV: SchoolNavItem[] = [
     label: 'Finance',
     href: '/school/finance',
     icon: Percent,
+    section: 'ledger',
     capabilities: ['fee.configure', 'payment.log', 'payment.verify', 'refund.initiate', 'refund.approve'],
   },
   {
     label: 'PSF Obligations',
     href: '/school/finance/psf',
     icon: ShieldCheck,
+    section: 'ledger',
     capabilities: ['fee.configure'],
   },
   {

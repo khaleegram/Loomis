@@ -1,10 +1,10 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { AppShell, DashboardPageHeader, PageBody, PageHeader } from '@loomis/ui-web';
 
-import { ConsoleShell } from '@/components/layout/console-shell';
 import { SchoolAuthGate } from '@/components/school/school-auth-gate';
-import { SchoolSidebar } from '@/components/school/school-sidebar';
+import { SchoolTopBar } from '@/components/school/school-sidebar';
 
 interface SchoolShellProps {
   children: ReactNode;
@@ -13,9 +13,15 @@ interface SchoolShellProps {
 export function SchoolShell({ children }: SchoolShellProps) {
   return (
     <SchoolAuthGate>
-      <ConsoleShell sidebar={<SchoolSidebar />}>{children}</ConsoleShell>
+      <AppShell
+        sidebar={null}
+        topBar={<SchoolTopBar />}
+        contentClassName="dashboard-canvas"
+      >
+        {children}
+      </AppShell>
     </SchoolAuthGate>
   );
 }
 
-export { PageBody, PageHeader } from '@/components/layout/page-header';
+export { PageBody, PageHeader, DashboardPageHeader };

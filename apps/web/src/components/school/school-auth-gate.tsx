@@ -1,7 +1,6 @@
 'use client';
 
 import { Skeleton } from '@loomis/ui-web';
-import { useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
 
 import { useAuth } from '@/lib/auth/auth-context';
@@ -12,35 +11,25 @@ interface SchoolAuthGateProps {
 
 /** Ensures an authenticated school-session before rendering console pages. */
 export function SchoolAuthGate({ children }: SchoolAuthGateProps) {
-  const { status } = useAuth();
-  const router = useRouter();
+  const { status, signOut } = useAuth();
 
   useEffect(() => {
     if (status === 'unauthenticated') {
-      router.replace('/login?next=/school/dashboard');
+      // Clears stale edge cookies then sends the user to login.
+      void signOut();
     }
-  }, [status, router]);
+  }, [status, signOut]);
 
   if (status === 'loading') {
     return (
-      <div className="flex min-h-screen bg-background">
-        <div className="hidden w-56 shrink-0 border-r border-border bg-sidebar p-4 lg:block">
-          <Skeleton className="mb-4 h-6 w-24" />
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-full" />
-            <Skeleton className="h-8 w-full" />
-            <Skeleton className="h-8 w-full" />
-          </div>
-        </div>
-        <div className="flex flex-1 flex-col">
-          <Skeleton className="h-14 w-full" />
-          <div className="space-y-4 p-6">
-            <Skeleton className="h-8 w-48" />
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Skeleton className="h-32 w-full" />
-              <Skeleton className="h-32 w-full" />
-              <Skeleton className="h-32 w-full" />
-            </div>
+      <div className="flex h-screen flex-col overflow-hidden bg-background">
+        <Skeleton className="h-14 w-full shrink-0 rounded-none" />
+        <div className="flex-1 space-y-4 overflow-y-auto p-6">
+          <Skeleton className="h-8 w-48" />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-32 w-full" />
           </div>
         </div>
       </div>
