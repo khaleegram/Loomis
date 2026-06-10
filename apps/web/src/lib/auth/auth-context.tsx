@@ -66,6 +66,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus('unauthenticated');
   }, [clearTimer]);
 
+  /** Clears httpOnly cookies when the in-memory session is dead but edge gating still sees a session. */
+  const purgeStaleServerSession = useCallback(async () => {
+    try {
+      await authClient.logout();
+    } catch {
+      // Best-effort — logout clears cookies even when the backend is unreachable.
+    }
+  }, []);
+
   // Single source for scheduling the next silent refresh.
   const scheduleRefresh = useCallback(
     (expiresAt: string) => {
@@ -123,9 +132,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           applySession(next);
           scheduleRefresh(next.expiresAt);
         } else {
-          clearSession();
+          await purgeStaleServerSession();
+          if (active) clearSession();
         }
       } catch {
+        await purgeStaleServerSession();
         if (active) clearSession();
       }
     })();
@@ -133,7 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       active = false;
       clearTimer();
     };
-  }, [applySession, clearSession, clearTimer, scheduleRefresh]);
+  }, [applySession, clearSession, clearTimer, purgeStaleServerSession, scheduleRefresh]);
 
   const value = useMemo<AuthContextValue>(
     () => ({

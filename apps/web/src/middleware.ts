@@ -24,6 +24,13 @@ export function middleware(req: NextRequest): NextResponse {
   const { pathname } = req.nextUrl;
   const session = parseSession(req.cookies.get(SESSION_COOKIE)?.value);
 
+  if (pathname === '/') {
+    if (session) {
+      return NextResponse.redirect(new URL(homePathForRole(session.role), req.url));
+    }
+    return NextResponse.next();
+  }
+
   // Authenticated users should not sit on the login/MFA/reset screens.
   if (AUTH_PAGES.has(pathname)) {
     if (session) {

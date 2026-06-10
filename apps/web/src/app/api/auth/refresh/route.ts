@@ -23,7 +23,9 @@ export const runtime = 'nodejs';
 export async function POST(req: NextRequest) {
   const refreshToken = req.cookies.get(REFRESH_COOKIE)?.value;
   if (!refreshToken) {
-    return forwardError(401, {
+    // Session descriptor cookie can outlive the refresh token — clear both so
+    // middleware stops treating the user as signed in.
+    const res = forwardError(401, {
       status: 'error',
       error: {
         code: 'IDENTITY_SESSION_INVALIDATED',
@@ -31,6 +33,8 @@ export async function POST(req: NextRequest) {
         requestId: 'bff',
       },
     });
+    clearAuthCookies(res);
+    return res;
   }
 
   let response: Response;

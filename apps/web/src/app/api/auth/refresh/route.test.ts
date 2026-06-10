@@ -24,11 +24,13 @@ afterEach(() => {
 });
 
 describe('POST /api/auth/refresh', () => {
-  it('returns 401 when there is no refresh cookie', async () => {
-    const res = await POST(refreshReq());
+  it('returns 401 and clears cookies when there is no refresh cookie', async () => {
+    const res = await POST(refreshReq('loomis_session={"role":"principal","tenantId":"t-1"}'));
     expect(res.status).toBe(401);
     const body = await res.json();
     expect(body.error.code).toBe('IDENTITY_SESSION_INVALIDATED');
+    expect(res.cookies.get('loomis_refresh')?.value).toBe('');
+    expect(res.cookies.get('loomis_session')?.value).toBe('');
   });
 
   it('rotates the refresh token and returns a fresh access token', async () => {
