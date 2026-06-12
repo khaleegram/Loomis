@@ -260,6 +260,34 @@
       "when": 1780837100001,
       "tag": "0036_read_models_constraints_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1780837200000,
+      "tag": "0037_profile_photos",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1780837300000,
+      "tag": "0038_must_change_password",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1780837400000,
+      "tag": "0039_user_display_name",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1780837500000,
+      "tag": "0040_user_photo",
+      "breakpoints": true
     }
   ]
 }

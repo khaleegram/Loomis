@@ -48,6 +48,7 @@ export const staffProfiles = hrmSchema.table(
     deactivationReason: varchar('deactivation_reason', { length: 500 }),
     reactivatedAt: timestamp('reactivated_at', { withTimezone: true }),
     reactivatedById: uuid('reactivated_by_id'),
+    photoStorageObjectId: uuid('photo_storage_object_id'),
     createdById: uuid('created_by_id').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

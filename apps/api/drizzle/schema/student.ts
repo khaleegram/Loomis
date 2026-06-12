@@ -132,6 +132,8 @@ export const students = studentSchema.table(
     transferReason: varchar('transfer_reason', { length: 500 }),
     transferredAt: timestamp('transferred_at', { withTimezone: true }),
     transferredById: uuid('transferred_by_id'),
+    photoStorageObjectId: uuid('photo_storage_object_id'),
+    userId: uuid('user_id'),
     createdById: uuid('created_by_id').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
