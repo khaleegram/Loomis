@@ -43,6 +43,7 @@ export const stepUpAction = z.enum([
   'census_lock',
   'result_publish',
   'ledger_adjustment',
+  'financial_override',
   'parent_contact_change',
   'break_glass',
 ]);

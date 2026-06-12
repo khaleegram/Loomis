@@ -1,13 +1,28 @@
+import postgres from 'postgres';
 import { getEnv } from '../../../config/env.js';
 import { LoomisError } from '../../../shared/errors.js';
 import { writeAudit, writeDataAccess } from '../../../shared/audit.js';
 import type { AuditLogExportRequest, AuditLogSearchFilters } from '@loomis/contracts';
 
-let readClient: ReturnType<typeof import('postgres').default> | null = null;
+type AuditEventRow = {
+  id: string;
+  tenant_id: string | null;
+  actor_user_id: string | null;
+  actor_type: string;
+  action: string;
+  resource_type: string;
+  resource_id: string | null;
+  sensitivity: string;
+  result: string;
+  ip_address: string | null;
+  request_id: string;
+  created_at: Date;
+};
+
+let readClient: ReturnType<typeof postgres> | null = null;
 
 async function getReadClient() {
   if (!readClient) {
-    const postgres = (await import('postgres')).default;
     readClient = postgres(getEnv().DATABASE_AUDIT_URL, { max: 3 });
   }
   return readClient;
@@ -25,22 +40,7 @@ export const auditReadService = {
     const limit = Math.min(filters.limit ?? 50, 200);
 
     try {
-      const rows = await client<
-        {
-          id: string;
-          tenant_id: string | null;
-          actor_user_id: string | null;
-          actor_type: string;
-          action: string;
-          resource_type: string;
-          resource_id: string | null;
-          sensitivity: string;
-          result: string;
-          ip_address: string | null;
-          request_id: string;
-          created_at: Date;
-        }[]
-      >`
+      const rows = await client<AuditEventRow[]>`
         SELECT id, tenant_id, actor_user_id, actor_type, action, resource_type,
                resource_id, sensitivity, result, ip_address, request_id, created_at
         FROM audit.audit_events
