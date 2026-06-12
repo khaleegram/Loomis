@@ -15,8 +15,12 @@ export function authErrorMessage(err: unknown): string {
       return 'That code is incorrect or has expired. Try again.';
     case 'IDENTITY_MFA_NOT_ENROLLED':
       return 'Your enrollment session expired. Please sign in again.';
+    case 'IDENTITY_PASSWORD_CHANGE_REQUIRED':
+      return 'You must set a new password before continuing.';
+    case 'IDENTITY_PASSWORD_REUSE':
+      return 'Choose a password that is different from your current one.';
     case 'IDENTITY_SESSION_INVALIDATED':
-      return 'Your session has ended. Please sign in again.';
+      return 'Your session expired. Please sign in again.';
     case 'VALIDATION_ERROR':
       return 'Please check the details you entered.';
     case 'UPSTREAM_UNAVAILABLE':

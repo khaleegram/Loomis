@@ -18,14 +18,31 @@ import { SESSION_COOKIE, parseSession } from '@/lib/auth/session';
  * This is UX-level defence in depth — the backend remains the real authority.
  */
 
-const AUTH_PAGES = new Set(['/login', '/mfa', '/mfa-enrollment', '/reset-password']);
+const AUTH_PAGES = new Set(['/login', '/mfa', '/mfa-enrollment', '/reset-password', '/change-password']);
 
 export function middleware(req: NextRequest): NextResponse {
   const { pathname } = req.nextUrl;
   const session = parseSession(req.cookies.get(SESSION_COOKIE)?.value);
 
+  if (session?.mustChangePassword && pathname !== '/change-password') {
+    return NextResponse.redirect(new URL('/change-password', req.url));
+  }
+
+  if (pathname === '/change-password') {
+    if (!session) {
+      return NextResponse.redirect(new URL('/login', req.url));
+    }
+    if (!session.mustChangePassword) {
+      return NextResponse.redirect(new URL(homePathForRole(session.role), req.url));
+    }
+    return NextResponse.next();
+  }
+
   if (pathname === '/') {
     if (session) {
+      if (session.mustChangePassword) {
+        return NextResponse.redirect(new URL('/change-password', req.url));
+      }
       return NextResponse.redirect(new URL(homePathForRole(session.role), req.url));
     }
     return NextResponse.next();
@@ -33,7 +50,7 @@ export function middleware(req: NextRequest): NextResponse {
 
   // Authenticated users should not sit on the login/MFA/reset screens.
   if (AUTH_PAGES.has(pathname)) {
-    if (session) {
+    if (session && !session.mustChangePassword) {
       return NextResponse.redirect(new URL(homePathForRole(session.role), req.url));
     }
     return NextResponse.next();

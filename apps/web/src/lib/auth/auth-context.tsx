@@ -131,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (next) {
           applySession(next);
           scheduleRefresh(next.expiresAt);
-        } else {
+        } else if (!memoryTokenStore.getAccessToken()) {
           await purgeStaleServerSession();
           if (active) clearSession();
         }

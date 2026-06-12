@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     return res;
   }
 
-  const data = (json as { data: { accessToken?: string; refreshToken?: string; expiresAt?: string } }).data;
+  const data = (json as { data: { accessToken?: string; refreshToken?: string; expiresAt?: string; mustChangePassword?: boolean; displayName?: string } }).data;
   if (
     typeof data.accessToken !== 'string' ||
     typeof data.refreshToken !== 'string' ||
@@ -76,5 +76,6 @@ export async function POST(req: NextRequest) {
     accessToken: data.accessToken,
     expiresAt: data.expiresAt,
     refreshToken: data.refreshToken,
+    ...(data.mustChangePassword === true ? { mustChangePassword: true } : {}),
   });
 }

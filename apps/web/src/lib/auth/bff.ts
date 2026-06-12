@@ -27,6 +27,7 @@ export interface AuthenticatedBundle extends SessionInfo {
   accessToken: string;
   expiresAt: string;
   refreshToken: string;
+  mustChangePassword?: boolean;
 }
 
 /** Cookie attributes shared by both session cookies (loomis-security). */
@@ -83,12 +84,16 @@ export function decodeSessionFromAccessToken(accessToken: string): SessionInfo |
     const payloadPart = parts[1];
     if (!payloadPart) return null;
     const json = Buffer.from(payloadPart, 'base64url').toString('utf8');
-    const claims = JSON.parse(json) as { role?: unknown; tenant_id?: unknown };
+    const claims = JSON.parse(json) as { role?: unknown; tenant_id?: unknown; display_name?: unknown };
     const parsedRole = roleSchema.safeParse(claims.role);
     if (!parsedRole.success) return null;
     const tenantId =
       typeof claims.tenant_id === 'string' ? claims.tenant_id : null;
-    return { role: parsedRole.data, tenantId };
+    const displayName =
+      typeof claims.display_name === 'string' && claims.display_name.length > 0
+        ? claims.display_name
+        : undefined;
+    return { role: parsedRole.data, tenantId, ...(displayName ? { displayName } : {}) };
   } catch {
     return null;
   }

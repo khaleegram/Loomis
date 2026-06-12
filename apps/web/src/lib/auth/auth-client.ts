@@ -12,6 +12,7 @@ import {
   type PasswordResetConfirmRequest,
   type PasswordResetRequest,
   type PasswordResetResponse,
+  type ChangePasswordRequest,
   type Role,
 } from '@loomis/contracts';
 
@@ -26,6 +27,8 @@ export interface AuthenticatedSession {
   expiresAt: string;
   role: Role;
   tenantId: string | null;
+  mustChangePassword?: boolean;
+  displayName?: string;
 }
 
 export class AuthError extends Error {
@@ -61,6 +64,24 @@ async function postJson(path: string, body: unknown): Promise<Response> {
   });
 }
 
+function toAuthenticatedSession(data: {
+  accessToken: string;
+  expiresAt: string;
+  role: Role;
+  tenantId: string | null;
+  mustChangePassword?: boolean;
+  displayName?: string;
+}): AuthenticatedSession {
+  return {
+    accessToken: data.accessToken,
+    expiresAt: data.expiresAt,
+    role: data.role,
+    tenantId: data.tenantId,
+    ...(data.mustChangePassword ? { mustChangePassword: true } : {}),
+    ...(data.displayName ? { displayName: data.displayName } : {}),
+  };
+}
+
 /** Step 1 of login: password. May resolve to an authenticated session or an MFA step. */
 export async function login(input: LoginRequest): Promise<LoginResponse> {
   const res = await postJson('/api/auth/login', input);
@@ -80,8 +101,8 @@ export async function verifyMfa(input: MfaVerifyRequest): Promise<AuthenticatedS
   if (!parsed.success || parsed.data.outcome !== 'authenticated') {
     throw new AuthError('INTERNAL_ERROR', 'Malformed MFA verification response', 500);
   }
-  const { accessToken, expiresAt, role, tenantId } = parsed.data;
-  return { accessToken, expiresAt, role, tenantId };
+  const { accessToken, expiresAt, role, tenantId, mustChangePassword, displayName } = parsed.data;
+  return toAuthenticatedSession({ accessToken, expiresAt, role, tenantId, mustChangePassword, displayName });
 }
 
 /** Begin TOTP enrollment using the enrollment token returned by login. */
@@ -146,8 +167,31 @@ export async function refresh(): Promise<AuthenticatedSession | null> {
   if (!parsed.success || parsed.data.outcome !== 'authenticated') {
     throw new AuthError('INTERNAL_ERROR', 'Malformed refresh response', 500);
   }
-  const { accessToken, expiresAt, role, tenantId } = parsed.data;
-  return { accessToken, expiresAt, role, tenantId };
+  const { accessToken, expiresAt, role, tenantId, mustChangePassword, displayName } = parsed.data;
+  return toAuthenticatedSession({ accessToken, expiresAt, role, tenantId, mustChangePassword, displayName });
+}
+
+/** Change password after logging in with a provisioned temporary password. */
+export async function changePassword(input: ChangePasswordRequest): Promise<AuthenticatedSession> {
+  const { memoryTokenStore } = await import('@/lib/auth/memory-token-store');
+  const token = memoryTokenStore.getAccessToken();
+  const res = await fetch('/api/auth/change-password', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    credentials: 'same-origin',
+    body: JSON.stringify({ newPassword: input.newPassword }),
+  });
+  const json = await readJson(res);
+  if (!res.ok) throw toAuthError(res.status, json);
+
+  const next = await refresh();
+  if (!next) {
+    throw new AuthError('IDENTITY_SESSION_INVALIDATED', 'Session expired after password change', 401);
+  }
+  return next;
 }
 
 /** Revoke the session and clear auth cookies. */

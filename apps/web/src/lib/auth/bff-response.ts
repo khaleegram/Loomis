@@ -36,15 +36,25 @@ export function clearAuthCookies(res: NextResponse): void {
  * refresh token is stripped from the body so it can never reach client JS.
  */
 export function respondAuthenticated(bundle: AuthenticatedBundle): NextResponse {
-  // Shape matches the `loginResponse` `authenticated` variant (no refresh token).
   const res = NextResponse.json({
     outcome: 'authenticated' as const,
     accessToken: bundle.accessToken,
     expiresAt: bundle.expiresAt,
     role: bundle.role,
     tenantId: bundle.tenantId,
+    mustChangePassword: bundle.mustChangePassword ?? false,
+    displayName: bundle.displayName ?? undefined,
   });
-  setAuthCookies(res, { role: bundle.role, tenantId: bundle.tenantId }, bundle.refreshToken);
+  setAuthCookies(
+    res,
+    {
+      role: bundle.role,
+      tenantId: bundle.tenantId,
+      ...(bundle.mustChangePassword ? { mustChangePassword: true } : {}),
+      ...(bundle.displayName ? { displayName: bundle.displayName } : {}),
+    },
+    bundle.refreshToken,
+  );
   return res;
 }
 
@@ -68,6 +78,8 @@ interface BackendAuthData {
   role?: unknown;
   tenantId?: unknown;
   refreshToken?: string;
+  mustChangePassword?: boolean;
+  displayName?: string;
   [key: string]: unknown;
 }
 
@@ -97,6 +109,8 @@ export async function handleAuthBackendResponse(response: Response): Promise<Nex
     const session: SessionInfo = {
       role: data.role as AuthenticatedBundle['role'],
       tenantId: typeof data.tenantId === 'string' ? data.tenantId : null,
+      ...(data.mustChangePassword === true ? { mustChangePassword: true } : {}),
+      ...(typeof data.displayName === 'string' ? { displayName: data.displayName } : {}),
     };
     return respondAuthenticated({
       ...session,

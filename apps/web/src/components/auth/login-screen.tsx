@@ -47,7 +47,18 @@ export function LoginScreen() {
       const result = await login(values);
       switch (result.outcome) {
         case 'authenticated':
-          completeAuthentication(result);
+          completeAuthentication({
+            accessToken: result.accessToken,
+            expiresAt: result.expiresAt,
+            role: result.role,
+            tenantId: result.tenantId,
+            ...(result.mustChangePassword ? { mustChangePassword: true } : {}),
+            ...(result.displayName ? { displayName: result.displayName } : {}),
+          });
+          if (result.mustChangePassword) {
+            router.replace('/change-password');
+            return;
+          }
           router.replace(homePathForRole(result.role));
           return;
         case 'mfa_required':

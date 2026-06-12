@@ -12,6 +12,8 @@ export const SESSION_COOKIE = 'loomis_session';
 export interface SessionInfo {
   role: Role;
   tenantId: string | null;
+  mustChangePassword?: boolean;
+  displayName?: string;
 }
 
 export function serializeSession(info: SessionInfo): string {
@@ -32,10 +34,12 @@ function safeJsonParse(raw: string): unknown {
 
 export function parseSession(raw: string | undefined | null): SessionInfo | null {
   if (!raw) return null;
-  const parsed = safeJsonParse(raw) as { role?: unknown; tenantId?: unknown } | null;
+  const parsed = safeJsonParse(raw) as { role?: unknown; tenantId?: unknown; mustChangePassword?: unknown; displayName?: unknown } | null;
   if (!parsed || typeof parsed !== 'object') return null;
   const parsedRole = roleSchema.safeParse(parsed.role);
   if (!parsedRole.success) return null;
   const tenantId = typeof parsed.tenantId === 'string' ? parsed.tenantId : null;
-  return { role: parsedRole.data, tenantId };
+  const mustChangePassword = parsed.mustChangePassword === true;
+  const displayName = typeof parsed.displayName === 'string' ? parsed.displayName : undefined;
+  return { role: parsedRole.data, tenantId, ...(mustChangePassword ? { mustChangePassword: true } : {}), ...(displayName ? { displayName } : {}) };
 }
