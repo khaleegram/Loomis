@@ -70,6 +70,7 @@ export const queryKeys = {
     /** User-scoped — not tenant-partitioned. */
     sessions: () => ['identity', 'sessions'] as const,
     devices: () => ['identity', 'devices'] as const,
+    myProfile: () => ['identity', 'me', 'profile'] as const,
   },
   students: {
     all: (tenantId: string) => ['students', tenantId] as const,
@@ -203,6 +204,11 @@ export const queryKeys = {
     notifications: (tenantId: string) => ['comms', tenantId, 'notifications'] as const,
     thread: (tenantId: string, messageId: string) =>
       ['comms', tenantId, 'threads', messageId] as const,
+  },
+  /** Storage — presigned URL access */
+  storage: {
+    downloadUrl: (storageObjectId: string) =>
+      ['storage', 'download-url', storageObjectId] as const,
   },
 
 } as const;

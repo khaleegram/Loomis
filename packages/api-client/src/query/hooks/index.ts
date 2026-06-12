@@ -15,3 +15,4 @@ export * from './comms.js';
 export * from './parent.js';
 export * from './ledger.js';
 export * from './audit.js';
+export * from './storage.js';

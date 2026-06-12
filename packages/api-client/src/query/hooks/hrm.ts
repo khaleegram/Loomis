@@ -5,8 +5,13 @@ import type {
   ClassTeacherAssignmentResponse,
   CreateSubjectAssignmentRequest,
   DeactivateStaffRequest,
+  DesignateBackupRequest,
   InviteStaffRequest,
+  CreateStaffRequest,
+  ReactivateStaffRequest,
   RemoveSubjectAssignmentRequest,
+  ResendStaffInvitationResponse,
+  StaffDetailResponse,
   StaffDirectoryResponse,
   StaffProfileResponse,
   SubjectAssignmentResponse,
@@ -21,6 +26,13 @@ const STAFF_DETAIL_STALE_MS = 30_000;
 export interface InviteStaffResult {
   profile: StaffProfileResponse;
   invitation: { id: string; staffProfileId: string; email: string; expiresAt: string };
+}
+
+export interface CreateStaffResult {
+  profile: StaffProfileResponse;
+  loginEmail: string;
+  temporaryPassword: string;
+  credentialsEmail: import('@loomis/contracts').EmailDeliveryResult;
 }
 
 export function staffListQueryOptions(client: ApiClient, tenantId: string) {
@@ -44,7 +56,7 @@ export function staffDetailQueryOptions(
   return {
     queryKey,
     queryFn: () =>
-      client.get<StaffProfileResponse>(
+      client.get<StaffDetailResponse>(
         `/tenants/${tenantId}/staff/${staffProfileId}`,
       ),
     staleTime: STAFF_DETAIL_STALE_MS,
@@ -82,7 +94,18 @@ function invalidateStaffQueries(
   }
 }
 
-/** Invite a new staff member (US-HRM-001). */
+/** Add a new staff member with a temporary password (US-HRM-001). */
+export function useCreateStaff(tenantId: string) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CreateStaffRequest) =>
+      client.post<CreateStaffResult>(`/tenants/${tenantId}/staff`, body),
+    onSuccess: () => invalidateStaffQueries(queryClient, tenantId),
+  });
+}
+
+/** @deprecated Use useCreateStaff — invitation flow replaced by provisioned passwords. */
 export function useInviteStaff(tenantId: string) {
   const client = useApiClient();
   const queryClient = useQueryClient();
@@ -165,5 +188,50 @@ export function useDeactivateStaff(tenantId: string, staffProfileId: string) {
         body,
       ),
     onSuccess: () => invalidateStaffQueries(queryClient, tenantId, staffProfileId),
+  });
+}
+
+/** Reactivate a deactivated staff member (FR-HRM-006). */
+export function useReactivateStaff(tenantId: string, staffProfileId: string) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: ReactivateStaffRequest) =>
+      client.post<StaffProfileResponse>(
+        `/tenants/${tenantId}/staff/${staffProfileId}/reactivate`,
+        body,
+      ),
+    onSuccess: () => invalidateStaffQueries(queryClient, tenantId, staffProfileId),
+  });
+}
+
+/** Resend a pending staff invitation (US-HRM-009). */
+export function useResendStaffInvitation(tenantId: string, staffProfileId: string) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (invitationId: string) =>
+      client.post<ResendStaffInvitationResponse>(
+        `/tenants/${tenantId}/staff/${invitationId}/resend`,
+      ),
+    onSuccess: () => invalidateStaffQueries(queryClient, tenantId, staffProfileId),
+  });
+}
+
+/** Designate a backup for a singleton role (FR-HRM-005). */
+export function useDesignateBackup(tenantId: string, staffProfileId: string) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: DesignateBackupRequest) =>
+      client.post(`/tenants/${tenantId}/staff/backup-designations`, body),
+    onSuccess: (_data, variables) =>
+      invalidateStaffQueries(
+        queryClient,
+        tenantId,
+        variables.primaryStaffProfileId === staffProfileId
+          ? staffProfileId
+          : variables.backupStaffProfileId,
+      ),
   });
 }

@@ -5,6 +5,7 @@ import type {
   InitiateParentLinkRequest,
   ParentLinkResponse,
   RecordIdentityAttestationRequest,
+  SetStudentPhotoRequest,
   StudentListResponse,
   StudentProfileResponse,
   StudentResponse,
@@ -164,5 +165,27 @@ export function useRecordIdentityAttestation(tenantId: string, studentId: string
         body,
       ),
     onSuccess: () => invalidateStudentQueries(queryClient, tenantId, studentId),
+  });
+}
+
+export function useSetStudentPhoto(tenantId: string) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      studentId,
+      storageObjectId,
+    }: {
+      studentId: string;
+      storageObjectId: string;
+    }) =>
+      client.patch<StudentResponse>(
+        `/tenants/${tenantId}/students/${studentId}/photo`,
+        { storageObjectId } satisfies SetStudentPhotoRequest,
+      ),
+    onSuccess: (_data, variables) => {
+      invalidateStudentQueries(queryClient, tenantId, variables.studentId);
+    },
   });
 }
