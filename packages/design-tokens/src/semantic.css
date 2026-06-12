@@ -47,6 +47,17 @@
 
   --radius: 12px;
   --shadow-elevated: 0 1px 3px rgb(90 65 30 / 0.04), 0 6px 24px rgb(90 65 30 / 0.06);
+
+  /* Composed gradients — reference brand scale + semantic surfaces */
+  --gradient-hero-surface: linear-gradient(135deg, var(--color-brand-50) 0%, var(--color-brand-100) 40%, var(--card) 100%);
+  --gradient-profile-surface: linear-gradient(135deg, var(--color-brand-50) 0%, var(--background) 50%, var(--card) 100%);
+  --gradient-profile-footer: linear-gradient(135deg, var(--color-brand-50) 0%, var(--card) 100%);
+  --gradient-table-header: linear-gradient(135deg, var(--color-brand-800) 0%, var(--color-brand-900) 100%);
+  --gradient-kpi-1: linear-gradient(135deg, var(--color-brand-500), var(--color-brand-700));
+  --gradient-kpi-2: linear-gradient(135deg, var(--color-brand-700), var(--color-brand-900));
+  --gradient-kpi-3: linear-gradient(135deg, var(--color-brand-400), var(--color-brand-600));
+  --gradient-kpi-4: linear-gradient(135deg, var(--color-brand-600), var(--color-brand-800));
+  --gradient-kpi-card: linear-gradient(135deg, var(--color-brand-600), var(--color-brand-800));
 }
 
 .dark {

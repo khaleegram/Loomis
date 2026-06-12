@@ -71,15 +71,26 @@ export function DashboardSpark({
   );
 }
 
+function greeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
 export function DashboardHeader({
   consoleLabel,
   roleLabel,
+  userName,
   description,
 }: {
   consoleLabel: string;
   roleLabel: string;
+  userName?: string;
   description: string;
 }) {
+  const label = userName ?? roleLabel;
+
   return (
     <div className="mb-6">
       <div className="mb-2 flex items-center gap-2">
@@ -92,7 +103,7 @@ export function DashboardHeader({
         className="text-neutral-900"
         style={{ fontSize: '1.875rem', fontWeight: 800, letterSpacing: '-0.025em', lineHeight: 1.2 }}
       >
-        Good morning, <span className="text-brand-600">{roleLabel}.</span>
+        {greeting()}, <span className="text-brand-600">{label}.</span>
       </h1>
       <p className="mt-1.5 text-[13px] text-neutral-500">{description}</p>
     </div>

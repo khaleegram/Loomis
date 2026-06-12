@@ -103,6 +103,7 @@ export default function RegionalDashboardPage() {
       <DashboardHeader
         consoleLabel="Regional Console"
         roleLabel={roleLabel}
+        userName={session?.displayName}
         description="Aggregated performance across your referral network — live."
       />
 

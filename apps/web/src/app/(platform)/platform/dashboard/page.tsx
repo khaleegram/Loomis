@@ -107,6 +107,14 @@ export default function PlatformDashboard() {
       ? (ROLE_LABELS[session.role] ?? session.role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()))
       : 'Commander';
 
+  const userName = session?.displayName ?? roleLabel;
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }, []);
+
   const settlementPct =
     summary && summary.billedMinor > 0
       ? Math.round((summary.settledMinor / summary.billedMinor) * 100)
@@ -142,7 +150,7 @@ export default function PlatformDashboard() {
           className="text-neutral-900"
           style={{ fontSize: '1.875rem', fontWeight: 800, letterSpacing: '-0.025em', lineHeight: 1.2 }}
         >
-          Good morning, <span className="text-brand-600">{roleLabel}.</span>
+          {greeting}, <span className="text-brand-600">{userName}.</span>
         </h1>
         <p className="mt-1.5 text-[13px] text-neutral-500">
           Revenue, risk, and school health across your network — live.

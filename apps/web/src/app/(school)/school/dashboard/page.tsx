@@ -129,6 +129,7 @@ export default function SchoolDashboardPage() {
       <DashboardHeader
         consoleLabel="School Console"
         roleLabel={roleLabel}
+        userName={session?.displayName}
         description="Enrollment, academic standards, and ledger-backed financial posture — live."
       />
 

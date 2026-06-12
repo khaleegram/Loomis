@@ -74,6 +74,7 @@ export default function ParentDashboardPage() {
       <DashboardHeader
         consoleLabel={consoleLabel}
         roleLabel={roleLabel}
+        userName={session?.displayName}
         description={
           isStudent
             ? 'Your academic overview, attendance, and results — live.'
