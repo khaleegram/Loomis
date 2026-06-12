@@ -28,7 +28,6 @@ import {
   reactivateStaffRequest,
   staffPrimaryRole,
   type AssignClassTeacherRequest,
-  type ChangeStaffRoleRequest,
   type CreateSubjectAssignmentRequest,
   type DesignateBackupRequest,
   type StaffDetailResponse,
@@ -147,9 +146,9 @@ export function StaffMemberDetail({ staffProfileId, staff: staffProp }: StaffMem
     [directoryData?.staff, staffProfileId],
   );
 
-  const roleForm = useForm<ChangeStaffRoleRequest>({
+  const roleForm = useForm<z.input<typeof changeStaffRoleRequest>>({
     resolver: zodResolver(changeStaffRoleRequest),
-    defaultValues: { primaryRole: 'teacher' },
+    defaultValues: { primaryRole: 'teacher', singletonOverrideConfirmed: false },
   });
 
   const subjectForm = useForm<CreateSubjectAssignmentRequest>({
@@ -345,7 +344,7 @@ export function StaffMemberDetail({ staffProfileId, staff: staffProp }: StaffMem
               <form
                 onSubmit={roleForm.handleSubmit(async (values) => {
                   try {
-                    await changeRole.mutateAsync(values);
+                    await changeRole.mutateAsync(changeStaffRoleRequest.parse(values));
                     roleForm.reset(values);
                     await refetch();
                   } catch (err) {

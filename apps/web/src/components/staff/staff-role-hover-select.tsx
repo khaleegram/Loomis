@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { createPortal } from 'react-dom';
 import { useChangeStaffRole, useStaffDirectory } from '@loomis/api-client';
 import {
+  changeStaffRoleRequest,
   staffPrimaryRole,
   type StaffPrimaryRole,
   type StaffProfileStatus,
@@ -189,13 +190,13 @@ export function StaffRoleHoverSelect({
   ) => {
     setError(null);
     try {
-      await changeRole.mutateAsync({
+      await changeRole.mutateAsync(changeStaffRoleRequest.parse({
         primaryRole: role,
         ...(options?.replacementStaffProfileId
           ? { replacementStaffProfileId: options.replacementStaffProfileId }
           : {}),
         ...(options?.singletonOverrideConfirmed ? { singletonOverrideConfirmed: true } : {}),
-      });
+      }));
       setOpen(false);
       hoverDepth.current = 0;
       resetFlow();

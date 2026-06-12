@@ -1,8 +1,7 @@
-// @ts-nocheck
 'use client';
 
 import { usePlatformLedger } from '@loomis/api-client';
-import { Badge, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@loomis/ui-web';
+import { Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@loomis/ui-web';
 
 import { PageBody, PageHeader } from '@/components/platform/platform-shell';
 
@@ -11,10 +10,24 @@ const DIRECTION_COLOR: Record<string, string> = {
   credit: 'text-green-600 dark:text-green-400',
 };
 
+interface LedgerEntry {
+  id: string;
+  createdAt?: string;
+  accountCode?: string;
+  account?: string;
+  direction: string;
+  amountMinor?: number;
+  sourceType?: string;
+}
+
+interface PlatformLedgerResponse {
+  entries?: LedgerEntry[];
+}
+
 export default function PlatformLedgerPage() {
   const { data, isLoading, isError, error } = usePlatformLedger();
 
-  const entries = (data as any)?.entries ?? [];
+  const entries = (data as PlatformLedgerResponse | undefined)?.entries ?? [];
 
   return (
     <>
@@ -44,7 +57,7 @@ export default function PlatformLedgerPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {entries.map((e: any) => (
+              {entries.map((e) => (
                 <TableRow key={e.id}>
                   <TableCell className="font-mono text-xs tabular-nums">
                     {e.createdAt ? new Date(e.createdAt).toISOString().replace('T', ' ').slice(0, 19) : '—'}

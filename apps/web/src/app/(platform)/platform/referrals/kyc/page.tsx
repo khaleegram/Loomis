@@ -1,14 +1,26 @@
-// @ts-nocheck
 'use client';
 
 import { useState } from 'react';
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@loomis/ui-web';
+import { Badge, Button, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@loomis/ui-web';
 import { Check, X } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { PageBody, PageHeader } from '@/components/platform/platform-shell';
 import { useApiClient } from '@loomis/api-client';
 import { useQuery } from '@tanstack/react-query';
+
+interface KycRecord {
+  id: string;
+  participantName?: string;
+  participantId?: string;
+  submittedAt?: string;
+  documentTypes?: string[];
+  status: string;
+}
+
+interface KycPendingResponse {
+  records?: KycRecord[];
+}
 
 export default function KycPage() {
   const client = useApiClient();
@@ -17,7 +29,7 @@ export default function KycPage() {
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['platform', 'referral', 'kyc', 'pending'],
-    queryFn: () => client.get<any>('/platform/referral/kyc/pending'),
+    queryFn: () => client.get<KycPendingResponse>('/platform/referral/kyc/pending'),
     staleTime: 15_000,
   });
 
@@ -67,13 +79,13 @@ export default function KycPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {records.map((r: any) => (
+              {records.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="font-medium">{r.participantName ?? r.participantId?.slice(0, 8)}</TableCell>
                   <TableCell className="text-muted-foreground">{r.submittedAt ? format(new Date(r.submittedAt), 'dd/MM/yyyy') : '—'}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {(r.documentTypes ?? []).map((d: string) => (
+                      {(r.documentTypes ?? []).map((d) => (
                         <Badge key={d} variant="outline" className="text-[10px]">{d}</Badge>
                       ))}
                     </div>

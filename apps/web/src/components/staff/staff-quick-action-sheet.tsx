@@ -24,7 +24,6 @@ import {
   reactivateStaffRequest,
   staffPrimaryRole,
   type AssignClassTeacherRequest,
-  type ChangeStaffRoleRequest,
   type CreateSubjectAssignmentRequest,
 } from '@loomis/contracts';
 import {
@@ -124,9 +123,9 @@ export function StaffQuickActionSheet({
     [classArms],
   );
 
-  const roleForm = useForm<ChangeStaffRoleRequest>({
+  const roleForm = useForm<z.input<typeof changeStaffRoleRequest>>({
     resolver: zodResolver(changeStaffRoleRequest),
-    defaultValues: { primaryRole: 'teacher' },
+    defaultValues: { primaryRole: 'teacher', singletonOverrideConfirmed: false },
   });
 
   const subjectForm = useForm<CreateSubjectAssignmentRequest>({
@@ -246,7 +245,7 @@ export function StaffQuickActionSheet({
                       <form
                         onSubmit={roleForm.handleSubmit(async (values) => {
                           try {
-                            await changeRole.mutateAsync(values);
+                            await changeRole.mutateAsync(changeStaffRoleRequest.parse(values));
                             roleForm.reset(values);
                             await refetch();
                             onSuccess?.();

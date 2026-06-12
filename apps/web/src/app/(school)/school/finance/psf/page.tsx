@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use client';
 
 import { usePsfObligations } from '@loomis/api-client';
@@ -8,18 +7,35 @@ import { formatKobo } from '@loomis/core';
 import { PageBody, PageHeader } from '@/components/school/school-shell';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 
-const STATUS_BADGE: Record<string, string> = {
+const STATUS_BADGE: Record<string, 'default' | 'warning' | 'success' | 'neutral'> = {
   pending: 'warning',
   partially_settled: 'warning',
   settled: 'success',
   waived: 'neutral',
 };
 
+function psfStatusVariant(status?: string): 'default' | 'warning' | 'success' | 'neutral' {
+  if (!status) return 'default';
+  return STATUS_BADGE[status] ?? 'default';
+}
+
+interface PsfObligation {
+  id: string;
+  studentId?: string;
+  termId?: string;
+  amountMinor?: number;
+  status?: string;
+}
+
+interface PsfObligationsResponse {
+  obligations?: PsfObligation[];
+}
+
 export default function PsfObligationsPage() {
   const tenantId = useTenantId();
   const { data, isLoading, isError, error } = usePsfObligations(tenantId ?? '');
 
-  const obligations = (data as any)?.obligations ?? [];
+  const obligations = (data as PsfObligationsResponse | undefined)?.obligations ?? [];
 
   if (!tenantId) {
     return (
@@ -57,13 +73,13 @@ export default function PsfObligationsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {obligations.map((o: any) => (
+              {obligations.map((o) => (
                 <TableRow key={o.id}>
                   <TableCell className="font-mono text-xs">{o.studentId?.slice(0, 8)}…</TableCell>
                   <TableCell className="font-mono text-xs">{o.termId?.slice(0, 8)}…</TableCell>
                   <TableCell className="tabular-nums font-medium">{formatKobo(o.amountMinor ?? 0)}</TableCell>
                   <TableCell>
-                    <Badge variant={STATUS_BADGE[o.status] ?? 'default'}>{o.status?.replace(/_/g, ' ') ?? '—'}</Badge>
+                    <Badge variant={psfStatusVariant(o.status)}>{o.status?.replace(/_/g, ' ') ?? '—'}</Badge>
                   </TableCell>
                 </TableRow>
               ))}

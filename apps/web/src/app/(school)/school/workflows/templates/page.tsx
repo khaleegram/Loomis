@@ -1,8 +1,7 @@
-// @ts-nocheck
 'use client';
 
 import { useState } from 'react';
-import { Button, Card, CardContent, CardHeader, CardTitle, Form, FormControl, FormField, FormItem, FormLabel, FormMessage, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Skeleton } from '@loomis/ui-web';
+import { Button, Card, CardContent, CardHeader, CardTitle, Form, FormControl, FormField, FormItem, FormLabel, FormMessage, Input, Skeleton } from '@loomis/ui-web';
 import { Save } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -32,6 +31,17 @@ const templateSchema = z.object({
 
 type TemplateForm = z.infer<typeof templateSchema>;
 
+interface WorkflowTemplate {
+  workflowType: string;
+  approverRoles?: string[];
+  escalationTimeoutHours?: number;
+  autoEscalate?: boolean;
+}
+
+interface WorkflowTemplatesResponse {
+  templates?: WorkflowTemplate[];
+}
+
 export default function WorkflowTemplatesPage() {
   const tenantId = useTenantId();
   const client = useApiClient();
@@ -41,7 +51,7 @@ export default function WorkflowTemplatesPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['workflow', tenantId, 'templates'],
-    queryFn: () => client.get<any>(`/tenants/${tenantId}/workflows/templates`),
+    queryFn: () => client.get<WorkflowTemplatesResponse>(`/tenants/${tenantId}/workflows/templates`),
     enabled: Boolean(tenantId),
   });
 
@@ -59,7 +69,7 @@ export default function WorkflowTemplatesPage() {
 
   async function onSave(values: TemplateForm) {
     try {
-      await client.put(`/tenants/${tenantId}/workflows/templates/${values.workflowType}`, {
+      await client.patch(`/tenants/${tenantId}/workflows/templates/${values.workflowType}`, {
         approverRoles: values.approverRoles.split(',').map((r) => r.trim()),
         escalationTimeoutHours: values.escalationTimeoutHours,
         autoEscalate: values.autoEscalate ?? false,
@@ -89,7 +99,7 @@ export default function WorkflowTemplatesPage() {
       <PageBody>
         {!canConfigure ? (
           <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border py-16">
-            <p className="text-sm text-muted-foreground">You don't have permission to configure workflow templates.</p>
+            <p className="text-sm text-muted-foreground">You do not have permission to configure workflow templates.</p>
           </div>
         ) : isLoading ? (
           <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-32 w-full" />)}</div>
@@ -100,7 +110,7 @@ export default function WorkflowTemplatesPage() {
               <CardContent>
                 <div className="space-y-2">
                   {WORKFLOW_TYPES.map((wt) => {
-                    const existing = templates.find((t: any) => t.workflowType === wt.key);
+                    const existing = templates.find((t) => t.workflowType === wt.key);
                     return (
                       <button
                         key={wt.key}
