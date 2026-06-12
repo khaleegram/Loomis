@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@loomis/ui-web';
 
 const SETTINGS_LINKS = [
+  { label: 'Profile', href: '/school/settings/profile' },
   { label: 'Appearance', href: '/school/settings/appearance' },
   { label: 'Security', href: '/school/settings/security' },
 ] as const;

@@ -2,7 +2,8 @@
 
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useState } from 'react';
-import { Bell, ChevronDown, LogOut, ShieldAlert, Timer } from 'lucide-react';
+import Link from 'next/link';
+import { Bell, ChevronDown, LogOut, ShieldAlert, Timer, User } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -190,6 +191,12 @@ export function AppBar({
                 <p className="mt-0.5 text-xs text-neutral-500">{scopeLine}</p>
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="my-2 bg-neutral-100" />
+              <DropdownMenuItem className="cursor-pointer rounded-lg focus:bg-brand-50 focus:text-brand-700" asChild>
+                <Link href="/school/settings/profile">
+                  <User aria-hidden className="mr-2 size-4" />
+                  Profile
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuItem
                 className="cursor-pointer rounded-lg text-red-600 focus:bg-red-50 focus:text-red-600"
                 onClick={() => void signOut()}
