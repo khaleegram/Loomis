@@ -1,17 +1,29 @@
 'use client';
 
-import { use, useState } from 'react';
-import { ArrowLeft, ShieldAlert } from 'lucide-react';
+import { use, useRef, useState } from 'react';
 import Link from 'next/link';
+import {
+  AlertTriangle,
+  ArrowLeft,
+  ArrowUpRight,
+  Building2,
+  Calendar,
+  Copy,
+  FileText,
+  Globe,
+  History,
+  Mail,
+  MapPin,
+  Percent,
+  Shield,
+  ShieldAlert,
+  Zap,
+} from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 import {
   Alert,
   AlertDescription,
-  Badge,
   Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -25,21 +37,32 @@ import {
   FormLabel,
   FormMessage,
   Input,
-  Skeleton,
   Textarea,
 } from '@loomis/ui-web';
-import { usePlatformTenant, useSuspendTenant, useReinstateTenant } from '@loomis/api-client';
+import {
+  usePlatformTenant,
+  usePlatformRiskCases,
+  useSuspendTenant,
+  useReinstateTenant,
+} from '@loomis/api-client';
 import { suspendTenantRequest } from '@loomis/contracts';
 import { formatKobo } from '@loomis/core';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { uuidv7 } from 'uuidv7';
-import { useRef } from 'react';
 
-import { PageBody, PageHeader } from '@/components/platform/platform-shell';
+import { PageBody } from '@/components/platform/platform-shell';
 import { PsfRateCard } from '@/components/platform/psf-rate-card';
 import { BreakGlassModal } from '@/components/platform/break-glass-modal';
+import { BRONZE } from '@/components/dashboard/dashboard-primitives';
+import { useAuth } from '@/lib/auth/auth-context';
+
+const ROLE_LABELS: Record<string, string> = {
+  platform_owner: 'Platform Owner',
+  platform_admin: 'Platform Admin',
+  dpo: 'Data Protection Officer',
+};
 
 const suspendFormSchema = suspendTenantRequest.extend({
   confirmName: z.string().min(1, 'Type the school name to confirm'),
@@ -51,9 +74,75 @@ interface TenantDetailPageProps {
   params: Promise<{ id: string }>;
 }
 
+function statusDot(status: string): string {
+  switch (status) {
+    case 'active': return '#16a34a';
+    case 'suspended': return '#dc2626';
+    case 'provisioning': return '#f59e0b';
+    default: return '#9ca3af';
+  }
+}
+
+function statusLabel(status: string): string {
+  switch (status) {
+    case 'active': return 'Active';
+    case 'suspended': return 'Suspended';
+    case 'provisioning': return 'Provisioning';
+    default: return status;
+  }
+}
+
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  sub,
+  gradient,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  sub: string;
+  gradient: string;
+}) {
+  return (
+    <div className="flex items-center gap-3.5 px-5 py-4">
+      <span
+        className="flex size-9 shrink-0 items-center justify-center rounded-xl text-white"
+        style={{ background: gradient }}
+      >
+        <Icon aria-hidden className="size-4" />
+      </span>
+      <div className="min-w-0">
+        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-neutral-400">{label}</p>
+        <p
+          className="mt-0.5 tabular-nums text-neutral-900"
+          style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.15 }}
+        >
+          {value}
+        </p>
+        <p className="mt-0.5 truncate text-[11px] text-neutral-400">{sub}</p>
+      </div>
+    </div>
+  );
+}
+
+function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-4 border-b border-neutral-50 py-3 last:border-0">
+      <dt className="w-[120px] shrink-0 pt-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-400">
+        {label}
+      </dt>
+      <dd className="min-w-0 flex-1 text-[13px] font-semibold text-neutral-900">{children}</dd>
+    </div>
+  );
+}
+
 export default function TenantDetailPage({ params }: TenantDetailPageProps) {
   const { id: tenantId } = use(params);
   const { data: tenant, isLoading } = usePlatformTenant(tenantId);
+  const { data: riskCases } = usePlatformRiskCases({ status: 'OPEN' });
+  const { session } = useAuth();
   const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
   const [bgModalOpen, setBgModalOpen] = useState(false);
   const suspendIdempotencyKey = useRef(uuidv7());
@@ -97,161 +186,495 @@ export default function TenantDetailPage({ params }: TenantDetailPageProps) {
     }
   }
 
+  const roleLabel = session?.role != null
+    ? (ROLE_LABELS[session.role] ?? session.role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()))
+    : 'Commander';
+
+  const openRiskCount = riskCases?.cases.filter(
+    (c) => c.tenantId === tenantId
+  ).length ?? 0;
+
+  // ── Loading state ────────────────────────────────────
   if (isLoading) {
     return (
-      <>
-        <PageHeader title="School detail" />
-        <PageBody>
-          <div className="space-y-6">
-            <Skeleton className="h-32 w-full rounded-lg" />
-            <Skeleton className="h-48 w-full rounded-lg" />
+      <PageBody className="max-w-[1200px] px-7 py-7">
+        <div className="mb-6 animate-pulse space-y-3">
+          <div className="h-3 w-28 rounded bg-neutral-100" />
+          <div className="h-10 w-72 rounded bg-neutral-100" />
+          <div className="h-4 w-48 rounded bg-neutral-100" />
+        </div>
+        <div className="mb-5 grid grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="card h-[76px] rounded-2xl bg-neutral-50" />
+          ))}
+        </div>
+        <div className="grid grid-cols-12 gap-5">
+          <div className="card col-span-8 h-[320px] rounded-2xl bg-neutral-50" />
+          <div className="col-span-4 space-y-4">
+            <div className="card h-[180px] rounded-2xl bg-neutral-50" />
+            <div className="card h-[120px] rounded-2xl bg-neutral-50" />
           </div>
-        </PageBody>
-      </>
+        </div>
+      </PageBody>
     );
   }
 
+  // ── Not found ────────────────────────────────────────
   if (!tenant) {
     return (
-      <>
-        <PageHeader title="Not found" />
-        <PageBody>
-          <Alert variant="destructive">
-            <AlertDescription>Tenant not found.</AlertDescription>
-          </Alert>
-        </PageBody>
-      </>
+      <PageBody className="max-w-[1200px] px-7 py-7">
+        <div className="card rounded-2xl border-red-100 bg-red-50 p-6">
+          <div className="flex items-start gap-4">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-red-100">
+              <ShieldAlert aria-hidden className="size-5 text-red-500" />
+            </span>
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-red-600">
+                School not found
+              </p>
+              <p className="mt-1 text-[13px] leading-relaxed text-red-700">
+                This tenant may have been deleted or the ID is invalid.
+              </p>
+              <Link
+                href="/platform/tenants"
+                className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3.5 py-1.5 text-[12px] font-semibold text-white hover:bg-red-700 transition"
+              >
+                <ArrowLeft aria-hidden className="size-3.5" />
+                Back to tenants
+              </Link>
+            </div>
+          </div>
+        </div>
+      </PageBody>
     );
   }
 
   const isSuspended = tenant.status === 'suspended';
+  const schoolInitial = tenant.name.charAt(0).toUpperCase();
 
   return (
-    <>
-      <PageHeader
-        title={tenant.name}
-        description={`${tenant.region} · ${tenant.tierCode}`}
-        breadcrumbs={
-          <Link
-            href="/platform/tenants"
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft aria-hidden className="size-3" />
-            Tenants
-          </Link>
-        }
-        actions={
-          <div className="flex flex-wrap gap-2">
-            {!isSuspended ? (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 border-red-200 text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
-                  onClick={() => setSuspendDialogOpen(true)}
-                >
-                  Suspend
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/40"
-                  onClick={() => setBgModalOpen(true)}
-                >
-                  <ShieldAlert aria-hidden className="size-4" />
-                  Break-Glass
-                </Button>
-              </>
-            ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => void handleReinstate()}
-                disabled={reinstate.isPending}
-              >
-                {reinstate.isPending ? 'Reinstating…' : 'Reinstate'}
-              </Button>
-            )}
+    <PageBody className="max-w-[1200px] px-7 py-7">
+      {/* ════════════════════════════════════════════════════
+          HERO HEADER
+          ════════════════════════════════════════════════════ */}
+      <div className="relative mb-5 overflow-hidden rounded-2xl p-6 text-white sm:p-8"
+        style={{
+          background: isSuspended
+            ? 'linear-gradient(135deg, #881337 0%, #be123c 50%, #9f1239 100%)'
+            : BRONZE.gradients.g2,
+        }}
+      >
+        {/* Background pattern */}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage: 'radial-gradient(circle at 20% 80%, white 1px, transparent 1px), radial-gradient(circle at 80% 20%, white 1px, transparent 1px)',
+            backgroundSize: '60px 60px',
+          }}
+        />
+
+        <div className="relative">
+          {/* Breadcrumb */}
+          <div className="mb-3 flex items-center gap-2">
+            <span className="flex size-4 items-center justify-center rounded-full bg-white/20">
+              <Zap aria-hidden className="size-2.5 text-white" />
+            </span>
+            <Link
+              href="/platform/tenants"
+              className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/60 hover:text-white/90 transition-colors"
+            >
+              Platform Console
+            </Link>
+            <span className="text-[11px] text-white/30">/</span>
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/60">
+              School Detail
+            </p>
           </div>
-        }
-      />
-      <PageBody>
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* School metadata */}
-          <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle className="font-serif text-base">School Info</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                {[
-                  { label: 'Status', value: <Badge variant={isSuspended ? 'destructive' : 'default'}>{tenant.status}</Badge> },
-                  { label: 'Contact email', value: tenant.contactEmail },
-                  { label: 'Region', value: tenant.region },
-                  { label: 'Address', value: tenant.address },
-                  { label: 'Tier', value: tenant.tierCode },
-                  {
-                    label: 'Current PSF Rate',
-                    value: tenant.currentPsfRateMinor != null
-                      ? `${formatKobo(tenant.currentPsfRateMinor)} / student`
-                      : 'Tier default',
-                  },
-                  {
-                    label: 'Tenant ID',
-                    value: <span className="font-mono text-xs">{tenant.id}</span>,
-                  },
-                  {
-                    label: 'Referral code',
-                    value: tenant.referralCode ? (
-                      <span className="font-mono text-xs">···{tenant.referralCode.slice(-8)}</span>
-                    ) : '—',
-                  },
-                ].map(({ label, value }) => (
-                  <div key={label} className="col-span-1">
-                    <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                      {label}
-                    </dt>
-                    <dd className="mt-0.5 text-foreground">{value}</dd>
-                  </div>
-                ))}
-              </dl>
 
-              {isSuspended && tenant.suspendedReason ? (
-                <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 dark:border-red-900 dark:bg-red-950/30">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-red-700 dark:text-red-400">
-                    Suspension reason
-                  </p>
-                  <p className="mt-1 text-sm text-red-700 dark:text-red-400">
-                    {tenant.suspendedReason}
-                  </p>
+          {/* Main header content */}
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex items-start gap-4">
+              {/* School avatar */}
+              <span
+                className="flex size-14 shrink-0 items-center justify-center rounded-2xl text-[1.5rem] font-extrabold tracking-tight"
+                style={{ background: 'rgba(255,255,255,0.15)' }}
+              >
+                {schoolInitial}
+              </span>
+
+              <div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <h1
+                    style={{ fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.025em', lineHeight: 1.15 }}
+                  >
+                    {tenant.name}
+                  </h1>
+                  <span
+                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-widest"
+                    style={{ background: 'rgba(255,255,255,0.15)' }}
+                  >
+                    <span className="size-2 rounded-full" style={{ background: statusDot(tenant.status) }} />
+                    {statusLabel(tenant.status)}
+                  </span>
                 </div>
-              ) : null}
-            </CardContent>
-          </Card>
 
-          {/* PSF Rate Card */}
-          <PsfRateCard
-            tenantId={tenant.id}
-            tenantName={tenant.name}
-            currentRateMinor={tenant.currentPsfRateMinor}
-          />
+                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+                  <span className="flex items-center gap-1.5 text-[13px] text-white/70">
+                    <MapPin aria-hidden className="size-3.5" />
+                    {tenant.region}
+                  </span>
+                  <span className="flex items-center gap-1.5 text-[13px] text-white/70">
+                    <Globe aria-hidden className="size-3.5" />
+                    <span className="font-mono text-[11px] uppercase tracking-[0.06em]">{tenant.tierCode}</span>
+                  </span>
+                  <span className="flex items-center gap-1.5 text-[13px] text-white/70">
+                    <Calendar aria-hidden className="size-3.5" />
+                    Onboarded {formatDistanceToNow(new Date(tenant.createdAt), { addSuffix: true })}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex flex-wrap gap-2 shrink-0">
+              {!isSuspended ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setSuspendDialogOpen(true)}
+                    className="flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[12px] font-semibold transition"
+                    style={{ background: 'rgba(255,255,255,0.15)', color: '#fecaca' }}
+                  >
+                    <ShieldAlert aria-hidden className="size-3.5" />
+                    Suspend
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBgModalOpen(true)}
+                    className="flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[12px] font-semibold transition"
+                    style={{ background: 'rgba(255,255,255,0.15)', color: '#fde68a' }}
+                  >
+                    <Shield aria-hidden className="size-3.5" />
+                    Break-Glass
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void handleReinstate()}
+                  disabled={reinstate.isPending}
+                  className="flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-[12px] font-bold text-neutral-900 transition hover:bg-neutral-100 disabled:opacity-40"
+                >
+                  {reinstate.isPending ? 'Reinstating…' : 'Reinstate school'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Suspension alert */}
+          {isSuspended && tenant.suspendedReason ? (
+            <div
+              className="mt-5 flex items-start gap-3 rounded-xl p-4"
+              style={{ background: 'rgba(0,0,0,0.25)' }}
+            >
+              <AlertTriangle aria-hidden className="size-4 shrink-0 text-red-300 mt-0.5" />
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-red-300">
+                  Suspended
+                  {tenant.suspendedAt
+                    ? ` · ${new Date(tenant.suspendedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                    : ''}
+                </p>
+                <p className="mt-1 text-[13px] leading-relaxed text-white/80">
+                  {tenant.suspendedReason}
+                </p>
+              </div>
+            </div>
+          ) : null}
         </div>
-      </PageBody>
+      </div>
 
-      {/* Suspend dialog */}
+      {/* ════════════════════════════════════════════════════
+          STAT STRIP
+          ════════════════════════════════════════════════════ */}
+      <div className="card mb-5 grid grid-cols-1 divide-y divide-neutral-100 rounded-2xl sm:grid-cols-2 lg:grid-cols-4 lg:divide-x lg:divide-y-0">
+        <StatCard
+          icon={Percent}
+          label="PSF Rate"
+          value={tenant.currentPsfRateMinor != null ? formatKobo(tenant.currentPsfRateMinor) : 'Tier default'}
+          sub="Per student / term"
+          gradient={BRONZE.gradients.g1}
+        />
+        <StatCard
+          icon={Building2}
+          label="Tier"
+          value={tenant.tierCode.toUpperCase()}
+          sub={tenant.status === 'provisioning' ? 'Awaiting activation' : 'Provisioned'}
+          gradient={BRONZE.gradients.g3}
+        />
+        <StatCard
+          icon={Shield}
+          label="Risk Flags"
+          value={openRiskCount === 0 ? 'Clear' : String(openRiskCount)}
+          sub={openRiskCount === 0 ? 'No open IVP cases' : 'Open anomaly cases'}
+          gradient={openRiskCount === 0 ? 'linear-gradient(135deg,#059669,#047857)' : 'linear-gradient(135deg,#dc2626,#991b1b)'}
+        />
+        <StatCard
+          icon={Calendar}
+          label="Age"
+          value={formatDistanceToNow(new Date(tenant.createdAt), { addSuffix: true }).replace('about ', '')}
+          sub={new Date(tenant.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+          gradient="linear-gradient(135deg,#6366f1,#4f46e5)"
+        />
+      </div>
+
+      {/* ════════════════════════════════════════════════════
+          MAIN CONTENT GRID
+          ════════════════════════════════════════════════════ */}
+      <div className="mb-5 grid grid-cols-12 gap-5">
+        {/* Left: School details */}
+        <div className="card col-span-12 overflow-hidden rounded-2xl lg:col-span-8">
+          <div className="flex items-center gap-2.5 border-b border-neutral-100 px-5 py-4">
+            <span
+              className="flex size-8 shrink-0 items-center justify-center rounded-xl text-white"
+              style={{ background: BRONZE.gradients.g1 }}
+            >
+              <Building2 aria-hidden className="size-4" />
+            </span>
+            <div>
+              <p className="text-[12px] font-bold text-neutral-900">School Details</p>
+              <p className="text-[11px] text-neutral-400">Identity &amp; contact information</p>
+            </div>
+          </div>
+
+          <div className="p-5">
+            <dl>
+              <InfoRow label="Contact Email">
+                <div className="flex items-center gap-2">
+                  <Mail aria-hidden className="size-3.5 text-neutral-400" />
+                  <span>{tenant.contactEmail}</span>
+                </div>
+              </InfoRow>
+              <InfoRow label="Address">
+                <span>{tenant.address}</span>
+              </InfoRow>
+              <InfoRow label="Tenant ID">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-[12px] text-neutral-500">
+                    {tenant.id.slice(0, 8)}…{tenant.id.slice(-4)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => void navigator.clipboard.writeText(tenant.id)}
+                    className="rounded-md p-1 text-neutral-300 transition hover:bg-neutral-100 hover:text-neutral-600"
+                  >
+                    <Copy aria-hidden className="size-3" />
+                  </button>
+                </div>
+              </InfoRow>
+              <InfoRow label="Referral">
+                {tenant.referralCode ? (
+                  <span className="font-mono text-[12px] text-neutral-500">
+                    Con···{tenant.referralCode.slice(-6)}
+                  </span>
+                ) : (
+                  <span className="text-neutral-400">None</span>
+                )}
+              </InfoRow>
+            </dl>
+          </div>
+        </div>
+
+        {/* Right column */}
+        <div className="col-span-12 flex flex-col gap-4 lg:col-span-4">
+          {/* Quick links — dark card matching dashboard style */}
+          <div
+            className="card-dark flex flex-col rounded-2xl p-5 text-white"
+            style={{ background: 'linear-gradient(145deg, #0f172a 0%, #1e293b 100%)' }}
+          >
+            <div className="mb-4 flex items-center gap-2.5">
+              <span
+                className="flex size-8 items-center justify-center rounded-xl"
+                style={{ background: 'rgba(255,255,255,0.12)' }}
+              >
+                <FileText aria-hidden className="size-4 text-white/80" />
+              </span>
+              <div>
+                <p className="text-[12px] font-bold text-white">Quick Actions</p>
+                <p className="text-[10px] text-white/40">Cross-module operations</p>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              {[
+                { label: 'View ledger entries', href: '/platform/ledger' },
+                { label: 'Check IVP cases', href: `/platform/risk?tenant=${tenantId}` },
+                { label: 'Review approvals', href: '/platform/approvals' },
+              ].map((action) => (
+                <Link
+                  key={action.label}
+                  href={action.href}
+                  className="flex items-center justify-between rounded-xl px-3 py-2.5 text-[12px] font-semibold transition hover:bg-white/10"
+                  style={{ background: 'rgba(255,255,255,0.05)' }}
+                >
+                  <span style={{ color: 'rgba(255,255,255,0.65)' }}>{action.label}</span>
+                  <ArrowUpRight aria-hidden className="size-3 text-white/25" />
+                </Link>
+              ))}
+              <button
+                type="button"
+                onClick={() => void navigator.clipboard.writeText(tenant.id)}
+                className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-[12px] font-semibold transition hover:bg-white/10"
+                style={{ background: 'rgba(255,255,255,0.05)' }}
+              >
+                <span style={{ color: 'rgba(255,255,255,0.65)' }}>Copy tenant ID</span>
+                <Copy aria-hidden className="size-3 text-white/25" />
+              </button>
+            </div>
+          </div>
+
+          {/* Risk mini-card */}
+          <div
+            className="card overflow-hidden rounded-2xl p-4 text-white"
+            style={{
+              background: openRiskCount === 0
+                ? 'linear-gradient(135deg,#059669,#047857)'
+                : 'linear-gradient(135deg,#dc2626,#991b1b)',
+            }}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <span
+                className="flex size-8 items-center justify-center rounded-xl"
+                style={{ background: 'rgba(255,255,255,0.15)' }}
+              >
+                <AlertTriangle aria-hidden className="size-4" />
+              </span>
+              <span
+                className="rounded-full px-2 py-0.5 text-[10px] font-bold"
+                style={{ background: 'rgba(255,255,255,0.15)' }}
+              >
+                {openRiskCount === 0 ? 'Healthy' : 'Attention'}
+              </span>
+            </div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.12em] opacity-70">
+              IVP Risk Monitor
+            </p>
+            <p className="mt-1 text-[1.375rem] font-extrabold tracking-tight">
+              {openRiskCount === 0 ? 'No flags' : `${openRiskCount} open case${openRiskCount !== 1 ? 's' : ''}`}
+            </p>
+            <p className="mt-0.5 text-[11px] opacity-70">
+              {openRiskCount === 0
+                ? 'No anomalies detected'
+                : 'Requires platform review'}
+            </p>
+            {openRiskCount > 0 ? (
+              <Link
+                href={`/platform/risk?tenant=${tenantId}`}
+                className="mt-3 flex items-center justify-between rounded-lg px-3 py-2 text-[11px] font-semibold transition hover:bg-white/10"
+                style={{ background: 'rgba(255,255,255,0.1)' }}
+              >
+                Review cases
+                <ArrowUpRight aria-hidden className="size-3" />
+              </Link>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
+      {/* ════════════════════════════════════════════════════
+          PSF RATE CARD
+          ════════════════════════════════════════════════════ */}
+      <div className="mb-5">
+        <PsfRateCard
+          tenantId={tenant.id}
+          tenantName={tenant.name}
+          currentRateMinor={tenant.currentPsfRateMinor}
+        />
+      </div>
+
+      {/* ════════════════════════════════════════════════════
+          TIMELINE
+          ════════════════════════════════════════════════════ */}
+      <div className="card overflow-hidden rounded-2xl">
+        <div className="flex items-center gap-2.5 border-b border-neutral-100 px-5 py-4">
+          <span
+            className="flex size-8 shrink-0 items-center justify-center rounded-xl text-white"
+            style={{ background: 'linear-gradient(135deg,#6366f1,#4f46e5)' }}
+          >
+            <History aria-hidden className="size-4" />
+          </span>
+          <div>
+            <p className="text-[12px] font-bold text-neutral-900">Activity Timeline</p>
+            <p className="text-[11px] text-neutral-400">Key events for this school</p>
+          </div>
+        </div>
+
+        <div className="p-5">
+          <ol className="relative ml-3 space-y-0 border-l-2 border-neutral-100 pl-6">
+            {/* Suspended */}
+            {tenant.suspendedAt ? (
+              <li className="relative pb-5 last:pb-0">
+                <span
+                  className="absolute left-[-27px] flex size-4 items-center justify-center rounded-full"
+                  style={{ background: '#dc2626' }}
+                >
+                  <span className="size-1.5 rounded-full bg-white" />
+                </span>
+                <p className="text-[13px] font-bold text-neutral-900">School suspended</p>
+                <p className="mt-0.5 text-[11px] text-neutral-500">
+                  {formatDistanceToNow(new Date(tenant.suspendedAt), { addSuffix: true })}
+                  {tenant.suspendedReason ? ` · ${tenant.suspendedReason}` : ''}
+                </p>
+              </li>
+            ) : null}
+
+            {/* Activated (when not provisioning/suspended or after suspension) */}
+            {tenant.status === 'active' ? (
+              <li className="relative pb-5 last:pb-0">
+                <span
+                  className="absolute left-[-27px] flex size-4 items-center justify-center rounded-full bg-emerald-500"
+                >
+                  <span className="size-1.5 rounded-full bg-white" />
+                </span>
+                <p className="text-[13px] font-bold text-neutral-900">School active</p>
+                <p className="mt-0.5 text-[11px] text-neutral-500">
+                  Operating normally
+                </p>
+              </li>
+            ) : null}
+
+            {/* Provisioned */}
+            <li className="relative pb-0">
+              <span
+                className="absolute left-[-27px] flex size-4 items-center justify-center rounded-full"
+                style={{ background: BRONZE.stroke.primary }}
+              >
+                <span className="size-1.5 rounded-full bg-white" />
+              </span>
+              <p className="text-[13px] font-bold text-neutral-900">School provisioned</p>
+              <p className="mt-0.5 text-[11px] text-neutral-500">
+                {formatDistanceToNow(new Date(tenant.createdAt), { addSuffix: true })}
+                {tenant.referralCode ? ' · Referral attached' : ''}
+              </p>
+            </li>
+          </ol>
+        </div>
+      </div>
+
+      {/* ════════════════════════════════════════════════════
+          SUSPEND DIALOG
+          ════════════════════════════════════════════════════ */}
       <Dialog open={suspendDialogOpen} onOpenChange={setSuspendDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Suspend {tenant.name}</DialogTitle>
             <DialogDescription>
-              This will immediately block all school actors from accessing their console.
-              Type the school name to confirm.
+              This immediately blocks all school actors. Type the school name to confirm.
             </DialogDescription>
           </DialogHeader>
           <Alert variant="destructive">
             <AlertDescription>
-              Suspending a school locks out all its users immediately. This should only be
-              done for non-payment, fraud, or compliance violations.
+              Locking out all users immediately. Only use for non-payment, fraud, or
+              compliance violations.
             </AlertDescription>
           </Alert>
           <Form {...suspendForm}>
@@ -282,7 +705,11 @@ export default function TenantDetailPage({ params }: TenantDetailPageProps) {
                       Type <strong>{tenant.name}</strong> to confirm
                     </FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder={tenant.name} autoComplete="off" />
+                      <Input
+                        {...field}
+                        placeholder={tenant.name}
+                        autoComplete="off"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -317,13 +744,15 @@ export default function TenantDetailPage({ params }: TenantDetailPageProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Break-glass modal */}
+      {/* ════════════════════════════════════════════════════
+          BREAK-GLASS MODAL
+          ════════════════════════════════════════════════════ */}
       <BreakGlassModal
         open={bgModalOpen}
         tenantId={tenant.id}
         tenantName={tenant.name}
         onClose={() => setBgModalOpen(false)}
       />
-    </>
+    </PageBody>
   );
 }

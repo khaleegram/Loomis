@@ -5,16 +5,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { formatDistanceToNow } from 'date-fns';
-import { ArrowRight, History } from 'lucide-react';
+import { ArrowRight, Clock, History, Percent, TrendingUp } from 'lucide-react';
 import {
   Alert,
   AlertDescription,
-  Badge,
   Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
   CurrencyInput,
   Form,
   FormControl,
@@ -24,15 +19,15 @@ import {
   FormLabel,
   FormMessage,
   Input,
-  Separator,
-  Skeleton,
   Textarea,
+  Skeleton,
   cn,
 } from '@loomis/ui-web';
 import { requestPsfRateOverrideRequest } from '@loomis/contracts';
 import { useRequestPsfRateOverride, usePsfRateHistory, useStepUpMfa } from '@loomis/api-client';
 import { formatKobo } from '@loomis/core';
 
+import { BRONZE } from '@/components/dashboard/dashboard-primitives';
 import { StepUpMfaFields } from '@/components/academic/step-up-mfa-fields';
 
 const overrideFormSchema = requestPsfRateOverrideRequest.extend({
@@ -46,6 +41,9 @@ interface PsfRateCardProps {
   tenantName: string;
   currentRateMinor: number | null;
 }
+
+const inputClass =
+  'h-10 rounded-lg border-neutral-200 bg-white text-[13px] placeholder:text-neutral-400 focus:border-neutral-300 focus:ring-1 focus:ring-neutral-200';
 
 export function PsfRateCard({ tenantId, tenantName, currentRateMinor }: PsfRateCardProps) {
   const [showForm, setShowForm] = useState(false);
@@ -98,56 +96,108 @@ export function PsfRateCard({ tenantId, tenantName, currentRateMinor }: PsfRateC
   }
 
   const snapshots = historyData?.snapshots ?? [];
+  const previousSnapshot = snapshots.length > 1 ? snapshots[1] : null;
+  const rateIncreased = previousSnapshot && currentRateMinor != null
+    ? currentRateMinor > previousSnapshot.rateMinor
+    : null;
 
   return (
-    <Card className="shadow-card">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-3">
-          <CardTitle className="font-serif text-base">PSF Rate</CardTitle>
-          {!showForm ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowForm(true)}
-            >
-              Request change
-            </Button>
-          ) : null}
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Current rate display */}
-        <div
-          className={cn(
-            'flex items-center gap-4 rounded-lg border p-4',
-            'border-neutral-200 bg-neutral-50 dark:border-forest-800 dark:bg-forest-900',
-          )}
-        >
-          <div className="flex-1">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Current rate · {tenantName}
-            </p>
-            <p className="mt-1 font-serif text-2xl font-semibold text-foreground">
-              {currentRateMinor != null
-                ? `${formatKobo(currentRateMinor)} / student`
-                : 'Using tier default'}
-            </p>
+    <div className="card overflow-hidden rounded-2xl">
+      {/* Header with rate badge */}
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-neutral-100 px-5 py-4">
+        <div className="flex items-center gap-2.5">
+          <span
+            className="flex size-8 shrink-0 items-center justify-center rounded-xl text-white"
+            style={{ background: BRONZE.gradients.g1 }}
+          >
+            <Percent aria-hidden className="size-4" />
+          </span>
+          <div>
+            <p className="text-[12px] font-bold text-neutral-900">PSF Rate</p>
+            <p className="text-[11px] text-neutral-400">Per-student fee &middot; {tenantName}</p>
           </div>
-          <Badge variant="secondary" className="shrink-0">
-            Per term
-          </Badge>
+        </div>
+        {!showForm ? (
+          <button
+            type="button"
+            onClick={() => setShowForm(true)}
+            className="rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-neutral-600 transition hover:bg-neutral-50 hover:text-neutral-900"
+          >
+            Request change
+          </button>
+        ) : null}
+      </div>
+
+      <div className="space-y-4 p-5">
+        {/* Rate display - big numbers with context */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          {/* Current rate */}
+          <div className="rounded-xl border border-neutral-200 bg-neutral-50/60 p-4">
+            <div className="flex items-center gap-1.5">
+              <Clock aria-hidden className="size-3 text-neutral-400" />
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-400">
+                Current rate
+              </p>
+            </div>
+            <p className="mt-1.5 font-mono text-[1.625rem] font-extrabold tabular-nums tracking-tight text-neutral-900">
+              {currentRateMinor != null ? formatKobo(currentRateMinor) : '\u2014'}
+            </p>
+            <p className="mt-0.5 text-[12px] font-semibold text-neutral-400">per student / term</p>
+          </div>
+
+          {/* Rate trend */}
+          <div className="rounded-xl border border-neutral-200 bg-neutral-50/60 p-4">
+            <div className="flex items-center gap-1.5">
+              <TrendingUp aria-hidden className="size-3 text-neutral-400" />
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-400">
+                Trend
+              </p>
+            </div>
+            {rateIncreased != null ? (
+              <>
+                <p
+                  className={cn(
+                    'mt-1.5 text-[1.625rem] font-extrabold tracking-tight',
+                    rateIncreased ? 'text-emerald-600' : 'text-red-500',
+                  )}
+                >
+                  {rateIncreased ? '+' : ''}
+                  {currentRateMinor != null && previousSnapshot
+                    ? formatKobo(Math.abs(currentRateMinor - previousSnapshot.rateMinor))
+                    : formatKobo(0)}
+                </p>
+                <p className="mt-0.5 text-[12px] font-semibold text-neutral-400">
+                  {rateIncreased ? 'Increase' : 'Decrease'} since last change
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="mt-1.5 text-[1.625rem] font-extrabold tracking-tight text-neutral-400">
+                  \u2014
+                </p>
+                <p className="mt-0.5 text-[12px] font-semibold text-neutral-400">No prior changes</p>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Rate change request form */}
         {showForm ? (
-          <div className="rounded-lg border border-neutral-200 bg-white p-4 dark:border-forest-800 dark:bg-forest-900">
-            <p className="mb-4 text-sm font-semibold text-foreground">
-              Request PSF rate override
-            </p>
+          <div className="rounded-xl border border-brand-600/20 bg-brand-50/30 p-5">
+            <div className="mb-4 flex items-center gap-2.5">
+              <span
+                className="flex size-7 items-center justify-center rounded-lg text-white"
+                style={{ background: BRONZE.gradients.g1 }}
+              >
+                <Percent aria-hidden className="size-3.5" />
+              </span>
+              <p className="text-[13px] font-bold text-neutral-900">
+                Request PSF rate override
+              </p>
+            </div>
             <Alert variant="warning" className="mb-4">
               <AlertDescription className="text-xs">
-                Rate change requires dual approval. A second platform actor must approve this
-                request (CON-013). Step-up MFA is required.
+                Dual approval required (CON-013). Step-up MFA is mandatory.
               </AlertDescription>
             </Alert>
             <Form {...form}>
@@ -161,14 +211,15 @@ export function PsfRateCard({ tenantId, tenantName, currentRateMinor }: PsfRateC
                   name="rateMinor"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>New rate (₦ per student per term)</FormLabel>
+                      <FormLabel>New rate (per student per term)</FormLabel>
                       <FormControl>
                         <CurrencyInput
+                          className="rounded-lg border-neutral-200 shadow-none"
                           valueKobo={field.value}
                           onChangeKobo={field.onChange}
                         />
                       </FormControl>
-                      <FormDescription>Rate of zero is permanently blocked.</FormDescription>
+                      <FormDescription>Zero is permanently blocked (CON-011).</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -183,10 +234,11 @@ export function PsfRateCard({ tenantId, tenantName, currentRateMinor }: PsfRateC
                         <Input
                           {...field}
                           type="date"
+                          className={inputClass}
                           min={new Date().toISOString().split('T')[0]}
                         />
                       </FormControl>
-                      <FormDescription>Applies from the next billing term only.</FormDescription>
+                      <FormDescription>Next billing term only.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -200,7 +252,8 @@ export function PsfRateCard({ tenantId, tenantName, currentRateMinor }: PsfRateC
                       <FormControl>
                         <Textarea
                           {...field}
-                          placeholder="Reason for override request…"
+                          className="min-h-[72px] resize-none rounded-lg border-neutral-200 bg-white text-[13px] placeholder:text-neutral-400 focus:border-neutral-300 focus:ring-1 focus:ring-neutral-200"
+                          placeholder="Reason for override..."
                           rows={3}
                         />
                       </FormControl>
@@ -237,7 +290,7 @@ export function PsfRateCard({ tenantId, tenantName, currentRateMinor }: PsfRateC
                     size="sm"
                     disabled={requestOverride.isSubmitting}
                   >
-                    {requestOverride.isSubmitting ? 'Submitting…' : 'Submit for approval'}
+                    {requestOverride.isSubmitting ? 'Submitting\u2026' : 'Submit for approval'}
                   </Button>
                 </div>
               </form>
@@ -249,10 +302,13 @@ export function PsfRateCard({ tenantId, tenantName, currentRateMinor }: PsfRateC
         <div>
           <button
             onClick={() => setShowHistory((v) => !v)}
-            className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center gap-1.5 text-[11px] font-semibold text-neutral-500 transition hover:text-neutral-800"
           >
             <History aria-hidden className="size-3.5" />
             {showHistory ? 'Hide' : 'Show'} rate history
+            <span className="rounded-full bg-neutral-100 px-1.5 py-px text-[10px] text-neutral-400">
+              {snapshots.length}
+            </span>
           </button>
 
           {showHistory ? (
@@ -260,33 +316,42 @@ export function PsfRateCard({ tenantId, tenantName, currentRateMinor }: PsfRateC
               {historyLoading ? (
                 <div className="space-y-2">
                   {Array.from({ length: 3 }).map((_, i) => (
-                    <Skeleton key={i} className="h-12 w-full" />
+                    <Skeleton key={i} className="h-10 w-full rounded-lg" />
                   ))}
                 </div>
               ) : snapshots.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No rate changes recorded.</p>
+                <p className="text-[12px] text-neutral-400">No rate changes yet.</p>
               ) : (
-                <ol className="space-y-2">
+                <ol className="space-y-1.5">
                   {snapshots.map((snap, i) => (
-                    <li key={snap.id} className="flex items-start gap-3">
-                      {i < snapshots.length - 1 ? (
-                        <ArrowRight
-                          aria-hidden
-                          className="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                        />
-                      ) : (
-                        <div className="mt-0.5 size-4 shrink-0 rounded-full bg-brand-600 dark:bg-mint-500" />
-                      )}
+                    <li
+                      key={snap.id}
+                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition hover:bg-neutral-50"
+                    >
+                      <span
+                        className={cn(
+                          'flex size-5 shrink-0 items-center justify-center rounded-full',
+                          i === 0
+                            ? 'bg-black text-white'
+                            : 'border border-neutral-200 bg-white text-neutral-400',
+                        )}
+                      >
+                        {i === 0 ? (
+                          <span className="text-[10px] font-bold">{'\u25CF'}</span>
+                        ) : (
+                          <ArrowRight aria-hidden className="size-2.5" />
+                        )}
+                      </span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium tabular-nums">
+                        <p className="text-[13px] font-bold tabular-nums text-neutral-900">
                           {formatKobo(snap.rateMinor)}
-                          <span className="ml-2 text-xs font-normal text-muted-foreground">
-                            / student / term
+                          <span className="ml-1.5 text-[11px] font-semibold text-neutral-400">
+                            / student
                           </span>
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="mt-0.5 truncate text-[11px] text-neutral-500">
                           {formatDistanceToNow(new Date(snap.createdAt), { addSuffix: true })}
-                          {snap.reason ? ` · ${snap.reason}` : ''}
+                          {snap.reason ? ' \u00b7 ' + snap.reason : ''}
                         </p>
                       </div>
                     </li>
@@ -297,13 +362,14 @@ export function PsfRateCard({ tenantId, tenantName, currentRateMinor }: PsfRateC
           ) : null}
         </div>
 
-        <Separator />
-
-        <p className="text-[11px] text-muted-foreground">
-          CON-011: PSF obligations are immutable after creation. Rate changes only affect future
-          billing terms.
-        </p>
-      </CardContent>
-    </Card>
+        <div className="rounded-lg border border-neutral-100 bg-neutral-50/60 px-3 py-2.5">
+          <p className="text-[11px] leading-relaxed text-neutral-400">
+            <span className="font-bold text-neutral-500">CON-011</span>{' '}
+            PSF obligations are immutable after creation. Rate changes only affect future
+            billing terms.
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
