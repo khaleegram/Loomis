@@ -36,6 +36,7 @@ export interface AccessTokenPayload {
   tenantId: string | null;
   sessionId: string;
   userVer: number;
+  displayName?: string;
   mfaAt?: number;
   deviceId?: string | null;
 }
@@ -53,7 +54,9 @@ export interface CreateUserInput {
   tenantId: string | null;
   mfaRequired: boolean;
   status?: UserStatus;
-  phone?: string;
+  phone?: string | null;
+  mustChangePassword?: boolean;
+  displayName?: string | null;
 }
 
 export interface CreateSessionInput {

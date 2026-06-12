@@ -14,7 +14,7 @@ export async function refreshHandler(
     throw new LoomisError('IDENTITY_SESSION_INVALIDATED', 401, 'Missing refresh token');
   }
 
-  const { accessToken, refreshToken, expiresAt, refreshExpiresAt } =
+  const { accessToken, refreshToken, expiresAt, refreshExpiresAt, mustChangePassword, displayName } =
     await authService.refresh(rawToken);
   setRefreshCookie(reply, refreshToken, refreshExpiresAt);
 
@@ -22,5 +22,7 @@ export async function refreshHandler(
     accessToken,
     refreshToken,
     expiresAt: expiresAt.toISOString(),
+    ...(mustChangePassword ? { mustChangePassword: true } : {}),
+    ...(displayName ? { displayName } : {}),
   });
 }

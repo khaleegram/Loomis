@@ -9,12 +9,46 @@ import { passwordService } from './password.service.js';
 const PENDING_PASSWORD_SENTINEL = 'pending-invitation-password-not-usable';
 
 export const staffAccountService = {
+  async createActiveStaffAccount(
+    input: {
+      tenantId: string;
+      email: string;
+      phone: string;
+      role: Role;
+      password: string;
+      displayName?: string;
+    },
+    tx?: Executor,
+  ) {
+    const existing = await userRepository.findByEmail(input.email);
+    if (existing) {
+      throw new LoomisError('HRM_ROLE_CONFLICT', 409, 'A user with this email already exists');
+    }
+
+    const passwordHash = await passwordService.hashProvisioned(input.password);
+    return userRepository.create(
+      {
+        email: input.email,
+        phone: input.phone,
+        role: input.role,
+        tenantId: input.tenantId,
+        mfaRequired: MFA_MANDATORY_ROLES.has(input.role),
+        status: 'active',
+        passwordHash,
+        mustChangePassword: true,
+        displayName: input.displayName ?? null,
+      },
+      tx,
+    );
+  },
+
   async createPendingStaffAccount(
     input: {
       tenantId: string;
       email: string;
       phone: string;
       role: Role;
+      displayName?: string;
     },
     tx?: Executor,
   ) {
@@ -35,6 +69,7 @@ export const staffAccountService = {
         mfaRequired: MFA_MANDATORY_ROLES.has(input.role),
         status: 'pending',
         passwordHash,
+        displayName: input.displayName ?? null,
       },
       tx,
     );

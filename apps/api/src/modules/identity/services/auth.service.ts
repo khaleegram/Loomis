@@ -55,6 +55,8 @@ export interface AuthenticatedBundle {
   sessionId: string;
   deviceId: string | null;
   displacedSessionId: string | null;
+  mustChangePassword?: boolean;
+  displayName?: string;
   persistentToken?: string;
   persistentTokenExpiresAt?: Date;
 }
@@ -117,6 +119,11 @@ export const authService = {
       ...(ctx.ipAddress !== undefined ? { ipAddress: ctx.ipAddress } : {}),
       ...(ctx.userAgent !== undefined ? { userAgent: ctx.userAgent } : {}),
     });
+
+    if (user.mustChangePassword) {
+      const bundle = await this.issueAuthenticatedSession(user, ctx, { mfaCompleted: false });
+      return { kind: 'authenticated', bundle: { ...bundle, mustChangePassword: true } };
+    }
 
     const role = user.role as Role;
     const loginRequiresMfa = MFA_MANDATORY_ROLES.has(role);
@@ -261,6 +268,7 @@ export const authService = {
       sessionId: session.id,
       userVer: user.userVer,
       deviceId: opts.deviceId ?? null,
+      ...(user.displayName ? { displayName: user.displayName } : {}),
       ...(opts.mfaCompleted ? { mfaAt: nowSec } : {}),
     };
     const { token: accessToken, expiresAt: accessExpiresAt } =
@@ -287,6 +295,7 @@ export const authService = {
       sessionId: session.id,
       deviceId: opts.deviceId ?? null,
       displacedSessionId,
+      ...(user.displayName ? { displayName: user.displayName } : {}),
       ...(opts.persistentToken !== undefined ? { persistentToken: opts.persistentToken } : {}),
       ...(opts.persistentTokenExpiresAt !== undefined
         ? { persistentTokenExpiresAt: opts.persistentTokenExpiresAt }
@@ -303,6 +312,8 @@ export const authService = {
     refreshToken: string;
     expiresAt: Date;
     refreshExpiresAt: Date;
+    mustChangePassword: boolean;
+    displayName?: string;
   }> {
     const tokenHash = tokenService.hashRefreshToken(rawToken);
     const record = await tokenRepository.findByHash(tokenHash);
@@ -364,10 +375,18 @@ export const authService = {
       sessionId: session.id,
       userVer: user.userVer,
       deviceId: record.deviceId ?? null,
+      ...(user.displayName ? { displayName: user.displayName } : {}),
     };
     const { token: accessToken, expiresAt } = await tokenService.signAccessToken(accessPayload);
 
-    return { accessToken, refreshToken: newRaw, expiresAt, refreshExpiresAt: record.expiresAt };
+    return {
+      accessToken,
+      refreshToken: newRaw,
+      expiresAt,
+      refreshExpiresAt: record.expiresAt,
+      mustChangePassword: user.mustChangePassword,
+      ...(user.displayName ? { displayName: user.displayName } : {}),
+    };
   },
 
   /** Logout: revokes the current session (or all), clears device tokens, blacklists the access jti. */
@@ -457,5 +476,46 @@ export const authService = {
     const { plain, hashed } = await mfaService.generateBackupCodes();
     await mfaRepository.activate(userId, hashed);
     return { backupCodes: plain };
+  },
+
+  async changePassword(
+    userId: string,
+    newPassword: string,
+    currentPassword?: string,
+  ): Promise<void> {
+    const user = await userRepository.findById(userId);
+    if (!user) {
+      throw new LoomisError('IDENTITY_INVALID_CREDENTIALS', 401, 'Invalid email or password');
+    }
+
+    if (user.mustChangePassword) {
+      // Session already proves the user knows the temporary password from login.
+    } else if (!currentPassword) {
+      throw new LoomisError(
+        'VALIDATION_ERROR',
+        422,
+        'Current password is required to change your password',
+      );
+    } else {
+      const validCurrent = await passwordService.verify(currentPassword, user.passwordHash);
+      if (!validCurrent) {
+        throw new LoomisError('IDENTITY_INVALID_CREDENTIALS', 401, 'Current password is incorrect');
+      }
+    }
+
+    const reusingPassword = await passwordService.verify(newPassword, user.passwordHash);
+    if (reusingPassword) {
+      throw new LoomisError(
+        'IDENTITY_PASSWORD_REUSE',
+        422,
+        'New password must be different from the current password',
+      );
+    }
+
+    const passwordHash = await passwordService.hash(newPassword);
+    const updated = await userRepository.updatePasswordHash(userId, passwordHash);
+    if (!updated) {
+      throw new LoomisError('INTERNAL_ERROR', 500, 'Failed to update password');
+    }
   },
 };

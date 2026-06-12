@@ -63,6 +63,7 @@ export const tokenService = {
       session_id: payload.sessionId,
       user_ver: payload.userVer,
     };
+    if (payload.displayName !== undefined) claims['display_name'] = payload.displayName;
     if (payload.mfaAt !== undefined) claims['mfa_at'] = payload.mfaAt;
     if (payload.deviceId !== undefined) claims['device_id'] = payload.deviceId;
 
@@ -128,6 +129,7 @@ export const tokenService = {
       };
 
       if (typeof payload.mfa_at === 'number') verified.mfaAt = payload.mfa_at;
+      if (typeof payload.display_name === 'string') verified.displayName = payload.display_name;
       if (payload.device_id === null || typeof payload.device_id === 'string') {
         verified.deviceId = (payload.device_id as string | null) ?? null;
       }

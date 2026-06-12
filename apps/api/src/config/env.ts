@@ -37,6 +37,9 @@ const envSchema = z.object({
   /** Base URL for gateway redirect after online payment (parent portal). */
   PAYMENT_REDIRECT_BASE_URL: z.string().url().optional(),
 
+  /** Public web app origin for links in transactional emails (defaults to http://localhost:3000 in dev). */
+  WEB_APP_BASE_URL: z.string().url().optional(),
+
   /** AWS SES (SRS §10.3). Required for email delivery when email channel is used. */
   SES_REGION: z.string().min(1).optional(),
   SES_FROM_EMAIL: z.string().email().optional(),

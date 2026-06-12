@@ -103,6 +103,8 @@ export function respondAuthenticated(reply: FastifyReply, bundle: AuthenticatedB
     expiresAt: bundle.accessExpiresAt.toISOString(),
     role: bundle.role,
     tenantId: bundle.tenantId,
+    mustChangePassword: bundle.mustChangePassword ?? false,
+    displayName: bundle.displayName ?? undefined,
     refreshToken: bundle.refreshToken,
     ...(bundle.persistentToken !== undefined
       ? {

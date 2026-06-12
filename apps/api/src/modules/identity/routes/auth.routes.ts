@@ -1,5 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import {
+  changePasswordRequest,
+  type ChangePasswordRequest,
   loginRequest,
   type LoginRequest,
   type LogoutRequest,
@@ -15,6 +17,7 @@ import { authenticate } from '../../../middleware/authenticate.js';
 import { loginRateLimiter } from '../../../middleware/login-rate-limiter.js';
 import { validateBody } from '../../../shared/validation.js';
 import {
+  changePasswordHandler,
   loginHandler,
   logoutHandler,
   mfaEnrollConfirmHandler,
@@ -59,5 +62,11 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     '/auth/stepup',
     { preHandler: [authenticate], preValidation: [validateBody(stepUpRequest)] },
     stepUpHandler,
+  );
+
+  app.post<{ Body: ChangePasswordRequest }>(
+    '/auth/change-password',
+    { preHandler: [authenticate], preValidation: [validateBody(changePasswordRequest)] },
+    changePasswordHandler,
   );
 }

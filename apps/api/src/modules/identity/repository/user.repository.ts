@@ -42,6 +42,8 @@ export const userRepository = {
         mfaRequired: input.mfaRequired,
         status: input.status ?? 'active',
         phone: input.phone ?? null,
+        mustChangePassword: input.mustChangePassword ?? false,
+        displayName: input.displayName ?? null,
       })
       .returning();
     if (!user) throw new Error('Failed to create user');
@@ -54,6 +56,7 @@ export const userRepository = {
       .update(users)
       .set({
         passwordHash,
+        mustChangePassword: false,
         userVer: sql`${users.userVer} + 1`,
         updatedAt: new Date(),
       })
@@ -113,6 +116,24 @@ export const userRepository = {
         lockedUntil: lockedUntil ?? null,
         updatedAt: new Date(),
       })
+      .where(eq(users.id, userId))
+      .returning();
+    return user ?? null;
+  },
+
+  async updateProfile(
+    userId: string,
+    fields: { displayName?: string; email?: string; photoStorageObjectId?: string | null },
+    tx?: Executor,
+  ) {
+    const executor = tx ?? db;
+    const set: Record<string, unknown> = { updatedAt: new Date() };
+    if (fields.displayName !== undefined) set.displayName = fields.displayName;
+    if (fields.email !== undefined) set.email = fields.email.toLowerCase();
+    if (fields.photoStorageObjectId !== undefined) set.photoStorageObjectId = fields.photoStorageObjectId;
+    const [user] = await executor
+      .update(users)
+      .set(set)
       .where(eq(users.id, userId))
       .returning();
     return user ?? null;

@@ -1,5 +1,5 @@
 import * as argon2 from 'argon2';
-import { passwordComplexity } from '@loomis/contracts';
+import { passwordComplexity, provisionedPassword } from '@loomis/contracts';
 import { LoomisError } from '../../../shared/errors.js';
 
 const ARGON2_OPTIONS: argon2.Options = {
@@ -12,6 +12,20 @@ const ARGON2_OPTIONS: argon2.Options = {
 export const passwordService = {
   async hash(plain: string): Promise<string> {
     this.assertComplexity(plain);
+    return argon2.hash(plain, ARGON2_OPTIONS);
+  },
+
+  /** Hash admin-provisioned temporary passwords (min length only — no complexity). */
+  async hashProvisioned(plain: string): Promise<string> {
+    const result = provisionedPassword.safeParse(plain);
+    if (!result.success) {
+      throw new LoomisError(
+        'VALIDATION_ERROR',
+        400,
+        'Provisioned password must be between 8 and 128 characters',
+        { issues: result.error.flatten().fieldErrors },
+      );
+    }
     return argon2.hash(plain, ARGON2_OPTIONS);
   },
 
