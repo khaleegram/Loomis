@@ -27,7 +27,20 @@ export type PushPlatform = z.infer<typeof pushPlatform>;
 export const COMMS_EVENT_TYPES = {
   notificationSent: 'notification.sent',
   messageSent: 'comms.message.sent',
+  accountCredentialsEmail: 'comms.account_credentials.email',
 } as const;
+
+export const emailDeliverySkipReason = z.enum(['SES_NOT_CONFIGURED', 'SEND_FAILED']);
+export type EmailDeliverySkipReason = z.infer<typeof emailDeliverySkipReason>;
+
+/** Result of a one-time credentials email (staff onboarding / student portal). */
+export const emailDeliveryResult = z.object({
+  sent: z.boolean(),
+  /** Masked or full recipient — only populated when an send was attempted or skipped due to config. */
+  recipient: z.string().email().optional(),
+  reason: emailDeliverySkipReason.optional(),
+});
+export type EmailDeliveryResult = z.infer<typeof emailDeliveryResult>;
 
 export const sendAnnouncementRequest = z.object({
   subject: z.string().min(1).max(200),

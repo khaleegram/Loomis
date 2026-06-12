@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { calendarDate } from '../academic/academic.schema.js';
+import { emailDeliveryResult } from '../comms/comms.schema.js';
 
 /**
  * Student module contracts (SRS §4.4 FR-SIS-001..008; CON-002; US-SIS-001..007).
@@ -112,16 +113,27 @@ export const studentResponse = z.object({
   dateOfBirth: calendarDate,
   gender: studentGender,
   status: studentStatus,
+  userId: z.string().uuid().nullable().optional(),
   identityAttestationType: identityAttestationType.nullable(),
   identityAttestedAt: z.string().datetime().nullable(),
+  photoStorageObjectId: z.string().uuid().nullable().optional(),
+  photoUrl: z.string().url().nullable().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
 export type StudentResponse = z.infer<typeof studentResponse>;
 
+export const portalCredentialsResponse = z.object({
+  loginEmail: z.string().email(),
+  temporaryPassword: z.string(),
+});
+export type PortalCredentialsResponse = z.infer<typeof portalCredentialsResponse>;
+
 export const admissionDecisionResponse = z.object({
   admission: admissionResponse,
   student: studentResponse.nullable(),
+  portalCredentials: portalCredentialsResponse.nullable().optional(),
+  credentialsEmail: emailDeliveryResult.optional(),
 });
 export type AdmissionDecisionResponse = z.infer<typeof admissionDecisionResponse>;
 
@@ -252,3 +264,8 @@ export const studentProfileResponse = z.object({
   ),
 });
 export type StudentProfileResponse = z.infer<typeof studentProfileResponse>;
+
+export const setStudentPhotoRequest = z.object({
+  storageObjectId: z.string().uuid(),
+});
+export type SetStudentPhotoRequest = z.infer<typeof setStudentPhotoRequest>;

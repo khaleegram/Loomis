@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { emailDeliveryResult } from '../comms/comms.schema.js';
 import { role } from '../common/roles.js';
 
 /**
@@ -46,6 +47,13 @@ export const inviteStaffRequest = z.object({
 });
 export type InviteStaffRequest = z.infer<typeof inviteStaffRequest>;
 
+/** US-HRM-001. Add staff with a temporary password (replaces invitation flow). */
+export const createStaffRequest = inviteStaffRequest.extend({
+  /** Optional — auto-generated if omitted. Shown once in the response. */
+  temporaryPassword: z.string().min(8).max(128).optional(),
+});
+export type CreateStaffRequest = z.infer<typeof createStaffRequest>;
+
 export const acceptStaffInvitationRequest = z.object({
   token: z.string().min(32).max(256),
   password: z.string().min(12).max(128),
@@ -54,6 +62,10 @@ export type AcceptStaffInvitationRequest = z.infer<typeof acceptStaffInvitationR
 
 export const changeStaffRoleRequest = z.object({
   primaryRole: staffPrimaryRole,
+  /** Promote another staff member into the vacated singleton role. */
+  replacementStaffProfileId: z.string().uuid().optional(),
+  /** Acknowledge leaving accountant / exam_officer uncovered (no active holder). */
+  singletonOverrideConfirmed: z.boolean().default(false),
 });
 export type ChangeStaffRoleRequest = z.infer<typeof changeStaffRoleRequest>;
 
@@ -108,13 +120,36 @@ export const staffProfileResponse = z.object({
   roleExtensions: z.array(staffRole),
   joinedAt: z.string().datetime().nullable(),
   deactivatedAt: z.string().datetime().nullable(),
+  photoStorageObjectId: z.string().uuid().nullable().optional(),
+  photoUrl: z.string().url().nullable().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
 export type StaffProfileResponse = z.infer<typeof staffProfileResponse>;
 
+export const createStaffResponse = z.object({
+  profile: staffProfileResponse,
+  loginEmail: z.string().email(),
+  temporaryPassword: z.string(),
+  credentialsEmail: emailDeliveryResult,
+});
+export type CreateStaffResponse = z.infer<typeof createStaffResponse>;
+
+/** Lightweight invitation summary for pending staff in directory listings. */
+export const staffPendingInvitationSummary = z.object({
+  id: z.string().uuid(),
+  expiresAt: z.string().datetime(),
+  isExpired: z.boolean(),
+});
+export type StaffPendingInvitationSummary = z.infer<typeof staffPendingInvitationSummary>;
+
+export const staffDirectoryEntryResponse = staffProfileResponse.extend({
+  pendingInvitation: staffPendingInvitationSummary.nullable().optional(),
+});
+export type StaffDirectoryEntryResponse = z.infer<typeof staffDirectoryEntryResponse>;
+
 export const staffDirectoryResponse = z.object({
-  staff: z.array(staffProfileResponse),
+  staff: z.array(staffDirectoryEntryResponse),
 });
 export type StaffDirectoryResponse = z.infer<typeof staffDirectoryResponse>;
 
@@ -125,6 +160,7 @@ export const staffInvitationResponse = z.object({
   expiresAt: z.string().datetime(),
   acceptedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
+  isExpired: z.boolean(),
 });
 export type StaffInvitationResponse = z.infer<typeof staffInvitationResponse>;
 
@@ -150,3 +186,21 @@ export const classTeacherAssignmentResponse = z.object({
   effectiveTo: z.string().datetime().nullable(),
 });
 export type ClassTeacherAssignmentResponse = z.infer<typeof classTeacherAssignmentResponse>;
+
+export const staffDetailResponse = staffProfileResponse.extend({
+  pendingInvitation: staffInvitationResponse.nullable(),
+  subjectAssignments: z.array(subjectAssignmentResponse),
+  classTeacherAssignments: z.array(classTeacherAssignmentResponse),
+});
+export type StaffDetailResponse = z.infer<typeof staffDetailResponse>;
+
+export const resendStaffInvitationResponse = z.object({
+  status: z.literal('resent'),
+  expiresAt: z.string().datetime(),
+});
+export type ResendStaffInvitationResponse = z.infer<typeof resendStaffInvitationResponse>;
+
+export const setPhotoRequest = z.object({
+  storageObjectId: z.string().uuid(),
+});
+export type SetPhotoRequest = z.infer<typeof setPhotoRequest>;

@@ -15,6 +15,8 @@ export const loginResponse = z.discriminatedUnion('outcome', [
     expiresAt: z.string().datetime(),
     role,
     tenantId: z.string().uuid().nullable(),
+    mustChangePassword: z.boolean().default(false),
+    displayName: z.string().optional(),
   }),
   z.object({
     outcome: z.literal('mfa_required'),

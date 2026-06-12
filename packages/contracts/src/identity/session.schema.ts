@@ -55,6 +55,8 @@ export const refreshTokenResponse = z.object({
   accessToken: z.string(),
   refreshToken: z.string(),
   expiresAt: z.string().datetime(),
+  mustChangePassword: z.boolean().optional(),
+  displayName: z.string().optional(),
 });
 export type RefreshTokenResponse = z.infer<typeof refreshTokenResponse>;
 
