@@ -3,6 +3,7 @@ export {
   assignClassTeacherRequest,
   changeStaffRoleRequest,
   createSubjectAssignmentRequest,
+  createStaffRequest,
   deactivateStaffRequest,
   designateBackupRequest,
   inviteStaffRequest,

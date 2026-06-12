@@ -7,8 +7,10 @@ import type {
   DeactivateStaffRequest,
   DesignateBackupRequest,
   InviteStaffRequest,
+  CreateStaffRequest,
   ReactivateStaffRequest,
   RemoveSubjectAssignmentRequest,
+  SetPhotoRequest,
 } from '@loomis/contracts';
 import { sendSuccess } from '../../../shared/http.js';
 import { staffService } from '../services/staff.service.js';
@@ -24,6 +26,14 @@ interface StaffParams extends TenantParams {
 
 interface AssignmentParams extends TenantParams {
   assignmentId: string;
+}
+
+export async function createStaffHandler(
+  req: FastifyRequest<{ Params: TenantParams; Body: CreateStaffRequest }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const result = await staffService.createStaff(req.params.tenantId, req.body, requireActor(req));
+  return sendSuccess(reply, result, 201);
 }
 
 export async function inviteStaffHandler(
@@ -144,6 +154,19 @@ export async function reactivateStaffHandler(
   const staff = await staffService.reactivateStaff(
     req.params.tenantId,
     req.params.staffProfileId,
+    requireActor(req),
+  );
+  return sendSuccess(reply, staff);
+}
+
+export async function setStaffPhotoHandler(
+  req: FastifyRequest<{ Params: StaffParams; Body: SetPhotoRequest }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const staff = await staffService.setPhoto(
+    req.params.tenantId,
+    req.params.staffProfileId,
+    req.body,
     requireActor(req),
   );
   return sendSuccess(reply, staff);

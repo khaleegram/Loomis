@@ -1,5 +1,6 @@
 import type {
   CreateSubjectAssignmentRequest,
+  CreateStaffRequest,
   DeactivateStaffRequest,
   InviteStaffRequest,
   RoleAssignmentType,
@@ -14,6 +15,7 @@ export interface ActorContext {
 }
 
 export type InviteStaffInput = InviteStaffRequest;
+export type CreateStaffInput = CreateStaffRequest;
 export type CreateSubjectAssignmentInput = CreateSubjectAssignmentRequest;
 export type DeactivateStaffInput = DeactivateStaffRequest;
 

@@ -4,20 +4,24 @@ import {
   assignClassTeacherRequest,
   changeStaffRoleRequest,
   createSubjectAssignmentRequest,
+  createStaffRequest,
   deactivateStaffRequest,
   designateBackupRequest,
   inviteStaffRequest,
   reactivateStaffRequest,
   removeSubjectAssignmentRequest,
+  setPhotoRequest,
   type AcceptStaffInvitationRequest,
   type AssignClassTeacherRequest,
   type ChangeStaffRoleRequest,
   type CreateSubjectAssignmentRequest,
+  type CreateStaffRequest,
   type DeactivateStaffRequest,
   type DesignateBackupRequest,
   type InviteStaffRequest,
   type ReactivateStaffRequest,
   type RemoveSubjectAssignmentRequest,
+  type SetPhotoRequest,
 } from '@loomis/contracts';
 import { authenticate } from '../../../middleware/authenticate.js';
 import { requireRole } from '../../../middleware/require-role.js';
@@ -27,6 +31,7 @@ import {
   acceptStaffInvitationHandler,
   assignClassTeacherHandler,
   changeStaffRoleHandler,
+  createStaffHandler,
   createSubjectAssignmentHandler,
   deactivateStaffHandler,
   designateBackupHandler,
@@ -35,12 +40,22 @@ import {
   listStaffHandler,
   reactivateStaffHandler,
   removeSubjectAssignmentHandler,
+  setStaffPhotoHandler,
 } from '../handlers/index.js';
 
 const staffAdmins = ['school_owner', 'principal', 'admin_officer'] as const;
 const principalOwners = ['school_owner', 'principal'] as const;
 
 export async function staffRoutes(app: FastifyInstance): Promise<void> {
+  app.post<{ Params: { tenantId: string }; Body: CreateStaffRequest }>(
+    '/tenants/:tenantId/staff',
+    {
+      preHandler: [authenticate, requireTenantMatch, requireRole(...staffAdmins)],
+      preValidation: [validateBody(createStaffRequest)],
+    },
+    createStaffHandler,
+  );
+
   app.post<{ Params: { tenantId: string }; Body: InviteStaffRequest }>(
     '/tenants/:tenantId/staff/invitations',
     {
@@ -138,5 +153,14 @@ export async function staffRoutes(app: FastifyInstance): Promise<void> {
       preValidation: [validateBody(reactivateStaffRequest)],
     },
     reactivateStaffHandler,
+  );
+
+  app.patch<{ Params: { tenantId: string; staffProfileId: string }; Body: SetPhotoRequest }>(
+    '/tenants/:tenantId/staff/:staffProfileId/photo',
+    {
+      preHandler: [authenticate, requireTenantMatch, requireRole(...staffAdmins)],
+      preValidation: [validateBody(setPhotoRequest)],
+    },
+    setStaffPhotoHandler,
   );
 }

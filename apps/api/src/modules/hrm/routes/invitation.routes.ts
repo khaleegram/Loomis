@@ -19,7 +19,7 @@ export async function invitationRoutes(app: FastifyInstance): Promise<void> {
         .limit(1);
 
       if (!invitation) return reply.status(404).send({ error: 'Invitation not found' });
-      if (invitation.status !== 'pending') {
+      if (invitation.acceptedAt || invitation.revokedAt) {
         return reply.status(409).send({ error: 'Invitation is no longer pending' });
       }
 

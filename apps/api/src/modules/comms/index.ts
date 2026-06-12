@@ -24,4 +24,5 @@ export {
   notificationService,
   pushSubscriptionService,
   templateService,
+  transactionalEmailService,
 } from './services/index.js';

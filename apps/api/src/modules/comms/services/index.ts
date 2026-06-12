@@ -4,3 +4,4 @@ export { deliveryService } from './delivery.service.js';
 export { pushSubscriptionService } from './push-subscription.service.js';
 export { templateService } from './template.service.js';
 export { automatedNotificationService } from './automated-notification.service.js';
+export { transactionalEmailService } from './transactional-email.service.js';

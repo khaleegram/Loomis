@@ -1,15 +1,22 @@
 import { createHash, randomBytes } from 'node:crypto';
-import type {
-  AssignClassTeacherRequest,
-  ChangeStaffRoleRequest,
-  ClassTeacherAssignmentResponse,
-  DesignateBackupRequest,
-  StaffInvitationResponse,
-  StaffPrimaryRole,
-  StaffProfileResponse,
-  SubjectAssignmentResponse,
+  import type {
+   AssignClassTeacherRequest,
+   ChangeStaffRoleRequest,
+   ClassTeacherAssignmentResponse,
+   DesignateBackupRequest,
+   EmailDeliveryResult,
+   SetPhotoRequest,
+   StaffDetailResponse,
+   StaffDirectoryEntryResponse,
+   StaffInvitationResponse,
+   StaffPendingInvitationSummary,
+   StaffPrimaryRole,
+   StaffProfileResponse,
+   SubjectAssignmentResponse,
 } from '@loomis/contracts';
 import { staffAccountService } from '../../identity/services/staff-account.service.js';
+import { DEFAULT_STAFF_PROVISIONED_PASSWORD } from '../../identity/services/provisioned-password.service.js';
+import { transactionalEmailService } from '../../comms/services/transactional-email.service.js';
 import { LoomisError } from '../../../shared/errors.js';
 import { hrmEvents } from '../events/index.js';
 import { staffRepository } from '../repository/staff.repository.js';
@@ -18,6 +25,7 @@ import type {
   CreateSubjectAssignmentInput,
   DeactivateStaffInput,
   InviteStaffInput,
+  CreateStaffInput,
 } from '../types.js';
 
 const INVITATION_TTL_MS = 48 * 60 * 60 * 1000;
@@ -54,6 +62,7 @@ function serializeProfile(
     roleExtensions: extensions,
     joinedAt: profile.joinedAt?.toISOString() ?? null,
     deactivatedAt: profile.deactivatedAt?.toISOString() ?? null,
+    photoStorageObjectId: profile.photoStorageObjectId ?? null,
     createdAt: profile.createdAt.toISOString(),
     updatedAt: profile.updatedAt.toISOString(),
   };
@@ -69,6 +78,18 @@ function serializeInvitation(
     expiresAt: invitation.expiresAt.toISOString(),
     acceptedAt: invitation.acceptedAt?.toISOString() ?? null,
     createdAt: invitation.createdAt.toISOString(),
+    isExpired: invitation.expiresAt <= new Date(),
+  };
+}
+
+function serializePendingInvitationSummary(
+  invitation: NonNullable<Awaited<ReturnType<typeof staffRepository.findActiveInvitationForProfile>>>,
+): StaffPendingInvitationSummary {
+  const expiresAt = invitation.expiresAt.toISOString();
+  return {
+    id: invitation.id,
+    expiresAt,
+    isExpired: invitation.expiresAt <= new Date(),
   };
 }
 
@@ -102,6 +123,62 @@ function serializeClassTeacherAssignment(
 }
 
 export const staffService = {
+  async createStaff(
+    tenantId: string,
+    input: CreateStaffInput,
+    actor: ActorContext,
+  ): Promise<{ profile: StaffProfileResponse; loginEmail: string; temporaryPassword: string; credentialsEmail: EmailDeliveryResult }> {
+    requireTenant(actor, tenantId);
+
+    const temporaryPassword = input.temporaryPassword ?? DEFAULT_STAFF_PROVISIONED_PASSWORD;
+    const email = input.email.toLowerCase();
+
+    const user = await staffAccountService.createActiveStaffAccount({
+      tenantId,
+      email,
+      phone: input.phone,
+      role: input.primaryRole,
+      password: temporaryPassword,
+      displayName: input.fullName,
+    });
+
+    const now = new Date();
+    const created = await staffRepository.createStaffProfile({
+      profile: {
+        tenantId,
+        userId: user.id,
+        fullName: input.fullName,
+        email,
+        phone: input.phone,
+        status: 'active',
+        joinedAt: now,
+        createdById: actor.userId,
+      },
+      roleAssignment: {
+        tenantId,
+        role: input.primaryRole,
+        assignmentType: 'primary',
+        approvedById: actor.userId,
+      },
+    });
+
+    const credentialsEmail = await transactionalEmailService.sendStaffAccountCredentials({
+      tenantId,
+      userId: user.id,
+      to: email,
+      fullName: input.fullName,
+      loginEmail: email,
+      temporaryPassword,
+    });
+
+    return {
+      profile: serializeProfile(created.profile, [created.roleAssignment]),
+      loginEmail: email,
+      temporaryPassword,
+      credentialsEmail,
+    };
+  },
+
   async inviteStaff(
     tenantId: string,
     input: InviteStaffInput,
@@ -114,6 +191,7 @@ export const staffService = {
       email: input.email,
       phone: input.phone,
       role: input.primaryRole,
+      displayName: input.fullName,
     });
 
     const rawToken = randomBytes(32).toString('base64url');
@@ -172,13 +250,20 @@ export const staffService = {
     return serializeProfile(accepted.profile, roles);
   },
 
-  async listStaff(tenantId: string, actor: ActorContext): Promise<StaffProfileResponse[]> {
+  async listStaff(tenantId: string, actor: ActorContext): Promise<StaffDirectoryEntryResponse[]> {
     requireTenant(actor, tenantId);
     const profiles = await staffRepository.listProfiles(tenantId);
-    const responses: StaffProfileResponse[] = [];
+    const responses: StaffDirectoryEntryResponse[] = [];
     for (const profile of profiles) {
       const roles = await staffRepository.listActiveRoles(tenantId, profile.id);
-      responses.push(serializeProfile(profile, roles));
+      const entry: StaffDirectoryEntryResponse = serializeProfile(profile, roles);
+      if (profile.status === 'pending') {
+        const invitation = await staffRepository.findActiveInvitationForProfile(tenantId, profile.id);
+        if (invitation) {
+          entry.pendingInvitation = serializePendingInvitationSummary(invitation);
+        }
+      }
+      responses.push(entry);
     }
     return responses;
   },
@@ -187,11 +272,29 @@ export const staffService = {
     tenantId: string,
     staffProfileId: string,
     actor: ActorContext,
-  ): Promise<StaffProfileResponse> {
+  ): Promise<StaffDetailResponse> {
     requireTenant(actor, tenantId);
     const profile = await this.requireProfile(tenantId, staffProfileId);
     const roles = await staffRepository.listActiveRoles(tenantId, profile.id);
-    return serializeProfile(profile, roles);
+    const invitation =
+      profile.status === 'pending'
+        ? await staffRepository.findActiveInvitationForProfile(tenantId, profile.id)
+        : null;
+    const subjectAssignments = await staffRepository.listActiveSubjectAssignments(
+      tenantId,
+      profile.id,
+    );
+    const classTeacherAssignments = await staffRepository.listActiveClassTeacherAssignments(
+      tenantId,
+      profile.id,
+    );
+
+    return {
+      ...serializeProfile(profile, roles),
+      pendingInvitation: invitation ? serializeInvitation(invitation) : null,
+      subjectAssignments: subjectAssignments.map(serializeSubjectAssignment),
+      classTeacherAssignments: classTeacherAssignments.map(serializeClassTeacherAssignment),
+    };
   },
 
   async findActiveProfileByUserId(tenantId: string, userId: string) {
@@ -252,13 +355,46 @@ export const staffService = {
     }
 
     if (SINGLETON_ROLES.has(currentPrimary?.role as StaffPrimaryRole)) {
+      const vacatedRole = currentPrimary!.role as StaffPrimaryRole;
       const backups = await staffRepository.listActiveBackupDesignations(tenantId, staffProfileId);
-      if (backups.length === 0) {
+      if (
+        backups.length === 0 &&
+        !input.replacementStaffProfileId &&
+        !input.singletonOverrideConfirmed
+      ) {
         throw new LoomisError(
           'HRM_SINGLETON_ROLE_GUARD',
           409,
-          'Assign a replacement or backup before changing this singleton role',
+          'Choose a replacement or confirm leaving this role vacant',
         );
+      }
+
+      if (input.replacementStaffProfileId) {
+        if (input.replacementStaffProfileId === staffProfileId) {
+          throw new LoomisError(
+            'HRM_ROLE_CONFLICT',
+            409,
+            'Replacement must be a different staff member',
+          );
+        }
+        const replacementProfile = await this.requireActiveProfile(
+          tenantId,
+          input.replacementStaffProfileId,
+        );
+        const replacementChange = await staffRepository.replacePrimaryRole({
+          tenantId,
+          staffProfileId: input.replacementStaffProfileId,
+          newRole: vacatedRole,
+          approvedById: actor.userId,
+        });
+        await staffAccountService.updateStaffRole(replacementProfile.userId, vacatedRole);
+        await hrmEvents.publishStaffRoleChanged({
+          userId: replacementProfile.userId,
+          tenantId,
+          previousRole: replacementChange.previous?.role ?? '',
+          newRole: vacatedRole,
+          changedAt: replacementChange.next.effectiveFrom.toISOString(),
+        });
       }
     }
 
@@ -487,6 +623,22 @@ export const staffService = {
       throw new LoomisError('HRM_STAFF_NOT_FOUND', 404, 'Staff profile not found');
     }
     return profile;
+  },
+
+  async setPhoto(
+    tenantId: string,
+    staffProfileId: string,
+    input: SetPhotoRequest,
+    actor: ActorContext,
+  ): Promise<StaffProfileResponse> {
+    requireTenant(actor, tenantId);
+    await this.requireActiveProfile(tenantId, staffProfileId);
+    const updated = await staffRepository.setPhoto(tenantId, staffProfileId, input.storageObjectId);
+    if (!updated) {
+      throw new LoomisError('HRM_STAFF_NOT_FOUND', 404, 'Staff profile not found');
+    }
+    const roles = await staffRepository.listActiveRoles(tenantId, staffProfileId);
+    return serializeProfile(updated, roles);
   },
 
   async requireActiveProfile(tenantId: string, staffProfileId: string) {

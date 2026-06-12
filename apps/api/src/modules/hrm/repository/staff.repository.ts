@@ -67,6 +67,24 @@ export const staffRepository = {
     });
   },
 
+  async createStaffProfile(input: {
+    profile: CreateStaffProfileInput & { status: 'active'; joinedAt: Date };
+    roleAssignment: Omit<CreateRoleAssignmentInput, 'staffProfileId'>;
+  }) {
+    return withTenantContext(input.profile.tenantId, async (tx) => {
+      const [profile] = await tx.insert(staffProfiles).values(input.profile).returning();
+      if (!profile) throw new Error('Failed to create staff profile');
+
+      const [roleAssignment] = await tx
+        .insert(roleAssignments)
+        .values({ ...input.roleAssignment, staffProfileId: profile.id })
+        .returning();
+      if (!roleAssignment) throw new Error('Failed to assign role');
+
+      return { profile, roleAssignment };
+    });
+  },
+
   async findInvitationByTokenHash(tokenHash: string, tenantIdHint?: string) {
     if (tenantIdHint) {
       return withTenantContext(tenantIdHint, async (tx) => {
@@ -479,6 +497,21 @@ export const staffRepository = {
     });
   },
 
+  async listActiveSubjectAssignments(tenantId: string, staffProfileId: string) {
+    return withTenantContext(tenantId, async (tx) =>
+      tx
+        .select()
+        .from(subjectAssignments)
+        .where(
+          and(
+            eq(subjectAssignments.tenantId, tenantId),
+            eq(subjectAssignments.staffProfileId, staffProfileId),
+            eq(subjectAssignments.active, true),
+          ),
+        ),
+    );
+  },
+
   async listActiveClassTeacherAssignments(tenantId: string, staffProfileId: string) {
     return withTenantContext(tenantId, async (tx) =>
       tx
@@ -509,6 +542,22 @@ export const staffRepository = {
         )
         .limit(1);
       return invitation ?? null;
+    });
+  },
+
+  async setPhoto(tenantId: string, staffProfileId: string, storageObjectId: string) {
+    return withTenantContext(tenantId, async (tx) => {
+      const [updated] = await tx
+        .update(staffProfiles)
+        .set({ photoStorageObjectId: storageObjectId, updatedAt: new Date() })
+        .where(
+          and(
+            eq(staffProfiles.tenantId, tenantId),
+            eq(staffProfiles.id, staffProfileId),
+          ),
+        )
+        .returning();
+      return updated ?? null;
     });
   },
 };
