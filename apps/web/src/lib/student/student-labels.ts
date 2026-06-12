@@ -185,3 +185,27 @@ export function maskPhone(phone: string): string {
   if (phone.length <= 4) return phone;
   return `${'•'.repeat(phone.length - 4)}${phone.slice(-4)}`;
 }
+
+// ── Directory Metrics ──────────────────────────────────────────────────────────
+
+export interface StudentDirectoryMetrics {
+  total: number;
+  enrolled: number;
+  admitted: number;
+  graduated: number;
+  transferredOut: number;
+  withdrawn: number;
+}
+
+export function computeStudentMetrics(
+  students: { status: string }[],
+): StudentDirectoryMetrics {
+  return {
+    total: students.length,
+    enrolled: students.filter((s) => s.status === 'enrolled').length,
+    admitted: students.filter((s) => s.status === 'admitted').length,
+    graduated: students.filter((s) => s.status === 'graduated').length,
+    transferredOut: students.filter((s) => s.status === 'transferred_out').length,
+    withdrawn: students.filter((s) => s.status === 'withdrawn').length,
+  };
+}

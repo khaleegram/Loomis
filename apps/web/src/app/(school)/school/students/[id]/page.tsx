@@ -5,6 +5,7 @@ import {
   useClassStructure,
   useStudent,
   useStudentProfile,
+  useSetStudentPhoto,
 } from '@loomis/api-client';
 import {
   Alert,
@@ -23,7 +24,7 @@ import {
   TabsTrigger,
 } from '@loomis/ui-web';
 import Link from 'next/link';
-import { use, useMemo, useState } from 'react';
+import { use, useCallback, useMemo, useState } from 'react';
 
 import { EnrollStudentDialog } from '@/components/student/enroll-student-dialog';
 import { InitiateParentLinkDialog } from '@/components/student/initiate-parent-link-dialog';
@@ -31,13 +32,17 @@ import { RecordAttestationDialog } from '@/components/student/record-attestation
 import {
   StudentProfileActionButton,
   StudentProfileHeader,
+  StudentProfileHeaderSkeleton,
 } from '@/components/student/student-profile-header';
+import { StudentTimeline } from '@/components/student/student-timeline';
 import { TransferStudentDialog } from '@/components/student/transfer-student-dialog';
 import { PageBody, PageHeader } from '@/components/school/school-shell';
+import { PhotoUpload } from '@/components/shared/photo-upload';
 import { useCan, useCanAny } from '@/lib/auth/use-capability';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 import {
   attestationTypeLabel,
+  computeAgeYears,
   enrollmentStatusLabel,
   formatCalendarDate,
   formatDateTime,
@@ -72,6 +77,16 @@ export default function StudentProfilePage({ params }: StudentProfilePageProps) 
   const profileQuery = useStudentProfile(
     tenantId ?? '',
     canViewFullProfile ? studentId : '',
+  );
+  const setPhotoMutation = useSetStudentPhoto(tenantId ?? '');
+
+  const handlePhotoSet = useCallback(
+    (storageObjectId: string) => {
+      if (storageObjectId) {
+        setPhotoMutation.mutate({ studentId, storageObjectId });
+      }
+    },
+    [setPhotoMutation, studentId],
   );
   const yearsQuery = useAcademicYears(tenantId ?? '');
   const activeYearId = pickActiveYearId(yearsQuery.data?.academicYears ?? []);
@@ -135,7 +150,7 @@ export default function StudentProfilePage({ params }: StudentProfilePageProps) 
     <>
       <PageHeader
         title="Student profile"
-        description="Complete student record and linked family information (US-SIS-007)."
+        description="Complete student record and linked family information."
         breadcrumbs={
           <nav className="flex items-center gap-2 text-sm">
             <Link href="/school/students" className="hover:text-foreground">
@@ -146,19 +161,23 @@ export default function StudentProfilePage({ params }: StudentProfilePageProps) 
           </nav>
         }
       />
-      <PageBody>
+      <PageBody className="max-w-[1200px] px-6 py-6 lg:px-8 lg:py-8">
         {isLoading ? (
           <div className="space-y-6">
-            <Skeleton className="h-40 w-full rounded-lg" />
+            <StudentProfileHeaderSkeleton />
             <Skeleton className="h-10 w-full max-w-xl" />
-            <Skeleton className="h-64 w-full rounded-lg" />
+            <Skeleton className="h-64 w-full rounded-2xl" />
           </div>
         ) : isError || !student ? (
-          <Alert variant="destructive">
-            <AlertDescription>
-              {(studentQuery.error as Error)?.message ?? 'Student not found.'}
-            </AlertDescription>
-          </Alert>
+          <div className="flex flex-col items-center justify-center py-20">
+            <h2 className="text-lg font-bold text-neutral-800">Student not found</h2>
+            <p className="mt-1.5 text-[13px] text-neutral-500">
+              The student profile you&rsquo;re looking for doesn&rsquo;t exist or has been removed.
+            </p>
+            <Button variant="outline" size="sm" className="mt-5" asChild>
+              <Link href="/school/students">Return to registry</Link>
+            </Button>
+          </div>
         ) : (
           <div className="space-y-6">
             <StudentProfileHeader
@@ -167,8 +186,25 @@ export default function StudentProfilePage({ params }: StudentProfilePageProps) 
               actions={headerActions}
             />
 
+            {/* Compulsory student photo — passport-style */}
+            <div className={`card rounded-2xl p-5 ${student.photoStorageObjectId ? 'border-brand-100/40' : 'border-2 border-amber-300 bg-amber-50/20'}`}>
+              <PhotoUpload
+                photoStorageObjectId={student.photoStorageObjectId}
+                fullName={studentDisplayName(student.firstName, student.lastName)}
+                onPhotoSet={handlePhotoSet}
+                required
+                uploadLabel="Upload passport photo"
+                size={88}
+              />
+              {!student.photoStorageObjectId ? (
+                <p className="mt-2 text-center text-[11px] text-amber-600">
+                  A clear passport-style photo is required. Face must be visible.
+                </p>
+              ) : null}
+            </div>
+
             {student.status === 'admitted' ? (
-              <Alert variant="warning">
+              <Alert variant="warning" className="rounded-2xl border-l-4 border-l-amber-500">
                 <AlertDescription>
                   This student is admitted but not yet enrolled for the current term. Use Enroll to
                   assign a class arm.
@@ -176,81 +212,92 @@ export default function StudentProfilePage({ params }: StudentProfilePageProps) 
               </Alert>
             ) : null}
 
-            <Tabs defaultValue="overview" className="space-y-4">
-              <div className="sticky top-0 z-10 -mx-1 bg-background/95 px-1 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-                <TabsList className="w-full justify-start overflow-x-auto">
-                  <TabsTrigger value="overview">Overview</TabsTrigger>
-                  <TabsTrigger value="enrollments">Enrollments</TabsTrigger>
-                  <TabsTrigger value="parents">Parents</TabsTrigger>
-                  <TabsTrigger value="documents">Documents</TabsTrigger>
-                  <TabsTrigger value="transfer">Transfer</TabsTrigger>
+            <Tabs defaultValue="overview" className="space-y-5">
+              {/* Premium tab bar */}
+              <div className="overflow-x-auto">
+                <TabsList className="inline-flex h-auto gap-1 rounded-xl border border-brand-100 bg-brand-50/30 p-1">
+                  <TabsTrigger
+                    value="overview"
+                    className="rounded-lg px-4 py-2 text-[12px] font-semibold transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-brand-800 data-[state=active]:shadow-sm"
+                  >
+                    Overview
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="enrollments"
+                    className="rounded-lg px-4 py-2 text-[12px] font-semibold transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-brand-800 data-[state=active]:shadow-sm"
+                  >
+                    Enrollments
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="parents"
+                    className="rounded-lg px-4 py-2 text-[12px] font-semibold transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-brand-800 data-[state=active]:shadow-sm"
+                  >
+                    Parents
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="documents"
+                    className="rounded-lg px-4 py-2 text-[12px] font-semibold transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-brand-800 data-[state=active]:shadow-sm"
+                  >
+                    Documents
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="transfer"
+                    className="rounded-lg px-4 py-2 text-[12px] font-semibold transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-brand-800 data-[state=active]:shadow-sm"
+                  >
+                    Transfer
+                  </TabsTrigger>
                 </TabsList>
               </div>
 
               <TabsContent value="overview" className="space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  <Card className="shadow-card">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium">Enrollment status</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-2xl font-semibold tabular-nums text-brand-600 dark:text-mint-400">
-                        {currentClassLabel ?? 'Not enrolled'}
+                  <div className="card group rounded-2xl p-5 transition-all duration-300 hover:shadow-md">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-neutral-400">Enrollment status</p>
+                    <p className="mt-1 text-xl font-extrabold tracking-tight text-brand-700">
+                      {currentClassLabel ?? 'Not enrolled'}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-neutral-400">
+                      {profile?.enrollments.length ?? 0} historical enrollment{(profile?.enrollments.length ?? 0) === 1 ? '' : 's'}
+                    </p>
+                  </div>
+                  <div className="card group rounded-2xl p-5 transition-all duration-300 hover:shadow-md">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-neutral-400">Parent links</p>
+                    <p className="mt-1 text-xl font-extrabold tracking-tight text-gold-700">
+                      {profile?.parentLinks.filter((l) => l.status === 'active').length ?? 0}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-neutral-400">Active verified links</p>
+                  </div>
+                  <div className="card group rounded-2xl p-5 transition-all duration-300 hover:shadow-md">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-neutral-400">Identity attestation</p>
+                    <p className="mt-1 text-[13px] font-semibold text-neutral-800">
+                      {student.identityAttestationType
+                        ? attestationTypeLabel(student.identityAttestationType)
+                        : 'Not recorded'}
+                    </p>
+                    {student.identityAttestedAt ? (
+                      <p className="mt-0.5 text-[11px] text-neutral-400">
+                        Recorded {formatDateTime(student.identityAttestedAt)}
                       </p>
-                      <CardDescription className="mt-1">
-                        {profile?.enrollments.length ?? 0} historical enrollment
-                        {(profile?.enrollments.length ?? 0) === 1 ? '' : 's'}
-                      </CardDescription>
-                    </CardContent>
-                  </Card>
-                  <Card className="shadow-card">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium">Parent links</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-2xl font-semibold tabular-nums text-gold-600 dark:text-gold-300">
-                        {profile?.parentLinks.filter((l) => l.status === 'active').length ?? 0}
-                      </p>
-                      <CardDescription className="mt-1">Active verified links</CardDescription>
-                    </CardContent>
-                  </Card>
-                  <Card className="shadow-card">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium">Identity attestation</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm font-medium text-foreground">
-                        {student.identityAttestationType
-                          ? attestationTypeLabel(student.identityAttestationType)
-                          : 'Not recorded'}
-                      </p>
-                      {student.identityAttestedAt ? (
-                        <CardDescription className="mt-1">
-                          Recorded {formatDateTime(student.identityAttestedAt)}
-                        </CardDescription>
-                      ) : null}
-                    </CardContent>
-                  </Card>
+                    ) : null}
+                  </div>
                 </div>
 
                 {profile?.admission ? (
-                  <Card className="shadow-card">
-                    <CardHeader>
-                      <CardTitle className="font-serif text-base">Admission record</CardTitle>
-                      <CardDescription>
-                        Ref {profile.admission.referenceNumber} · Submitted{' '}
-                        {formatCalendarDate(profile.admission.createdAt.slice(0, 10))}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="text-sm text-muted-foreground">
+                  <div className="card rounded-2xl p-6">
+                    <h3 className="text-[13px] font-bold text-neutral-800">Admission record</h3>
+                    <p className="mt-1 text-[12px] text-neutral-400">
+                      Ref {profile.admission.referenceNumber} · Submitted{' '}
+                      {formatCalendarDate(profile.admission.createdAt.slice(0, 10))}
+                    </p>
+                    <p className="mt-3 text-[12px] text-neutral-500">
                       Guardian on application: {profile.admission.guardianName} (
                       {relationshipLabel(profile.admission.guardianRelationship)})
-                    </CardContent>
-                  </Card>
+                    </p>
+                  </div>
                 ) : null}
 
                 {!canViewFullProfile ? (
-                  <Alert>
+                  <Alert className="rounded-2xl">
                     <AlertDescription>
                       Extended profile history is available to the Principal and School Owner.
                     </AlertDescription>
@@ -262,23 +309,18 @@ export default function StudentProfilePage({ params }: StudentProfilePageProps) 
                 {!profile ? (
                   <ProfileTabPlaceholder loading={profileQuery.isLoading} />
                 ) : profile.enrollments.length === 0 ? (
-                  <Card className="border-dashed shadow-none">
-                    <CardContent className="py-12 text-center text-sm text-muted-foreground">
-                      No enrollment records yet.
-                      {canManage ? (
-                        <>
-                          {' '}
-                          <button
-                            type="button"
-                            className="font-medium text-brand-600 underline dark:text-mint-400"
-                            onClick={() => setEnrollOpen(true)}
-                          >
-                            Enroll now
-                          </button>
-                        </>
-                      ) : null}
-                    </CardContent>
-                  </Card>
+                  <div className="card rounded-2xl border border-dashed border-neutral-200 py-12 text-center">
+                    <p className="text-[13px] font-medium text-neutral-400">No enrollment records yet.</p>
+                    {canManage ? (
+                      <button
+                        type="button"
+                        className="mt-2 text-[12px] font-medium text-brand-600 underline"
+                        onClick={() => setEnrollOpen(true)}
+                      >
+                        Enroll now
+                      </button>
+                    ) : null}
+                  </div>
                 ) : (
                   <div className="space-y-3">
                     {profile.enrollments.map((enrollment) => {
@@ -291,19 +333,20 @@ export default function StudentProfilePage({ params }: StudentProfilePageProps) 
                       const label =
                         level && arm ? `${level.name} — ${arm.name}` : (arm?.name ?? 'Class arm');
                       return (
-                        <Card key={enrollment.id} className="shadow-card">
-                          <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
-                            <div>
-                              <p className="font-medium text-foreground">{label}</p>
-                              <p className="text-xs text-muted-foreground">
-                                Enrolled {formatDateTime(enrollment.enrolledAt)}
-                              </p>
-                            </div>
-                            <Badge variant="outline">
-                              {enrollmentStatusLabel(enrollment.status)}
-                            </Badge>
-                          </CardContent>
-                        </Card>
+                        <div
+                          key={enrollment.id}
+                          className="card flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4"
+                        >
+                          <div>
+                            <p className="font-semibold text-neutral-800">{label}</p>
+                            <p className="text-[11px] text-neutral-400">
+                              Enrolled {formatDateTime(enrollment.enrolledAt)}
+                            </p>
+                          </div>
+                          <Badge variant="outline">
+                            {enrollmentStatusLabel(enrollment.status)}
+                          </Badge>
+                        </div>
                       );
                     })}
                   </div>
@@ -314,113 +357,105 @@ export default function StudentProfilePage({ params }: StudentProfilePageProps) 
                 {!profile ? (
                   <ProfileTabPlaceholder loading={profileQuery.isLoading} />
                 ) : profile.parentLinks.length === 0 ? (
-                  <Card className="border-dashed shadow-none">
-                    <CardContent className="py-12 text-center text-sm text-muted-foreground">
-                      No parent links initiated.
-                      {canManage ? (
-                        <>
-                          {' '}
-                          <button
-                            type="button"
-                            className="font-medium text-brand-600 underline dark:text-mint-400"
-                            onClick={() => setParentLinkOpen(true)}
-                          >
-                            Initiate a link
-                          </button>
-                        </>
-                      ) : null}
-                    </CardContent>
-                  </Card>
+                  <div className="card rounded-2xl border border-dashed border-neutral-200 py-12 text-center">
+                    <p className="text-[13px] font-medium text-neutral-400">No parent links initiated.</p>
+                    {canManage ? (
+                      <button
+                        type="button"
+                        className="mt-2 text-[12px] font-medium text-brand-600 underline"
+                        onClick={() => setParentLinkOpen(true)}
+                      >
+                        Initiate a link
+                      </button>
+                    ) : null}
+                  </div>
                 ) : (
                   <div className="space-y-3">
                     {profile.parentLinks.map((link) => (
-                      <Card key={link.id} className="shadow-card">
-                        <CardContent className="py-4">
-                          <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div>
-                              <p className="font-medium text-foreground">
-                                {link.parentIdentity.fullName}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                {relationshipLabel(link.relationship)} ·{' '}
-                                {maskEmail(link.parentIdentity.emailNormalized)}
-                                {link.parentIdentity.phoneE164
-                                  ? ` · ${maskPhone(link.parentIdentity.phoneE164)}`
-                                  : null}
-                              </p>
-                              <p className="mt-1 text-xs text-muted-foreground">
-                                Expires {formatDateTime(link.expiresAt)}
-                              </p>
-                            </div>
-                            <Badge
-                              variant={link.status === 'active' ? 'default' : 'secondary'}
-                            >
-                              {parentLinkStatusLabel(link.status)}
-                            </Badge>
+                      <div key={link.id} className="card rounded-2xl p-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="font-semibold text-neutral-800">
+                              {link.parentIdentity.fullName}
+                            </p>
+                            <p className="text-[12px] text-neutral-400">
+                              {relationshipLabel(link.relationship)} ·{' '}
+                              {maskEmail(link.parentIdentity.emailNormalized)}
+                              {link.parentIdentity.phoneE164
+                                ? ` · ${maskPhone(link.parentIdentity.phoneE164)}`
+                                : null}
+                            </p>
+                            <p className="mt-1 text-[11px] text-neutral-400">
+                              Expires {formatDateTime(link.expiresAt)}
+                            </p>
                           </div>
-                        </CardContent>
-                      </Card>
+                          <Badge
+                            variant={link.status === 'active' ? 'default' : 'secondary'}
+                          >
+                            {parentLinkStatusLabel(link.status)}
+                          </Badge>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 )}
               </TabsContent>
 
               <TabsContent value="documents" className="space-y-4">
-                <Card className="shadow-card">
-                  <CardHeader>
-                    <CardTitle className="font-serif text-base">Identity attestation</CardTitle>
-                    <CardDescription>
-                      Required before billable enrollment and census lock (FR-SIS-002).
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
+                <div className="card rounded-2xl p-6">
+                  <h3 className="text-[13px] font-bold text-neutral-800">Identity attestation</h3>
+                  <p className="mt-1 text-[12px] text-neutral-400">
+                    Required before billable enrollment and census lock.
+                  </p>
+                  <div className="mt-4 space-y-4">
                     {student.identityAttestationType ? (
-                      <div className="rounded-md border border-border bg-muted/40 p-4">
-                        <p className="font-medium text-foreground">
+                      <div className="rounded-xl border border-brand-100 bg-brand-50/20 p-4">
+                        <p className="font-semibold text-neutral-800">
                           {attestationTypeLabel(student.identityAttestationType)}
                         </p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-[12px] text-neutral-400">
                           Recorded {formatDateTime(student.identityAttestedAt)}
                         </p>
                       </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-[13px] text-neutral-400">
                         No attestation on file. Record one before enrolling for billing purposes.
                       </p>
                     )}
                     {canManage && !student.identityAttestationType ? (
-                      <Button onClick={() => setAttestationOpen(true)}>
+                      <Button size="sm" variant="gradient" onClick={() => setAttestationOpen(true)}>
                         Record attestation
                       </Button>
                     ) : null}
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </TabsContent>
 
               <TabsContent value="transfer" className="space-y-4">
-                <Alert variant="warning">
+                <Alert variant="warning" className="rounded-2xl border-l-4 border-l-amber-500">
                   <AlertDescription>
                     Transfer out ends enrollment and generates a transfer certificate. Principal
-                    approval is required (US-SIS-006).
+                    approval is required.
                   </AlertDescription>
                 </Alert>
                 {student.status === 'transferred_out' ? (
-                  <Card className="shadow-card">
-                    <CardContent className="py-6 text-sm text-muted-foreground">
-                      This student has been transferred out of the school.
-                    </CardContent>
-                  </Card>
+                  <div className="card rounded-2xl p-6">
+                    <p className="text-[13px] text-neutral-400">This student has been transferred out of the school.</p>
+                  </div>
                 ) : canTransfer ? (
-                  <Button variant="destructive" onClick={() => setTransferOpen(true)}>
+                  <Button variant="destructive" size="sm" onClick={() => setTransferOpen(true)}>
                     Process transfer out
                   </Button>
                 ) : (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-[13px] text-neutral-400">
                     Contact the Principal to process a transfer.
                   </p>
                 )}
               </TabsContent>
             </Tabs>
+
+            {/* Activity Timeline */}
+            <StudentTimeline student={student} />
           </div>
         )}
       </PageBody>
@@ -466,7 +501,7 @@ function ProfileTabPlaceholder({ loading }: { loading: boolean }) {
     return <Skeleton className="h-32 w-full rounded-lg" />;
   }
   return (
-    <Alert>
+    <Alert className="rounded-2xl">
       <AlertDescription>
         Full enrollment and parent history is available to the Principal and School Owner.
       </AlertDescription>

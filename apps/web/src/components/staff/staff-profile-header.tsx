@@ -1,32 +1,25 @@
 'use client';
 
-import type { StudentResponse } from '@loomis/contracts';
+import type { StaffDetailResponse } from '@loomis/contracts';
 import type { ComponentProps, ReactNode } from 'react';
 import { Badge, Button, Skeleton } from '@loomis/ui-web';
-
 import { ProfileAvatar } from '@/components/shared/profile-avatar';
-import { StudentStatusBadge } from '@/components/student/student-status-badge';
-import { SEMANTIC, SURFACES } from '@/lib/design/surfaces';
-import {
-  computeAgeYears,
-  formatCalendarDate,
-  genderLabel,
-  studentDisplayName,
-} from '@/lib/student/student-labels';
+import { formatRoleLabel } from '@/components/school/school-nav-config';
+import { StaffRoleHoverSelect } from '@/components/staff/staff-role-hover-select';
+import { StaffStatusBadge } from '@/components/staff/staff-status-badge';
+import { SURFACES } from '@/lib/design/surfaces';
+import { formatStaffJoinedDate } from '@/lib/staff/staff-labels';
 
-interface StudentProfileHeaderProps {
-  student: StudentResponse;
-  currentClassLabel?: string | null;
+interface StaffProfileHeaderProps {
+  staff: StaffDetailResponse;
   actions?: ReactNode;
 }
 
-export function StudentProfileHeader({
-  student,
-  currentClassLabel,
-  actions,
-}: StudentProfileHeaderProps) {
-  const name = studentDisplayName(student.firstName, student.lastName);
-  const age = computeAgeYears(student.dateOfBirth);
+export function StaffProfileHeader({ staff, actions }: StaffProfileHeaderProps) {
+  const extensions =
+    staff.roleExtensions.length > 0
+      ? staff.roleExtensions.map((r) => formatRoleLabel(r)).join(', ')
+      : null;
 
   return (
     <div className="card overflow-hidden rounded-2xl">
@@ -41,8 +34,8 @@ export function StudentProfileHeader({
             {/* Premium avatar */}
             <div className="size-16 shrink-0 overflow-hidden rounded-2xl shadow-lg">
               <ProfileAvatar
-                photoStorageObjectId={student.photoStorageObjectId}
-                alt={name}
+                photoStorageObjectId={staff.photoStorageObjectId}
+                alt={staff.fullName}
                 rounded="2xl"
               />
             </div>
@@ -50,29 +43,34 @@ export function StudentProfileHeader({
             {/* Name and metadata */}
             <div className="min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-neutral-400">
-                Student Profile
+                Staff Profile
               </p>
               <h2
                 className="mt-1 text-neutral-900"
                 style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.025em', lineHeight: 1.2 }}
               >
-                {name}
+                {staff.fullName}
               </h2>
-              <p className="mt-1 font-mono text-[13px] text-gold-600">
-                {student.admissionNo}
-              </p>
+              <p className="mt-1 text-[13px] text-neutral-400">{staff.email}</p>
 
               {/* Badge row */}
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                <StudentStatusBadge status={student.status} />
-                {currentClassLabel ? (
-                  <Badge variant="outline" className="border-brand-100 bg-brand-50 text-brand-700">
-                    {currentClassLabel}
+                <StaffStatusBadge status={staff.status} />
+                {staff.primaryRole ? (
+                  <StaffRoleHoverSelect
+                    staffProfileId={staff.id}
+                    primaryRole={staff.primaryRole}
+                    status={staff.status}
+                  />
+                ) : null}
+                {extensions ? (
+                  <Badge variant="secondary" className="bg-brand-50 text-brand-700">
+                    +{extensions}
                   </Badge>
                 ) : null}
-                {student.identityAttestationType ? (
-                  <Badge variant="secondary" className={SEMANTIC.success.badge}>
-                    Identity verified
+                {staff.status === 'pending' && staff.pendingInvitation?.isExpired ? (
+                  <Badge variant="destructive" className="text-[10px]">
+                    Invitation expired
                   </Badge>
                 ) : null}
               </div>
@@ -92,35 +90,34 @@ export function StudentProfileHeader({
       <dl className="grid gap-4 bg-white px-6 py-4 sm:grid-cols-2 sm:px-8 lg:grid-cols-4">
         <div className="group rounded-xl bg-brand-50/20 p-3 transition-colors hover:bg-brand-50/40">
           <dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-neutral-400">
-            Date of Birth
+            Primary Role
           </dt>
           <dd className="mt-1 text-[13px] font-semibold text-neutral-900">
-            {formatCalendarDate(student.dateOfBirth)}
-            <span className="ml-1 text-[12px] font-normal text-neutral-400">({age} yrs)</span>
+            {formatRoleLabel(staff.primaryRole)}
           </dd>
         </div>
         <div className="group rounded-xl bg-brand-50/20 p-3 transition-colors hover:bg-brand-50/40">
           <dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-neutral-400">
-            Gender
+            Phone
           </dt>
           <dd className="mt-1 text-[13px] font-semibold text-neutral-900">
-            {genderLabel(student.gender)}
+            {staff.phone ?? '—'}
           </dd>
         </div>
         <div className="group rounded-xl bg-brand-50/20 p-3 transition-colors hover:bg-brand-50/40">
           <dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-neutral-400">
-            Identity Attestation
+            Joined
           </dt>
           <dd className="mt-1 text-[13px] font-semibold text-neutral-900">
-            {student.identityAttestationType ? 'On file' : 'Not recorded'}
+            {formatStaffJoinedDate(staff.joinedAt)}
           </dd>
         </div>
         <div className="group rounded-xl bg-brand-50/20 p-3 transition-colors hover:bg-brand-50/40">
           <dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-neutral-400">
-            Registered
+            Assignments
           </dt>
           <dd className="mt-1 text-[13px] font-semibold text-neutral-900">
-            {formatCalendarDate(student.createdAt.slice(0, 10))}
+            {staff.subjectAssignments.length + staff.classTeacherAssignments.length} active
           </dd>
         </div>
       </dl>
@@ -128,7 +125,7 @@ export function StudentProfileHeader({
   );
 }
 
-export function StudentProfileHeaderSkeleton() {
+export function StaffProfileHeaderSkeleton() {
   return (
     <div className="card overflow-hidden rounded-2xl">
       <div className="px-6 py-6 sm:px-8" style={{ background: SURFACES.profileFooter }}>
@@ -137,10 +134,10 @@ export function StudentProfileHeaderSkeleton() {
           <div className="min-w-0 flex-1 space-y-2">
             <Skeleton className="h-3 w-20" />
             <Skeleton className="h-7 w-48" />
-            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-4 w-64" />
             <div className="flex gap-2 pt-1">
+              <Skeleton className="h-5 w-16 rounded-full" />
               <Skeleton className="h-5 w-20 rounded-full" />
-              <Skeleton className="h-5 w-24 rounded-full" />
             </div>
           </div>
         </div>
@@ -154,6 +151,6 @@ export function StudentProfileHeaderSkeleton() {
   );
 }
 
-export function StudentProfileActionButton(props: ComponentProps<typeof Button>) {
+export function StaffProfileActionButton(props: ComponentProps<typeof Button>) {
   return <Button size="sm" {...props} />;
 }

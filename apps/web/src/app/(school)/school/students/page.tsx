@@ -1,83 +1,179 @@
 'use client';
 
-import { useStudents } from '@loomis/api-client';
-import { Alert, AlertDescription, Button } from '@loomis/ui-web';
 import Link from 'next/link';
+import { useMemo, useState } from 'react';
+import { useStudents } from '@loomis/api-client';
+import { UserPlus, Users } from 'lucide-react';
+import type { StudentStatus } from '@loomis/contracts';
 
-import { StudentsTable, StudentsTableSkeleton } from '@/components/student/students-table';
-import { PageBody, PageHeader } from '@/components/school/school-shell';
-import { useCanAny } from '@/lib/auth/use-capability';
+import { StudentHero, StudentHeroSkeleton } from '@/components/student/student-hero';
+import { StudentToolbar, type StudentStatusFilter } from '@/components/student/student-toolbar';
+import { StudentDirectoryCards, StudentDirectoryCardsSkeleton } from '@/components/student/student-directory-cards';
+import { StudentDirectoryTable, StudentDirectoryTableSkeleton } from '@/components/student/student-directory-table';
+import { PageBody } from '@/components/school/school-shell';
+import { useCan, useCanAny } from '@/lib/auth/use-capability';
+import { computeStudentMetrics } from '@/lib/student/student-labels';
+import { SEMANTIC } from '@/lib/design/surfaces';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 
-export default function StudentsRegistryPage() {
+type ViewMode = 'cards' | 'table';
+
+function getSavedViewMode(): ViewMode {
+  if (typeof window === 'undefined') return 'cards';
+  try {
+    const saved = localStorage.getItem('student_view_preference');
+    if (saved === 'cards' || saved === 'table') return saved;
+  } catch {}
+  return 'cards';
+}
+
+function saveViewMode(mode: ViewMode) {
+  try { localStorage.setItem('student_view_preference', mode); } catch {}
+}
+
+export default function StudentRegistryPage() {
   const tenantId = useTenantId();
-  const canView = useCanAny(['admissions.manage', 'admissions.approve', 'student.promote']);
+  const canView = useCanAny(['student.promote', 'admissions.manage', 'admissions.approve']);
   const canManageAdmissions = useCanAny(['admissions.manage', 'admissions.approve']);
 
-  const studentsQuery = useStudents(tenantId ?? '');
-  const students = studentsQuery.data?.students ?? [];
+  const [statusFilter, setStatusFilter] = useState<StudentStatusFilter>('all');
+  const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState<ViewMode>(getSavedViewMode);
+
+  const { data, isLoading, isError, error } = useStudents(tenantId ?? '');
+  const students = data?.students ?? [];
+  const metrics = useMemo(() => computeStudentMetrics(students), [students]);
+
+  // Client-side filtering
+  const filteredStudents = useMemo(() => {
+    let rows = students;
+    if (statusFilter !== 'all') rows = rows.filter((s) => s.status === statusFilter);
+    const q = search.trim().toLowerCase();
+    if (q) {
+      rows = rows.filter(
+        (s) =>
+          `${s.firstName} ${s.lastName}`.toLowerCase().includes(q) ||
+          s.admissionNo.toLowerCase().includes(q),
+      );
+    }
+    return rows;
+  }, [students, statusFilter, search]);
 
   if (!tenantId) {
     return (
-      <>
-        <PageHeader title="Student registry" />
-        <PageBody>
-          <p className="text-sm text-destructive">No tenant context. Sign in again.</p>
-        </PageBody>
-      </>
+      <PageBody className="max-w-[1400px] px-6 py-6 lg:px-12 lg:py-8">
+        <p className="text-sm text-red-600 font-medium">No tenant context. Sign in again.</p>
+      </PageBody>
     );
   }
 
   if (!canView) {
     return (
-      <>
-        <PageHeader title="Student registry" />
-        <PageBody>
-          <Alert>
-            <AlertDescription>You do not have permission to view students.</AlertDescription>
-          </Alert>
-        </PageBody>
-      </>
+      <PageBody className="max-w-[1400px] px-6 py-6 lg:px-12 lg:py-8">
+        <p className="text-sm text-neutral-500">You do not have permission to view students.</p>
+      </PageBody>
     );
   }
 
   return (
-    <>
-      <PageHeader
-        title="Student registry"
-        description="All admitted and enrolled students for this school."
-        actions={
-          canManageAdmissions ? (
-            <Button asChild>
-              <Link href="/school/students/admissions">Admissions pipeline</Link>
-            </Button>
-          ) : null
-        }
-      />
-      <PageBody>
-        {studentsQuery.isLoading ? (
-          <StudentsTableSkeleton />
-        ) : studentsQuery.isError ? (
-          <Alert variant="destructive">
-            <AlertDescription>
-              {(studentsQuery.error as Error).message ?? 'Failed to load students.'}
-            </AlertDescription>
-          </Alert>
-        ) : students.length === 0 ? (
-          <Alert>
-            <AlertDescription>
-              No student records yet.{' '}
-              {canManageAdmissions ? (
-                <Link href="/school/students/admissions" className="font-medium underline">
-                  Register applicants in the admissions pipeline
-                </Link>
-              ) : null}
-            </AlertDescription>
-          </Alert>
-        ) : (
-          <StudentsTable students={students} />
-        )}
-      </PageBody>
-    </>
+    <PageBody className="max-w-[1400px] px-6 py-6 lg:px-12 lg:py-8">
+      <div className="space-y-8">
+        {/* 1. Hero */}
+        {isLoading ? <StudentHeroSkeleton /> : <StudentHero metrics={metrics} />}
+
+        {/* 2. Admissions CTA — right under the hero */}
+        {canManageAdmissions && !isLoading && students.length > 0 ? (
+          <div className="mb-6">
+            <Link
+              href="/school/students/admissions"
+              className={`inline-flex h-10 items-center gap-2 rounded-lg px-5 text-[14px] font-medium transition-colors duration-150 ${SEMANTIC.cta.primary}`}
+            >
+              <UserPlus size={16} />
+              Admissions Pipeline
+            </Link>
+          </div>
+        ) : null}
+
+        {/* 3. Error */}
+        {isError ? (
+          <div className={`rounded-xl border p-4 text-sm ${SEMANTIC.danger.surface}`}>
+            {(error as Error).message ?? 'Failed to load students.'}
+          </div>
+        ) : null}
+
+        {/* 4. Empty state — no students at all */}
+        {!isLoading && !isError && students.length === 0 ? (
+          <div className="flex flex-col items-center py-20">
+            <div className={`mb-4 flex h-16 w-16 items-center justify-center rounded-full ${SEMANTIC.cta.iconCircle}`}>
+              <UserPlus size={28} />
+            </div>
+            <h2 className="mb-2 text-lg font-medium text-neutral-800">No students yet</h2>
+            <p className="mb-5 max-w-xs text-center text-sm text-neutral-500">
+              Start by registering applicants in the admissions pipeline.
+            </p>
+            {canManageAdmissions ? (
+              <Link
+                href="/school/students/admissions"
+                className={`inline-flex h-10 items-center gap-2 rounded-lg px-5 text-sm font-medium transition-colors ${SEMANTIC.cta.primary}`}
+              >
+                <UserPlus size={16} />
+                Go to Admissions
+              </Link>
+            ) : null}
+          </div>
+        ) : null}
+
+        {/* 5. Directory */}
+        {!isLoading && !isError && students.length > 0 ? (
+          <div className="space-y-4">
+            <StudentToolbar
+              search={search}
+              onSearchChange={setSearch}
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
+              viewMode={viewMode}
+              onViewModeChange={(m) => { setViewMode(m); saveViewMode(m); }}
+              filteredCount={filteredStudents.length}
+              totalCount={students.length}
+            />
+
+            {/* No results */}
+            {filteredStudents.length === 0 ? (
+              <div className="flex flex-col items-center py-20">
+                <div className={`mb-4 flex h-16 w-16 items-center justify-center rounded-full ${SEMANTIC.cta.iconCircle}`}>
+                  <Users size={28} />
+                </div>
+                <h2 className="mb-2 text-lg font-medium text-neutral-800">No students found</h2>
+                <p className="mb-5 max-w-xs text-center text-sm text-neutral-500">
+                  No students match your current filters. Try adjusting your search or clearing active filters.
+                </p>
+                <button
+                  onClick={() => { setSearch(''); setStatusFilter('all'); }}
+                  className="h-9 rounded-lg border border-neutral-200 px-4 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
+                >
+                  Clear filters
+                </button>
+              </div>
+            ) : null}
+
+            {/* Results */}
+            {filteredStudents.length > 0 ? (
+              viewMode === 'table' ? (
+                <StudentDirectoryTable students={filteredStudents} totalCount={students.length} />
+              ) : (
+                <StudentDirectoryCards students={filteredStudents} totalCount={students.length} />
+              )
+            ) : null}
+          </div>
+        ) : null}
+
+        {/* 6. Loading */}
+        {isLoading ? (
+          <div className="space-y-4">
+            <StudentDirectoryTableSkeleton />
+          </div>
+        ) : null}
+      </div>
+    </PageBody>
   );
 }

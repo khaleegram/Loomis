@@ -6,6 +6,7 @@ import {
   admissionDecisionRequest,
   type AdmissionDecisionRequest,
   type AdmissionResponse,
+  type EmailDeliveryResult,
 } from '@loomis/contracts';
 import {
   Alert,
@@ -28,6 +29,7 @@ import {
   Input,
   Textarea,
 } from '@loomis/ui-web';
+import { Copy, Mail } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { z } from 'zod';
@@ -82,6 +84,11 @@ export function AdmissionDecisionDialog({
   onDecided,
 }: AdmissionDecisionDialogProps) {
   const [mode, setMode] = useState<'approve' | 'decline'>('approve');
+  const [portalCredentials, setPortalCredentials] = useState<{
+    loginEmail: string;
+    temporaryPassword: string;
+  } | null>(null);
+  const [credentialsEmail, setCredentialsEmail] = useState<EmailDeliveryResult | null>(null);
   const decision = useAdmissionDecision(tenantId, admission?.id ?? '');
 
   const form = useForm<DecisionFormValues>({
@@ -103,6 +110,8 @@ export function AdmissionDecisionDialog({
         admissionNo: '',
         acknowledged: false,
       });
+      setPortalCredentials(null);
+      setCredentialsEmail(null);
     }
   }, [open, admission?.id, form]);
 
@@ -122,7 +131,12 @@ export function AdmissionDecisionDialog({
           };
 
     try {
-      await decision.mutateAsync(body);
+      const result = await decision.mutateAsync(body);
+      if (result.portalCredentials) {
+        setPortalCredentials(result.portalCredentials);
+        setCredentialsEmail(result.credentialsEmail ?? null);
+        return;
+      }
       onOpenChange(false);
       onDecided?.();
     } catch (err) {
@@ -133,6 +147,101 @@ export function AdmissionDecisionDialog({
   if (!admission) return null;
 
   const applicantName = studentDisplayName(admission.firstName, admission.lastName);
+
+  if (portalCredentials) {
+    return (
+      <Dialog
+        open={open}
+        onOpenChange={(next) => {
+          if (!next) {
+            setPortalCredentials(null);
+            setCredentialsEmail(null);
+            onDecided?.();
+          }
+          onOpenChange(next);
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Admission approved</DialogTitle>
+            <DialogDescription>
+              {applicantName} has been admitted. Share these portal login credentials securely — the
+              temporary password is shown only once.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Alert variant={credentialsEmail?.sent ? 'default' : 'warning'}>
+            <AlertTitle className="flex items-center gap-2">
+              <Mail aria-hidden className="size-4" />
+              {credentialsEmail?.sent ? 'Email sent to guardian' : 'Email not sent'}
+            </AlertTitle>
+            <AlertDescription>
+              {credentialsEmail?.sent
+                ? `Portal login details were emailed to ${credentialsEmail.recipient}.`
+                : credentialsEmail?.reason === 'SES_NOT_CONFIGURED'
+                  ? 'Email is not configured yet. Copy the credentials below and share them with the guardian.'
+                  : 'Could not deliver the email. Copy the credentials below and share them manually.'}
+            </AlertDescription>
+          </Alert>
+
+          <Alert variant="warning">
+            <AlertTitle>Student portal access</AlertTitle>
+            <AlertDescription>
+              Default portal password is <span className="font-mono font-medium">00000000</span>. The student must
+              change it on first login.
+            </AlertDescription>
+          </Alert>
+
+          <div className="space-y-3 rounded-md border border-border bg-muted/40 p-4 text-sm">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <span className="text-muted-foreground">Sign-in link</span>
+              <span className="font-mono text-[12px] font-medium break-all">
+                {typeof window !== 'undefined' ? `${window.location.origin}/login` : '/login'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-muted-foreground">Login email</span>
+              <span className="font-mono font-medium">{portalCredentials.loginEmail}</span>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-muted-foreground">Temporary password</span>
+              <span className="font-mono font-medium">{portalCredentials.temporaryPassword}</span>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
+                void navigator.clipboard.writeText(
+                  [
+                    `Sign in: ${typeof window !== 'undefined' ? `${window.location.origin}/login` : '/login'}`,
+                    `Login email: ${portalCredentials.loginEmail}`,
+                    `Temporary password: ${portalCredentials.temporaryPassword}`,
+                  ].join('\n'),
+                )
+              }
+            >
+              <Copy aria-hidden className="mr-2 size-4" />
+              Copy credentials
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                setPortalCredentials(null);
+                setCredentialsEmail(null);
+                onOpenChange(false);
+                onDecided?.();
+              }}
+            >
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

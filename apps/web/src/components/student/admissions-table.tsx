@@ -1,43 +1,22 @@
 'use client';
 
 import type { AdmissionResponse, ClassLevelResponse } from '@loomis/contracts';
-import {
-  Button,
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Skeleton,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@loomis/ui-web';
-import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  useReactTable,
-  type ColumnDef,
-  type SortingState,
-} from '@tanstack/react-table';
+import { Button, Skeleton } from '@loomis/ui-web';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
+import { ProfileAvatar } from '@/components/shared/profile-avatar';
+import { SURFACES } from '@/lib/design/surfaces';
 import { AdmissionStatusBadge } from '@/components/student/admission-status-badge';
 import type { KpiFilter } from '@/components/student/admissions-kpi-cards';
 import {
+  computeAgeYears,
   formatCalendarDate,
   relationshipLabel,
   studentDisplayName,
 } from '@/lib/student/student-labels';
 
-type StatusFilter = 'all' | AdmissionResponse['status'];
+type AdmissionStatusFilter = 'all' | AdmissionResponse['status'];
 
 interface AdmissionsTableProps {
   admissions: AdmissionResponse[];
@@ -76,6 +55,76 @@ function applyKpiFilter(
   }
 }
 
+const FILTER_CHIPS: { key: AdmissionStatusFilter; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'pending', label: 'Pending' },
+  { key: 'approved', label: 'Approved' },
+  { key: 'declined', label: 'Declined' },
+  { key: 'withdrawn', label: 'Withdrawn' },
+];
+
+interface AdmissionsToolbarProps {
+  search: string;
+  onSearchChange: (v: string) => void;
+  statusFilter: AdmissionStatusFilter;
+  onStatusFilterChange: (v: AdmissionStatusFilter) => void;
+  filteredCount: number;
+  totalCount: number;
+}
+
+function AdmissionsToolbar({
+  search,
+  onSearchChange,
+  statusFilter,
+  onStatusFilterChange,
+  filteredCount,
+  totalCount,
+}: AdmissionsToolbarProps) {
+  const hasActiveFilter = statusFilter !== 'all' || search.trim().length > 0;
+
+  return (
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center gap-3">
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder="Search by name, ref #, or guardian…"
+          aria-label="Search admissions"
+          className="h-10 w-64 rounded-xl border border-neutral-200 bg-white px-4 text-[13px] placeholder:text-neutral-400 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-100"
+        />
+        {hasActiveFilter ? (
+          <span className="hidden text-[11px] tabular-nums text-neutral-400 sm:inline">
+            <span className="font-semibold text-neutral-600">{filteredCount}</span>
+            <span className="mx-0.5">/</span>
+            <span>{totalCount}</span>
+          </span>
+        ) : null}
+      </div>
+
+      <div className="flex items-center gap-1.5 overflow-x-auto rounded-xl border border-neutral-200 bg-white p-1">
+        {FILTER_CHIPS.map((chip) => {
+          const isActive = statusFilter === chip.key;
+          return (
+            <button
+              key={chip.key}
+              type="button"
+              onClick={() => onStatusFilterChange(chip.key)}
+              className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-all duration-200 ${
+                isActive
+                  ? 'bg-brand-600 text-white shadow-sm'
+                  : 'text-neutral-500 hover:bg-brand-50 hover:text-brand-700'
+              }`}
+            >
+              {chip.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function AdmissionsTable({
   admissions,
   classLevels,
@@ -83,9 +132,8 @@ export function AdmissionsTable({
   canDecide,
   onDecide,
 }: AdmissionsTableProps) {
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<AdmissionStatusFilter>('all');
   const [search, setSearch] = useState('');
-  const [sorting, setSorting] = useState<SortingState>([{ id: 'createdAt', desc: true }]);
 
   const filteredData = useMemo(() => {
     let rows = applyKpiFilter(admissions, kpiFilter);
@@ -104,176 +152,156 @@ export function AdmissionsTable({
     return rows;
   }, [admissions, kpiFilter, search, statusFilter]);
 
-  const columns = useMemo<ColumnDef<AdmissionResponse>[]>(
-    () => [
-      {
-        accessorKey: 'referenceNumber',
-        header: 'Ref #',
-        cell: ({ row }) => (
-          <span className="font-mono text-xs text-muted-foreground">
-            {row.original.referenceNumber}
-          </span>
-        ),
-      },
-      {
-        id: 'applicant',
-        accessorFn: (row) => studentDisplayName(row.firstName, row.lastName),
-        header: 'Applicant',
-        cell: ({ row }) => (
-          <div>
-            <div className="font-medium text-foreground">
-              {studentDisplayName(row.original.firstName, row.original.lastName)}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              DOB {formatCalendarDate(row.original.dateOfBirth)}
-            </div>
-          </div>
-        ),
-      },
-      {
-        id: 'classLevel',
-        accessorFn: (row) => classLevelName(classLevels, row.intendedClassLevelId),
-        header: 'Intended class',
-      },
-      {
-        id: 'guardian',
-        header: 'Guardian',
-        cell: ({ row }) => (
-          <div>
-            <div className="text-foreground">{row.original.guardianName}</div>
-            <div className="text-xs text-muted-foreground">
-              {relationshipLabel(row.original.guardianRelationship)}
-            </div>
-          </div>
-        ),
-      },
-      {
-        accessorKey: 'createdAt',
-        header: 'Submitted',
-        cell: ({ row }) => formatCalendarDate(row.original.createdAt.slice(0, 10)),
-      },
-      {
-        accessorKey: 'status',
-        header: 'Status',
-        cell: ({ row }) => <AdmissionStatusBadge status={row.original.status} />,
-      },
-      {
-        id: 'actions',
-        header: () => <span className="sr-only">Actions</span>,
-        cell: ({ row }) => {
-          const admission = row.original;
-          if (admission.status === 'pending' && canDecide) {
-            return (
-              <Button variant="outline" size="sm" onClick={() => onDecide(admission)}>
-                Review
-              </Button>
-            );
-          }
-          if (admission.status === 'approved' && admission.studentId) {
-            return (
-              <Button variant="ghost" size="sm" asChild>
-                <Link href={`/school/students/${admission.studentId}`}>View student</Link>
-              </Button>
-            );
-          }
-          if (admission.status === 'declined' && admission.declineReason) {
-            return (
-              <span className="max-w-[12rem] truncate text-xs text-muted-foreground" title={admission.declineReason}>
-                {admission.declineReason}
-              </span>
-            );
-          }
-          return null;
-        },
-      },
-    ],
-    [canDecide, classLevels, onDecide],
-  );
-
-  const table = useReactTable({
-    data: filteredData,
-    columns,
-    state: { sorting },
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-  });
-
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Input
-          placeholder="Search by name, ref #, or guardian…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-sm"
-          aria-label="Search admissions"
-        />
-        <Select
-          value={statusFilter}
-          onValueChange={(v) => setStatusFilter(v as StatusFilter)}
-        >
-          <SelectTrigger className="w-full sm:w-44">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="approved">Approved</SelectItem>
-            <SelectItem value="declined">Declined</SelectItem>
-            <SelectItem value="withdrawn">Withdrawn</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      <AdmissionsToolbar
+        search={search}
+        onSearchChange={setSearch}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        filteredCount={filteredData.length}
+        totalCount={admissions.length}
+      />
 
-      <div className="overflow-hidden rounded-lg border border-border bg-card shadow-card">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder ? null : header.column.getCanSort() ? (
+      <div className="overflow-hidden rounded-2xl border border-brand-100/40 bg-white shadow-sm">
+        {/* Header — warm brand gradient */}
+        <div
+          className="flex items-center gap-3 px-5 py-3"
+          style={{ background: SURFACES.tableHeader }}
+        >
+          <div className="flex w-8 shrink-0" aria-hidden />
+          <div className="min-w-0 flex-1 text-[10px] font-bold uppercase tracking-[0.15em] text-brand-100/80">
+            Applicant
+          </div>
+          <div className="hidden w-28 shrink-0 text-[10px] font-bold uppercase tracking-[0.15em] text-brand-100/80 sm:block">
+            Class
+          </div>
+          <div className="hidden w-32 shrink-0 text-[10px] font-bold uppercase tracking-[0.15em] text-brand-100/80 md:block">
+            Guardian
+          </div>
+          <div className="hidden w-24 shrink-0 text-[10px] font-bold uppercase tracking-[0.15em] text-brand-100/80 lg:block">
+            Submitted
+          </div>
+          <div className="w-28 shrink-0 text-[10px] font-bold uppercase tracking-[0.15em] text-brand-100/80">
+            Status
+          </div>
+          <div className="w-28 shrink-0 text-right text-[10px] font-bold uppercase tracking-[0.15em] text-brand-100/80">
+            Actions
+          </div>
+        </div>
+
+        {filteredData.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 px-5 py-16">
+            <p className="text-[13px] font-medium text-neutral-400">No applications match your filters.</p>
+            <p className="text-[12px] text-neutral-300">Try adjusting the status filter or search term.</p>
+          </div>
+        ) : (
+          <div>
+            {filteredData.map((admission, i) => {
+              const isOdd = i % 2 === 1;
+              const name = studentDisplayName(admission.firstName, admission.lastName);
+              const age = computeAgeYears(admission.dateOfBirth);
+
+              return (
+                <div
+                  key={admission.id}
+                  className={`group flex items-center gap-3 px-5 py-3.5 transition-all duration-150 ${
+                    isOdd ? 'bg-brand-50/20' : 'bg-white'
+                  } hover:bg-brand-50/50`}
+                >
+                  {/* Avatar */}
+                  <div className="size-8 shrink-0 overflow-hidden rounded-full shadow-sm transition-transform duration-200 group-hover:scale-105">
+                    <ProfileAvatar alt={name} />
+                  </div>
+
+                  {/* Applicant info */}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[14px] font-semibold text-neutral-900">
+                      {name}
+                    </p>
+                    <div className="flex items-center gap-2 text-[11px] text-neutral-400">
+                      <span className="font-mono text-gold-600">{admission.referenceNumber}</span>
+                      <span className="text-neutral-200">·</span>
+                      <span>{formatCalendarDate(admission.dateOfBirth)}</span>
+                      <span className="text-neutral-200">·</span>
+                      <span>{age} yrs</span>
+                    </div>
+                  </div>
+
+                  {/* Class */}
+                  <div className="hidden w-28 shrink-0 sm:block">
+                    <span className="text-[12px] text-neutral-500">
+                      {classLevelName(classLevels, admission.intendedClassLevelId)}
+                    </span>
+                  </div>
+
+                  {/* Guardian */}
+                  <div className="hidden w-32 shrink-0 md:block">
+                    <p className="truncate text-[12px] text-neutral-700">{admission.guardianName}</p>
+                    <p className="text-[11px] text-neutral-400">
+                      {relationshipLabel(admission.guardianRelationship)}
+                    </p>
+                  </div>
+
+                  {/* Submitted */}
+                  <div className="hidden w-24 shrink-0 lg:block">
+                    <span className="text-[12px] tabular-nums text-neutral-500">
+                      {formatCalendarDate(admission.createdAt.slice(0, 10))}
+                    </span>
+                  </div>
+
+                  {/* Status */}
+                  <div className="w-28 shrink-0">
+                    <AdmissionStatusBadge status={admission.status} />
+                  </div>
+
+                  {/* Actions */}
+                  <div className="w-28 shrink-0 text-right">
+                    {admission.status === 'pending' && canDecide ? (
                       <button
-                        type="button"
-                        className="flex items-center gap-1 font-medium hover:text-foreground"
-                        onClick={header.column.getToggleSortingHandler()}
+                        onClick={() => onDecide(admission)}
+                        className="inline-flex items-center justify-center rounded-lg border border-brand-200/80 bg-brand-50/50 px-3 py-1 text-[12px] font-semibold text-brand-700 transition-all duration-200 hover:bg-brand-600 hover:text-white hover:border-brand-600 hover:shadow-sm"
                       >
-                        {flexRender(header.column.columnDef.header, header.getContext())}
-                        {{
-                          asc: ' ↑',
-                          desc: ' ↓',
-                        }[header.column.getIsSorted() as string] ?? null}
+                        Review
                       </button>
-                    ) : (
-                      flexRender(header.column.columnDef.header, header.getContext())
-                    )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
-                  No applications match your filters.
-                </TableCell>
-              </TableRow>
-            ) : (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} className="hover:bg-muted/50">
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+                    ) : admission.status === 'approved' && admission.studentId ? (
+                      <Link
+                        href={`/school/students/${admission.studentId}`}
+                        className="inline-flex items-center justify-center rounded-lg border border-brand-200/80 bg-brand-50/50 px-3 py-1 text-[12px] font-semibold text-brand-700 transition-all duration-200 hover:bg-brand-600 hover:text-white hover:border-brand-600 hover:shadow-sm"
+                      >
+                        View
+                      </Link>
+                    ) : admission.status === 'declined' && admission.declineReason ? (
+                      <span
+                        className="block max-w-[8rem] truncate text-[11px] text-neutral-400"
+                        title={admission.declineReason}
+                      >
+                        {admission.declineReason}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Footer — subtle count */}
+        <div className="border-t border-brand-50 bg-brand-50/10 px-5 py-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] text-neutral-400">
+              Showing{' '}
+              <span className="font-semibold tabular-nums text-neutral-600">{filteredData.length}</span>
+              {filteredData.length !== admissions.length ? (
+                <>
+                  {' '}of{' '}
+                  <span className="font-semibold tabular-nums text-neutral-600">{admissions.length}</span>
+                </>
+              ) : null}
+              {' '}application{filteredData.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -282,8 +310,30 @@ export function AdmissionsTable({
 export function AdmissionsTableSkeleton() {
   return (
     <div className="space-y-4">
-      <Skeleton className="h-10 w-full max-w-sm" />
-      <Skeleton className="h-64 w-full rounded-lg" />
+      <div className="h-10 w-64 animate-pulse rounded-xl bg-neutral-100" />
+      <div className="overflow-hidden rounded-2xl border border-brand-100/40 bg-white shadow-sm">
+        <div
+          className="h-11"
+          style={{ background: SURFACES.tableHeader }}
+        />
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div
+            key={i}
+            className={`flex items-center gap-3 px-5 py-3.5 ${i % 2 === 1 ? 'bg-brand-50/20' : 'bg-white'}`}
+          >
+            <Skeleton className="size-8 shrink-0 rounded-full" />
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-44" />
+            </div>
+            <Skeleton className="hidden h-4 w-20 sm:block" />
+            <Skeleton className="hidden h-4 w-24 md:block" />
+            <Skeleton className="hidden h-4 w-16 lg:block" />
+            <Skeleton className="h-5 w-20 shrink-0" />
+            <Skeleton className="h-7 w-16 shrink-0" />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
