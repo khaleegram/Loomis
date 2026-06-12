@@ -41,6 +41,16 @@ export default function ProfileSettingsPage() {
     setTimeout(() => setFlash(null), 4000);
   }, []);
 
+  const handlePhotoSet = useCallback(
+    (storageObjectId: string) => {
+      updateProfile.mutate(
+        { photoStorageObjectId: storageObjectId || null },
+        { onSuccess: () => { void refetchProfile(); } },
+      );
+    },
+    [updateProfile, refetchProfile],
+  );
+
   if (!session) {
     return (
       <p className="text-sm text-muted-foreground">Sign in to view your profile.</p>
@@ -60,16 +70,6 @@ export default function ProfileSettingsPage() {
     .join('')
     .toUpperCase()
     .slice(0, 2);
-
-  const handlePhotoSet = useCallback(
-    (storageObjectId: string) => {
-      updateProfile.mutate(
-        { photoStorageObjectId: storageObjectId || null },
-        { onSuccess: () => { void refetchProfile(); } },
-      );
-    },
-    [updateProfile, refetchProfile],
-  );
 
   const saveName = () => {
     if (!draftName.trim()) return;
