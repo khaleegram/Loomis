@@ -1,5 +1,6 @@
 import type {
   RecordIdentityAttestationRequest,
+  SetStudentPhotoRequest,
   StudentProfileResponse,
   StudentResponse,
   TransferStudentOutRequest,
@@ -29,6 +30,7 @@ function serializeStudent(
     status: row.status as StudentResponse['status'],
     identityAttestationType: row.identityAttestationType as StudentResponse['identityAttestationType'],
     identityAttestedAt: row.identityAttestedAt?.toISOString() ?? null,
+    photoStorageObjectId: row.photoStorageObjectId ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -171,5 +173,23 @@ export const studentService = {
       student: serializeStudent(updated),
       endedEnrollments: ended.length,
     };
+  },
+
+  async setPhoto(
+    tenantId: string,
+    studentId: string,
+    input: SetStudentPhotoRequest,
+    actor: ActorContext,
+  ): Promise<StudentResponse> {
+    requireTenant(actor, tenantId);
+    const student = await studentRepository.findStudentById(tenantId, studentId);
+    if (!student) {
+      throw new LoomisError('STUDENT_NOT_FOUND', 404, 'Student not found');
+    }
+    const updated = await studentRepository.setPhoto(tenantId, studentId, input.storageObjectId);
+    if (!updated) {
+      throw new LoomisError('STUDENT_NOT_FOUND', 404, 'Student not found');
+    }
+    return serializeStudent(updated);
   },
 };

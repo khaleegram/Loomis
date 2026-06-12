@@ -10,5 +10,6 @@ export {
   listAdmissionsHandler,
   listStudentsHandler,
   recordIdentityAttestationHandler,
+  setStudentPhotoHandler,
   transferStudentOutHandler,
 } from './student.handler.js';

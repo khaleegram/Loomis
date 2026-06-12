@@ -180,6 +180,17 @@ export const studentRepository = {
     });
   },
 
+  async linkStudentUserId(tenantId: string, studentId: string, userId: string) {
+    return withTenantContext(tenantId, async (tx) => {
+      const [student] = await tx
+        .update(students)
+        .set({ userId, updatedAt: new Date() })
+        .where(and(eq(students.tenantId, tenantId), eq(students.id, studentId)))
+        .returning();
+      return student ?? null;
+    });
+  },
+
   // ── Students ─────────────────────────────────────────────────────────────────
 
   async findStudentById(tenantId: string, studentId: string) {
@@ -265,6 +276,18 @@ export const studentRepository = {
           transferredById,
           updatedAt: now,
         })
+        .where(and(eq(students.tenantId, tenantId), eq(students.id, studentId)))
+        .returning();
+      return row ?? null;
+    });
+  },
+
+  async setPhoto(tenantId: string, studentId: string, storageObjectId: string) {
+    return withTenantContext(tenantId, async (tx) => {
+      const now = new Date();
+      const [row] = await tx
+        .update(students)
+        .set({ photoStorageObjectId: storageObjectId, updatedAt: now })
         .where(and(eq(students.tenantId, tenantId), eq(students.id, studentId)))
         .returning();
       return row ?? null;

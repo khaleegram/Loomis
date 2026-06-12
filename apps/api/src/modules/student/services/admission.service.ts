@@ -4,6 +4,9 @@ import type {
   CreateAdmissionRequest,
 } from '@loomis/contracts';
 import { academicRepository } from '../../academic/repository/academic.repository.js';
+import { DEFAULT_STUDENT_PROVISIONED_PASSWORD } from '../../identity/services/provisioned-password.service.js';
+import { studentAccountService } from '../../identity/services/student-account.service.js';
+import { transactionalEmailService } from '../../comms/services/transactional-email.service.js';
 import { LoomisError } from '../../../shared/errors.js';
 import { studentRepository } from '../repository/student.repository.js';
 import type { ActorContext } from '../types.js';
@@ -116,6 +119,36 @@ export const admissionService = {
       );
     }
 
+    let portalCredentials: { loginEmail: string; temporaryPassword: string } | null = null;
+    let studentUserId: string | null = null;
+    let credentialsEmail: import('@loomis/contracts').EmailDeliveryResult | undefined;
+    if (result.student) {
+      const temporaryPassword = DEFAULT_STUDENT_PROVISIONED_PASSWORD;
+      const { user, loginEmail } = await studentAccountService.createPortalAccount({
+        tenantId,
+        admissionNo: result.student.admissionNo,
+        password: temporaryPassword,
+        displayName: `${result.student.firstName} ${result.student.lastName}`,
+      });
+      const linked = await studentRepository.linkStudentUserId(tenantId, result.student.id, user.id);
+      if (!linked) {
+        throw new LoomisError('INTERNAL_ERROR', 500, 'Failed to link student portal account');
+      }
+      studentUserId = user.id;
+      portalCredentials = { loginEmail, temporaryPassword };
+
+      credentialsEmail = await transactionalEmailService.sendStudentPortalCredentials({
+        tenantId,
+        userId: user.id,
+        to: admission.guardianEmail,
+        guardianName: admission.guardianName,
+        studentFirstName: result.student.firstName,
+        studentLastName: result.student.lastName,
+        loginEmail,
+        temporaryPassword,
+      });
+    }
+
     return {
       admission: serializeAdmission(result.admission),
       student: result.student
@@ -129,12 +162,15 @@ export const admissionService = {
             dateOfBirth: result.student.dateOfBirth,
             gender: result.student.gender as AdmissionResponse['gender'],
             status: result.student.status as 'admitted',
+            userId: studentUserId,
             identityAttestationType: null,
             identityAttestedAt: null,
             createdAt: result.student.createdAt.toISOString(),
             updatedAt: result.student.updatedAt.toISOString(),
           }
         : null,
+      portalCredentials,
+      credentialsEmail,
     };
   },
 };

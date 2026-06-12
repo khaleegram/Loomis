@@ -6,6 +6,7 @@ import type {
   CreateEnrollmentRequest,
   InitiateParentLinkRequest,
   RecordIdentityAttestationRequest,
+  SetStudentPhotoRequest,
   TransferStudentOutRequest,
 } from '@loomis/contracts';
 import { LoomisError } from '../../../shared/errors.js';
@@ -184,4 +185,17 @@ export async function transferStudentOutHandler(
     requireActor(req),
   );
   return sendSuccess(reply, result);
+}
+
+export async function setStudentPhotoHandler(
+  req: FastifyRequest<{ Params: StudentParams; Body: SetStudentPhotoRequest }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const student = await studentService.setPhoto(
+    req.params.tenantId,
+    req.params.studentId,
+    req.body,
+    requireActor(req),
+  );
+  return sendSuccess(reply, student);
 }

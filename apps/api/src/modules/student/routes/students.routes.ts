@@ -4,11 +4,13 @@ import {
   createEnrollmentRequest,
   initiateParentLinkRequest,
   recordIdentityAttestationRequest,
+  setStudentPhotoRequest,
   transferStudentOutRequest,
   type AcceptParentLinkRequest,
   type CreateEnrollmentRequest,
   type InitiateParentLinkRequest,
   type RecordIdentityAttestationRequest,
+  type SetStudentPhotoRequest,
   type TransferStudentOutRequest,
 } from '@loomis/contracts';
 import { authenticate } from '../../../middleware/authenticate.js';
@@ -24,6 +26,7 @@ import {
   initiateParentLinkHandler,
   listStudentsHandler,
   recordIdentityAttestationHandler,
+  setStudentPhotoHandler,
   transferStudentOutHandler,
 } from '../handlers/index.js';
 
@@ -117,6 +120,15 @@ export async function studentsRoutes(app: FastifyInstance): Promise<void> {
       preValidation: [validateBody(transferStudentOutRequest)],
     },
     transferStudentOutHandler,
+  );
+
+  app.patch<{ Params: { tenantId: string; studentId: string }; Body: SetStudentPhotoRequest }>(
+    '/tenants/:tenantId/students/:studentId/photo',
+    {
+      preHandler: [authenticate, requireTenantMatch, requireRole(...studentWriters)],
+      preValidation: [validateBody(setStudentPhotoRequest)],
+    },
+    setStudentPhotoHandler,
   );
 
   /** US-SIS-005. Parent-only; no tenant header required (parent JWT is cross-tenant). */
