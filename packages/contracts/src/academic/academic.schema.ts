@@ -591,6 +591,7 @@ export const timetableEntryResponse = z.object({
   subjectId: z.string().uuid(),
   teacherStaffProfileId: z.string().uuid(),
   teacherName: z.string().nullable().optional(),
+  classArmLabel: z.string().nullable().optional(),
   dayOfWeek: z.number().int(),
   startMinute: z.number().int(),
   endMinute: z.number().int(),

@@ -20,6 +20,8 @@ interface TimetableHeroProps {
   /** Read-only viewers (teacher / parent). */
   lessonCount?: number;
   isLoading?: boolean;
+  /** Teacher personal schedule vs class-by-class view. */
+  viewerMode?: 'class' | 'personal';
 }
 
 function classStatusDot(status: 'empty' | 'draft' | 'published'): string {
@@ -44,6 +46,7 @@ export function TimetableHero({
   onSelectClassArm,
   lessonCount = 0,
   isLoading,
+  viewerMode = 'class',
 }: TimetableHeroProps) {
   const bellPeriods = summary?.bellPeriodsPerDay ?? PERIOD_PRESETS.length;
 
@@ -98,7 +101,7 @@ export function TimetableHero({
     {
       label: 'Lessons',
       value: isLoading ? '—' : String(lessonCount),
-      hint: classLabel ?? 'This class',
+      hint: viewerMode === 'personal' ? 'Your assigned periods' : classLabel ?? 'This class',
       icon: Layers,
       gradient: SURFACES.kpi.g1,
     },
@@ -132,12 +135,18 @@ export function TimetableHero({
           <div className="min-w-0">
             <p className={ACADEMIC_UI.sectionLabel}>Academic operations</p>
             <h1 className="text-neutral-900" style={ACADEMIC_PAGE_TITLE_STYLE}>
-              {canManage ? 'Timetable builder' : 'Class timetable'}
+              {canManage
+                ? 'Timetable builder'
+                : viewerMode === 'personal'
+                  ? 'My teaching schedule'
+                  : 'Class timetable'}
             </h1>
             <p className={ACADEMIC_UI.pageDesc}>
               {canManage
                 ? 'Your term command centre — see every class, fill the bell schedule, publish when ready (US-ACA-006).'
-                : 'Published schedule for the selected class. Updates when your school publishes changes.'}
+                : viewerMode === 'personal'
+                  ? 'Published periods where you are assigned to teach. Updates when the timetable officer publishes changes.'
+                  : 'Published schedule for the selected class. Updates when your school publishes changes.'}
             </p>
             {classLabel || termLabel ? (
               <div className="mt-3 flex flex-wrap items-center gap-2">

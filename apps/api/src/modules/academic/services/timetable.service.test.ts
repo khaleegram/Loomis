@@ -14,6 +14,7 @@ const {
   mockPublishTimetablePublished: vi.fn(),
   mockStaffRepository: {
     listSubjectAssignmentsForClassArm: vi.fn(),
+    findProfileByUserId: vi.fn(),
   },
   mockStudentRepository: {
     findStudentByUserId: vi.fn(),
@@ -40,6 +41,7 @@ const {
     markForRemoval: vi.fn(),
     deleteById: vi.fn(),
     countByClassArmForTerm: vi.fn(),
+    listByTeacherForTerm: vi.fn(),
   },
 }));
 
@@ -380,6 +382,44 @@ describe('timetableService.listTimetable', () => {
       TERM_ID,
       CLASS_ARM_ID,
       false,
+    );
+  });
+});
+
+describe('timetableService.listMyTimetable', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns published periods for the logged-in teacher', async () => {
+    mockStaffRepository.findProfileByUserId.mockResolvedValue({ id: TEACHER_ID });
+    mockTimetableRepository.listByTeacherForTerm.mockResolvedValue([
+      {
+        id: 'entry-1',
+        tenantId: TENANT_ID,
+        termId: TERM_ID,
+        classArmId: CLASS_ARM_ID,
+        subjectId: SUBJECT_ID,
+        teacherStaffProfileId: TEACHER_ID,
+        teacherName: 'Mr Ade',
+        classLevelCode: 'JSS1',
+        classArmName: 'A',
+        dayOfWeek: 1,
+        startMinute: 480,
+        endMinute: 525,
+        status: 'published',
+        createdById: 'user',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ]);
+
+    const result = await timetableService.listMyTimetable(TENANT_ID, TERM_ID, teacherActor);
+
+    expect(result.entries).toHaveLength(1);
+    expect(result.entries[0]?.classArmLabel).toBe('JSS1 A');
+    expect(mockTimetableRepository.listByTeacherForTerm).toHaveBeenCalledWith(
+      TENANT_ID,
+      TERM_ID,
+      TEACHER_ID,
     );
   });
 });

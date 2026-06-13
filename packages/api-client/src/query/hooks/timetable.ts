@@ -105,12 +105,17 @@ export function useTimetablePublishPreview(tenantId: string, termId: string | nu
 }
 
 export function useStudentTimetable(tenantId: string, termId: string) {
+  return useMyTimetable(tenantId, termId);
+}
+
+/** Published personal timetable for students and teaching staff (teacher / class teacher). */
+export function useMyTimetable(tenantId: string, termId: string | null) {
   const client = useApiClient();
   return useQuery({
-    queryKey: queryKeys.academic.studentTimetable(tenantId, termId),
+    queryKey: queryKeys.academic.studentTimetable(tenantId, termId ?? ''),
     queryFn: () =>
       client.get<TimetableListResponse>(
-        `/tenants/${tenantId}/timetable/me?termId=${encodeURIComponent(termId)}`,
+        `/tenants/${tenantId}/timetable/me?termId=${encodeURIComponent(termId!)}`,
       ),
     staleTime: STALE_MS,
     enabled: Boolean(tenantId && termId),

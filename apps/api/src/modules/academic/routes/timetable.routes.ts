@@ -108,7 +108,11 @@ export async function timetableRoutes(app: FastifyInstance): Promise<void> {
   app.get<{ Params: { tenantId: string }; Querystring: MyTimetableQuery }>(
     '/tenants/:tenantId/timetable/me',
     {
-      preHandler: [authenticate, requireTenantMatch, requireRole('student')],
+      preHandler: [
+        authenticate,
+        requireTenantMatch,
+        requireRole('student', 'teacher', 'class_teacher'),
+      ],
       preValidation: [validateQuery(myTimetableQuery)],
     },
     listStudentTimetableHandler,

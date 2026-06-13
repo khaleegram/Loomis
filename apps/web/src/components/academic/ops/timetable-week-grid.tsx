@@ -22,6 +22,8 @@ interface TimetableWeekGridProps {
   canEdit?: boolean;
   emptyMessage?: string;
   showTermStructure?: boolean;
+  /** Show class arm on each slot (teacher personal schedule). */
+  showClassLabel?: boolean;
 }
 
 function findEntryForSlot(
@@ -44,12 +46,14 @@ function TimetableSlot({
   canEdit,
   onDelete,
   compact = false,
+  showClassLabel = false,
 }: {
   entry: TimetableEntryResponse;
   showStatus?: boolean;
   canEdit?: boolean;
   onDelete?: (entryId: string) => void;
   compact?: boolean;
+  showClassLabel?: boolean;
 }) {
   return (
     <div
@@ -78,6 +82,13 @@ function TimetableSlot({
       <p className={`font-bold text-neutral-900 ${compact ? 'text-[11px] leading-snug' : 'mt-1.5 text-sm'}`}>
         {formatSubjectLabel(entry.subjectId)}
       </p>
+      {showClassLabel && entry.classArmLabel ? (
+        <p
+          className={`font-semibold text-brand-700 ${compact ? 'mt-0.5 text-[10px]' : 'mt-1 text-[11px]'}`}
+        >
+          {entry.classArmLabel}
+        </p>
+      ) : null}
       {entry.teacherName ? (
         <p
           className={`flex items-center gap-1 font-medium text-neutral-600 ${compact ? 'mt-0.5 text-[10px]' : 'mt-1 text-[11px]'}`}
@@ -106,6 +117,7 @@ function TermStructureGrid({
   canEdit,
   onDeleteEntry,
   onEmptySlotClick,
+  showClassLabel,
 }: {
   entries: TimetableEntryResponse[];
   scheduleSlots: BellScheduleSlot[];
@@ -113,6 +125,7 @@ function TermStructureGrid({
   canEdit?: boolean;
   onDeleteEntry?: (entryId: string) => void;
   onEmptySlotClick?: (slot: TimetableSlotTarget) => void;
+  showClassLabel?: boolean;
 }) {
   let lessonIndex = 0;
 
@@ -194,6 +207,7 @@ function TermStructureGrid({
                           canEdit={canEdit}
                           onDelete={onDeleteEntry}
                           compact
+                          showClassLabel={showClassLabel}
                         />
                       ) : canEdit && onEmptySlotClick ? (
                         <button
@@ -236,6 +250,7 @@ export function TimetableWeekGrid({
   canEdit = false,
   emptyMessage = 'No periods scheduled yet.',
   showTermStructure = false,
+  showClassLabel = false,
 }: TimetableWeekGridProps) {
   if (isLoading) {
     return (
@@ -255,6 +270,7 @@ export function TimetableWeekGrid({
         canEdit={canEdit}
         onDeleteEntry={onDeleteEntry}
         onEmptySlotClick={onEmptySlotClick}
+        showClassLabel={showClassLabel}
       />
     );
   }

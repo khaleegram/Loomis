@@ -8,6 +8,8 @@ import {
 
   useDeleteTimetableEntry,
 
+  useMyTimetable,
+
   useTimetable,
 
   useTimetableSubjectOptions,
@@ -74,6 +76,8 @@ export default function TimetablePage() {
 
   const canView = useCanAny(['timetable.manage', 'timetable.view']);
 
+  const isStaffViewer = canView && !canManage;
+
   const [assignSlot, setAssignSlot] = useState<TimetableSlotTarget | null>(null);
 
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -98,7 +102,9 @@ export default function TimetablePage() {
 
 
 
-  const timetableQuery = useTimetable(tenantId ?? '', filters);
+  const timetableQuery = useTimetable(tenantId ?? '', !isStaffViewer ? filters : null);
+
+  const myTimetableQuery = useMyTimetable(tenantId ?? '', isStaffViewer ? ctx.termId : null);
 
   const summaryQuery = useTimetableSummary(tenantId ?? '', canManage ? ctx.termId : null);
 
@@ -112,7 +118,13 @@ export default function TimetablePage() {
 
 
 
-  const entries = timetableQuery.data?.entries ?? [];
+  const entries = isStaffViewer
+    ? (myTimetableQuery.data?.entries ?? [])
+    : (timetableQuery.data?.entries ?? []);
+
+  const timetableLoading = isStaffViewer
+    ? myTimetableQuery.isLoading && Boolean(ctx.termId)
+    : timetableQuery.isLoading && Boolean(filters);
 
   const subjectOptions = subjectOptionsQuery.data?.options ?? [];
 
@@ -290,13 +302,15 @@ export default function TimetablePage() {
 
               canManage={false}
 
+              viewerMode={isStaffViewer ? 'personal' : 'class'}
+
               classLabel={classLabel}
 
               termLabel={termLabel}
 
               lessonCount={entries.length}
 
-              isLoading={timetableQuery.isLoading && Boolean(filters)}
+              isLoading={timetableLoading}
 
             />
 
@@ -313,6 +327,8 @@ export default function TimetablePage() {
               termId={ctx.termId}
 
               classArmId={ctx.classArmId}
+
+              hideClassSelection={isStaffViewer}
 
               onYearChange={(id) => {
 
@@ -371,6 +387,54 @@ export default function TimetablePage() {
             emptyMessage="Tap + on any empty cell to assign a subject."
 
           />
+
+        ) : isStaffViewer ? (
+
+          !ctx.termId ? (
+
+            <div className={`${ACADEMIC_UI.dataPanel} p-8 text-center`}>
+
+              <p className="text-[13px] text-neutral-500">Select an academic year and term to view your schedule.</p>
+
+            </div>
+
+          ) : myTimetableQuery.isError ? (
+
+            <Alert>
+
+              <AlertDescription>
+
+                Could not load your schedule. If timetables have not been published for this term yet, check back
+
+                after the timetable officer publishes.
+
+              </AlertDescription>
+
+            </Alert>
+
+          ) : (
+
+            <div className={`${ACADEMIC_UI.dataPanel} p-4 sm:p-5`}>
+
+              <TimetableWeekGrid
+
+                entries={entries}
+
+                scheduleSlots={scheduleSlots}
+
+                isLoading={timetableLoading}
+
+                showTermStructure
+
+                showClassLabel
+
+                emptyMessage="No published lessons assigned to you for this term yet."
+
+              />
+
+            </div>
+
+          )
 
         ) : !filters ? (
 

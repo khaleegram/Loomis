@@ -63,7 +63,7 @@ export function deviceKeyToResponse(row: DeviceKeyRow): DeviceKeyResponse {
 }
 
 export function timetableEntryToResponse(
-  row: TimetableRow & { teacherName?: string | null },
+  row: TimetableRow & { teacherName?: string | null; classArmLabel?: string | null },
 ): TimetableEntryResponse {
   return {
     id: row.id,
@@ -73,6 +73,7 @@ export function timetableEntryToResponse(
     subjectId: row.subjectId,
     teacherStaffProfileId: row.teacherStaffProfileId,
     teacherName: row.teacherName ?? null,
+    classArmLabel: row.classArmLabel ?? null,
     dayOfWeek: row.dayOfWeek,
     startMinute: row.startMinute,
     endMinute: row.endMinute,

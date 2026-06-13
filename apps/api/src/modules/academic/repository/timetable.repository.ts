@@ -1,5 +1,5 @@
 import { and, asc, eq, gt, lt, ne, sql } from 'drizzle-orm';
-import { timetables } from '../../../../drizzle/schema/academic.js';
+import { classArms, classLevels, timetables } from '../../../../drizzle/schema/academic.js';
 import { staffProfiles } from '../../../../drizzle/schema/hrm.js';
 import { withTenantContext } from '../../../shared/tenant-context.js';
 
@@ -207,6 +207,47 @@ export const timetableRepository = {
         .returning();
       return row ?? null;
     });
+  },
+
+  async listByTeacherForTerm(
+    tenantId: string,
+    termId: string,
+    teacherStaffProfileId: string,
+  ) {
+    return withTenantContext(tenantId, async (tx) =>
+      tx
+        .select({
+          id: timetables.id,
+          tenantId: timetables.tenantId,
+          termId: timetables.termId,
+          classArmId: timetables.classArmId,
+          subjectId: timetables.subjectId,
+          teacherStaffProfileId: timetables.teacherStaffProfileId,
+          teacherName: staffProfiles.fullName,
+          classLevelCode: classLevels.code,
+          classArmName: classArms.name,
+          dayOfWeek: timetables.dayOfWeek,
+          startMinute: timetables.startMinute,
+          endMinute: timetables.endMinute,
+          status: timetables.status,
+          createdById: timetables.createdById,
+          createdAt: timetables.createdAt,
+          updatedAt: timetables.updatedAt,
+        })
+        .from(timetables)
+        .leftJoin(staffProfiles, eq(staffProfiles.id, timetables.teacherStaffProfileId))
+        .innerJoin(classArms, eq(classArms.id, timetables.classArmId))
+        .innerJoin(classLevels, eq(classLevels.id, classArms.classLevelId))
+        .where(
+          and(
+            eq(timetables.tenantId, tenantId),
+            eq(timetables.termId, termId),
+            eq(timetables.teacherStaffProfileId, teacherStaffProfileId),
+            eq(timetables.status, 'published'),
+          ),
+        )
+        .orderBy(asc(timetables.dayOfWeek), asc(timetables.startMinute)),
+    );
   },
 
   async countByClassArmForTerm(tenantId: string, termId: string) {

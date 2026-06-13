@@ -179,7 +179,7 @@ export async function listStudentTimetableHandler(
   req: FastifyRequest<{ Params: TenantParams; Querystring: MyTimetableQuery }>,
   reply: FastifyReply,
 ): Promise<FastifyReply> {
-  const result = await timetableService.listStudentTimetable(
+  const result = await timetableService.listMyTimetable(
     req.params.tenantId,
     req.query.termId,
     requireActor(req),

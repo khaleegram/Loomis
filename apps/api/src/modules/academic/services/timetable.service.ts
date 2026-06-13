@@ -142,41 +142,65 @@ export const timetableService = {
   },
 
   async listStudentTimetable(tenantId: string, termId: string, actor: ActorContext) {
+    return this.listMyTimetable(tenantId, termId, actor);
+  },
+
+  async listMyTimetable(tenantId: string, termId: string, actor: ActorContext) {
     requireTenant(actor, tenantId);
-    if (actor.role !== 'student') {
-      throw new LoomisError('FORBIDDEN', 403, 'Student role required');
+
+    if (actor.role === 'student') {
+      const student = await studentRepository.findStudentByUserId(tenantId, actor.userId);
+      if (!student) {
+        throw new LoomisError('STUDENT_NOT_FOUND', 404, 'Student profile not found');
+      }
+
+      const enrollment = await studentRepository.findEnrollmentForTerm(tenantId, student.id, termId);
+      if (
+        !enrollment ||
+        !['active', 'active_billable', 'suspended'].includes(enrollment.status)
+      ) {
+        throw new LoomisError('STUDENT_ENROLLMENT_NOT_FOUND', 404, 'No active enrollment for this term');
+      }
+
+      const entries = await timetableRepository.list(
+        tenantId,
+        termId,
+        enrollment.classArmId,
+        true,
+      );
+
+      const classArm = await academicRepository.findClassArmById(tenantId, enrollment.classArmId);
+      const level = classArm
+        ? await academicRepository.findClassLevelById(tenantId, classArm.classLevelId)
+        : null;
+
+      return {
+        entries,
+        classArmId: enrollment.classArmId,
+        classArmLabel: classArm && level ? `${level.code} ${classArm.name}` : null,
+      };
     }
 
-    const student = await studentRepository.findStudentByUserId(tenantId, actor.userId);
-    if (!student) {
-      throw new LoomisError('STUDENT_NOT_FOUND', 404, 'Student profile not found');
+    if (actor.role === 'teacher' || actor.role === 'class_teacher') {
+      const profile = await staffRepository.findProfileByUserId(tenantId, actor.userId);
+      if (!profile) {
+        throw new LoomisError('HRM_STAFF_NOT_FOUND', 404, 'Staff profile not found');
+      }
+
+      const rows = await timetableRepository.listByTeacherForTerm(tenantId, termId, profile.id);
+      const entries = rows.map((row) => ({
+        ...row,
+        classArmLabel: `${row.classLevelCode} ${row.classArmName}`,
+      }));
+
+      return {
+        entries,
+        classArmId: undefined,
+        classArmLabel: null,
+      };
     }
 
-    const enrollment = await studentRepository.findEnrollmentForTerm(tenantId, student.id, termId);
-    if (
-      !enrollment ||
-      !['active', 'active_billable', 'suspended'].includes(enrollment.status)
-    ) {
-      throw new LoomisError('STUDENT_ENROLLMENT_NOT_FOUND', 404, 'No active enrollment for this term');
-    }
-
-    const entries = await timetableRepository.list(
-      tenantId,
-      termId,
-      enrollment.classArmId,
-      true,
-    );
-
-    const classArm = await academicRepository.findClassArmById(tenantId, enrollment.classArmId);
-    const level = classArm
-      ? await academicRepository.findClassLevelById(tenantId, classArm.classLevelId)
-      : null;
-
-    return {
-      entries,
-      classArmId: enrollment.classArmId,
-      classArmLabel: classArm && level ? `${level.code} ${classArm.name}` : null,
-    };
+    throw new LoomisError('FORBIDDEN', 403, 'Personal timetable is for students and teaching staff');
   },
 
   async listParentChildTimetable(

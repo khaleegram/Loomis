@@ -25,6 +25,7 @@ interface AcademicScopePickerProps {
   showWorkflow?: boolean;
   /** Optional stats shown on selected class pill area */
   selectedClassMeta?: string | null;
+  hideClassSelection?: boolean;
 }
 
 const WORKFLOW: { key: WorkflowStep; label: string }[] = [
@@ -72,6 +73,7 @@ export function AcademicScopePicker({
   workflowStep = 'class',
   showWorkflow = false,
   selectedClassMeta,
+  hideClassSelection = false,
 }: AcademicScopePickerProps) {
   const [sessionOpen, setSessionOpen] = useState(false);
 
@@ -198,7 +200,7 @@ export function AcademicScopePicker({
         ) : null}
 
         {/* Class quick-pick */}
-        {armOptions.length > 0 ? (
+        {!hideClassSelection && armOptions.length > 0 ? (
           <div className="mt-5">
             <p className={ACADEMIC_UI.sectionLabel}>Classes — tap to switch</p>
             <div className="mt-2 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
