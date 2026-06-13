@@ -121,7 +121,7 @@ export default function ChangePasswordPage() {
 
           <Button
             type="submit"
-            className="w-full gap-2"
+            className="w-full gap-2 min-h-12"
             disabled={isSubmitting || !sessionReady}
           >
             {isSubmitting ? (

@@ -27,6 +27,11 @@ export interface ApiClient {
     body?: unknown,
     options?: Omit<HttpRequestOptions, 'method' | 'body'>,
   ): Promise<T>;
+  put<T>(
+    path: string,
+    body?: unknown,
+    options?: Omit<HttpRequestOptions, 'method' | 'body'>,
+  ): Promise<T>;
   delete<T>(path: string, options?: Omit<HttpRequestOptions, 'method' | 'body'>): Promise<T>;
 }
 
@@ -79,17 +84,41 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
     });
 
     if (options.body !== undefined && !headers.has('Content-Type')) {
-      headers.set('Content-Type', 'application/json');
+      const isBinaryBody =
+        options.body instanceof Blob ||
+        (typeof File !== 'undefined' && options.body instanceof File) ||
+        options.body instanceof ArrayBuffer ||
+        options.body instanceof Uint8Array;
+      if (!isBinaryBody) {
+        headers.set('Content-Type', 'application/json');
+      }
     }
 
     const platform = config.deviceInfo().platform;
     const url = `${config.baseUrl.replace(/\/$/, '')}${path.startsWith('/') ? path : `/${path}`}`;
 
+    let fetchBody: BodyInit | undefined;
+    if (options.body !== undefined) {
+      if (
+        options.body instanceof Blob ||
+        (typeof File !== 'undefined' && options.body instanceof File) ||
+        options.body instanceof ArrayBuffer
+      ) {
+        fetchBody = options.body as BodyInit;
+      } else if (options.body instanceof Uint8Array) {
+        fetchBody = options.body as unknown as BodyInit;
+      } else if (typeof options.body === 'string') {
+        fetchBody = options.body;
+      } else {
+        fetchBody = JSON.stringify(options.body);
+      }
+    }
+
     return fetchFn(url, {
       method: options.method ?? 'GET',
       headers,
       credentials: platform === 'web' ? 'include' : 'same-origin',
-      ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
+      ...(fetchBody !== undefined ? { body: fetchBody } : {}),
     });
   }
 
@@ -107,6 +136,11 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
       body?: unknown,
       options?: Omit<HttpRequestOptions, 'method' | 'body'>,
     ) => request<T>(path, { ...options, method: 'PATCH', body }),
+    put: <T>(
+      path: string,
+      body?: unknown,
+      options?: Omit<HttpRequestOptions, 'method' | 'body'>,
+    ) => request<T>(path, { ...options, method: 'PUT', body }),
     delete: <T>(path: string, options?: Omit<HttpRequestOptions, 'method' | 'body'>) =>
       request<T>(path, { ...options, method: 'DELETE' }),
   };

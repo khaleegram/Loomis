@@ -22,6 +22,10 @@ export function AppProviders({ children }: AppProvidersProps) {
             staleTime: 30_000,
             retry: 1,
           },
+          mutations: {
+            // Expected API errors (409 conflict, 422 validation) must be caught in UI — never crash the app shell.
+            throwOnError: false,
+          },
         },
       }),
   );
