@@ -58,8 +58,12 @@ import type { z } from 'zod';
 import { BookOpen, Briefcase, Mail, ExternalLink, Shield, UserX, UserCheck } from 'lucide-react';
 import Link from 'next/link';
 
+import { formatClassArmLabel, SCHOOL_SUBJECT_OPTIONS } from '@/lib/academic/ops-labels';
+import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
+import { CardOptionPicker, SmartFieldLabel } from '@/components/shared/smart-form';
 import { formatRoleLabel } from '@/components/school/school-nav-config';
 import { useCan } from '@/lib/auth/use-capability';
+import { appErrorMessage } from '@/lib/errors/app-error-message';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 import { DeactivationImpactPreview } from '@/components/staff/staff-deactivation-preview';
 import { SEMANTIC } from '@/lib/design/surfaces';
@@ -110,6 +114,7 @@ export function StaffQuickActionSheet({
   const openTerm = useMemo(() => terms.find((t) => t.status === 'open'), [terms]);
   const { data: classStructureData } = useClassStructure(tenantId ?? '', activeYear?.id ?? '');
   const classArms = classStructureData?.arms ?? [];
+  const classLevels = classStructureData?.levels ?? [];
 
   const [selectedTermId, setSelectedTermId] = useState<string | null>(null);
   const activeTermId = selectedTermId ?? openTerm?.id ?? terms[0]?.id ?? null;
@@ -118,9 +123,21 @@ export function StaffQuickActionSheet({
     () => terms.map((term) => ({ value: term.id, label: term.name ?? 'Term' })),
     [terms],
   );
+  const classArmCardOptions = useMemo(
+    () =>
+      classArms.map((arm) => ({
+        id: arm.id,
+        label: formatClassArmLabel(arm, classLevels),
+      })),
+    [classArms, classLevels],
+  );
   const classArmOptions = useMemo(
-    () => classArms.map((arm) => ({ value: arm.id, label: arm.name })),
-    [classArms],
+    () => classArmCardOptions.map((opt) => ({ value: opt.id, label: opt.label })),
+    [classArmCardOptions],
+  );
+  const subjectCardOptions = useMemo(
+    () => SCHOOL_SUBJECT_OPTIONS.map((s) => ({ id: s.id, label: s.label })),
+    [],
   );
 
   const roleForm = useForm<z.input<typeof changeStaffRoleRequest>>({
@@ -251,7 +268,7 @@ export function StaffQuickActionSheet({
                             onSuccess?.();
                           } catch (err) {
                             roleForm.setError('root', {
-                              message: err instanceof Error ? err.message : 'Role change failed.',
+                              message: appErrorMessage(err),
                             });
                           }
                         })}
@@ -400,68 +417,74 @@ export function StaffQuickActionSheet({
                                 staffProfileId: staff.id,
                                 termId: values.termId || activeTermId || '',
                               });
-                              subjectForm.reset({ staffProfileId: staff.id, termId: '', classArmId: '', subjectId: '' });
+                              subjectForm.reset({
+                                staffProfileId: staff.id,
+                                termId: '',
+                                classArmId: '',
+                                subjectId: '',
+                              });
                               await refetch();
                               onSuccess?.();
                             } catch (err) {
                               subjectForm.setError('root', {
-                                message: err instanceof Error ? err.message : 'Assignment failed.',
+                                message: appErrorMessage(err),
                               });
                             }
                           })}
-                          className="space-y-3"
+                          className="space-y-4"
                         >
                           {subjectForm.formState.errors.root?.message && (
                             <Alert variant="destructive">
                               <AlertDescription>{subjectForm.formState.errors.root.message}</AlertDescription>
                             </Alert>
                           )}
-                          <div className="grid grid-cols-2 gap-3">
-                            <FormField
-                              control={subjectForm.control}
-                              name="classArmId"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel className="text-[11px]">Class Arm</FormLabel>
-                                  <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                      <SelectTrigger className="border-brand-200 h-9 text-[12px]">
-                                        <SelectValue placeholder="Select class arm" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      {classArmOptions.map((opt) => (
-                                        <SelectItem key={opt.value} value={opt.value}>
-                                          {opt.label}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={subjectForm.control}
-                              name="subjectId"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel className="text-[11px]">Subject ID</FormLabel>
-                                  <FormControl>
-                                    <Input
-                                      placeholder="Subject UUID"
-                                      className="border-brand-200 h-9 text-[12px]"
-                                      {...field}
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                          <Button type="submit" disabled={createSubject.isPending || !activeTermId} size="sm" variant="gradient">
-                            {createSubject.isPending ? 'Assigning…' : 'Assign Subject'}
-                          </Button>
+
+                          <FormField
+                            control={subjectForm.control}
+                            name="classArmId"
+                            render={({ field }) => (
+                              <FormItem className="space-y-2">
+                                <SmartFieldLabel>Class</SmartFieldLabel>
+                                <CardOptionPicker
+                                  options={classArmCardOptions}
+                                  value={field.value}
+                                  onChange={field.onChange}
+                                  searchPlaceholder="Search class…"
+                                  emptyMessage="No classes for the active year"
+                                  showSearchMin={6}
+                                />
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={subjectForm.control}
+                            name="subjectId"
+                            render={({ field }) => (
+                              <FormItem className="space-y-2">
+                                <SmartFieldLabel>Subject</SmartFieldLabel>
+                                <CardOptionPicker
+                                  options={subjectCardOptions}
+                                  value={field.value}
+                                  onChange={field.onChange}
+                                  searchPlaceholder="Search subject…"
+                                  emptyMessage="No subjects configured"
+                                  showSearchMin={4}
+                                />
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <button
+                            type="submit"
+                            disabled={createSubject.isPending || !activeTermId}
+                            className={ACADEMIC_UI.btnPrimarySm}
+                          >
+                            <BookOpen aria-hidden className="size-4" />
+                            {createSubject.isPending ? 'Assigning…' : 'Assign subject'}
+                          </button>
                         </form>
                       </Form>
                     )}
@@ -521,7 +544,7 @@ export function StaffQuickActionSheet({
                               onSuccess?.();
                             } catch (err) {
                               deactivateForm.setError('root', {
-                                message: err instanceof Error ? err.message : 'Deactivation failed.',
+                                message: appErrorMessage(err),
                               });
                             }
                           })}
@@ -600,7 +623,7 @@ export function StaffQuickActionSheet({
                             onSuccess?.();
                           } catch (err) {
                             reactivateForm.setError('root', {
-                              message: err instanceof Error ? err.message : 'Reactivation failed.',
+                              message: appErrorMessage(err),
                             });
                           }
                         })}

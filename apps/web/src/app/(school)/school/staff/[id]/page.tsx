@@ -37,7 +37,7 @@ export default function StaffProfilePage() {
 
   if (!tenantId) {
     return (
-      <PageBody className="max-w-[1200px] px-6 py-6 lg:px-8 lg:py-8">
+      <PageBody className="max-w-[1200px] px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
         <Alert variant="destructive">
           <AlertDescription>No tenant context. Sign in again.</AlertDescription>
         </Alert>
@@ -46,7 +46,7 @@ export default function StaffProfilePage() {
   }
 
   return (
-    <PageBody className="max-w-[1200px] px-6 py-6 lg:px-8 lg:py-8">
+    <PageBody className="max-w-[1200px] px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
       <div className="space-y-6">
         {/* Breadcrumb + Back */}
         <div className="flex items-center justify-between">
@@ -98,6 +98,8 @@ export default function StaffProfilePage() {
             {/* Optional photo upload — all roles */}
             <div className="card rounded-2xl p-5">
               <PhotoUpload
+                ownerResourceId={staffProfileId}
+                ownerResourceType="staff_profile"
                 photoStorageObjectId={staff.photoStorageObjectId}
                 fullName={staff.fullName}
                 onPhotoSet={handlePhotoSet}

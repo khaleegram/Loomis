@@ -1,4 +1,4 @@
-import { and, eq, isNull, ne } from 'drizzle-orm';
+import { and, asc, eq, isNull, ne } from 'drizzle-orm';
 import {
   classTeacherAssignments,
   roleAssignments,
@@ -6,6 +6,7 @@ import {
   staffProfiles,
   subjectAssignments,
 } from '../../../../drizzle/schema/hrm.js';
+import { users } from '../../../../drizzle/schema/identity.js';
 import { withTenantContext } from '../../../shared/tenant-context.js';
 import type {
   CreateInvitationInput,
@@ -16,7 +17,14 @@ import type {
 export const staffRepository = {
   async listProfiles(tenantId: string) {
     return withTenantContext(tenantId, async (tx) =>
-      tx.select().from(staffProfiles).where(eq(staffProfiles.tenantId, tenantId)),
+      tx
+        .select({
+          profile: staffProfiles,
+          userPhotoStorageObjectId: users.photoStorageObjectId,
+        })
+        .from(staffProfiles)
+        .innerJoin(users, eq(staffProfiles.userId, users.id))
+        .where(eq(staffProfiles.tenantId, tenantId)),
     );
   },
 
@@ -28,6 +36,21 @@ export const staffRepository = {
         .where(and(eq(staffProfiles.tenantId, tenantId), eq(staffProfiles.id, staffProfileId)))
         .limit(1);
       return profile ?? null;
+    });
+  },
+
+  async findProfileWithUserPhoto(tenantId: string, staffProfileId: string) {
+    return withTenantContext(tenantId, async (tx) => {
+      const [row] = await tx
+        .select({
+          profile: staffProfiles,
+          userPhotoStorageObjectId: users.photoStorageObjectId,
+        })
+        .from(staffProfiles)
+        .innerJoin(users, eq(staffProfiles.userId, users.id))
+        .where(and(eq(staffProfiles.tenantId, tenantId), eq(staffProfiles.id, staffProfileId)))
+        .limit(1);
+      return row ?? null;
     });
   },
 
@@ -509,6 +532,34 @@ export const staffRepository = {
             eq(subjectAssignments.active, true),
           ),
         ),
+    );
+  },
+
+  /** Active subject assignments for a class arm — used by the timetable builder (US-ACA-006). */
+  async listSubjectAssignmentsForClassArm(
+    tenantId: string,
+    termId: string,
+    classArmId: string,
+  ) {
+    return withTenantContext(tenantId, async (tx) =>
+      tx
+        .select({
+          assignmentId: subjectAssignments.id,
+          subjectId: subjectAssignments.subjectId,
+          teacherStaffProfileId: subjectAssignments.staffProfileId,
+          teacherName: staffProfiles.fullName,
+        })
+        .from(subjectAssignments)
+        .innerJoin(staffProfiles, eq(staffProfiles.id, subjectAssignments.staffProfileId))
+        .where(
+          and(
+            eq(subjectAssignments.tenantId, tenantId),
+            eq(subjectAssignments.termId, termId),
+            eq(subjectAssignments.classArmId, classArmId),
+            eq(subjectAssignments.active, true),
+          ),
+        )
+        .orderBy(asc(subjectAssignments.subjectId)),
     );
   },
 

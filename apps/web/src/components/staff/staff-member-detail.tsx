@@ -80,7 +80,7 @@ function RootFormError({ message }: { message?: string }) {
 
 function SectionCard({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
   return (
-    <div className="card rounded-2xl p-6">
+    <div className="card rounded-2xl p-4 sm:p-6">
       <h3 className="text-[13px] font-bold text-neutral-800">{title}</h3>
       {description ? <p className="mt-1 text-[12px] text-neutral-400">{description}</p> : null}
       <div className="mt-4">{children}</div>
@@ -215,25 +215,25 @@ export function StaffMemberDetail({ staffProfileId, staff: staffProp }: StaffMem
         <TabsList className="inline-flex h-auto gap-1 rounded-xl border border-brand-100 bg-brand-50/30 p-1">
           <TabsTrigger
             value="overview"
-            className="rounded-lg px-4 py-2 text-[12px] font-semibold transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-brand-800 data-[state=active]:shadow-sm"
+            className="shrink-0 rounded-lg px-4 py-2.5 text-[12px] font-semibold transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-brand-800 data-[state=active]:shadow-sm sm:py-2"
           >
             Overview
           </TabsTrigger>
           <TabsTrigger
             value="role"
-            className="rounded-lg px-4 py-2 text-[12px] font-semibold transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-brand-800 data-[state=active]:shadow-sm"
+            className="shrink-0 rounded-lg px-4 py-2.5 text-[12px] font-semibold transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-brand-800 data-[state=active]:shadow-sm sm:py-2"
           >
             Role &amp; Access
           </TabsTrigger>
           <TabsTrigger
             value="assignments"
-            className="rounded-lg px-4 py-2 text-[12px] font-semibold transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-brand-800 data-[state=active]:shadow-sm"
+            className="shrink-0 rounded-lg px-4 py-2.5 text-[12px] font-semibold transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-brand-800 data-[state=active]:shadow-sm sm:py-2"
           >
             Assignments
           </TabsTrigger>
           <TabsTrigger
             value="workload"
-            className="rounded-lg px-4 py-2 text-[12px] font-semibold transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-brand-800 data-[state=active]:shadow-sm"
+            className="shrink-0 rounded-lg px-4 py-2.5 text-[12px] font-semibold transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-brand-800 data-[state=active]:shadow-sm sm:py-2"
           >
             Workload
           </TabsTrigger>
@@ -531,7 +531,7 @@ export function StaffMemberDetail({ staffProfileId, staff: staffProp }: StaffMem
                   )}
                 />
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                   <Button
                     type="button"
                     variant="outline"
@@ -606,7 +606,7 @@ export function StaffMemberDetail({ staffProfileId, staff: staffProp }: StaffMem
                   {staff.subjectAssignments.map((assignment) => (
                     <div
                       key={assignment.id}
-                      className="flex items-center justify-between rounded-xl border border-brand-50 bg-brand-50/10 px-4 py-3"
+                      className="flex flex-col gap-3 rounded-xl border border-brand-50 bg-brand-50/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                     >
                       <div className="flex items-center gap-3">
                         <span className="flex size-8 items-center justify-center rounded-lg bg-accent-purple-100 text-accent-purple-600">

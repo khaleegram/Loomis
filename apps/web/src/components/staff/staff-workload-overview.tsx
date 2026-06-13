@@ -113,7 +113,7 @@ export function WorkloadOverview({
       </div>
 
       {/* Quick Stats */}
-      <div className="mt-4 grid grid-cols-3 gap-3">
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="rounded-xl bg-brand-50/20 p-3 text-center">
           <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-neutral-400">
             Classes

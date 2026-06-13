@@ -44,10 +44,10 @@ export function StaffToolbar({
   const hasActiveFilter = statusFilter !== 'all' || search.trim().length > 0;
 
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
       {/* Search */}
-      <div className="flex items-center gap-3">
-        <div className="relative max-w-md w-64">
+      <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center lg:w-auto">
+        <div className="relative w-full lg:max-w-md lg:w-64">
           <Search
             aria-hidden
             className={`pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 transition-colors duration-200 ${
@@ -85,9 +85,9 @@ export function StaffToolbar({
       </div>
 
       {/* Filter Chips + View Toggle */}
-      <div className="flex items-center gap-3">
+      <div className="flex w-full flex-wrap items-center gap-3 lg:w-auto lg:flex-nowrap">
         {/* Filter chips */}
-        <div className="flex items-center gap-1.5 rounded-xl border border-neutral-200 bg-white p-1">
+        <div className="flex max-w-full items-center gap-1.5 overflow-x-auto rounded-xl border border-neutral-200 bg-white p-1">
           {FILTER_CHIPS.map((chip) => {
             const isActive = statusFilter === chip.statusKey;
             return (
@@ -95,7 +95,7 @@ export function StaffToolbar({
                 key={chip.key}
                 type="button"
                 onClick={() => onStatusFilterChange(chip.statusKey!)}
-                className={`rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-all duration-200 ${
+                className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-[12px] font-semibold transition-all duration-200 min-h-[44px] sm:min-h-0 sm:py-1.5 ${
                   isActive
                     ? 'bg-brand-600 text-white shadow-sm'
                     : 'text-neutral-500 hover:bg-brand-50 hover:text-brand-700'
@@ -108,11 +108,11 @@ export function StaffToolbar({
         </div>
 
         {/* View toggle */}
-        <div className="flex items-center rounded-xl border border-neutral-200 bg-white p-0.5">
+        <div className="flex shrink-0 items-center rounded-xl border border-neutral-200 bg-white p-0.5">
           <button
             type="button"
             onClick={() => onViewModeChange('cards')}
-            className={`rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-all duration-200 ${
+            className={`inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-all duration-200 sm:min-h-0 sm:min-w-0 ${
               viewMode === 'cards'
                 ? 'bg-brand-600 text-white shadow-sm'
                 : 'text-neutral-400 hover:text-neutral-700'
@@ -130,7 +130,7 @@ export function StaffToolbar({
           <button
             type="button"
             onClick={() => onViewModeChange('table')}
-            className={`rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-all duration-200 ${
+            className={`inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-all duration-200 sm:min-h-0 sm:min-w-0 ${
               viewMode === 'table'
                 ? 'bg-brand-600 text-white shadow-sm'
                 : 'text-neutral-400 hover:text-neutral-700'

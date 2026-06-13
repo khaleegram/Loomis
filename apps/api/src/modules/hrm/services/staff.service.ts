@@ -44,6 +44,7 @@ function requireTenant(actor: ActorContext, tenantId: string): void {
 function serializeProfile(
   profile: NonNullable<Awaited<ReturnType<typeof staffRepository.findProfileById>>>,
   roles: Awaited<ReturnType<typeof staffRepository.listActiveRoles>>,
+  userPhotoStorageObjectId?: string | null,
 ): StaffProfileResponse {
   const primary = roles.find((assignment) => assignment.assignmentType === 'primary');
   const extensions = roles
@@ -62,7 +63,7 @@ function serializeProfile(
     roleExtensions: extensions,
     joinedAt: profile.joinedAt?.toISOString() ?? null,
     deactivatedAt: profile.deactivatedAt?.toISOString() ?? null,
-    photoStorageObjectId: profile.photoStorageObjectId ?? null,
+    photoStorageObjectId: profile.photoStorageObjectId ?? userPhotoStorageObjectId ?? null,
     createdAt: profile.createdAt.toISOString(),
     updatedAt: profile.updatedAt.toISOString(),
   };
@@ -254,9 +255,13 @@ export const staffService = {
     requireTenant(actor, tenantId);
     const profiles = await staffRepository.listProfiles(tenantId);
     const responses: StaffDirectoryEntryResponse[] = [];
-    for (const profile of profiles) {
+    for (const { profile, userPhotoStorageObjectId } of profiles) {
       const roles = await staffRepository.listActiveRoles(tenantId, profile.id);
-      const entry: StaffDirectoryEntryResponse = serializeProfile(profile, roles);
+      const entry: StaffDirectoryEntryResponse = serializeProfile(
+        profile,
+        roles,
+        userPhotoStorageObjectId,
+      );
       if (profile.status === 'pending') {
         const invitation = await staffRepository.findActiveInvitationForProfile(tenantId, profile.id);
         if (invitation) {
@@ -274,7 +279,11 @@ export const staffService = {
     actor: ActorContext,
   ): Promise<StaffDetailResponse> {
     requireTenant(actor, tenantId);
-    const profile = await this.requireProfile(tenantId, staffProfileId);
+    const row = await staffRepository.findProfileWithUserPhoto(tenantId, staffProfileId);
+    if (!row) {
+      throw new LoomisError('HRM_STAFF_NOT_FOUND', 404, 'Staff profile not found');
+    }
+    const { profile, userPhotoStorageObjectId } = row;
     const roles = await staffRepository.listActiveRoles(tenantId, profile.id);
     const invitation =
       profile.status === 'pending'
@@ -290,7 +299,7 @@ export const staffService = {
     );
 
     return {
-      ...serializeProfile(profile, roles),
+      ...serializeProfile(profile, roles, userPhotoStorageObjectId),
       pendingInvitation: invitation ? serializeInvitation(invitation) : null,
       subjectAssignments: subjectAssignments.map(serializeSubjectAssignment),
       classTeacherAssignments: classTeacherAssignments.map(serializeClassTeacherAssignment),
@@ -638,7 +647,11 @@ export const staffService = {
       throw new LoomisError('HRM_STAFF_NOT_FOUND', 404, 'Staff profile not found');
     }
     const roles = await staffRepository.listActiveRoles(tenantId, staffProfileId);
-    return serializeProfile(updated, roles);
+    const row = await staffRepository.findProfileWithUserPhoto(tenantId, staffProfileId);
+    if (!row) {
+      throw new LoomisError('HRM_STAFF_NOT_FOUND', 404, 'Staff profile not found');
+    }
+    return serializeProfile(row.profile, roles, row.userPhotoStorageObjectId);
   },
 
   async requireActiveProfile(tenantId: string, staffProfileId: string) {

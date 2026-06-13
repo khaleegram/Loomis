@@ -85,7 +85,7 @@ export default function AddStaffPage() {
 
   if (!canOnboard) {
     return (
-      <PageBody className="max-w-2xl px-6 py-6 lg:px-8 lg:py-8">
+      <PageBody className="max-w-2xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
         <Alert>
           <AlertDescription>You do not have permission to add staff.</AlertDescription>
         </Alert>
@@ -95,7 +95,7 @@ export default function AddStaffPage() {
 
   if (!tenantId) {
     return (
-      <PageBody className="max-w-2xl px-6 py-6 lg:px-8 lg:py-8">
+      <PageBody className="max-w-2xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
         <Alert variant="destructive">
           <AlertDescription>No tenant context. Sign in again.</AlertDescription>
         </Alert>
@@ -128,7 +128,7 @@ export default function AddStaffPage() {
   }
 
   return (
-    <PageBody className="max-w-2xl px-6 py-6 lg:px-8 lg:py-8">
+    <PageBody className="max-w-2xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
       <div className="mb-6 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.15em] text-neutral-400">
         <Link href="/school/staff" className="transition-colors hover:text-brand-600">
           Staff Management

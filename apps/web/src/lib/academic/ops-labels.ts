@@ -54,9 +54,25 @@ export function formatClassArmLabel(
   return `${level?.code ?? 'Class'} ${arm.name}`;
 }
 
-/** Subject catalogue is pending — show opaque ID fragment. */
+/** Subject catalogue — opaque IDs until subjects module ships. */
+const SUBJECT_LABELS: Record<string, string> = {
+  '019c0000-0000-7000-8000-000000000001': 'Mathematics',
+  '019c0000-0000-7000-8000-000000000002': 'English Language',
+  '019c0000-0000-7000-8000-000000000003': 'Basic Science',
+  '019c0000-0000-7000-8000-000000000004': 'Social Studies',
+  '019c0000-0000-7000-8000-000000000005': 'Civic Education',
+  '019c0000-0000-7000-8000-000000000006': 'Computer Studies',
+  '019c0000-0000-7000-8000-000000000007': 'Physical & Health Education',
+  '019c0000-0000-7000-8000-000000000008': 'Christian Religious Studies',
+};
+
+export const SCHOOL_SUBJECT_OPTIONS = Object.entries(SUBJECT_LABELS).map(([id, label]) => ({
+  id,
+  label,
+}));
+
 export function formatSubjectLabel(subjectId: string): string {
-  return `Subject ···${subjectId.slice(-8)}`;
+  return SUBJECT_LABELS[subjectId] ?? `Subject ···${subjectId.slice(-8)}`;
 }
 
 export function todayCalendarDate(): string {
