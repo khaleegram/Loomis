@@ -269,3 +269,65 @@ export const setStudentPhotoRequest = z.object({
   storageObjectId: z.string().uuid(),
 });
 export type SetStudentPhotoRequest = z.infer<typeof setStudentPhotoRequest>;
+
+/** Active enrollments in a term — used for year-end promotion staging (FR-ASM-007). */
+export const termEnrollmentRosterEntry = z.object({
+  enrollmentId: z.string().uuid(),
+  studentId: z.string().uuid(),
+  admissionNo: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
+  classArmId: z.string().uuid(),
+  classLevelId: z.string().uuid(),
+  classArmName: z.string(),
+  classLevelName: z.string(),
+  classLevelCode: z.string(),
+  status: enrollmentStatus,
+});
+export type TermEnrollmentRosterEntry = z.infer<typeof termEnrollmentRosterEntry>;
+
+export const termEnrollmentRosterResponse = z.object({
+  termId: z.string().uuid(),
+  academicYearId: z.string().uuid(),
+  entries: z.array(termEnrollmentRosterEntry),
+});
+export type TermEnrollmentRosterResponse = z.infer<typeof termEnrollmentRosterResponse>;
+
+// ── Certificates (US-ASM-006) ────────────────────────────────────────────────────
+
+export const studentCertificateType = z.enum(['leaving', 'transfer']);
+export type StudentCertificateType = z.infer<typeof studentCertificateType>;
+
+/** Issued leaving or transfer certificate metadata (PDF stored in S3). */
+export const studentCertificateResponse = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
+  studentId: z.string().uuid(),
+  certificateType: studentCertificateType,
+  certificateNumber: z.string(),
+  academicYearId: z.string().uuid().nullable(),
+  promotionRecordId: z.string().uuid().nullable(),
+  storageObjectId: z.string().uuid(),
+  issuedAt: z.string().datetime(),
+  issuedById: z.string().uuid(),
+  createdAt: z.string().datetime(),
+});
+export type StudentCertificateResponse = z.infer<typeof studentCertificateResponse>;
+
+export const leavingCertificateListResponse = z.object({
+  academicYearId: z.string().uuid(),
+  certificates: z.array(studentCertificateResponse),
+});
+export type LeavingCertificateListResponse = z.infer<typeof leavingCertificateListResponse>;
+
+export const studentCertificateListResponse = z.object({
+  studentId: z.string().uuid(),
+  certificates: z.array(studentCertificateResponse),
+});
+export type StudentCertificateListResponse = z.infer<typeof studentCertificateListResponse>;
+
+/** On-demand leaving certificate generation when auto-issue failed or was skipped. */
+export const generateLeavingCertificateRequest = z.object({
+  academicYearId: z.string().uuid(),
+});
+export type GenerateLeavingCertificateRequest = z.infer<typeof generateLeavingCertificateRequest>;

@@ -204,6 +204,17 @@ export const studentRepository = {
     });
   },
 
+  async findStudentByUserId(tenantId: string, userId: string) {
+    return withTenantContext(tenantId, async (tx) => {
+      const [row] = await tx
+        .select()
+        .from(students)
+        .where(and(eq(students.tenantId, tenantId), eq(students.userId, userId)))
+        .limit(1);
+      return row ?? null;
+    });
+  },
+
   async listStudents(tenantId: string) {
     return withTenantContext(tenantId, async (tx) =>
       tx
@@ -282,6 +293,35 @@ export const studentRepository = {
     });
   },
 
+  /** US-ASM-006. Mark student graduated and close active enrollments. */
+  async markGraduated(tenantId: string, studentId: string) {
+    return withTenantContext(tenantId, async (tx) => {
+      const now = new Date();
+      await tx
+        .update(enrollments)
+        .set({
+          status: 'graduated',
+          endedAt: now,
+          endReason: 'graduated',
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(enrollments.tenantId, tenantId),
+            eq(enrollments.studentId, studentId),
+            inArray(enrollments.status, ['active', 'active_billable']),
+          ),
+        );
+
+      const [row] = await tx
+        .update(students)
+        .set({ status: 'graduated', updatedAt: now })
+        .where(and(eq(students.tenantId, tenantId), eq(students.id, studentId)))
+        .returning();
+      return row ?? null;
+    });
+  },
+
   async setPhoto(tenantId: string, studentId: string, storageObjectId: string) {
     return withTenantContext(tenantId, async (tx) => {
       const now = new Date();
@@ -320,6 +360,38 @@ export const studentRepository = {
         .from(enrollments)
         .where(and(eq(enrollments.tenantId, tenantId), eq(enrollments.studentId, studentId)))
         .orderBy(asc(enrollments.enrolledAt)),
+    );
+  },
+
+  /** Active enrollments in a term with student and class metadata (promotion staging). */
+  async listTermEnrollmentRoster(tenantId: string, termId: string) {
+    return withTenantContext(tenantId, async (tx) =>
+      tx
+        .select({
+          enrollmentId: enrollments.id,
+          studentId: students.id,
+          admissionNo: students.admissionNo,
+          firstName: students.firstName,
+          lastName: students.lastName,
+          classArmId: enrollments.classArmId,
+          classLevelId: classArms.classLevelId,
+          classArmName: classArms.name,
+          classLevelName: classLevels.name,
+          classLevelCode: classLevels.code,
+          status: enrollments.status,
+        })
+        .from(enrollments)
+        .innerJoin(students, eq(enrollments.studentId, students.id))
+        .innerJoin(classArms, eq(enrollments.classArmId, classArms.id))
+        .innerJoin(classLevels, eq(classArms.classLevelId, classLevels.id))
+        .where(
+          and(
+            eq(enrollments.tenantId, tenantId),
+            eq(enrollments.termId, termId),
+            inArray(enrollments.status, ['active', 'active_billable']),
+          ),
+        )
+        .orderBy(asc(classLevels.rank), asc(classArms.name), asc(students.lastName)),
     );
   },
 
@@ -598,6 +670,32 @@ export const studentRepository = {
         .where(and(eq(parentLinks.tenantId, tenantId), eq(parentLinks.studentId, studentId)))
         .orderBy(asc(parentLinks.createdAt)),
     );
+  },
+
+  /** True when the parent user has an active link to the student in this tenant. */
+  async hasActiveParentLink(tenantId: string, parentUserId: string, studentId: string) {
+    return withTenantContext(tenantId, async (tx) => {
+      const [identity] = await tx
+        .select({ id: parentIdentities.id })
+        .from(parentIdentities)
+        .where(eq(parentIdentities.userId, parentUserId))
+        .limit(1);
+      if (!identity) return false;
+
+      const [link] = await tx
+        .select({ id: parentLinks.id })
+        .from(parentLinks)
+        .where(
+          and(
+            eq(parentLinks.tenantId, tenantId),
+            eq(parentLinks.studentId, studentId),
+            eq(parentLinks.parentIdentityId, identity.id),
+            eq(parentLinks.status, 'active'),
+          ),
+        )
+        .limit(1);
+      return Boolean(link);
+    });
   },
 
   async createParentLink(

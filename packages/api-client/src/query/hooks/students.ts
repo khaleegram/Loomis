@@ -2,13 +2,18 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   CreateEnrollmentRequest,
   EnrollmentResponse,
+  GenerateLeavingCertificateRequest,
   InitiateParentLinkRequest,
+  LeavingCertificateListResponse,
   ParentLinkResponse,
   RecordIdentityAttestationRequest,
   SetStudentPhotoRequest,
+  StudentCertificateListResponse,
+  StudentCertificateResponse,
   StudentListResponse,
   StudentProfileResponse,
   StudentResponse,
+  TermEnrollmentRosterResponse,
   TransferStudentOutRequest,
   TransferStudentOutResponse,
 } from '@loomis/contracts';
@@ -79,6 +84,82 @@ export function useStudent(tenantId: string, studentId: string) {
   return useQuery({
     ...studentDetailQueryOptions(client, tenantId, studentId),
     enabled: Boolean(tenantId && studentId),
+  });
+}
+
+/** Active enrollments in a term for promotion staging (FR-ASM-007). */
+export function useTermEnrollmentRoster(tenantId: string, termId: string) {
+  const client = useApiClient();
+  const queryKey = queryKeys.students.enrollmentRoster(tenantId, termId);
+  assertTenantScopedKey(queryKey, tenantId);
+  return useQuery({
+    queryKey,
+    queryFn: () =>
+      client.get<TermEnrollmentRosterResponse>(
+        `/tenants/${tenantId}/terms/${termId}/enrollment-roster`,
+      ),
+    staleTime: STUDENT_LIST_STALE_MS,
+    enabled: Boolean(tenantId && termId),
+  });
+}
+
+/** Leaving certificates issued for an academic year (US-ASM-006). */
+export function useLeavingCertificates(tenantId: string, academicYearId: string) {
+  const client = useApiClient();
+  const queryKey = queryKeys.students.leavingCertificates(tenantId, academicYearId);
+  assertTenantScopedKey(queryKey, tenantId);
+  return useQuery({
+    queryKey,
+    queryFn: () =>
+      client.get<LeavingCertificateListResponse>(
+        `/tenants/${tenantId}/academic-years/${academicYearId}/leaving-certificates`,
+      ),
+    staleTime: STUDENT_LIST_STALE_MS,
+    enabled: Boolean(tenantId && academicYearId),
+  });
+}
+
+/** All certificates for a single student. */
+export function useStudentCertificates(tenantId: string, studentId: string) {
+  const client = useApiClient();
+  const queryKey = queryKeys.students.certificates(tenantId, studentId);
+  assertTenantScopedKey(queryKey, tenantId);
+  return useQuery({
+    queryKey,
+    queryFn: () =>
+      client.get<StudentCertificateListResponse>(
+        `/tenants/${tenantId}/students/${studentId}/certificates`,
+      ),
+    staleTime: STUDENT_DETAIL_STALE_MS,
+    enabled: Boolean(tenantId && studentId),
+  });
+}
+
+/** On-demand leaving certificate generation (Principal / Owner). */
+export function useGenerateLeavingCertificate(tenantId: string) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      studentId,
+      academicYearId,
+    }: {
+      studentId: string;
+      academicYearId: string;
+    }) =>
+      client.post<StudentCertificateResponse>(
+        `/tenants/${tenantId}/students/${studentId}/leaving-certificate`,
+        { academicYearId } satisfies GenerateLeavingCertificateRequest,
+      ),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.students.leavingCertificates(tenantId, variables.academicYearId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.students.certificates(tenantId, variables.studentId),
+      });
+    },
   });
 }
 

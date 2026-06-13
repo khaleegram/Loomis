@@ -331,3 +331,38 @@ export const parentLinks = studentSchema.table(
     ),
   }),
 );
+
+/** Leaving / transfer certificates (US-ASM-006). PDF in S3; metadata here. */
+export const studentCertificates = studentSchema.table(
+  'student_certificates',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id),
+    studentId: uuid('student_id')
+      .notNull()
+      .references(() => students.id),
+    certificateType: varchar('certificate_type', { length: 20 }).notNull(),
+    certificateNumber: varchar('certificate_number', { length: 64 }).notNull(),
+    academicYearId: uuid('academic_year_id'),
+    promotionRecordId: uuid('promotion_record_id'),
+    storageObjectId: uuid('storage_object_id').notNull(),
+    issuedAt: timestamp('issued_at', { withTimezone: true }).notNull().defaultNow(),
+    issuedById: uuid('issued_by_id').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    tenantNumberUnique: uniqueIndex('student_certificates_tenant_number_unique').on(
+      table.tenantId,
+      table.certificateNumber,
+    ),
+    typeValid: check(
+      'student_certificates_type_valid',
+      sql`${table.certificateType} IN ('leaving', 'transfer')`,
+    ),
+  }),
+);

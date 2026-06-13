@@ -185,6 +185,35 @@ export const enrollmentService = {
     return rows.map(serializeEnrollment);
   },
 
+  /** FR-ASM-007. Roster of active enrollments for promotion staging. */
+  async listTermEnrollmentRoster(tenantId: string, termId: string, actor: ActorContext) {
+    requireTenant(actor, tenantId);
+
+    const term = await academicRepository.findTermById(tenantId, termId);
+    if (!term) {
+      throw new LoomisError('ACADEMIC_TERM_NOT_FOUND', 404, 'Academic term not found');
+    }
+
+    const rows = await studentRepository.listTermEnrollmentRoster(tenantId, termId);
+    return {
+      termId,
+      academicYearId: term.academicYearId,
+      entries: rows.map((row) => ({
+        enrollmentId: row.enrollmentId,
+        studentId: row.studentId,
+        admissionNo: row.admissionNo,
+        firstName: row.firstName,
+        lastName: row.lastName,
+        classArmId: row.classArmId,
+        classLevelId: row.classLevelId,
+        classArmName: row.classArmName,
+        classLevelName: row.classLevelName,
+        classLevelCode: row.classLevelCode,
+        status: row.status as EnrollmentResponse['status'],
+      })),
+    };
+  },
+
   /** Census lock reads this count (System Design §8.1). */
   async countBillableForTerm(tenantId: string, termId: string): Promise<number> {
     return studentRepository.countBillableEnrollments(tenantId, termId);

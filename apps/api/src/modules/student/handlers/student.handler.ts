@@ -4,6 +4,7 @@ import type {
   AdmissionDecisionRequest,
   CreateAdmissionRequest,
   CreateEnrollmentRequest,
+  GenerateLeavingCertificateRequest,
   InitiateParentLinkRequest,
   RecordIdentityAttestationRequest,
   SetStudentPhotoRequest,
@@ -13,6 +14,7 @@ import { LoomisError } from '../../../shared/errors.js';
 import { sendSuccess } from '../../../shared/http.js';
 import {
   admissionService,
+  certificateService,
   enrollmentService,
   parentLinkService,
   studentService,
@@ -198,4 +200,67 @@ export async function setStudentPhotoHandler(
     requireActor(req),
   );
   return sendSuccess(reply, student);
+}
+
+interface TermParams extends TenantParams {
+  termId: string;
+}
+
+interface YearParams extends TenantParams {
+  yearId: string;
+}
+
+export async function listTermEnrollmentRosterHandler(
+  req: FastifyRequest<{ Params: TermParams }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const roster = await enrollmentService.listTermEnrollmentRoster(
+    req.params.tenantId,
+    req.params.termId,
+    requireActor(req),
+  );
+  return sendSuccess(reply, roster);
+}
+
+export async function listLeavingCertificatesHandler(
+  req: FastifyRequest<{ Params: YearParams }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const certificates = await certificateService.listLeavingCertificatesForYear(
+    req.params.tenantId,
+    req.params.yearId,
+    requireActor(req),
+  );
+  return sendSuccess(reply, {
+    academicYearId: req.params.yearId,
+    certificates,
+  });
+}
+
+export async function listStudentCertificatesHandler(
+  req: FastifyRequest<{ Params: StudentParams }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const certificates = await certificateService.listStudentCertificates(
+    req.params.tenantId,
+    req.params.studentId,
+    requireActor(req),
+  );
+  return sendSuccess(reply, {
+    studentId: req.params.studentId,
+    certificates,
+  });
+}
+
+export async function generateLeavingCertificateHandler(
+  req: FastifyRequest<{ Params: StudentParams; Body: GenerateLeavingCertificateRequest }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const certificate = await certificateService.generateLeavingCertificateOnRequest(
+    req.params.tenantId,
+    req.params.studentId,
+    req.body.academicYearId,
+    requireActor(req),
+  );
+  return sendSuccess(reply, certificate, 201);
 }

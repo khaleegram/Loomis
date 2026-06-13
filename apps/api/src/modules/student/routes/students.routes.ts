@@ -2,12 +2,14 @@ import type { FastifyInstance } from 'fastify';
 import {
   acceptParentLinkRequest,
   createEnrollmentRequest,
+  generateLeavingCertificateRequest,
   initiateParentLinkRequest,
   recordIdentityAttestationRequest,
   setStudentPhotoRequest,
   transferStudentOutRequest,
   type AcceptParentLinkRequest,
   type CreateEnrollmentRequest,
+  type GenerateLeavingCertificateRequest,
   type InitiateParentLinkRequest,
   type RecordIdentityAttestationRequest,
   type SetStudentPhotoRequest,
@@ -21,10 +23,14 @@ import { validateBody } from '../../../shared/validation.js';
 import {
   acceptParentLinkHandler,
   createEnrollmentHandler,
+  generateLeavingCertificateHandler,
   getStudentHandler,
   getStudentProfileHandler,
   initiateParentLinkHandler,
+  listLeavingCertificatesHandler,
   listStudentsHandler,
+  listStudentCertificatesHandler,
+  listTermEnrollmentRosterHandler,
   recordIdentityAttestationHandler,
   setStudentPhotoHandler,
   transferStudentOutHandler,
@@ -33,6 +39,9 @@ import {
 const studentReaders = ['school_owner', 'principal', 'admin_officer'] as const;
 const studentWriters = ['school_owner', 'principal', 'admin_officer'] as const;
 const transferApprovers = ['school_owner', 'principal'] as const;
+const promotionRosterReaders = ['school_owner', 'principal', 'admin_officer'] as const;
+const certificateReaders = ['school_owner', 'principal', 'admin_officer', 'exam_officer'] as const;
+const certificateGenerators = ['school_owner', 'principal'] as const;
 
 export async function studentsRoutes(app: FastifyInstance): Promise<void> {
   app.get<{ Params: { tenantId: string } }>(
@@ -86,6 +95,42 @@ export async function studentsRoutes(app: FastifyInstance): Promise<void> {
       preValidation: [validateBody(createEnrollmentRequest)],
     },
     createEnrollmentHandler,
+  );
+
+  app.get<{ Params: { tenantId: string; termId: string } }>(
+    '/tenants/:tenantId/terms/:termId/enrollment-roster',
+    {
+      preHandler: [authenticate, requireTenantMatch, requireRole(...promotionRosterReaders)],
+    },
+    listTermEnrollmentRosterHandler,
+  );
+
+  app.get<{ Params: { tenantId: string; yearId: string } }>(
+    '/tenants/:tenantId/academic-years/:yearId/leaving-certificates',
+    {
+      preHandler: [authenticate, requireTenantMatch, requireRole(...certificateReaders)],
+    },
+    listLeavingCertificatesHandler,
+  );
+
+  app.get<{ Params: { tenantId: string; studentId: string } }>(
+    '/tenants/:tenantId/students/:studentId/certificates',
+    {
+      preHandler: [authenticate, requireTenantMatch, requireRole(...certificateReaders)],
+    },
+    listStudentCertificatesHandler,
+  );
+
+  app.post<{
+    Params: { tenantId: string; studentId: string };
+    Body: GenerateLeavingCertificateRequest;
+  }>(
+    '/tenants/:tenantId/students/:studentId/leaving-certificate',
+    {
+      preHandler: [authenticate, requireTenantMatch, requireRole(...certificateGenerators)],
+      preValidation: [validateBody(generateLeavingCertificateRequest)],
+    },
+    generateLeavingCertificateHandler,
   );
 
   app.post<{
