@@ -1,6 +1,8 @@
 import { LoomisError } from '../../../shared/errors.js';
 import { academicEvents } from '../events/index.js';
 import { academicRepository } from '../repository/academic.repository.js';
+import { certificateService } from '../../student/services/certificate.service.js';
+import type { ActorContext as StudentActorContext } from '../../student/types.js';
 import type { ActorContext, StagePromotionInput } from '../types.js';
 import { requireTenant, requireYear } from './_shared.js';
 
@@ -85,7 +87,13 @@ export const promotionService = {
       actor.userId,
     );
 
-    const toAcademicYearId = staged[0]?.toAcademicYearId;
+    await certificateService.processConfirmedGraduations(
+      tenantId,
+      confirmed,
+      actor as StudentActorContext,
+    );
+
+    const toAcademicYearId = confirmed.find((r) => r.status === 'confirmed')?.toAcademicYearId;
     if (toAcademicYearId) {
       await academicEvents.publishPromotionConfirmed(
         tenantId,

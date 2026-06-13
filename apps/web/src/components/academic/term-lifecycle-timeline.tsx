@@ -1,13 +1,15 @@
 'use client';
 
 import type { AcademicTermResponse } from '@loomis/contracts';
+import { Check, Lock, PenLine, Play } from 'lucide-react';
+
 import { cn } from '@loomis/ui-web';
 
 const LIFECYCLE_STEPS = [
-  { key: 'draft', label: 'Configure' },
-  { key: 'open', label: 'Open' },
-  { key: 'census_locked', label: 'Census lock' },
-  { key: 'closed', label: 'Close' },
+  { key: 'draft', label: 'Configure', icon: PenLine },
+  { key: 'open', label: 'Open', icon: Play },
+  { key: 'census_locked', label: 'Census', icon: Lock },
+  { key: 'closed', label: 'Closed', icon: Check },
 ] as const;
 
 type LifecycleKey = (typeof LIFECYCLE_STEPS)[number]['key'];
@@ -33,40 +35,50 @@ function stepState(
 interface TermLifecycleTimelineProps {
   term: AcademicTermResponse;
   className?: string;
+  variant?: 'default' | 'compact';
 }
 
-/** Horizontal Emerald Rail — term lifecycle (draft → open → census_locked → closed). */
-export function TermLifecycleTimeline({ term, className }: TermLifecycleTimelineProps) {
+export function TermLifecycleTimeline({
+  term,
+  className,
+  variant = 'default',
+}: TermLifecycleTimelineProps) {
   return (
     <nav
       aria-label={`${term.name} lifecycle`}
-      className={cn('w-full overflow-x-auto pb-1', className)}
+      className={cn('w-full overflow-x-auto', className)}
     >
-      <ol className="flex min-w-[32rem] items-center gap-0">
+      <ol
+        className={cn(
+          'flex w-full min-w-0 items-center justify-between sm:justify-normal',
+          variant === 'compact' ? 'gap-1' : 'gap-0',
+        )}
+      >
         {LIFECYCLE_STEPS.map((step, index) => {
           const state = stepState(step.key, term.status);
+          const Icon = step.icon;
           const isLast = index === LIFECYCLE_STEPS.length - 1;
+
           return (
             <li key={step.key} className="flex flex-1 items-center">
-              <div className="flex flex-col items-center gap-1.5 px-2">
+              <div className="flex flex-col items-center gap-1.5 px-1">
                 <span
                   className={cn(
-                    'flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-semibold transition-colors',
-                    state === 'complete' &&
-                      'border-brand-600 bg-brand-600 text-primary-foreground dark:border-mint-500 dark:bg-mint-500',
+                    'flex items-center justify-center rounded-xl transition-colors',
+                    variant === 'compact' ? 'size-8' : 'size-9',
+                    state === 'complete' && 'bg-brand-600 text-neutral-900',
                     state === 'current' &&
-                      'border-gold bg-gold/10 text-foreground ring-2 ring-gold/30 dark:border-gold dark:bg-gold/15',
-                    state === 'upcoming' &&
-                      'border-border bg-muted text-muted-foreground',
+                      'bg-brand-500 text-neutral-900 ring-2 ring-brand-300 ring-offset-2',
+                    state === 'upcoming' && 'bg-neutral-100 text-neutral-400',
                   )}
                   aria-current={state === 'current' ? 'step' : undefined}
                 >
-                  {index + 1}
+                  <Icon aria-hidden className="size-3.5" />
                 </span>
                 <span
                   className={cn(
-                    'text-center text-xs font-medium',
-                    state === 'current' ? 'text-foreground' : 'text-muted-foreground',
+                    'text-center text-[10px] font-semibold uppercase tracking-wide',
+                    state === 'current' ? 'text-brand-800' : 'text-neutral-400',
                   )}
                 >
                   {step.label}
@@ -75,10 +87,10 @@ export function TermLifecycleTimeline({ term, className }: TermLifecycleTimeline
               {!isLast ? (
                 <div
                   className={cn(
-                    'mx-1 h-0.5 flex-1 rounded-full',
+                    'mx-0.5 h-0.5 flex-1 rounded-full',
                     STATUS_ORDER[step.key] < STATUS_ORDER[term.status]
-                      ? 'bg-brand-600 dark:bg-mint-500/60'
-                      : 'bg-border',
+                      ? 'bg-brand-500'
+                      : 'bg-neutral-100',
                   )}
                   aria-hidden
                 />

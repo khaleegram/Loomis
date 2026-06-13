@@ -6,7 +6,6 @@ import {
   Alert,
   AlertDescription,
   AlertTitle,
-  Button,
   Checkbox,
   Dialog,
   DialogContent,
@@ -18,6 +17,7 @@ import {
 import { useState } from 'react';
 
 import { academicErrorMessage } from '@/lib/academic/academic-errors';
+import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { formatCalendarDate } from '@/lib/academic/term-labels';
 
 interface ActivateYearDialogProps {
@@ -93,17 +93,18 @@ export function ActivateYearDialog({
           </Alert>
         ) : null}
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="gap-2 sm:justify-end">
+          <button type="button" onClick={() => onOpenChange(false)} className={ACADEMIC_UI.btnSecondary}>
             Cancel
-          </Button>
-          <Button
-            variant="destructive"
+          </button>
+          <button
+            type="button"
             disabled={!acknowledged || activate.isPending}
             onClick={() => void handleActivate()}
+            className="inline-flex h-10 items-center rounded-lg border border-red-200 bg-red-50 px-5 text-[14px] font-medium text-red-800 transition-colors hover:bg-red-100 disabled:opacity-50"
           >
             {activate.isPending ? 'Activating…' : 'Activate year'}
-          </Button>
+          </button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

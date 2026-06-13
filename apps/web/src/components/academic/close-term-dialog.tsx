@@ -7,7 +7,6 @@ import {
   Alert,
   AlertDescription,
   AlertTitle,
-  Button,
   Checkbox,
   Dialog,
   DialogContent,
@@ -28,6 +27,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import { academicErrorMessage } from '@/lib/academic/academic-errors';
+import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 
 const closeFormSchema = closeTermRequest.extend({
   acknowledged: z.boolean().refine((v) => v, {
@@ -189,13 +189,17 @@ export function CloseTermDialog({
                 <AlertDescription>{form.formState.errors.root.message}</AlertDescription>
               </Alert>
             ) : null}
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <DialogFooter className="gap-2 sm:justify-end">
+              <button type="button" onClick={() => onOpenChange(false)} className={ACADEMIC_UI.btnSecondary}>
                 Cancel
-              </Button>
-              <Button type="submit" variant="destructive" disabled={closeTerm.isPending}>
+              </button>
+              <button
+                type="submit"
+                disabled={closeTerm.isPending}
+                className="inline-flex h-10 items-center rounded-lg border border-red-200 bg-red-50 px-5 text-[14px] font-medium text-red-800 transition-colors hover:bg-red-100 disabled:opacity-50"
+              >
                 {closeTerm.isPending ? 'Closing…' : 'Close term'}
-              </Button>
+              </button>
             </DialogFooter>
           </form>
         </Form>

@@ -10,12 +10,6 @@ import {
 import {
   Alert,
   AlertDescription,
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   Form,
   FormControl,
   FormField,
@@ -32,6 +26,7 @@ import { OpenTermDialog } from '@/components/academic/open-term-dialog';
 import { TermLifecycleTimeline } from '@/components/academic/term-lifecycle-timeline';
 import { TermStatusBadge } from '@/components/academic/term-status-badge';
 import { academicErrorMessage } from '@/lib/academic/academic-errors';
+import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { defaultTermName, formatCalendarDate } from '@/lib/academic/term-labels';
 import { useCan } from '@/lib/auth/use-capability';
 
@@ -81,22 +76,22 @@ export function TermConfigPanel({ tenantId, yearId, term }: TermConfigPanelProps
   });
 
   return (
-    <Card className="shadow-card">
-      <CardHeader className="space-y-4">
+    <div className="card rounded-2xl p-0">
+      <div className="space-y-4 border-b border-neutral-100 px-6 py-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <CardTitle className="text-lg">{term.name}</CardTitle>
-            <CardDescription>
+            <h3 className="text-lg font-bold text-neutral-900">{term.name}</h3>
+            <p className="text-[13px] text-neutral-500">
               Term {term.sequence}
               {term.openedAt ? ` · Opened ${formatCalendarDate(term.openedAt.slice(0, 10))}` : null}
-            </CardDescription>
+            </p>
           </div>
           <TermStatusBadge status={term.status} />
         </div>
         <TermLifecycleTimeline term={term} />
-      </CardHeader>
+      </div>
 
-      <CardContent className="space-y-6">
+      <div className="space-y-6 px-6 py-5">
         {term.status === 'open' ? (
           <Alert>
             <AlertDescription>
@@ -116,9 +111,9 @@ export function TermConfigPanel({ tenantId, yearId, term }: TermConfigPanelProps
         <Form {...form}>
           <form onSubmit={onSubmit} className="space-y-6">
             <section className="space-y-4">
-              <div>
-                <h3 className="text-sm font-semibold text-foreground">Calendar</h3>
-                <p className="text-xs text-muted-foreground">Core term boundaries</p>
+              <div className="border-l-2 border-brand-300 pl-3">
+                <p className={ACADEMIC_UI.sectionLabel}>Calendar</p>
+                <p className="text-[12px] text-neutral-500">Core term boundaries</p>
               </div>
               <FormField
                 control={form.control}
@@ -163,12 +158,12 @@ export function TermConfigPanel({ tenantId, yearId, term }: TermConfigPanelProps
               </div>
             </section>
 
-            <Separator />
+            <Separator className="bg-gradient-to-r from-transparent via-neutral-200 to-transparent" />
 
             <section className="space-y-4">
-              <div>
-                <h3 className="text-sm font-semibold text-foreground">Enrollment window</h3>
-                <p className="text-xs text-muted-foreground">
+              <div className="border-l-2 border-accent-teal-400 pl-3">
+                <p className={ACADEMIC_UI.sectionLabel}>Enrollment window</p>
+                <p className="text-[12px] text-neutral-500">
                   Must close on or before the census lock date
                 </p>
               </div>
@@ -215,12 +210,12 @@ export function TermConfigPanel({ tenantId, yearId, term }: TermConfigPanelProps
               />
             </section>
 
-            <Separator />
+            <Separator className="bg-gradient-to-r from-transparent via-neutral-200 to-transparent" />
 
             <section className="space-y-4">
-              <div>
-                <h3 className="text-sm font-semibold text-foreground">Examinations (optional)</h3>
-                <p className="text-xs text-muted-foreground">Visible on the academic calendar (US-ASM-007)</p>
+              <div className="border-l-2 border-accent-purple-400 pl-3">
+                <p className={ACADEMIC_UI.sectionLabel}>Examinations</p>
+                <p className="text-[12px] text-neutral-500">Optional — visible on the academic calendar</p>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
@@ -260,17 +255,17 @@ export function TermConfigPanel({ tenantId, yearId, term }: TermConfigPanelProps
 
             {isDraft && canManageTerm ? (
               <div className="flex flex-wrap gap-2">
-                <Button type="submit" disabled={configure.isPending}>
+                <button type="submit" disabled={configure.isPending} className={ACADEMIC_UI.btnPrimary}>
                   {configure.isPending ? 'Saving…' : 'Save configuration'}
-                </Button>
-                <Button
+                </button>
+                <button
                   type="button"
-                  variant="outline"
                   disabled={openTerm.isPending}
                   onClick={() => setOpenDialog(true)}
+                  className={ACADEMIC_UI.btnSecondary}
                 >
                   Open term
-                </Button>
+                </button>
               </div>
             ) : null}
           </form>
@@ -282,15 +277,11 @@ export function TermConfigPanel({ tenantId, yearId, term }: TermConfigPanelProps
           onOpenChange={setOpenDialog}
           isPending={openTerm.isPending}
           onConfirm={async () => {
-            try {
-              await openTerm.mutateAsync();
-              setOpenDialog(false);
-            } catch (err) {
-              throw err;
-            }
+            await openTerm.mutateAsync();
+            setOpenDialog(false);
           }}
         />
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

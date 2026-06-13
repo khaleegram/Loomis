@@ -5,7 +5,6 @@ import {
   Alert,
   AlertDescription,
   AlertTitle,
-  Button,
   Checkbox,
   Dialog,
   DialogContent,
@@ -16,7 +15,8 @@ import {
 } from '@loomis/ui-web';
 import { useState } from 'react';
 
-import { academicErrorMessage } from '@/lib/academic/academic-errors';
+import { appErrorMessage } from '@/lib/errors/app-error-message';
+import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { formatCalendarDate } from '@/lib/academic/term-labels';
 
 interface OpenTermDialogProps {
@@ -43,7 +43,7 @@ export function OpenTermDialog({
       await onConfirm();
       setAcknowledged(false);
     } catch (err) {
-      setError(academicErrorMessage(err));
+      setError(appErrorMessage(err));
     }
   }
 
@@ -91,13 +91,18 @@ export function OpenTermDialog({
           </Alert>
         ) : null}
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="gap-2 sm:justify-end">
+          <button type="button" onClick={() => onOpenChange(false)} className={ACADEMIC_UI.btnSecondary}>
             Cancel
-          </Button>
-          <Button disabled={!acknowledged || isPending} onClick={() => void handleConfirm()}>
+          </button>
+          <button
+            type="button"
+            disabled={!acknowledged || isPending}
+            onClick={() => void handleConfirm()}
+            className={ACADEMIC_UI.btnPrimary}
+          >
             {isPending ? 'Opening…' : 'Open term'}
-          </Button>
+          </button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -7,18 +7,29 @@ import type {
   CensusLockRequest,
   CensusLockResponse,
   CensusPreviewResponse,
+  ClassArmResponse,
   ClassLevelListResponse,
+  ClassLevelResponse,
   ClassStructureResponse,
+  ConfirmPromotionRequest,
+  CreateClassArmRequest,
+  CreateClassLevelRequest,
+  ProgressionMapResponse,
+  ProgressionResponse,
+  PromotionListResponse,
   CloseTermRequest,
   ConfigureTermRequest,
   CreateAcademicYearRequest,
+  StagePromotionRequest,
   StepUpAction,
   StepUpRequest,
   StepUpResponse,
+  UpsertProgressionRequest,
 } from '@loomis/contracts';
 import type { ApiClient } from '../../http/client.js';
 import type { StepUpTokenResult } from '../../mutations/financial-mutation.js';
 import { useFinancialMutation } from '../../mutations/useFinancialMutation.js';
+import { useIdempotentMutation } from '../../mutations/useIdempotentMutation.js';
 import { useApiClient } from '../context.js';
 import { assertTenantScopedKey, queryKeys } from '../keys.js';
 
@@ -277,5 +288,100 @@ export function useLockCensus(config: UseLockCensusConfig) {
       queryKeys.academic.term(tenantId, termId),
       queryKeys.academic.censusPreview(tenantId, termId),
     ],
+  });
+}
+
+export function progressionsQueryOptions(client: ApiClient, tenantId: string) {
+  const queryKey = queryKeys.academic.progressions(tenantId);
+  assertTenantScopedKey(queryKey, tenantId);
+  return {
+    queryKey,
+    queryFn: () =>
+      client.get<ProgressionMapResponse>(`/tenants/${tenantId}/class-progression`),
+    staleTime: ACADEMIC_STALE_MS,
+  };
+}
+
+/** Class progression map for year-end promotions (FR-ASM-009). */
+export function useProgressions(tenantId: string) {
+  const client = useApiClient();
+  return useQuery({
+    ...progressionsQueryOptions(client, tenantId),
+    enabled: Boolean(tenantId),
+  });
+}
+
+/** Create a class level (FR-ASM-009). */
+export function useCreateClassLevel(tenantId: string) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CreateClassLevelRequest) =>
+      client.post<ClassLevelResponse>(`/tenants/${tenantId}/class-levels`, body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.academic.classLevels(tenantId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.academic.all(tenantId) });
+    },
+  });
+}
+
+/** Create a class arm for an academic year (FR-ASM-009). */
+export function useCreateClassArm(tenantId: string) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CreateClassArmRequest) =>
+      client.post<ClassArmResponse>(`/tenants/${tenantId}/class-arms`, body),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.academic.classStructure(tenantId, variables.academicYearId),
+      });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.academic.all(tenantId) });
+    },
+  });
+}
+
+/** Upsert a progression map entry (FR-ASM-009). */
+export function useUpsertProgression(tenantId: string) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: UpsertProgressionRequest) =>
+      client.put<ProgressionResponse>(`/tenants/${tenantId}/class-progression`, body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.academic.progressions(tenantId) });
+    },
+  });
+}
+
+/** List promotion records for a closing year (FR-ASM-007). */
+export function usePromotions(tenantId: string, yearId: string) {
+  const client = useApiClient();
+  return useQuery({
+    queryKey: queryKeys.academic.promotions(tenantId, yearId),
+    queryFn: () =>
+      client.get<PromotionListResponse>(`/tenants/${tenantId}/academic-years/${yearId}/promotions`),
+    staleTime: ACADEMIC_STALE_MS,
+    enabled: Boolean(tenantId && yearId),
+  });
+}
+
+/** Stage the year-end promotion list (FR-ASM-007). */
+export function useStagePromotion(tenantId: string) {
+  return useIdempotentMutation<StagePromotionRequest, PromotionListResponse>({
+    mutationFn: (client, body, idempotencyKey) =>
+      client.post<PromotionListResponse>(`/tenants/${tenantId}/promotions`, body, {
+        idempotencyKey,
+      }),
+    invalidates: [queryKeys.academic.all(tenantId)],
+  });
+}
+
+/** Confirm staged promotions — Principal / School Owner only (FR-ASM-007). */
+export function useConfirmPromotion(tenantId: string) {
+  return useIdempotentMutation<ConfirmPromotionRequest, { confirmed: true }>({
+    mutationFn: (client, body, idempotencyKey) =>
+      client.post(`/tenants/${tenantId}/promotions/confirm`, body, { idempotencyKey }),
+    invalidates: [queryKeys.academic.all(tenantId), queryKeys.students.all(tenantId)],
   });
 }
