@@ -45,5 +45,6 @@ describe('route-groups', () => {
     expect(homePathForRole('platform_owner')).toBe('/platform');
     expect(homePathForRole('dpo')).toBe('/platform/compliance');
     expect(homePathForRole('parent')).toBe('/parent');
+    expect(homePathForRole('timetable_officer')).toBe('/school/timetable');
   });
 });

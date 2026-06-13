@@ -1,199 +1,443 @@
-// @ts-nocheck
 'use client';
 
+
+
+import {
+
+  useCreateTimetableEntry,
+
+  useDeleteTimetableEntry,
+
+  useTimetable,
+
+  useTimetableSubjectOptions,
+
+  useTimetableSummary,
+
+} from '@loomis/api-client';
+
+import { Alert, AlertDescription } from '@loomis/ui-web';
+
+import { Send } from 'lucide-react';
+
+import Link from 'next/link';
+
 import { useMemo, useState } from 'react';
-import { useTimetable, useCreateTimetableEntry, useDeleteTimetableEntry, usePublishTimetable, useAcademicTerms, useAcademicYears, useClassStructure } from '@loomis/api-client';
-import { Button, Card, CardContent, CardHeader, CardTitle, Form, FormControl, FormField, FormItem, FormLabel, FormMessage, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@loomis/ui-web';
-import { Plus, Trash2, Send, Clock } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 
-import { PageBody, PageHeader } from '@/components/school/school-shell';
+
+
+import { AcademicScopePicker } from '@/components/academic/ops/academic-scope-picker';
+
+import {
+
+  TimetableAssignLessonSheet,
+
+  type TimetableSlotTarget,
+
+} from '@/components/academic/ops/timetable-add-period-sheet';
+
+import { TimetableCommandCenter } from '@/components/academic/ops/timetable-command-center';
+
+import { TimetableHero } from '@/components/academic/ops/timetable-hero';
+
+import { TimetableScheduleCanvas } from '@/components/academic/ops/timetable-schedule-canvas';
+
+import { TimetableWeekGrid } from '@/components/academic/ops/timetable-week-grid';
+
+import { PageBody } from '@/components/school/school-shell';
+
+import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
+
+import { academicErrorMessage } from '@/lib/academic/academic-errors';
+
+import {
+
+  classArmOptions,
+
+  useAcademicOpsContext,
+
+} from '@/lib/academic/use-academic-ops-context';
+
+import { useCan, useCanAny } from '@/lib/auth/use-capability';
+
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
-import { useCan } from '@/lib/auth/use-capability';
 
-const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] as const;
+import { useBellScheduleSlots } from '@/lib/timetable/use-bell-schedule-slots';
 
-const entrySchema = z.object({
-  dayOfWeek: z.coerce.number().min(0).max(4),
-  startMinute: z.coerce.number().min(0),
-  endMinute: z.coerce.number().min(0),
-  subjectId: z.string().min(1, 'Subject required'),
-  classArmId: z.string().min(1, 'Required'),
-});
 
-type EntryForm = z.infer<typeof entrySchema>;
 
 export default function TimetablePage() {
+
   const tenantId = useTenantId();
-  const canEdit = useCan('term.manage');
-  const [adding, setAdding] = useState(false);
 
-  const yearsData = useAcademicYears(tenantId ?? '');
-  const activeYearId = useMemo(() => {
-    const list = (yearsData.data as any)?.academicYears ?? [];
-    return list.find((y: any) => y.status === 'active')?.id ?? null;
-  }, [yearsData.data]);
+  const canManage = useCan('timetable.manage');
 
-  const termsData = useAcademicTerms(tenantId ?? '', activeYearId ?? '');
-  const openTermId = useMemo(() => {
-    const list = (termsData.data as any)?.terms ?? [];
-    return list.find((t: any) => t.status === 'open')?.id ?? null;
-  }, [termsData.data]);
+  const canView = useCanAny(['timetable.manage', 'timetable.view']);
 
-  const structure = useClassStructure(tenantId ?? '', activeYearId ?? '');
-  const { data: timetableData, isLoading } = useTimetable(tenantId ?? '', openTermId ?? '');
+  const [assignSlot, setAssignSlot] = useState<TimetableSlotTarget | null>(null);
+
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  const [actionError, setActionError] = useState<string | null>(null);
+
+
+
+  const ctx = useAcademicOpsContext(tenantId ?? '');
+
+  const filters =
+
+    ctx.termId && ctx.classArmId
+
+      ? { termId: ctx.termId, classArmId: ctx.classArmId }
+
+      : null;
+
+
+
+  const { scheduleSlots } = useBellScheduleSlots(tenantId, ctx.yearId);
+
+
+
+  const timetableQuery = useTimetable(tenantId ?? '', filters);
+
+  const summaryQuery = useTimetableSummary(tenantId ?? '', canManage ? ctx.termId : null);
+
+  const subjectOptionsQuery = useTimetableSubjectOptions(tenantId ?? '', canManage ? filters : null);
+
+
 
   const createEntry = useCreateTimetableEntry(tenantId ?? '');
+
   const deleteEntry = useDeleteTimetableEntry(tenantId ?? '');
-  const publishTimetable = usePublishTimetable(tenantId ?? '');
 
-  const entries = (timetableData as any)?.entries ?? [];
-  const classArms = (structure.data as any)?.arms ?? [];
 
-  const form = useForm<EntryForm>({
-    resolver: zodResolver(entrySchema),
-    defaultValues: { dayOfWeek: 0, startMinute: 480, endMinute: 540, subjectId: '', classArmId: '' },
-  });
 
-  async function onAdd(values: EntryForm) {
-    try {
-      await createEntry.mutateAsync({
-        termId: openTermId!,
-        classArmId: values.classArmId,
-        subjectId: values.subjectId,
-        dayOfWeek: values.dayOfWeek,
-        startMinute: values.startMinute,
-        endMinute: values.endMinute,
-        teacherStaffProfileId: '',
-      });
-      form.reset();
-      setAdding(false);
-    } catch {
-      // handled by mutator
-    }
+  const entries = timetableQuery.data?.entries ?? [];
+
+  const subjectOptions = subjectOptionsQuery.data?.options ?? [];
+
+  const summary = summaryQuery.data;
+
+
+
+  const draftCount = useMemo(
+
+    () => entries.filter((entry) => entry.status === 'draft').length,
+
+    [entries],
+
+  );
+
+
+
+  const canEdit = canManage && ctx.activeTerm?.status === 'open';
+
+  const classLabel =
+
+    classArmOptions(ctx.arms, ctx.levels).find((arm) => arm.id === ctx.classArmId)?.label ?? null;
+
+  const termLabel = ctx.activeTerm?.name ?? null;
+
+
+
+  const publishHref = ctx.termId
+
+    ? `/school/timetable/publish?termId=${encodeURIComponent(ctx.termId)}`
+
+    : '/school/timetable/publish';
+
+
+
+  const termDraftCount = summary?.totalDraftSlots ?? 0;
+
+
+
+  const heroActions = canEdit ? (
+    <Link href={publishHref} className={ACADEMIC_UI.btnPrimary}>
+      <Send aria-hidden className="size-4" />
+      Review & publish
+      {termDraftCount > 0 ? ` (${termDraftCount})` : ''}
+    </Link>
+  ) : null;
+
+
+
+  function openAssignSheet(slot: TimetableSlotTarget) {
+
+    setAssignSlot(slot);
+
+    setSheetOpen(true);
+
   }
+
+
+
+  const deleteHandler = canEdit
+
+    ? async (entryId: string) => {
+
+        setActionError(null);
+
+        try {
+
+          await deleteEntry.mutateAsync({ entryId });
+
+        } catch (err) {
+
+          setActionError(academicErrorMessage(err));
+
+        }
+
+      }
+
+    : undefined;
+
+
 
   if (!tenantId) {
+
     return (
-      <>
-        <PageHeader title="Timetable" />
-        <PageBody><p className="text-sm text-destructive">No tenant context.</p></PageBody>
-      </>
+
+      <PageBody className="max-w-[1400px] px-4 py-5 sm:px-6 sm:py-6 lg:px-12 lg:py-8">
+
+        <Alert variant="destructive">
+
+          <AlertDescription>No tenant context. Sign in again.</AlertDescription>
+
+        </Alert>
+
+      </PageBody>
+
     );
+
   }
 
-  return (
-    <>
-      <PageHeader
-        title="Timetable"
-        description="Manage class schedules for the current term — US-ACA-006"
-        actions={
-          openTermId && canEdit && entries.length > 0 ? (
-            <Button size="sm" onClick={() => publishTimetable.mutate({ termId: openTermId, classArmId: classArms[0]?.id ?? '' } as any)} disabled={publishTimetable.isPending}>
-              <Send className="mr-1.5 size-3.5" />
-              Publish
-            </Button>
-          ) : null
-        }
-      />
-      <PageBody>
-        {!openTermId ? (
-          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border py-16">
-            <Clock className="mb-2 size-8 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">No open term found.</p>
-          </div>
-        ) : isLoading ? (
-          <div className="space-y-3">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}</div>
-        ) : (
-          <div className="space-y-6">
-            {canEdit ? (
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-base">Add Entry</CardTitle>
-                  <Button size="sm" variant="outline" onClick={() => setAdding(!adding)}>
-                    <Plus className="mr-1 size-3.5" /> {adding ? 'Cancel' : 'Add period'}
-                  </Button>
-                </CardHeader>
-                {adding ? (
-                  <CardContent>
-                    <Form {...form}>
-                      <form onSubmit={form.handleSubmit(onAdd)} className="grid grid-cols-2 gap-4 md:grid-cols-3">
-                        <FormField control={form.control} name="dayOfWeek" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Day</FormLabel>
-                            <Select value={String(field.value)} onValueChange={(v) => field.onChange(Number(v))}>
-                              <SelectTrigger><SelectValue /></SelectTrigger>
-                              <SelectContent>{DAYS.map((d, i) => <SelectItem key={d} value={String(i)}>{d}</SelectItem>)}</SelectContent>
-                            </Select>
-                          </FormItem>
-                        )} />
-                        <FormField control={form.control} name="startMinute" render={({ field }) => (
-                          <FormItem><FormLabel>Start (minutes from midnight)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                        <FormField control={form.control} name="endMinute" render={({ field }) => (
-                          <FormItem><FormLabel>End (minutes)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                        <FormField control={form.control} name="subjectId" render={({ field }) => (
-                          <FormItem><FormLabel>Subject ID</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                        <FormField control={form.control} name="classArmId" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Class</FormLabel>
-                            <Select value={field.value} onValueChange={field.onChange}>
-                              <SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger>
-                              <SelectContent>{classArms.map((a: any) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
-                            </Select>
-                          </FormItem>
-                        )} />
-                        <div className="col-span-2 md:col-span-3 flex justify-end">
-                          <Button type="submit" disabled={createEntry.isPending}>Save entry</Button>
-                        </div>
-                      </form>
-                    </Form>
-                  </CardContent>
-                ) : null}
-              </Card>
-            ) : null}
 
-            {entries.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border py-16">
-                <p className="text-sm text-muted-foreground">No timetable entries yet.</p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Day</TableHead>
-                    <TableHead>Time</TableHead>
-                    <TableHead>Subject</TableHead>
-                    <TableHead>Class</TableHead>
-                    {canEdit ? <TableHead className="w-20" /> : null}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {entries.map((entry: any) => (
-                    <TableRow key={entry.id}>
-                      <TableCell className="font-medium">{DAYS[entry.dayOfWeek ?? 0]}</TableCell>
-                      <TableCell>{Math.floor(entry.startMinute / 60)}:{String(entry.startMinute % 60).padStart(2, '0')} - {Math.floor(entry.endMinute / 60)}:{String(entry.endMinute % 60).padStart(2, '0')}</TableCell>
-                      <TableCell>{entry.subjectId?.slice(0, 8) ?? '—'}</TableCell>
-                      <TableCell>{classArms.find((a: any) => a.id === entry.classArmId)?.name ?? entry.classArmId?.slice(0, 8)}</TableCell>
-                      {canEdit ? (
-                        <TableCell>
-                          <Button variant="ghost" size="icon" onClick={() => deleteEntry.mutate({ entryId: entry.id })} disabled={deleteEntry.isPending}>
-                            <Trash2 className="size-4 text-destructive" />
-                          </Button>
-                        </TableCell>
-                      ) : null}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </div>
-        )}
+
+  if (!canView) {
+
+    return (
+
+      <PageBody className="max-w-[1400px] px-4 py-5 sm:px-6 sm:py-6 lg:px-12 lg:py-8">
+
+        <Alert>
+
+          <AlertDescription>You do not have permission to view the timetable.</AlertDescription>
+
+        </Alert>
+
       </PageBody>
-    </>
+
+    );
+
+  }
+
+
+
+  return (
+
+    <PageBody className="max-w-[1400px] px-4 py-5 sm:px-6 sm:py-6 lg:px-12 lg:py-8">
+
+      <div className="space-y-6">
+
+        {canManage ? (
+
+          <TimetableCommandCenter
+
+            years={ctx.sortedYears}
+
+            terms={ctx.terms}
+
+            yearId={ctx.yearId}
+
+            termId={ctx.termId}
+
+            classArmId={ctx.classArmId}
+
+            classLabel={classLabel}
+
+            onYearChange={(id) => {
+
+              ctx.setYearId(id);
+
+              ctx.setTermId(null);
+
+            }}
+
+            onTermChange={ctx.setTermId}
+
+            onSelectClassArm={ctx.setClassArmId}
+
+            summary={summary ?? null}
+
+            summaryLoading={summaryQuery.isLoading}
+
+            selectedLessonCount={entries.length}
+
+            selectedDraftCount={draftCount}
+
+            publishHref={publishHref}
+
+            actions={heroActions}
+
+          />
+
+        ) : (
+
+          <>
+
+            <TimetableHero
+
+              canManage={false}
+
+              classLabel={classLabel}
+
+              termLabel={termLabel}
+
+              lessonCount={entries.length}
+
+              isLoading={timetableQuery.isLoading && Boolean(filters)}
+
+            />
+
+            <AcademicScopePicker
+
+              years={ctx.sortedYears}
+
+              terms={ctx.terms}
+
+              classArmOptions={classArmOptions(ctx.arms, ctx.levels)}
+
+              yearId={ctx.yearId}
+
+              termId={ctx.termId}
+
+              classArmId={ctx.classArmId}
+
+              onYearChange={(id) => {
+
+                ctx.setYearId(id);
+
+                ctx.setTermId(null);
+
+              }}
+
+              onTermChange={ctx.setTermId}
+
+              onClassArmChange={ctx.setClassArmId}
+
+            />
+
+          </>
+
+        )}
+
+
+
+        {actionError ? (
+
+          <Alert variant="destructive">
+
+            <AlertDescription>{actionError}</AlertDescription>
+
+          </Alert>
+
+        ) : null}
+
+
+
+        {canManage ? (
+
+          <TimetableScheduleCanvas
+
+            classLabel={classLabel}
+
+            termLabel={termLabel}
+
+            entries={entries}
+
+            scheduleSlots={scheduleSlots}
+
+            isLoading={timetableQuery.isLoading && Boolean(filters)}
+
+            showStatus
+
+            canEdit={canEdit}
+
+            onDeleteEntry={deleteHandler}
+
+            onEmptySlotClick={canEdit ? openAssignSheet : undefined}
+
+            emptyMessage="Tap + on any empty cell to assign a subject."
+
+          />
+
+        ) : !filters ? (
+
+          <div className={`${ACADEMIC_UI.dataPanel} p-8 text-center`}>
+
+            <p className="text-[13px] text-neutral-500">Select year, term, and class to view the timetable.</p>
+
+          </div>
+
+        ) : (
+
+          <div className={`${ACADEMIC_UI.dataPanel} p-4 sm:p-5`}>
+
+            <TimetableWeekGrid
+
+              entries={entries}
+
+              scheduleSlots={scheduleSlots}
+
+              isLoading={timetableQuery.isLoading}
+
+              showTermStructure
+
+              emptyMessage="No published timetable for this class yet."
+
+            />
+
+          </div>
+
+        )}
+
+      </div>
+
+
+
+      {canEdit && filters ? (
+
+        <TimetableAssignLessonSheet
+
+          open={sheetOpen}
+
+          onOpenChange={setSheetOpen}
+
+          slot={assignSlot}
+
+          classLabel={classLabel}
+
+          options={subjectOptions}
+
+          isSubmitting={createEntry.isPending}
+
+          onSubmit={async (values) => {
+            await createEntry.mutateAsync({
+              termId: filters.termId,
+              classArmId: filters.classArmId,
+              ...values,
+            });
+          }}
+
+        />
+
+      ) : null}
+
+    </PageBody>
+
   );
+
 }
+
+

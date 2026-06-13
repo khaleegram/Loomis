@@ -55,6 +55,24 @@ export function academicErrorMessage(err: unknown): string {
     case 'ACADEMIC_ATTENDANCE_FORBIDDEN_ROLE':
     case 'ACADEMIC_ATTENDANCE_NOT_ASSIGNED':
       return 'You are not the active class teacher for this class.';
+    case 'ACADEMIC_TIMETABLE_CONFLICT':
+      return timetableConflictMessage(err);
+    case 'ACADEMIC_TIMETABLE_ASSIGNMENT_INVALID':
+      return 'Subject and teacher must match an active assignment for this class.';
+    case 'ACADEMIC_TIMETABLE_ENTRY_NOT_FOUND':
+      return 'That timetable entry no longer exists.';
+    case 'ACADEMIC_TIMETABLE_NOTHING_TO_PUBLISH':
+      return 'No pending changes to publish — add or edit lessons in the builder first.';
+    case 'ACADEMIC_TERM_NOT_OPEN':
+      return 'The term must be open before you can publish timetables.';
+    case 'ACADEMIC_BELL_SCHEDULE_INVALID':
+      return 'Check each slot — end time must be after start, and at least one lesson period is required.';
+    case 'ACADEMIC_BELL_SCHEDULE_OVERLAP':
+      return 'Two slots overlap. Adjust start and end times so they do not clash.';
+    case 'STUDENT_ENROLLMENT_NOT_FOUND':
+      return 'No enrollment found for this term.';
+    case 'STUDENT_NOT_FOUND':
+      return 'Student profile not found for your account.';
     case 'WORKFLOW_FORBIDDEN':
       return 'You cannot action this workflow step.';
     case 'WORKFLOW_STEP_NOT_ACTIVE':
@@ -62,6 +80,20 @@ export function academicErrorMessage(err: unknown): string {
     default:
       return err instanceof Error ? err.message : 'Something went wrong. Try again.';
   }
+}
+
+function timetableConflictMessage(err: unknown): string {
+  if (!(err instanceof LoomisClientError) || !err.details) {
+    return 'This period overlaps an existing booking. Choose a different time, teacher, or class.';
+  }
+  const conflictType = err.details.conflictType;
+  if (conflictType === 'teacher') {
+    return 'This teacher is already assigned to another class at this time.';
+  }
+  if (conflictType === 'class') {
+    return 'This class already has a period scheduled at this time.';
+  }
+  return 'This period overlaps an existing booking.';
 }
 
 function closureBlockedMessage(err: unknown): string {

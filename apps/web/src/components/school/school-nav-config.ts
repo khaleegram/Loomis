@@ -11,6 +11,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { Capability } from '@loomis/core';
+import type { Role } from '@loomis/contracts';
 
 export interface SchoolNavItem {
   label: string;
@@ -18,12 +19,20 @@ export interface SchoolNavItem {
   icon: LucideIcon;
   capabilities?: Capability[];
   always?: boolean;
+  /** Hide for roles that only need a single focused workspace (e.g. timetable officer). */
+  hideForRoles?: Role[];
   /** Groups sidebar items under Ledger Flows when set to ledger. */
   section?: 'workspace' | 'ledger';
 }
 
 export const SCHOOL_NAV: SchoolNavItem[] = [
-  { label: 'Dashboard', href: '/school/dashboard', icon: LayoutDashboard, always: true },
+  {
+    label: 'Dashboard',
+    href: '/school/dashboard',
+    icon: LayoutDashboard,
+    always: true,
+    hideForRoles: ['timetable_officer'],
+  },
   { label: 'Staff', href: '/school/staff', icon: Users, capabilities: ['staff.onboard'] },
   {
     label: 'Students',
@@ -33,15 +42,22 @@ export const SCHOOL_NAV: SchoolNavItem[] = [
   },
   {
     label: 'Academic',
-    href: '/school/sessions',
+    href: '/school/academic',
     icon: BookOpen,
-    capabilities: ['academic_year.manage', 'term.manage', 'census.lock'],
+    capabilities: [
+      'academic_year.manage',
+      'term.manage',
+      'census.lock',
+      'student.promote',
+      'student.graduate',
+      'class_structure.manage',
+    ],
   },
   {
     label: 'Timetable',
     href: '/school/timetable',
     icon: BookOpen,
-    capabilities: ['academic_year.manage', 'term.manage'],
+    capabilities: ['timetable.manage', 'timetable.view'],
   },
   {
     label: 'Assignments',
