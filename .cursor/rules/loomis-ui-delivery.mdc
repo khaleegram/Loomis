@@ -1,0 +1,244 @@
+---
+description: UI delivery workflow — user stories, theme, roles, full-stack end-to-end
+alwaysApply: true
+---
+
+# Loomis — UI & Feature Delivery
+
+When the user asks to **build**, **fix**, **redesign**, or **migrate** a feature, follow this workflow **before writing code**. The user names the **feature** (e.g. “build timetable”) — not file paths, not scope blocks.
+
+**Single source of truth:** `Loomis_User_Stories_v1.md` at the repo root. Capabilities: `packages/core/src/capabilities.ts`. Hard role rules: `loomis-roles.mdc`.
+
+Do not ask “should it look like staff or dashboard?” — decide from the page purpose and user stories.
+
+## Step 0 — Feature delivery (how the user talks to you)
+
+### User prompt format
+
+The user says one of:
+
+- `Build timetable`
+- `Build attendance`
+- `Fix parent fees`
+- `Migrate finance to new UI`
+
+That is enough. **Do not ask them for Scope, file paths, or batch numbers** unless you are genuinely blocked.
+
+Optional extras they may add: “mobile only”, “backend first”, “skip parent portal for now”. Respect those; otherwise deliver the **full feature** for **every role** in the stories.
+
+### What you do automatically (before coding)
+
+**1. Discover all user stories** for the feature keyword across **every epic** in `Loomis_User_Stories_v1.md` (not just one epic table row). Example for *timetable*:
+
+| Story | Actor | What they do |
+|---|---|---|
+| US-ACA-006 | Timetable Officer | Build, assign, detect conflicts, publish |
+| US-STU-002 | Student | Read-only class timetable, live updates |
+| *(derived from US-ACA-006)* | Teacher, Parent | Read-only published timetable |
+
+Include cross-epic stories (e.g. parent sees child timetable via child profile even if no US-PAR-* title mentions it — follow acceptance criteria in US-ACA-006).
+
+**2. Build a role × capability matrix** from `capabilities.ts` + `loomis-roles.mdc`:
+
+- Who can **manage** (write/publish)?
+- Who can **view** (read-only)?
+- Who must be **denied** (no nav link, API 403)?
+
+Example *timetable*: `timetable.manage` → school_owner, principal, timetable_officer. Read-only → teacher, class_teacher, student, parent (scoped to own class/child). Never use inline `if (role === 'principal')` — use `requireRole` / `useCan` / `useCanAny`.
+
+**3. Audit the codebase** for existing routes, API, contracts, hooks, and UI for this feature. Note what is scaffold/mock vs wired.
+
+**4. Plan surfaces per role** (routes + page type from Step 4):
+
+| Role / portal | Typical route group | Page type |
+|---|---|---|
+| Timetable Officer (school) | `/school/timetable` | Operational (builder) |
+| Teacher / Class Teacher | `/school/timetable` or dashboard link | Operational (read-only grid) |
+| Student | `/parent/timetable` on web | Detail / read-only |
+| Parent | `/parent/timetable` | Linked child schedule |
+
+On web, `student` role uses the **parent route group** (`route-groups.ts`) — not a bug.
+
+**5. First reply must be short (max ~12 lines), then code immediately:**
+
+- Story IDs + one line each
+- Role matrix (compact table or bullet list)
+- Exists vs build (one line)
+- BLOCKED items if any
+
+**Do not** paste essay-length delivery summaries before writing code. **Do not** mark a feature ✅ until UI passes the quality bar below.
+
+Then implement — **full-stack by default**. UI-only is not done if stories need persistence, auth, or workflows.
+
+### Definition of done (per feature)
+
+For **each role** in the matrix:
+
+- Can complete their story actions in the browser against the **real API**
+- Route protected by `requireRole` / capabilities on API **and** UI
+- New UI matches Loomis theme (Step 4 + **Step 4b quality bar**) + mobile
+- Loading, empty, and error states
+- No mock data unless explicitly marked `// BLOCKED:` with user notified
+
+Finish with a **short** summary: stories ✅/BLOCKED, routes per role, test one-liner per role. No wall-of-text handoff docs.
+
+### One feature per chat
+
+Deliver **one feature domain** per conversation (timetable, attendance, gradebook, parent fees, etc.). If the feature is huge (e.g. all of finance), finish one **sub-feature** per chat (e.g. “payment log”) but still derive work from user stories — do not ask the user to pick files.
+
+Sub-features within a domain (only if you must split):
+
+| Sub-feature | Stories (examples) |
+|---|---|
+| Timetable | US-ACA-006 + US-STU-002 + read views |
+| Attendance | US-ACA-005 + US-PAR-002 + US-STU-004 |
+| Gradebook | US-ACA-001–003 + teacher/class_teacher rules |
+| Payments | US-FIN-002–004 (one write flow per chat if needed) |
+
+### Already on new UI (extend, don’t re-skin from scratch)
+
+Staff, students, admissions, academic hub, dashboards, auth, platform tenants, settings shell. When building a feature that touches these, **match** their patterns — don’t regress them.
+
+### Still scaffold / incomplete (common build targets)
+
+Attendance, gradebook, exams, assignments, timetable, finance, comms, workflows, parent portal pages, platform console, regional, settings security/appearance.
+
+## Step 1 — Find the user stories (mandatory)
+
+When Step 0 applies, this is part of your **first reply** — do not skip it.
+
+1. Search `Loomis_User_Stories_v1.md` for the feature keyword **and** related terms (e.g. timetable → schedule, period, class).
+2. Collect stories from **all epics**, not only the route table row below.
+3. Map each story’s “As a …” actor to JWT roles and capabilities.
+4. List every acceptance criterion you will implement; call out derived requirements (e.g. parent read-only from US-ACA-006).
+
+| Route / area | Epic | Story prefix |
+|---|---|---|
+| `/platform/*` | Platform Management | US-PLT |
+| `/regional/*` | Regional Layer | US-REG |
+| `/school/academic/*`, `/school/sessions/*`, census/promotions/graduation | Academic Session | US-ASM |
+| `/school/students/*`, admissions | Student Information | US-SIS |
+| `/school/attendance`, `/school/gradebook`, `/school/exams`, `/school/assignments`, `/school/timetable` | Academic Management | US-ACA |
+| `/school/finance/*` | Financial Management | US-FIN |
+| `/school/comms/*` | Communication | US-COM |
+| `/school/workflows/*` | Workflow | US-WRK |
+| `/school/staff/*` | Human Resources | US-HRM |
+| `/parent/*` | Parent Portal | US-PAR |
+| student-facing school routes | Student Portal | US-STU |
+
+Stories marked **[Rev Int]** require step-up MFA, idempotency keys, and audit — see `loomis-financial-integrity.mdc` and `loomis-security.mdc`.
+
+## Step 2 — Roles & capabilities (per-feature matrix)
+
+For the feature in scope, produce a **role matrix** before coding:
+
+| Role | Capabilities | UI surfaces | API actions |
+|---|---|---|---|
+| … | from `capabilities.ts` | routes they see | what they can POST/PUT |
+
+Rules:
+
+- Allowed actors come from user stories (“As a …”). Enforce on **routes** with `requireRole(...)` and in **UI** with `useCan` / `useCanAny` — never `if (role === 'principal')`.
+- Build **separate UX** where behaviour differs (builder vs read-only), not one page with hidden buttons only.
+- If a story’s actor cannot access an action, hide it in UI **and** block the API. UI gating alone is not security.
+- Cross-check `loomis-roles.mdc` for hard rules (e.g. class_teacher-only attendance, cashier cannot verify payments).
+
+## Step 3 — Full-stack: default for every feature build
+
+**Always deliver end-to-end** unless the user explicitly says otherwise. Reskin/migrate still means wire real API — replace mock data, don’t paint over it.
+
+1. **Audit first** — search for existing API routes, contracts, api-client hooks, and pages for this feature and all roles in the matrix.
+2. **If backend exists** — wire UI to real TanStack Query hooks; loading, empty, and error states required.
+3. **If backend missing** — implement in order: `packages/contracts` schema → API handler/service/repository → api-client hook + query keys → UI for **each role** that needs it. Follow `loomis-module-patterns.mdc`.
+4. **Financial / workflow writes** — `Idempotency-Key`, outbox where required, `useFinancialMutation` on web. No fake success responses.
+5. **Tenant scope** — `withTenantContext`, `X-Tenant-Id`, query keys include `tenantId`.
+6. **Do not ship** partial screens that look done but call stub data. If blocked on env/credentials (AWS, SES, etc.), STOP and tell the user exactly what is missing — see `loomis-implementation-guardrails.mdc`.
+
+**Definition of done:** every story actor can complete their primary action in the browser against the real API (or documented `// BLOCKED:` with user notified). Every surface is usable on mobile-width web without broken layout or clipped controls.
+
+## Step 4 — UI theme (same family, different layout per page)
+
+**Read before coding (open these files):**
+- `apps/web/src/lib/design/surfaces.ts` — `SURFACES`, `SEMANTIC`
+- `apps/web/src/lib/academic/academic-ui.ts` — `ACADEMIC_UI`, buttons, `dataPanel`
+- `apps/web/src/components/dashboard/dashboard-primitives.tsx` — `BRONZE`, headers, stat strip
+- Gold references by page type (layout inspiration only — do not clone blindly):
+  - **Hub:** `academic/(hub)/page.tsx`, `academic-command-deck.tsx`
+  - **Directory:** `school/staff/page.tsx`, `staff-hero.tsx` OR `students/page.tsx`
+  - **Detail:** `staff-member-detail.tsx`, `student-profile-header.tsx`
+  - **Form:** `school/staff/add/page.tsx`
+  - **Operational:** `school/timetable/page.tsx`, `timetable-hero.tsx`, `academic-scope-picker.tsx`
+  - **Console dashboard:** `school/dashboard/page.tsx`
+
+## Step 4b — UI quality bar (non-negotiable)
+
+If the page looks like old scaffold UI, the feature is **not done** — even if the API works.
+
+### Forbidden as the primary layout (school/platform features)
+
+- `PageHeader` + bare `PageBody` + unstyled content only
+- Generic shadcn `<Card>` / `<Tabs>` shell with no brand hero or KPI strip (like `/school/exams` today)
+- Plain white tables with no `SURFACES` / `ACADEMIC_UI.dataPanel` wrapper
+- Invisible or outline-only primary CTAs
+
+### Required for operational pages (timetable, attendance, gradebook, payments, exams)
+
+1. **Hero or command strip** with gradient (`SURFACES.hero`), uppercase section label, 800-weight title
+2. **KPI stat cards** overlapping hero bottom (see `staff-hero.tsx`, `timetable-hero.tsx`) OR equivalent command deck
+3. **Context bar** — `AcademicScopePicker`: “You are viewing” summary, class pill strip, collapsible year/term (not three bare dropdowns)
+4. **Data panel** — `rounded-2xl`, `border-brand-100/40`, brand-tinted table/grid header
+5. **CTAs** — `ACADEMIC_UI.btnPrimary` / `btnSecondary` or `SEMANTIC.cta` (gold, visible)
+6. **PageBody padding** — `px-4 py-5 sm:px-6 lg:px-12` on school module pages
+
+### Self-check before saying done
+
+Compare side-by-side with `/school/staff` or `/school/timetable`. If yours looks like a default shadcn admin template, keep working.
+
+**Theme rules:**
+- Brand gold (`brand-*`, `#c9a96e`), neutral cards, `rounded-2xl`, subtle gradients via `SURFACES` / `BRONZE`.
+- Typography: section labels `text-[10px] font-bold uppercase tracking-[0.15em] text-neutral-400`; headings `font-weight: 800`, tight tracking.
+- Components from `@loomis/ui-web`; layout via `PageBody`. Forms: React Hook Form + `zodResolver` + contracts schemas.
+- Primary CTA: visible gold (`SEMANTIC.cta` or `bg-[#c9a96e]`). Avoid invisible `variant="gradient"` buttons.
+- Dropdowns in overflow containers: prefer native `<select>` over Radix Select when clipping occurs.
+- Greeting headers use the user’s **name** (`session.displayName`), not role label.
+
+**Pick layout by page type** (unique per feature, shared tokens only):
+
+| Type | Use when | Structure |
+|---|---|---|
+| Module hub | Section landing | Header → hero/command deck → bento/quick actions → optional timeline |
+| Directory | Lists (staff, students, admissions) | KPI hero → toolbar (search/filter/view) → table or cards |
+| Detail | Single record profile | Profile header → summary strip → sections/timeline |
+| Form | Create/edit flows | Title + card form + gold submit |
+| Operational | Attendance, gradebook, timetable, payments | Hero → **AcademicScopePicker** (class pills + workflow steps) → data panel |
+| Settings | `/school/settings/*` | Sub-nav layout, simple sections |
+
+**Mobile-compatible web (required on every page):**
+- All school/platform pages must work on phone-width viewports (~375px) without horizontal page scroll.
+- Use responsive Tailwind: stack on small screens (`flex-col sm:flex-row`, `grid-cols-1 md:grid-cols-2`, `hidden sm:table-cell` only when a mobile alternative exists).
+- Touch targets: buttons and icon actions at least ~44px hit area; adequate spacing between tappable rows.
+- Wide data tables: wrap in `overflow-x-auto` **or** provide a card/list view on `max-sm` (prefer cards for directory pages).
+- Toolbars, filters, and KPI strips: wrap or stack on narrow screens — never clip controls (use native `<select>` if Radix overflows).
+- Forms and dialogs: full-width fields on mobile; primary actions visible without sideways scroll.
+- Do not rely on hover-only affordances; core actions must be reachable on touch.
+- Before finishing, mentally verify layout at mobile + desktop; fix overflow and unreadable density.
+
+## Step 5 — File organisation
+
+You decide which files to create or change from the feature + role matrix — the user does not pick paths.
+
+- Pages: `apps/web/src/app/(school)/school/.../page.tsx` (or matching route group per role portal).
+- Module components: `apps/web/src/components/[module]/`.
+- Labels/helpers: `apps/web/src/lib/[module]/`.
+- API: `apps/api/src/modules/...` per module map in `loomis-core.mdc`.
+- Minimal diff — only what the stories require across all roles.
+
+## Step 6 — One-pass delivery
+
+In a single session when possible:
+
+1. Story checklist + role matrix (Step 0 first reply)
+2. Implementation: contracts → API → hooks → UI **per role**
+3. Summary: stories ✅ / BLOCKED, routes per role, files changed, test checklist (375px + desktop, one login path per role)
+
+Do not stop at “UI only”. Do not ask the user for Scope blocks or file lists.
