@@ -134,7 +134,7 @@ export default function PlatformDashboard() {
   const systemHealthy = openCases === 0 && pendingCount === 0 && openDsarCount === 0;
 
   return (
-    <PageBody className="max-w-[1200px] px-7 py-7">
+    <PageBody className="max-w-[1200px] px-4 py-5 sm:px-6 sm:py-6 lg:px-7 lg:py-7">
 
       {/* ── Page header — title only ─────────────────────── */}
       <div className="mb-6">
@@ -147,8 +147,8 @@ export default function PlatformDashboard() {
           </p>
         </div>
         <h1
-          className="text-neutral-900"
-          style={{ fontSize: '1.875rem', fontWeight: 800, letterSpacing: '-0.025em', lineHeight: 1.2 }}
+          className="text-neutral-900 text-2xl lg:text-[1.875rem]"
+          style={{ fontWeight: 800, letterSpacing: '-0.025em', lineHeight: 1.2 }}
         >
           {greeting}, <span className="text-brand-600">{userName}.</span>
         </h1>
@@ -182,7 +182,7 @@ export default function PlatformDashboard() {
       />
 
       {/* ── Stat strip ───────────────────────────────────── */}
-      <div className="card mb-5 grid grid-cols-4 divide-x divide-neutral-100 rounded-2xl">
+      <div className="card mb-5 grid grid-cols-1 divide-y divide-neutral-100 rounded-2xl sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 lg:divide-x">
         {[
           { label: 'Active Schools', value: isLoading ? '—' : scopedSchoolCount.toLocaleString(), sub: selectedTenant ? selectedTenant.name : (billedChange?.text ?? 'Active tenants'), subColor: billedChange?.color ?? '#9ca3af', icon: Building2, color: 'linear-gradient(135deg,hsl(35,35%,52%),hsl(35,32%,40%))' },
           { label: 'PSF Billed',     value: isLoading ? '—' : (summary ? fmtBig(summary.billedMinor) : '—'),    sub: 'Ledger obligations',      subColor: '#9ca3af', icon: TrendingUp, color: 'linear-gradient(135deg,hsl(30,28%,38%),hsl(28,26%,28%))' },
@@ -191,7 +191,7 @@ export default function PlatformDashboard() {
         ].map((item) => {
           const Icon = item.icon;
           return (
-            <div key={item.label} className="flex items-center gap-3.5 px-5 py-4">
+            <div key={item.label} className="flex items-center gap-3.5 px-4 py-4 sm:px-5 lg:px-5">
               <span
                 className="flex size-9 shrink-0 items-center justify-center rounded-xl text-white"
                 style={{ background: item.color }}
@@ -214,10 +214,10 @@ export default function PlatformDashboard() {
       </div>
 
       {/* ── Main grid ────────────────────────────────────── */}
-      <div className="mb-5 grid grid-cols-12 gap-5">
+      <div className="mb-5 grid grid-cols-1 gap-5 lg:grid-cols-12">
 
         {/* Revenue chart 8/12 */}
-        <div className="card col-span-8 overflow-hidden rounded-2xl">
+        <div className="card overflow-hidden rounded-2xl lg:col-span-8">
           <div className="flex items-start justify-between px-6 pt-6 pb-3">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400">Revenue Velocity</p>
@@ -272,7 +272,7 @@ export default function PlatformDashboard() {
         </div>
 
         {/* Right column 4/12 */}
-        <div className="col-span-4 flex flex-col gap-4">
+        <div className="flex flex-col gap-4 lg:col-span-4">
 
           {/* School growth mini */}
           <div className="card flex-1 overflow-hidden rounded-2xl">
@@ -337,7 +337,7 @@ export default function PlatformDashboard() {
       </div>
 
       {/* ── Bottom 3 cards ───────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
 
         <Link href="/platform/approvals" className="card group flex flex-col rounded-2xl p-5 transition">
           <div className="mb-3 flex items-center justify-between">

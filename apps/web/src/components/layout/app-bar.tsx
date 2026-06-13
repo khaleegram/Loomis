@@ -15,8 +15,10 @@ import {
 } from '@loomis/ui-web';
 
 import { SmartSearchPalette, type SmartSearchItem } from '@/components/layout/smart-search-palette';
+import { ProfileAvatar } from '@/components/shared/profile-avatar';
 import { useAuth } from '@/lib/auth/auth-context';
 import type { ActiveBreakGlassSession } from '@/lib/platform/break-glass-store';
+import { useMyProfile } from '@loomis/api-client';
 
 export function BreakGlassStrip({
   session: bgSession,
@@ -45,7 +47,7 @@ export function BreakGlassStrip({
     <div
       role="alert"
       aria-live="polite"
-      className="flex h-8 shrink-0 items-center justify-between bg-red-600 px-6 text-xs font-medium text-white"
+      className="flex min-h-8 shrink-0 flex-col gap-2 bg-red-600 px-4 py-2 text-xs font-medium text-white lg:h-8 lg:flex-row lg:items-center lg:justify-between lg:px-6 lg:py-0"
     >
       <div className="flex items-center gap-2">
         <ShieldAlert aria-hidden className="size-3.5" />
@@ -53,7 +55,7 @@ export function BreakGlassStrip({
         <span className="opacity-50">·</span>
         <span className="max-w-[24rem] truncate">{bgSession.tenantName}</span>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:gap-4">
         <div className="flex items-center gap-1.5 tabular-nums">
           <Timer aria-hidden className="size-3.5 opacity-80" />
           <span className="font-mono">
@@ -63,7 +65,7 @@ export function BreakGlassStrip({
         <button
           type="button"
           onClick={handleEnd}
-          className="rounded border border-white/40 px-2.5 py-0.5 text-[11px] font-semibold transition-colors hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+          className="rounded border border-white/40 px-3 py-1.5 text-[11px] font-semibold transition-colors hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 sm:px-2.5 sm:py-0.5"
         >
           End Session
         </button>
@@ -90,14 +92,6 @@ export interface AppBarProps {
   workspaceMenu?: ReactNode;
 }
 
-function roleInitials(role: string): string {
-  return role
-    .split('_')
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .slice(0, 2)
-    .join('');
-}
-
 /** V2 global app bar — workspace, search, notifications, profile. */
 export function AppBar({
   workspace,
@@ -111,10 +105,11 @@ export function AppBar({
   workspaceMenu,
 }: AppBarProps) {
   const { session, signOut } = useAuth();
+  const { data: profile } = useMyProfile();
 
   if (!session) return null;
 
-  const initials = roleInitials(session.role);
+  const displayName = profile?.displayName ?? session.displayName ?? roleLabel;
   const workspaceButton = (
     <button
       type="button"
@@ -176,19 +171,33 @@ export function AppBar({
                 type="button"
                 className="flex items-center gap-2.5 rounded-xl border border-black/[0.06] bg-white px-2.5 py-1 text-sm shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-150 hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/30 active:scale-[0.98]"
               >
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-[10px] font-bold text-white shadow-sm shadow-brand-700/25">
-                  {initials.charAt(0) || '?'}
+                <span className="size-7 shrink-0 overflow-hidden rounded-full shadow-sm shadow-brand-700/25 ring-1 ring-black/[0.06]">
+                  <ProfileAvatar
+                    photoStorageObjectId={profile?.photoStorageObjectId}
+                    alt={displayName}
+                  />
                 </span>
                 <span className="hidden max-w-[7rem] truncate text-[13px] font-semibold text-neutral-800 md:block">
-                  {roleLabel}
+                  {displayName}
                 </span>
                 <ChevronDown aria-hidden className="hidden size-3.5 text-neutral-400 md:block" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-60 rounded-xl border border-neutral-200 bg-white p-2 shadow-md shadow-black/5">
               <DropdownMenuLabel className="rounded-lg bg-neutral-50 px-3 py-3 font-normal">
-                <p className="text-sm font-semibold text-neutral-900">{roleLabel}</p>
-                <p className="mt-0.5 text-xs text-neutral-500">{scopeLine}</p>
+                <div className="flex items-center gap-3">
+                  <span className="size-10 shrink-0 overflow-hidden rounded-full ring-1 ring-black/[0.06]">
+                    <ProfileAvatar
+                      photoStorageObjectId={profile?.photoStorageObjectId}
+                      alt={displayName}
+                    />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-neutral-900">{displayName}</p>
+                    <p className="mt-0.5 truncate text-xs text-neutral-500">{roleLabel}</p>
+                    <p className="mt-0.5 truncate text-[11px] text-neutral-400">{scopeLine}</p>
+                  </div>
+                </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="my-2 bg-neutral-100" />
               <DropdownMenuItem className="cursor-pointer rounded-lg focus:bg-brand-50 focus:text-brand-700" asChild>

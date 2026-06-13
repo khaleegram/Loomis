@@ -69,7 +69,7 @@ export default function TenantsPage() {
     : 'Commander';
 
   return (
-      <PageBody className="max-w-[1200px] px-7 py-7">
+      <PageBody className="max-w-[1200px] px-4 py-5 sm:px-6 sm:py-6 lg:px-7 lg:py-7">
         {/* ── Header (dashboard style) ───────────────────── */}
         <div className="mb-6">
           <div className="mb-2 flex items-center gap-2">
@@ -92,14 +92,14 @@ export default function TenantsPage() {
         </div>
 
         {/* ── Toolbar ────────────────────────────────────── */}
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-1.5">
+        <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
+          <div className="flex max-w-full items-center gap-1.5 overflow-x-auto pb-1">
             {STATUS_FILTERS.map((f) => (
               <button
                 key={f.value}
                 type="button"
                 onClick={() => setStatusFilter(f.value)}
-                className={`rounded-lg px-3 py-1.5 text-[12px] font-semibold transition ${
+                className={`shrink-0 rounded-lg px-3 py-2 text-[12px] font-semibold transition sm:py-1.5 ${
                   statusFilter === f.value
                     ? 'bg-black text-white'
                     : 'border border-neutral-200 bg-white text-neutral-500 hover:border-neutral-300 hover:text-neutral-800'
@@ -110,8 +110,8 @@ export default function TenantsPage() {
             ))}
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="relative">
+          <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center lg:w-auto">
+            <div className="relative w-full sm:w-auto">
               <Search
                 aria-hidden
                 className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-neutral-400"
@@ -121,13 +121,13 @@ export default function TenantsPage() {
                 placeholder="Search by name or region…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-56 rounded-lg border border-neutral-200 bg-white py-1.5 pl-9 pr-3 text-[13px] text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-neutral-300"
+                className="w-full rounded-lg border border-neutral-200 bg-white py-2 pl-9 pr-3 text-[13px] text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-neutral-300 sm:w-56 sm:py-1.5"
               />
             </div>
 
             <Link
               href="/platform/tenants/new"
-              className="flex items-center gap-1.5 rounded-lg bg-black px-3.5 py-1.5 text-[12px] font-semibold text-white hover:bg-neutral-800 transition"
+              className="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg bg-black px-3.5 py-2 text-[12px] font-semibold text-white transition hover:bg-neutral-800 sm:min-h-0 sm:py-1.5"
             >
               <Plus aria-hidden className="size-3.5" />
               Provision school
@@ -145,7 +145,8 @@ export default function TenantsPage() {
 
         {/* ── Tenant list ────────────────────────────────── */}
         <div className="card overflow-hidden rounded-2xl">
-          <div className="grid grid-cols-[1fr_120px_100px_110px_100px_48px] items-center gap-4 border-b border-neutral-100 bg-neutral-50 px-6 py-3">
+          <div className="overflow-x-auto">
+          <div className="grid min-w-[720px] grid-cols-[1fr_120px_100px_110px_100px_48px] items-center gap-4 border-b border-neutral-100 bg-neutral-50 px-4 py-3 sm:px-6">
             {['School', 'Tier', 'Region', 'Status', 'PSF Rate', ''].map((h) => (
               <p key={h} className="text-[10px] font-bold uppercase tracking-[0.15em] text-neutral-400">
                 {h}
@@ -158,7 +159,7 @@ export default function TenantsPage() {
               Array.from({ length: 8 }).map((_, i) => (
                 <div
                   key={i}
-                  className="grid grid-cols-[1fr_120px_100px_110px_100px_48px] items-center gap-4 px-6 py-4 animate-pulse"
+                  className="grid min-w-[720px] grid-cols-[1fr_120px_100px_110px_100px_48px] items-center gap-4 px-4 py-4 animate-pulse sm:px-6"
                 >
                   <div className="flex items-center gap-3">
                     <div className="size-8 rounded-lg bg-neutral-100 shrink-0" />
@@ -206,7 +207,7 @@ export default function TenantsPage() {
                 <Link
                   key={tenant.id}
                   href={`/platform/tenants/${tenant.id}`}
-                  className="grid grid-cols-[1fr_120px_100px_110px_100px_48px] items-center gap-4 px-6 py-3.5 transition-colors hover:bg-neutral-50 group"
+                  className="grid min-w-[720px] grid-cols-[1fr_120px_100px_110px_100px_48px] items-center gap-4 px-4 py-3.5 transition-colors hover:bg-neutral-50 group sm:px-6"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span
@@ -263,13 +264,14 @@ export default function TenantsPage() {
           </div>
 
           {!isLoading && data ? (
-            <div className="border-t border-neutral-100 px-6 py-3">
+            <div className="border-t border-neutral-100 px-4 py-3 sm:px-6">
               <p className="text-[11px] font-semibold text-neutral-400">
                 {data.total.toLocaleString()} school{data.total !== 1 ? 's' : ''} total
                 {filtered.length !== data.total ? ` · ${filtered.length} shown` : ''}
               </p>
             </div>
           ) : null}
+          </div>
         </div>
       </PageBody>
   );

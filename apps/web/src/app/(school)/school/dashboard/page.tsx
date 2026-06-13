@@ -125,7 +125,7 @@ export default function SchoolDashboardPage() {
   const operationsClear = inboxCount === 0 && pendingAdmissionCount === 0;
 
   return (
-    <PageBody className="max-w-[1200px] px-7 py-7">
+    <PageBody className="max-w-[1200px] px-4 py-5 sm:px-6 sm:py-6 lg:px-7 lg:py-7">
       <DashboardHeader
         consoleLabel="School Console"
         roleLabel={roleLabel}
@@ -196,8 +196,8 @@ export default function SchoolDashboardPage() {
         ]}
       />
 
-      <div className="mb-5 grid grid-cols-12 gap-5">
-        <div className="card col-span-8 overflow-hidden rounded-2xl">
+      <div className="mb-5 grid grid-cols-1 gap-5 lg:grid-cols-12">
+        <div className="card overflow-hidden rounded-2xl lg:col-span-8">
           <div className="flex items-start justify-between px-6 pt-6 pb-3">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400">Enrollment Trend</p>
@@ -244,7 +244,7 @@ export default function SchoolDashboardPage() {
           </div>
         </div>
 
-        <div className="col-span-4 flex flex-col gap-4">
+        <div className="flex flex-col gap-4 lg:col-span-4">
           <div className="card flex-1 overflow-hidden rounded-2xl">
             <div className="px-5 pt-5 pb-2">
               <div className="flex items-center justify-between">
@@ -301,7 +301,7 @@ export default function SchoolDashboardPage() {
                 label: 'Active Term',
                 value: activeTerm ? 'Open' : 'None',
                 color: activeTerm ? '#34d399' : '#f87171',
-                href: '/school/academic/terms',
+                href: '/school/academic/sessions',
               },
               {
                 label: 'Staff Directory',
@@ -314,7 +314,7 @@ export default function SchoolDashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <DashboardBottomCard
           href="/school/students/admissions"
           icon={UserPlus}

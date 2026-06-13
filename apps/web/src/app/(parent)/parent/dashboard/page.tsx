@@ -70,7 +70,7 @@ export default function ParentDashboardPage() {
   const fmtNaira = (minor: number) => `₦${(minor / 100).toLocaleString()}`;
 
   return (
-    <PageBody className="max-w-[1200px] px-7 py-7">
+    <PageBody className="max-w-[1200px] px-4 py-5 sm:px-6 sm:py-6 lg:px-7 lg:py-7">
       <DashboardHeader
         consoleLabel={consoleLabel}
         roleLabel={roleLabel}
@@ -141,7 +141,7 @@ export default function ParentDashboardPage() {
       />
 
       {isLoading ? (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} className="h-48 rounded-2xl" />
           ))}
@@ -227,7 +227,7 @@ export default function ParentDashboardPage() {
       )}
 
       {!isLoading && cards.length > 0 ? (
-        <div className="mt-5 grid grid-cols-3 gap-4">
+        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <DashboardBottomCard
             href="/parent/attendance"
             icon={Calendar}

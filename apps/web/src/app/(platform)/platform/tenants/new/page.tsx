@@ -37,7 +37,7 @@ export default function NewTenantPage() {
     : 'Commander';
 
   return (
-    <PageBody className="max-w-[960px] px-7 py-7">
+    <PageBody className="max-w-[960px] px-4 py-5 sm:px-6 sm:py-6 lg:px-7 lg:py-7">
       <div className="mb-6">
         <Link
           href="/platform/tenants"

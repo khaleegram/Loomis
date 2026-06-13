@@ -100,8 +100,8 @@ export function DashboardHeader({
         <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-neutral-400">{consoleLabel}</p>
       </div>
       <h1
-        className="text-neutral-900"
-        style={{ fontSize: '1.875rem', fontWeight: 800, letterSpacing: '-0.025em', lineHeight: 1.2 }}
+        className="text-neutral-900 text-2xl lg:text-[1.875rem]"
+        style={{ fontWeight: 800, letterSpacing: '-0.025em', lineHeight: 1.2 }}
       >
         {greeting()}, <span className="text-brand-600">{label}.</span>
       </h1>
@@ -159,8 +159,8 @@ export function DashboardToolbar({
   const activePeriod = selectedPeriod ?? periods[0];
 
   return (
-    <div className="mb-5 flex items-center justify-between">
-      <div className="flex items-center gap-1.5">
+    <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-wrap items-center gap-1.5">
         {periods.map((label) => (
           <button
             key={label}
@@ -176,7 +176,7 @@ export function DashboardToolbar({
           </button>
         ))}
       </div>
-      {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
+      {actions ? <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">{actions}</div> : null}
     </div>
   );
 }
@@ -192,11 +192,11 @@ export type DashboardStatItem = {
 
 export function DashboardStatStrip({ items }: { items: DashboardStatItem[] }) {
   return (
-    <div className="card mb-5 grid grid-cols-4 divide-x divide-neutral-100 rounded-2xl">
+    <div className="card mb-5 grid grid-cols-1 divide-y divide-neutral-100 rounded-2xl sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 lg:divide-x">
       {items.map((item) => {
         const Icon = item.icon;
         return (
-          <div key={item.label} className="flex items-center gap-3.5 px-5 py-4">
+          <div key={item.label} className="flex items-center gap-3.5 px-4 py-4 sm:px-5 lg:px-5">
             <span
               className="flex size-9 shrink-0 items-center justify-center rounded-xl text-white"
               style={{ background: item.color }}

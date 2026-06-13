@@ -18,6 +18,7 @@ import {
 } from '@/components/school/school-nav-config';
 
 function isNavVisible(role: Role, item: SchoolNavItem): boolean {
+  if (item.hideForRoles?.includes(role)) return false;
   if (item.always) return true;
   if (!item.capabilities?.length) return false;
   return item.capabilities.some((cap: Capability) => can(role, cap));

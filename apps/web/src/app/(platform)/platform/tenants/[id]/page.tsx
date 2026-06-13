@@ -129,8 +129,8 @@ function StatCard({
 
 function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-start gap-4 border-b border-neutral-50 py-3 last:border-0">
-      <dt className="w-[120px] shrink-0 pt-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-400">
+    <div className="flex flex-col gap-1 border-b border-neutral-50 py-3 last:border-0 sm:flex-row sm:items-start sm:gap-4">
+      <dt className="w-full shrink-0 pt-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-400 sm:w-[120px]">
         {label}
       </dt>
       <dd className="min-w-0 flex-1 text-[13px] font-semibold text-neutral-900">{children}</dd>
@@ -197,13 +197,13 @@ export default function TenantDetailPage({ params }: TenantDetailPageProps) {
   // ── Loading state ────────────────────────────────────
   if (isLoading) {
     return (
-      <PageBody className="max-w-[1200px] px-7 py-7">
+      <PageBody className="max-w-[1200px] px-4 py-5 sm:px-6 sm:py-6 lg:px-7 lg:py-7">
         <div className="mb-6 animate-pulse space-y-3">
           <div className="h-3 w-28 rounded bg-neutral-100" />
           <div className="h-10 w-72 rounded bg-neutral-100" />
           <div className="h-4 w-48 rounded bg-neutral-100" />
         </div>
-        <div className="mb-5 grid grid-cols-4 gap-4">
+        <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="card h-[76px] rounded-2xl bg-neutral-50" />
           ))}
@@ -222,7 +222,7 @@ export default function TenantDetailPage({ params }: TenantDetailPageProps) {
   // ── Not found ────────────────────────────────────────
   if (!tenant) {
     return (
-      <PageBody className="max-w-[1200px] px-7 py-7">
+      <PageBody className="max-w-[1200px] px-4 py-5 sm:px-6 sm:py-6 lg:px-7 lg:py-7">
         <div className="card rounded-2xl border-red-100 bg-red-50 p-6">
           <div className="flex items-start gap-4">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-red-100">
@@ -253,7 +253,7 @@ export default function TenantDetailPage({ params }: TenantDetailPageProps) {
   const schoolInitial = tenant.name.charAt(0).toUpperCase();
 
   return (
-    <PageBody className="max-w-[1200px] px-7 py-7">
+    <PageBody className="max-w-[1200px] px-4 py-5 sm:px-6 sm:py-6 lg:px-7 lg:py-7">
       {/* ════════════════════════════════════════════════════
           HERO HEADER
           ════════════════════════════════════════════════════ */}
