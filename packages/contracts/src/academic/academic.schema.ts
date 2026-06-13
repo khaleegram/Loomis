@@ -495,11 +495,11 @@ export type DeviceKeyListResponse = z.infer<typeof deviceKeyListResponse>;
 // ── Timetable (SRS §4.5 FR-ACA-001; US-ACA-006) ──────────────────────────────
 //
 // A timetable is the set of period slots for a (term, class arm). The builder
-// detects conflicts — a teacher, a class arm, or a venue double-booked in an
-// overlapping time window on the same weekday — and refuses to save (US-ACA-006).
+// detects conflicts — a teacher or class arm double-booked in an overlapping
+// time window on the same weekday — and refuses to save (US-ACA-006).
 // Times are minutes-from-midnight to make overlap maths exact and timezone-free.
 
-export const timetableEntryStatus = z.enum(['draft', 'published']);
+export const timetableEntryStatus = z.enum(['draft', 'published', 'marked_for_removal']);
 export type TimetableEntryStatus = z.infer<typeof timetableEntryStatus>;
 
 /** 1 = Monday … 7 = Sunday (ISO-8601 weekday). */
@@ -514,7 +514,6 @@ export const createTimetableEntryRequest = z
     dayOfWeek: weekday,
     startMinute: z.number().int().min(0).max(1439),
     endMinute: z.number().int().min(1).max(1440),
-    venue: z.string().min(1).max(120).optional(),
   })
   .refine((v) => v.endMinute > v.startMinute, {
     message: 'endMinute must be after startMinute',
@@ -524,9 +523,59 @@ export type CreateTimetableEntryRequest = z.infer<typeof createTimetableEntryReq
 
 export const publishTimetableRequest = z.object({
   termId: z.string().uuid(),
-  classArmId: z.string().uuid(),
 });
 export type PublishTimetableRequest = z.infer<typeof publishTimetableRequest>;
+
+export const publishTimetableClassArmResult = z.object({
+  classArmId: z.string().uuid(),
+  publishedCount: z.number().int().nonnegative(),
+});
+export type PublishTimetableClassArmResult = z.infer<typeof publishTimetableClassArmResult>;
+
+export const publishTimetableResponse = z.object({
+  termId: z.string().uuid(),
+  publishedSlotCount: z.number().int().nonnegative(),
+  publishedClassArms: z.number().int().nonnegative(),
+  classArms: z.array(publishTimetableClassArmResult),
+});
+export type PublishTimetableResponse = z.infer<typeof publishTimetableResponse>;
+
+export const timetablePublishPreviewQuery = z.object({
+  termId: z.string().uuid(),
+});
+export type TimetablePublishPreviewQuery = z.infer<typeof timetablePublishPreviewQuery>;
+
+export const timetablePublishPreviewEntry = z.object({
+  entryId: z.string().uuid(),
+  classArmId: z.string().uuid(),
+  classArmLabel: z.string(),
+  subjectId: z.string().uuid(),
+  teacherName: z.string().nullable(),
+  dayOfWeek: z.number().int(),
+  startMinute: z.number().int(),
+  endMinute: z.number().int(),
+});
+export type TimetablePublishPreviewEntry = z.infer<typeof timetablePublishPreviewEntry>;
+
+export const timetablePublishPreviewChange = z.object({
+  classArmLabel: z.string(),
+  dayOfWeek: z.number().int(),
+  startMinute: z.number().int(),
+  endMinute: z.number().int(),
+  removed: timetablePublishPreviewEntry,
+  added: timetablePublishPreviewEntry,
+});
+export type TimetablePublishPreviewChange = z.infer<typeof timetablePublishPreviewChange>;
+
+export const timetablePublishPreviewResponse = z.object({
+  termId: z.string().uuid(),
+  termName: z.string(),
+  additions: z.array(timetablePublishPreviewEntry),
+  removals: z.array(timetablePublishPreviewEntry),
+  changes: z.array(timetablePublishPreviewChange),
+  totalPending: z.number().int().nonnegative(),
+});
+export type TimetablePublishPreviewResponse = z.infer<typeof timetablePublishPreviewResponse>;
 
 export const listTimetableQuery = z.object({
   termId: z.string().uuid(),
@@ -541,10 +590,10 @@ export const timetableEntryResponse = z.object({
   classArmId: z.string().uuid(),
   subjectId: z.string().uuid(),
   teacherStaffProfileId: z.string().uuid(),
+  teacherName: z.string().nullable().optional(),
   dayOfWeek: z.number().int(),
   startMinute: z.number().int(),
   endMinute: z.number().int(),
-  venue: z.string().nullable(),
   status: timetableEntryStatus,
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -553,8 +602,123 @@ export type TimetableEntryResponse = z.infer<typeof timetableEntryResponse>;
 
 export const timetableListResponse = z.object({
   entries: z.array(timetableEntryResponse),
+  classArmId: z.string().uuid().optional(),
+  classArmLabel: z.string().nullable().optional(),
 });
 export type TimetableListResponse = z.infer<typeof timetableListResponse>;
+
+export const listTimetableSubjectOptionsQuery = z.object({
+  termId: z.string().uuid(),
+  classArmId: z.string().uuid(),
+});
+export type ListTimetableSubjectOptionsQuery = z.infer<typeof listTimetableSubjectOptionsQuery>;
+
+export const timetableSubjectOptionResponse = z.object({
+  assignmentId: z.string().uuid(),
+  subjectId: z.string().uuid(),
+  teacherStaffProfileId: z.string().uuid(),
+  teacherName: z.string(),
+});
+export type TimetableSubjectOptionResponse = z.infer<typeof timetableSubjectOptionResponse>;
+
+export const timetableSubjectOptionsResponse = z.object({
+  options: z.array(timetableSubjectOptionResponse),
+});
+export type TimetableSubjectOptionsResponse = z.infer<typeof timetableSubjectOptionsResponse>;
+
+export const timetableClassArmSummaryStatus = z.enum(['empty', 'draft', 'published']);
+export type TimetableClassArmSummaryStatus = z.infer<typeof timetableClassArmSummaryStatus>;
+
+export const timetableClassArmSummary = z.object({
+  classArmId: z.string().uuid(),
+  classArmLabel: z.string(),
+  status: timetableClassArmSummaryStatus,
+  lessonCount: z.number().int().nonnegative(),
+  draftCount: z.number().int().nonnegative(),
+});
+export type TimetableClassArmSummary = z.infer<typeof timetableClassArmSummary>;
+
+export const timetableTermSummaryQuery = z.object({
+  termId: z.string().uuid(),
+});
+export type TimetableTermSummaryQuery = z.infer<typeof timetableTermSummaryQuery>;
+
+export const timetableTermSummaryResponse = z.object({
+  termId: z.string().uuid(),
+  termName: z.string(),
+  totalClassArms: z.number().int().nonnegative(),
+  publishedClassArms: z.number().int().nonnegative(),
+  draftClassArms: z.number().int().nonnegative(),
+  emptyClassArms: z.number().int().nonnegative(),
+  totalDraftSlots: z.number().int().nonnegative(),
+  totalPublishedSlots: z.number().int().nonnegative(),
+  bellPeriodsPerDay: z.number().int().positive(),
+  classArms: z.array(timetableClassArmSummary),
+});
+export type TimetableTermSummaryResponse = z.infer<typeof timetableTermSummaryResponse>;
+
+// ── Bell schedule (school day template per academic year) ─────────────────────
+
+export const bellScheduleSlotType = z.enum(['lesson', 'break']);
+export type BellScheduleSlotType = z.infer<typeof bellScheduleSlotType>;
+
+export const bellScheduleSlot = z
+  .object({
+    label: z.string().min(1).max(40),
+    type: bellScheduleSlotType,
+    startMinute: z.number().int().min(0).max(1439),
+    endMinute: z.number().int().min(1).max(1440),
+  })
+  .refine((slot) => slot.endMinute > slot.startMinute, {
+    message: 'endMinute must be after startMinute',
+    path: ['endMinute'],
+  });
+export type BellScheduleSlot = z.infer<typeof bellScheduleSlot>;
+
+/** Default Nigerian secondary-school day when a tenant has not customised yet. */
+export const DEFAULT_BELL_SCHEDULE_SLOTS: BellScheduleSlot[] = [
+  { label: 'Period 1', type: 'lesson', startMinute: 480, endMinute: 520 },
+  { label: 'Period 2', type: 'lesson', startMinute: 520, endMinute: 560 },
+  { label: 'Period 3', type: 'lesson', startMinute: 560, endMinute: 600 },
+  { label: 'Break', type: 'break', startMinute: 600, endMinute: 620 },
+  { label: 'Period 4', type: 'lesson', startMinute: 620, endMinute: 660 },
+  { label: 'Period 5', type: 'lesson', startMinute: 660, endMinute: 700 },
+  { label: 'Period 6', type: 'lesson', startMinute: 700, endMinute: 740 },
+  { label: 'Lunch', type: 'break', startMinute: 740, endMinute: 820 },
+  { label: 'Period 7', type: 'lesson', startMinute: 820, endMinute: 860 },
+  { label: 'Period 8', type: 'lesson', startMinute: 860, endMinute: 900 },
+];
+
+export const bellScheduleQuery = z.object({
+  academicYearId: z.string().uuid(),
+});
+export type BellScheduleQuery = z.infer<typeof bellScheduleQuery>;
+
+export const upsertBellScheduleRequest = z.object({
+  academicYearId: z.string().uuid(),
+  slots: z.array(bellScheduleSlot).min(1).max(24),
+});
+export type UpsertBellScheduleRequest = z.infer<typeof upsertBellScheduleRequest>;
+
+export const bellScheduleResponse = z.object({
+  academicYearId: z.string().uuid(),
+  slots: z.array(bellScheduleSlot),
+  isDefault: z.boolean(),
+  lessonPeriodCount: z.number().int().nonnegative(),
+  updatedAt: z.string().datetime().nullable(),
+});
+export type BellScheduleResponse = z.infer<typeof bellScheduleResponse>;
+
+export const myTimetableQuery = z.object({
+  termId: z.string().uuid(),
+});
+export type MyTimetableQuery = z.infer<typeof myTimetableQuery>;
+
+export const parentTimetableQuery = z.object({
+  studentId: z.string().uuid(),
+  termId: z.string().uuid(),
+});
+export type ParentTimetableQuery = z.infer<typeof parentTimetableQuery>;
 
 // ── Assignments & Submissions (SRS §4.5 FR-ACA-003; US-ACA-007) ───────────────
 //

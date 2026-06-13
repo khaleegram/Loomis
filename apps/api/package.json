@@ -13,7 +13,8 @@
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file=../../.env.local ./node_modules/drizzle-kit/bin.cjs migrate",
-    "db:seed": "node --env-file=../../.env.local ./node_modules/tsx/dist/cli.mjs scripts/seed-dev.ts"
+    "db:seed": "node --env-file=../../.env.local ./node_modules/tsx/dist/cli.mjs scripts/seed-dev.ts",
+    "db:seed:rich": "node --env-file=../../.env.local ./node_modules/tsx/dist/cli.mjs scripts/seed-rich-school.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1063.0",

@@ -1,6 +1,9 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
+import type { ParentTimetableQuery } from '@loomis/contracts';
 import { sendSuccess } from '../../../shared/http.js';
 import { LoomisError } from '../../../shared/errors.js';
+import { timetableEntryToResponse } from '../../academic/handlers/_ops-serializers.js';
+import { timetableService } from '../../academic/services/timetable.service.js';
 import { parentDashboardReadService, regionalAnalyticsReadService } from '../services/index.js';
 
 function requireActor(req: FastifyRequest) {
@@ -47,6 +50,29 @@ export async function getParentDashboardHandler(
 ): Promise<FastifyReply> {
   const cards = await parentDashboardReadService.getDashboard(requireActor(req));
   return sendSuccess(reply, { cards: cards.map(cardToResponse) });
+}
+
+export async function getParentTimetableHandler(
+  req: FastifyRequest<{ Querystring: ParentTimetableQuery }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const tenantId = req.headers['x-tenant-id'];
+  if (typeof tenantId !== 'string' || !tenantId) {
+    throw new LoomisError('VALIDATION_ERROR', 400, 'X-Tenant-Id header is required');
+  }
+
+  const result = await timetableService.listParentChildTimetable(
+    tenantId,
+    req.query.studentId,
+    req.query.termId,
+    requireActor(req),
+  );
+
+  return sendSuccess(reply, {
+    entries: result.entries.map(timetableEntryToResponse),
+    classArmId: result.classArmId,
+    classArmLabel: result.classArmLabel,
+  });
 }
 
 export async function getRegionalAnalyticsHandler(

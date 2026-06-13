@@ -17,6 +17,9 @@ export type Capability =
   | 'census.lock'
   | 'student.promote'
   | 'student.graduate'
+  | 'class_structure.manage'
+  | 'timetable.manage'
+  | 'timetable.view'
   | 'admissions.manage'
   | 'admissions.approve'
   | 'attendance.mark'
@@ -71,6 +74,8 @@ export const roleCapabilities: Record<Role, ReadonlySet<Capability>> = {
     'census.lock',
     'student.promote',
     'student.graduate',
+    'class_structure.manage',
+    'timetable.manage',
     'refund.approve',
     'ledger.view',
     'audit.view',
@@ -87,7 +92,11 @@ export const roleCapabilities: Record<Role, ReadonlySet<Capability>> = {
     'census.lock',
     'student.promote',
     'student.graduate',
+    'class_structure.manage',
+    'timetable.manage',
     'admissions.approve',
+    'attendance.view',
+    'gradebook.read',
     'refund.approve',
     'audit.view',
     'parent.message',
@@ -98,17 +107,19 @@ export const roleCapabilities: Record<Role, ReadonlySet<Capability>> = {
     'classteacher.assign',
     'student.promote',
     'student.graduate',
+    'class_structure.manage',
     'admissions.manage',
+    'timetable.view',
   ),
   accountant: C('fee.configure', 'payment.verify', 'refund.approve'),
   cashier: C('payment.log', 'refund.initiate'),
   exam_officer: C('grading_scheme.configure', 'result.publish', 'gradebook.read', 'student.graduate'),
   deputy_exam_officer: C('grading_scheme.configure', 'result.publish', 'gradebook.read'),
-  timetable_officer: C(),
-  teacher: C('gradebook.write'),
-  class_teacher: C('attendance.mark', 'attendance.view', 'gradebook.read', 'parent.message'),
+  timetable_officer: C('timetable.manage'),
+  teacher: C('gradebook.write', 'timetable.view'),
+  class_teacher: C('attendance.mark', 'attendance.view', 'gradebook.read', 'parent.message', 'timetable.view'),
   parent: C(),
-  student: C(),
+  student: C('timetable.view'),
 };
 
 export function can(role: Role, capability: Capability): boolean {

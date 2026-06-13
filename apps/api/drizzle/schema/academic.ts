@@ -660,10 +660,10 @@ export const attendanceDeviceKeys = academicSchema.table(
 
 /**
  * Timetable period slots (SRS §4.5 FR-ACA-001; US-ACA-006). The set of rows for a
- * (term, class arm) is the class timetable. Conflict detection (a teacher, class
- * arm, or venue double-booked in an overlapping window on the same weekday) runs
- * in the service before insert and refuses to save on conflict. Times are stored
- * as minutes-from-midnight so overlap maths is exact and timezone-free.
+ * (term, class arm) is the class timetable. Conflict detection (a teacher or class
+ * arm double-booked in an overlapping window on the same weekday) runs in the
+ * service before insert and refuses to save on conflict. Times are stored as
+ * minutes-from-midnight so overlap maths is exact and timezone-free.
  */
 export const timetables = academicSchema.table(
   'timetables',
@@ -685,7 +685,6 @@ export const timetables = academicSchema.table(
     dayOfWeek: integer('day_of_week').notNull(),
     startMinute: integer('start_minute').notNull(),
     endMinute: integer('end_minute').notNull(),
-    venue: varchar('venue', { length: 120 }),
     status: varchar('status', { length: 20 }).notNull().default('draft'),
     createdById: uuid('created_by_id').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -709,7 +708,33 @@ export const timetables = academicSchema.table(
       'timetables_time_valid',
       sql`${table.startMinute} >= 0 AND ${table.startMinute} < 1440 AND ${table.endMinute} > ${table.startMinute} AND ${table.endMinute} <= 1440`,
     ),
-    statusValid: check('timetables_status_valid', sql`${table.status} IN ('draft', 'published')`),
+    statusValid: check('timetables_status_valid', sql`${table.status} IN ('draft', 'published', 'marked_for_removal')`),
+  }),
+);
+
+/**
+ * School-day bell schedule per academic year (start times, period length, breaks).
+ * Timetable grids and conflict detection use these slots instead of hardcoded presets.
+ */
+export const bellSchedules = academicSchema.table(
+  'bell_schedules',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id),
+    academicYearId: uuid('academic_year_id')
+      .notNull()
+      .references(() => academicYears.id),
+    slots: jsonb('slots').notNull(),
+    updatedById: uuid('updated_by_id').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    tenantYearUid: uniqueIndex('bell_schedules_tenant_year_uidx').on(table.tenantId, table.academicYearId),
   }),
 );
 

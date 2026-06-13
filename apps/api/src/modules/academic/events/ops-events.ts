@@ -81,7 +81,7 @@ export const academicOpsEvents = {
   }) {
     return outboxRepository.publish({
       aggregateType: 'timetable',
-      aggregateId: `${params.termId}:${params.classArmId}`,
+      aggregateId: params.classArmId,
       eventType: ACADEMIC_OPS_EVENT_TYPES.timetablePublished,
       tenantId: params.tenantId,
       payload: { ...params },

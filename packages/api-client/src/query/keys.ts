@@ -80,6 +80,12 @@ export const queryKeys = {
       ['students', tenantId, 'detail', studentId] as const,
     profile: (tenantId: string, studentId: string) =>
       ['students', tenantId, 'profile', studentId] as const,
+    enrollmentRoster: (tenantId: string, termId: string) =>
+      ['students', tenantId, 'enrollment-roster', termId] as const,
+    leavingCertificates: (tenantId: string, academicYearId: string) =>
+      ['students', tenantId, 'leaving-certificates', academicYearId] as const,
+    certificates: (tenantId: string, studentId: string) =>
+      ['students', tenantId, 'certificates', studentId] as const,
   },
   admissions: {
     all: (tenantId: string) => ['admissions', tenantId] as const,
@@ -116,12 +122,23 @@ export const queryKeys = {
       ['academic', tenantId, 'gradebook', 'entries', filters] as const,
     attendance: (tenantId: string, filters: AttendanceListFilters) =>
       ['academic', tenantId, 'attendance', filters] as const,
-    timetable: (tenantId: string, termId: string) =>
-      ['academic', tenantId, 'timetable', termId] as const,
+    timetable: (tenantId: string, termId: string, classArmId: string) =>
+      ['academic', tenantId, 'timetable', termId, classArmId] as const,
+    timetableSubjectOptions: (tenantId: string, termId: string, classArmId: string) =>
+      ['academic', tenantId, 'timetable', 'subject-options', termId, classArmId] as const,
+    timetableSummary: (tenantId: string, termId: string) =>
+      ['academic', tenantId, 'timetable', 'summary', termId] as const,
+    timetablePublishPreview: (tenantId: string, termId: string) =>
+      ['academic', tenantId, 'timetable', 'publish-preview', termId] as const,
+    bellSchedule: (tenantId: string, academicYearId: string) =>
+      ['academic', tenantId, 'bell-schedule', academicYearId] as const,
+    studentTimetable: (tenantId: string, termId: string) =>
+      ['academic', tenantId, 'timetable', 'me', termId] as const,
     assignments: (tenantId: string, classArmId: string) =>
       ['academic', tenantId, 'assignments', classArmId] as const,
     promotions: (tenantId: string, yearId: string) =>
       ['academic', tenantId, 'promotions', yearId] as const,
+    progressions: (tenantId: string) => ['academic', tenantId, 'progressions'] as const,
   },
   workflow: {
     all: (tenantId: string) => ['workflow', tenantId] as const,
@@ -209,6 +226,11 @@ export const queryKeys = {
   storage: {
     downloadUrl: (storageObjectId: string) =>
       ['storage', 'download-url', storageObjectId] as const,
+  },
+  parent: {
+    dashboard: () => ['parent', 'dashboard'] as const,
+    timetable: (tenantId: string, studentId: string, termId: string) =>
+      ['parent', 'timetable', tenantId, studentId, termId] as const,
   },
 
 } as const;

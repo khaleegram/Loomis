@@ -1,5 +1,6 @@
-import { and, asc, eq, gt, lt } from 'drizzle-orm';
+import { and, asc, eq, gt, lt, ne, sql } from 'drizzle-orm';
 import { timetables } from '../../../../drizzle/schema/academic.js';
+import { staffProfiles } from '../../../../drizzle/schema/hrm.js';
 import { withTenantContext } from '../../../shared/tenant-context.js';
 
 interface CreateTimetableEntryInput {
@@ -10,7 +11,6 @@ interface CreateTimetableEntryInput {
   dayOfWeek: number;
   startMinute: number;
   endMinute: number;
-  venue: string | null;
 }
 
 /** Timetable persistence and the overlap query that powers conflict detection. */
@@ -29,7 +29,7 @@ export const timetableRepository = {
   /**
    * All entries for a term on a given weekday whose time window overlaps the
    * candidate [startMinute, endMinute). Overlap = existing.start < new.end AND
-   * existing.end > new.start. The service inspects these for teacher/class/venue
+   * existing.end > new.start. The service inspects these for teacher/class clashes
    * clashes (US-ACA-006).
    */
   async findOverlapping(
@@ -50,6 +50,7 @@ export const timetableRepository = {
             eq(timetables.dayOfWeek, dayOfWeek),
             lt(timetables.startMinute, endMinute),
             gt(timetables.endMinute, startMinute),
+            ne(timetables.status, 'marked_for_removal'),
           ),
         ),
     );
@@ -66,22 +67,121 @@ export const timetableRepository = {
     });
   },
 
-  async list(tenantId: string, termId: string, classArmId: string) {
-    return withTenantContext(tenantId, async (tx) =>
-      tx
-        .select()
+  async list(tenantId: string, termId: string, classArmId: string, publishedOnly = false) {
+    return withTenantContext(tenantId, async (tx) => {
+      const conditions = [
+        eq(timetables.tenantId, tenantId),
+        eq(timetables.termId, termId),
+        eq(timetables.classArmId, classArmId),
+        ne(timetables.status, 'marked_for_removal'),
+      ];
+      if (publishedOnly) {
+        conditions.push(eq(timetables.status, 'published'));
+      }
+
+      return tx
+        .select({
+          id: timetables.id,
+          tenantId: timetables.tenantId,
+          termId: timetables.termId,
+          classArmId: timetables.classArmId,
+          subjectId: timetables.subjectId,
+          teacherStaffProfileId: timetables.teacherStaffProfileId,
+          teacherName: staffProfiles.fullName,
+          dayOfWeek: timetables.dayOfWeek,
+          startMinute: timetables.startMinute,
+          endMinute: timetables.endMinute,
+          status: timetables.status,
+          createdById: timetables.createdById,
+          createdAt: timetables.createdAt,
+          updatedAt: timetables.updatedAt,
+        })
         .from(timetables)
+        .leftJoin(staffProfiles, eq(staffProfiles.id, timetables.teacherStaffProfileId))
+        .where(and(...conditions))
+        .orderBy(asc(timetables.dayOfWeek), asc(timetables.startMinute));
+    });
+  },
+
+  async publishTerm(tenantId: string, termId: string) {
+    return withTenantContext(tenantId, async (tx) => {
+      const now = new Date();
+
+      await tx
+        .delete(timetables)
         .where(
           and(
             eq(timetables.tenantId, tenantId),
             eq(timetables.termId, termId),
-            eq(timetables.classArmId, classArmId),
+            eq(timetables.status, 'marked_for_removal'),
+          ),
+        );
+
+      return tx
+        .update(timetables)
+        .set({ status: 'published', updatedAt: now })
+        .where(
+          and(
+            eq(timetables.tenantId, tenantId),
+            eq(timetables.termId, termId),
+            eq(timetables.status, 'draft'),
           ),
         )
-        .orderBy(asc(timetables.dayOfWeek), asc(timetables.startMinute)),
+        .returning();
+    });
+  },
+
+  async markForRemoval(tenantId: string, id: string) {
+    return withTenantContext(tenantId, async (tx) => {
+      const now = new Date();
+      const [row] = await tx
+        .update(timetables)
+        .set({ status: 'marked_for_removal', updatedAt: now })
+        .where(
+          and(
+            eq(timetables.tenantId, tenantId),
+            eq(timetables.id, id),
+            eq(timetables.status, 'published'),
+          ),
+        )
+        .returning();
+      return row ?? null;
+    });
+  },
+
+  async listPendingForTerm(tenantId: string, termId: string) {
+    return withTenantContext(tenantId, async (tx) =>
+      tx
+        .select({
+          id: timetables.id,
+          tenantId: timetables.tenantId,
+          termId: timetables.termId,
+          classArmId: timetables.classArmId,
+          subjectId: timetables.subjectId,
+          teacherStaffProfileId: timetables.teacherStaffProfileId,
+          teacherName: staffProfiles.fullName,
+          dayOfWeek: timetables.dayOfWeek,
+          startMinute: timetables.startMinute,
+          endMinute: timetables.endMinute,
+          status: timetables.status,
+          createdById: timetables.createdById,
+          createdAt: timetables.createdAt,
+          updatedAt: timetables.updatedAt,
+        })
+        .from(timetables)
+        .leftJoin(staffProfiles, eq(staffProfiles.id, timetables.teacherStaffProfileId))
+        .where(
+          and(
+            eq(timetables.tenantId, tenantId),
+            eq(timetables.termId, termId),
+            sql`${timetables.status} IN ('draft', 'marked_for_removal')`,
+          ),
+        )
+        .orderBy(asc(timetables.classArmId), asc(timetables.dayOfWeek), asc(timetables.startMinute)),
     );
   },
 
+  /** @deprecated Use publishTerm — publishes all draft slots for the term. */
   async publish(tenantId: string, termId: string, classArmId: string) {
     return withTenantContext(tenantId, async (tx) => {
       const now = new Date();
@@ -107,5 +207,21 @@ export const timetableRepository = {
         .returning();
       return row ?? null;
     });
+  },
+
+  async countByClassArmForTerm(tenantId: string, termId: string) {
+    return withTenantContext(tenantId, async (tx) =>
+      tx
+        .select({
+          classArmId: timetables.classArmId,
+          lessonCount: sql<number>`count(*)::int`,
+          draftCount: sql<number>`count(*) filter (where ${timetables.status} = 'draft')::int`,
+          pendingRemovalCount: sql<number>`count(*) filter (where ${timetables.status} = 'marked_for_removal')::int`,
+          publishedCount: sql<number>`count(*) filter (where ${timetables.status} = 'published')::int`,
+        })
+        .from(timetables)
+        .where(and(eq(timetables.tenantId, tenantId), eq(timetables.termId, termId)))
+        .groupBy(timetables.classArmId),
+    );
   },
 };

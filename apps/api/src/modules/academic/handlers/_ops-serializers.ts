@@ -62,7 +62,9 @@ export function deviceKeyToResponse(row: DeviceKeyRow): DeviceKeyResponse {
   };
 }
 
-export function timetableEntryToResponse(row: TimetableRow): TimetableEntryResponse {
+export function timetableEntryToResponse(
+  row: TimetableRow & { teacherName?: string | null },
+): TimetableEntryResponse {
   return {
     id: row.id,
     tenantId: row.tenantId,
@@ -70,10 +72,10 @@ export function timetableEntryToResponse(row: TimetableRow): TimetableEntryRespo
     classArmId: row.classArmId,
     subjectId: row.subjectId,
     teacherStaffProfileId: row.teacherStaffProfileId,
+    teacherName: row.teacherName ?? null,
     dayOfWeek: row.dayOfWeek,
     startMinute: row.startMinute,
     endMinute: row.endMinute,
-    venue: row.venue ?? null,
     status: row.status as TimetableEntryStatus,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),

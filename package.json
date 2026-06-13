@@ -18,6 +18,7 @@
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:seed": "pnpm --filter @loomis/api db:seed",
+    "db:seed:rich": "pnpm --filter @loomis/api db:seed:rich",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\""
   },
   "devDependencies": {

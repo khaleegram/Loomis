@@ -8,7 +8,9 @@ import type {
   ListAssignmentsQuery,
   ListAttendanceQuery,
   ListTimetableQuery,
+  ListTimetableSubjectOptionsQuery,
   MarkAttendanceRequest,
+  MyTimetableQuery,
   PublishTimetableRequest,
   RegisterDeviceKeyRequest,
   SyncOfflineAttendanceRequest,
@@ -19,6 +21,7 @@ import { assignmentService } from '../services/assignment.service.js';
 import { attendanceService } from '../services/attendance.service.js';
 import { deviceKeyService } from '../services/device-key.service.js';
 import { timetableService } from '../services/timetable.service.js';
+import { bellScheduleService } from '../services/bell-schedule.service.js';
 import { requireActor } from './_context.js';
 import {
   assignmentToResponse,
@@ -153,17 +156,52 @@ export async function listTimetableHandler(
   return sendSuccess(reply, { entries: entries.map(timetableEntryToResponse) });
 }
 
+export async function listTimetableSubjectOptionsHandler(
+  req: FastifyRequest<{ Params: TenantParams; Querystring: ListTimetableSubjectOptionsQuery }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const options = await timetableService.listSubjectOptions(
+    req.params.tenantId,
+    req.query,
+    requireActor(req),
+  );
+  return sendSuccess(reply, {
+    options: options.map((option) => ({
+      assignmentId: option.assignmentId,
+      subjectId: option.subjectId,
+      teacherStaffProfileId: option.teacherStaffProfileId,
+      teacherName: option.teacherName,
+    })),
+  });
+}
+
+export async function listStudentTimetableHandler(
+  req: FastifyRequest<{ Params: TenantParams; Querystring: MyTimetableQuery }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const result = await timetableService.listStudentTimetable(
+    req.params.tenantId,
+    req.query.termId,
+    requireActor(req),
+  );
+  return sendSuccess(reply, {
+    entries: result.entries.map(timetableEntryToResponse),
+    classArmId: result.classArmId,
+    classArmLabel: result.classArmLabel,
+  });
+}
+
 export async function publishTimetableHandler(
   req: FastifyRequest<{ Params: TenantParams; Body: PublishTimetableRequest }>,
   reply: FastifyReply,
 ): Promise<FastifyReply> {
-  const entries = await timetableService.publishTimetable(
+  const result = await timetableService.publishTimetable(
     req.params.tenantId,
     req.body,
     requireActor(req),
     req.id,
   );
-  return sendSuccess(reply, { entries: entries.map(timetableEntryToResponse) });
+  return sendSuccess(reply, result);
 }
 
 export async function deleteTimetableEntryHandler(
@@ -177,6 +215,55 @@ export async function deleteTimetableEntryHandler(
     req.id,
   );
   return sendSuccess(reply, timetableEntryToResponse(entry));
+}
+
+export async function timetableTermSummaryHandler(
+  req: FastifyRequest<{ Params: TenantParams; Querystring: { termId: string } }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const summary = await timetableService.summarizeTerm(
+    req.params.tenantId,
+    req.query.termId,
+    requireActor(req),
+  );
+  return sendSuccess(reply, summary);
+}
+
+export async function timetablePublishPreviewHandler(
+  req: FastifyRequest<{ Params: TenantParams; Querystring: { termId: string } }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const preview = await timetableService.getPublishPreview(
+    req.params.tenantId,
+    req.query.termId,
+    requireActor(req),
+  );
+  return sendSuccess(reply, preview);
+}
+
+export async function getBellScheduleHandler(
+  req: FastifyRequest<{ Params: TenantParams; Querystring: { academicYearId: string } }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const schedule = await bellScheduleService.getForYear(
+    req.params.tenantId,
+    req.query.academicYearId,
+    requireActor(req),
+  );
+  return sendSuccess(reply, schedule);
+}
+
+export async function upsertBellScheduleHandler(
+  req: FastifyRequest<{ Params: TenantParams; Body: import('@loomis/contracts').UpsertBellScheduleRequest }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const schedule = await bellScheduleService.upsert(
+    req.params.tenantId,
+    req.body,
+    requireActor(req),
+    req.id,
+  );
+  return sendSuccess(reply, schedule);
 }
 
 // ── Assignments & submissions (FR-ACA-003 / US-ACA-007) ──────────────────────

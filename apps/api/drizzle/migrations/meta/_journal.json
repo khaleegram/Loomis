@@ -288,6 +288,20 @@
       "when": 1780837500000,
       "tag": "0040_user_photo",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1780837700000,
+      "tag": "0043_timetable_pending_removal",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1780837800000,
+      "tag": "0044_drop_timetable_venue",
+      "breakpoints": true
     }
   ]
 }
