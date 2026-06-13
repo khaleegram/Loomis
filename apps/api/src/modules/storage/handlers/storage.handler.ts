@@ -30,3 +30,18 @@ export async function getDownloadUrlHandler(
   });
   return sendSuccess(reply, result);
 }
+
+/** PUT /storage/objects/:id/content — server-side upload for web clients (bypasses S3 CORS). */
+export async function uploadObjectContentHandler(
+  req: FastifyRequest<{ Params: StorageObjectParams; Body: Buffer }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const actor = requireTenantActor(req);
+  const result = await storageService.uploadObjectContent(
+    req.params.id,
+    req.body,
+    actor,
+    req.id,
+  );
+  return sendSuccess(reply, result);
+}

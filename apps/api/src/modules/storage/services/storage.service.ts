@@ -3,6 +3,7 @@ import type {
   GetDownloadUrlResponse,
   StorageClassification,
 } from '@loomis/contracts';
+import { createHash } from 'node:crypto';
 import { uuidv7 } from 'uuidv7';
 import { getEnv } from '../../../config/env.js';
 import { writeAudit, writeDataAccess } from '../../../shared/audit.js';
@@ -178,9 +179,76 @@ export const storageService = {
   },
 
   /**
-   * Issues a pre-signed S3 GET URL after tenant + role authorization.
-   * Records `storage.object.accessed` regardless of whether the client fetches.
+   * Server-side upload for web clients (avoids S3 bucket CORS configuration).
+   * Mobile clients should continue to use the pre-signed PUT URL.
    */
+  async uploadObjectContent(
+    storageObjectId: string,
+    body: Buffer,
+    actor: ActorContext,
+    requestId: string,
+  ): Promise<{ storageObjectId: string; status: 'upload_pending' | 'available' }> {
+    assertStorageRole(actor);
+
+    const record = await storageRepository.findById(actor.tenantId, storageObjectId);
+    if (!record) {
+      throw new LoomisError('STORAGE_OBJECT_NOT_FOUND', 404, 'Storage object not found');
+    }
+    if (record.status !== 'upload_pending') {
+      throw new LoomisError('STORAGE_OBJECT_NOT_AVAILABLE', 409, 'Storage object is not awaiting upload');
+    }
+    if (record.createdByUserId !== actor.userId) {
+      throw new LoomisError('FORBIDDEN', 403, 'Cannot upload to another user\'s storage object');
+    }
+    if (body.length !== record.contentLengthBytes) {
+      throw new LoomisError(
+        'VALIDATION_ERROR',
+        422,
+        'Uploaded content length does not match declared size',
+      );
+    }
+
+    const digest = createHash('sha256').update(body).digest('hex');
+    if (digest !== record.objectHash.toLowerCase()) {
+      throw new LoomisError('VALIDATION_ERROR', 422, 'Uploaded content hash does not match declared hash');
+    }
+
+    try {
+      await s3PresignService.putObject({
+        bucket: record.bucket,
+        objectKey: record.objectKey,
+        contentType: record.contentType,
+        body,
+      });
+    } catch {
+      throw new LoomisError('STORAGE_S3_UNAVAILABLE', 503, 'Object storage is temporarily unavailable');
+    }
+
+    const env = getEnv();
+    const nextStatus = env.NODE_ENV === 'development' ? 'available' : 'upload_pending';
+    if (nextStatus === 'available') {
+      await storageRepository.updateStatus(actor.tenantId, storageObjectId, 'available', new Date());
+    }
+
+    await writeAudit({
+      tenantId: actor.tenantId,
+      actorUserId: actor.userId,
+      action: 'storage.object.uploaded',
+      resourceType: 'storage_object',
+      resourceId: storageObjectId,
+      sensitivity: auditSensitivity(record.classification as StorageClassification),
+      result: 'success',
+      requestId,
+      metadata: {
+        classification: record.classification,
+        via: 'api_proxy',
+        status: nextStatus,
+      },
+    });
+
+    return { storageObjectId, status: nextStatus };
+  },
+
   async getDownloadUrl(
     storageObjectId: string,
     actor: ActorContext,
@@ -248,5 +316,63 @@ export const storageService = {
       classification: record.classification,
       status: record.status,
     };
+  },
+
+  /**
+   * Server-side object creation for platform-generated documents (certificates, exports).
+   * Skips malware scan in development; production uses upload_pending until scan completes.
+   */
+  async storePlatformGeneratedObject(input: {
+    tenantId: string;
+    ownerResourceType: string;
+    ownerResourceId: string;
+    classification: StorageClassification;
+    contentType: string;
+    body: Buffer;
+    createdByUserId: string;
+  }): Promise<{ storageObjectId: string }> {
+    if (!ALLOWED_CONTENT_TYPES.has(input.contentType)) {
+      throw new LoomisError(
+        'STORAGE_CONTENT_TYPE_NOT_ALLOWED',
+        422,
+        'Content type is not permitted for upload',
+      );
+    }
+
+    const env = getEnv();
+    const storageObjectId = uuidv7();
+    const objectKey = buildOpaqueObjectKey(input.classification, storageObjectId);
+    const objectHash = createHash('sha256').update(input.body).digest('hex');
+
+    await storageRepository.create({
+      id: storageObjectId,
+      tenantId: input.tenantId,
+      ownerResourceType: input.ownerResourceType,
+      ownerResourceId: input.ownerResourceId,
+      bucket: env.S3_BUCKET,
+      objectKey,
+      objectHash,
+      classification: input.classification,
+      contentType: input.contentType,
+      contentLengthBytes: input.body.length,
+      createdByUserId: input.createdByUserId,
+    });
+
+    try {
+      await s3PresignService.putObject({
+        bucket: env.S3_BUCKET,
+        objectKey,
+        contentType: input.contentType,
+        body: input.body,
+      });
+    } catch {
+      throw new LoomisError('STORAGE_S3_UNAVAILABLE', 503, 'Object storage is temporarily unavailable');
+    }
+
+    if (env.NODE_ENV === 'development') {
+      await storageRepository.updateStatus(input.tenantId, storageObjectId, 'available', new Date());
+    }
+
+    return { storageObjectId };
   },
 };

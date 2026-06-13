@@ -13,6 +13,7 @@ import {
 import { Button } from '@loomis/ui-web';
 
 import { useAuth } from '@/lib/auth/auth-context';
+import { getUserIdFromAccessToken } from '@/lib/auth/user-id';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 import { PhotoUpload } from '@/components/shared/photo-upload';
 
@@ -20,7 +21,7 @@ export default function ProfileSettingsPage() {
   const { session } = useAuth();
   const tenantId = useTenantId();
 
-  const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = useMyProfile();
+  const { data: profile, refetch: refetchProfile } = useMyProfile();
   const updateProfile = useUpdateProfile();
   const changePassword = useChangePassword();
 
@@ -40,6 +41,12 @@ export default function ProfileSettingsPage() {
     setFlash({ type, message });
     setTimeout(() => setFlash(null), 4000);
   }, []);
+
+  const ownerUserId =
+    profile?.userId ??
+    (session ? getUserIdFromAccessToken(session.accessToken) : null) ??
+    '';
+  const saving = updateProfile.isPending;
 
   const handlePhotoSet = useCallback(
     (storageObjectId: string) => {
@@ -122,8 +129,6 @@ export default function ProfileSettingsPage() {
     );
   };
 
-  const saving = updateProfile.isPending || profileLoading;
-
   return (
     <div className="max-w-2xl space-y-6">
       {/* Flash message */}
@@ -176,6 +181,8 @@ export default function ProfileSettingsPage() {
         </div>
         <div className="px-5 py-5">
           <PhotoUpload
+            ownerResourceId={ownerUserId}
+            ownerResourceType="identity_user"
             photoStorageObjectId={profile?.photoStorageObjectId}
             fullName={displayName}
             onPhotoSet={handlePhotoSet}

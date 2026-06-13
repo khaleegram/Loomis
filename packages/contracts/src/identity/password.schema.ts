@@ -65,6 +65,7 @@ export const updateProfileResponse = z.object({
 export type UpdateProfileResponse = z.infer<typeof updateProfileResponse>;
 
 export const myProfileResponse = z.object({
+  userId: z.string().uuid(),
   displayName: z.string().nullable(),
   email: z.string(),
   photoStorageObjectId: z.string().uuid().nullable(),

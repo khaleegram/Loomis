@@ -33,6 +33,13 @@ export interface PresignedGetInput {
   objectKey: string;
 }
 
+export interface PutObjectInput {
+  bucket: string;
+  objectKey: string;
+  contentType: string;
+  body: Buffer;
+}
+
 export const s3PresignService = {
   async createPutUrl(input: PresignedPutInput): Promise<string> {
     const client = getS3Client();
@@ -41,10 +48,23 @@ export const s3PresignService = {
       Key: input.objectKey,
       ContentType: input.contentType,
       ContentLength: input.contentLengthBytes,
-      // Private bucket + SSE; production uses per-classification KMS keys (§10.1).
       ServerSideEncryption: 'AES256',
     });
     return getSignedUrl(client, command, { expiresIn: PRESIGNED_URL_EXPIRY_SECONDS });
+  },
+
+  async putObject(input: PutObjectInput): Promise<void> {
+    const client = getS3Client();
+    await client.send(
+      new PutObjectCommand({
+        Bucket: input.bucket,
+        Key: input.objectKey,
+        Body: input.body,
+        ContentType: input.contentType,
+        ContentLength: input.body.length,
+        ServerSideEncryption: 'AES256',
+      }),
+    );
   },
 
   async createGetUrl(input: PresignedGetInput): Promise<string> {

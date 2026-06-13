@@ -1,1 +1,1 @@
-export { createUploadUrlHandler, getDownloadUrlHandler } from './storage.handler.js';
+export { createUploadUrlHandler, getDownloadUrlHandler, uploadObjectContentHandler } from './storage.handler.js';

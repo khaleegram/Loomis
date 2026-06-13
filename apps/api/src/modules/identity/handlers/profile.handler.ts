@@ -14,6 +14,7 @@ export async function getProfileHandler(
     throw new LoomisError('INTERNAL_ERROR', 500, 'Authenticated user not found in database');
   }
   return sendSuccess(reply, {
+    userId: user.id,
     displayName: user.displayName,
     email: user.email,
     photoStorageObjectId: user.photoStorageObjectId,

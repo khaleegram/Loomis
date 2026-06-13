@@ -24,6 +24,9 @@ export function usePhotoUrl(storageObjectId: string | null | undefined) {
   return useQuery(photoUrlQueryOptions(client, storageObjectId));
 }
 
+/** Alias for document downloads (certificates, exports). */
+export const useStorageDownloadUrl = usePhotoUrl;
+
 export function useSetStaffPhoto(tenantId: string) {
   const client = useApiClient();
   const queryClient = useQueryClient();

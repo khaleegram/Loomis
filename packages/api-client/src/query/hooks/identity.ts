@@ -93,7 +93,9 @@ export function useUpdateProfile() {
     mutationFn: (body: UpdateProfileRequest) =>
       client.patch<UpdateProfileResponse>('/identity/me/profile', body),
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.identity.myProfile() });
       void queryClient.invalidateQueries({ queryKey: queryKeys.identity.sessions() });
+      void queryClient.invalidateQueries({ queryKey: ['hrm'] });
     },
   });
 }
