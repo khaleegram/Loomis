@@ -61,7 +61,7 @@ export default function StudentRegistryPage() {
 
   if (!tenantId) {
     return (
-      <PageBody className="max-w-[1400px] px-6 py-6 lg:px-12 lg:py-8">
+      <PageBody className="max-w-[1400px] px-4 py-5 sm:px-6 sm:py-6 lg:px-12 lg:py-8">
         <p className="text-sm text-red-600 font-medium">No tenant context. Sign in again.</p>
       </PageBody>
     );
@@ -69,14 +69,14 @@ export default function StudentRegistryPage() {
 
   if (!canView) {
     return (
-      <PageBody className="max-w-[1400px] px-6 py-6 lg:px-12 lg:py-8">
+      <PageBody className="max-w-[1400px] px-4 py-5 sm:px-6 sm:py-6 lg:px-12 lg:py-8">
         <p className="text-sm text-neutral-500">You do not have permission to view students.</p>
       </PageBody>
     );
   }
 
   return (
-    <PageBody className="max-w-[1400px] px-6 py-6 lg:px-12 lg:py-8">
+    <PageBody className="max-w-[1400px] px-4 py-5 sm:px-6 sm:py-6 lg:px-12 lg:py-8">
       <div className="space-y-8">
         {/* 1. Hero */}
         {isLoading ? <StudentHeroSkeleton /> : <StudentHero metrics={metrics} />}

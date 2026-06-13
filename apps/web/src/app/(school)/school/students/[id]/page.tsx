@@ -161,7 +161,7 @@ export default function StudentProfilePage({ params }: StudentProfilePageProps) 
           </nav>
         }
       />
-      <PageBody className="max-w-[1200px] px-6 py-6 lg:px-8 lg:py-8">
+      <PageBody className="max-w-[1200px] px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
         {isLoading ? (
           <div className="space-y-6">
             <StudentProfileHeaderSkeleton />
@@ -189,6 +189,9 @@ export default function StudentProfilePage({ params }: StudentProfilePageProps) 
             {/* Compulsory student photo — passport-style */}
             <div className={`card rounded-2xl p-5 ${student.photoStorageObjectId ? 'border-brand-100/40' : 'border-2 border-amber-300 bg-amber-50/20'}`}>
               <PhotoUpload
+                ownerResourceId={studentId}
+                ownerResourceType="student"
+                classification="child_pii"
                 photoStorageObjectId={student.photoStorageObjectId}
                 fullName={studentDisplayName(student.firstName, student.lastName)}
                 onPhotoSet={handlePhotoSet}

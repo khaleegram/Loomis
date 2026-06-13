@@ -83,15 +83,15 @@ function AdmissionsToolbar({
   const hasActiveFilter = statusFilter !== 'all' || search.trim().length > 0;
 
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex items-center gap-3">
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center lg:w-auto">
         <input
           type="search"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Search by name, ref #, or guardian…"
           aria-label="Search admissions"
-          className="h-10 w-64 rounded-xl border border-neutral-200 bg-white px-4 text-[13px] placeholder:text-neutral-400 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-100"
+          className="h-10 w-full rounded-xl border border-neutral-200 bg-white px-4 text-[13px] placeholder:text-neutral-400 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-100 lg:w-64"
         />
         {hasActiveFilter ? (
           <span className="hidden text-[11px] tabular-nums text-neutral-400 sm:inline">
@@ -102,7 +102,7 @@ function AdmissionsToolbar({
         ) : null}
       </div>
 
-      <div className="flex items-center gap-1.5 overflow-x-auto rounded-xl border border-neutral-200 bg-white p-1">
+      <div className="flex max-w-full items-center gap-1.5 overflow-x-auto rounded-xl border border-neutral-200 bg-white p-1">
         {FILTER_CHIPS.map((chip) => {
           const isActive = statusFilter === chip.key;
           return (
@@ -110,7 +110,7 @@ function AdmissionsToolbar({
               key={chip.key}
               type="button"
               onClick={() => onStatusFilterChange(chip.key)}
-              className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-all duration-200 ${
+              className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-[12px] font-semibold transition-all duration-200 sm:py-1.5 ${
                 isActive
                   ? 'bg-brand-600 text-white shadow-sm'
                   : 'text-neutral-500 hover:bg-brand-50 hover:text-brand-700'
@@ -164,9 +164,10 @@ export function AdmissionsTable({
       />
 
       <div className="overflow-hidden rounded-2xl border border-brand-100/40 bg-white shadow-sm">
+        <div className="overflow-x-auto">
         {/* Header — warm brand gradient */}
         <div
-          className="flex items-center gap-3 px-5 py-3"
+          className="flex min-w-[720px] items-center gap-3 px-5 py-3"
           style={{ background: SURFACES.tableHeader }}
         >
           <div className="flex w-8 shrink-0" aria-hidden />
@@ -205,7 +206,7 @@ export function AdmissionsTable({
               return (
                 <div
                   key={admission.id}
-                  className={`group flex items-center gap-3 px-5 py-3.5 transition-all duration-150 ${
+                  className={`group flex min-w-[720px] items-center gap-3 px-5 py-3.5 transition-all duration-150 ${
                     isOdd ? 'bg-brand-50/20' : 'bg-white'
                   } hover:bg-brand-50/50`}
                 >
@@ -260,14 +261,14 @@ export function AdmissionsTable({
                     {admission.status === 'pending' && canDecide ? (
                       <button
                         onClick={() => onDecide(admission)}
-                        className="inline-flex items-center justify-center rounded-lg border border-brand-200/80 bg-brand-50/50 px-3 py-1 text-[12px] font-semibold text-brand-700 transition-all duration-200 hover:bg-brand-600 hover:text-white hover:border-brand-600 hover:shadow-sm"
+                        className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border border-brand-200/80 bg-brand-50/50 px-3 py-2 text-[12px] font-semibold text-brand-700 transition-all duration-200 hover:bg-brand-600 hover:text-white hover:border-brand-600 hover:shadow-sm sm:min-h-0 sm:min-w-0 sm:py-1"
                       >
                         Review
                       </button>
                     ) : admission.status === 'approved' && admission.studentId ? (
                       <Link
                         href={`/school/students/${admission.studentId}`}
-                        className="inline-flex items-center justify-center rounded-lg border border-brand-200/80 bg-brand-50/50 px-3 py-1 text-[12px] font-semibold text-brand-700 transition-all duration-200 hover:bg-brand-600 hover:text-white hover:border-brand-600 hover:shadow-sm"
+                        className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border border-brand-200/80 bg-brand-50/50 px-3 py-2 text-[12px] font-semibold text-brand-700 transition-all duration-200 hover:bg-brand-600 hover:text-white hover:border-brand-600 hover:shadow-sm sm:min-h-0 sm:min-w-0 sm:py-1"
                       >
                         View
                       </Link>
@@ -285,6 +286,7 @@ export function AdmissionsTable({
             })}
           </div>
         )}
+        </div>
 
         {/* Footer — subtle count */}
         <div className="border-t border-brand-50 bg-brand-50/10 px-5 py-2.5">

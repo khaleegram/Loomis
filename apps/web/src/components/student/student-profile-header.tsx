@@ -32,12 +32,12 @@ export function StudentProfileHeader({
     <div className="card overflow-hidden rounded-2xl">
       {/* Hero header section with warm cream/brand gradient */}
       <div
-        className="border-b border-brand-100/40 px-6 py-6 sm:px-8"
+        className="border-b border-brand-100/40 px-4 py-5 sm:px-6 sm:py-6 lg:px-8"
         style={{ background: SURFACES.profileHeader }}
       >
-        <div className="flex flex-wrap items-start justify-between gap-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-start lg:justify-between lg:gap-6">
           {/* Left: Avatar + Info */}
-          <div className="flex items-start gap-5">
+          <div className="flex items-start gap-4 sm:gap-5">
             {/* Premium avatar */}
             <div className="size-16 shrink-0 overflow-hidden rounded-2xl shadow-lg">
               <ProfileAvatar
@@ -81,7 +81,7 @@ export function StudentProfileHeader({
 
           {/* Right: Quick Actions */}
           {actions ? (
-            <div className="flex shrink-0 flex-wrap gap-2">
+            <div className="flex w-full shrink-0 flex-wrap gap-2 lg:w-auto">
               {actions}
             </div>
           ) : null}
@@ -89,7 +89,7 @@ export function StudentProfileHeader({
       </div>
 
       {/* Meta details row */}
-      <dl className="grid gap-4 bg-white px-6 py-4 sm:grid-cols-2 sm:px-8 lg:grid-cols-4">
+      <dl className="grid grid-cols-1 gap-4 bg-white px-4 py-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-4 lg:px-8">
         <div className="group rounded-xl bg-brand-50/20 p-3 transition-colors hover:bg-brand-50/40">
           <dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-neutral-400">
             Date of Birth

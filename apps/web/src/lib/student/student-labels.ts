@@ -127,6 +127,21 @@ export function attestationTypeLabel(type: IdentityAttestationType): string {
   }
 }
 
+export function attestationTypeHint(type: IdentityAttestationType): string {
+  switch (type) {
+    case 'birth_certificate':
+      return 'Official birth certificate or age declaration on file';
+    case 'previous_school_record':
+      return 'Report card or transfer letter from prior school';
+    case 'admission_photograph':
+      return 'Passport-style photo taken at admission';
+    case 'parent_consent':
+      return 'Signed consent for enrollment and data use';
+    default:
+      return '';
+  }
+}
+
 export function studentDisplayName(firstName: string, lastName: string): string {
   return `${firstName} ${lastName}`.trim();
 }

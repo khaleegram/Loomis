@@ -25,9 +25,10 @@ export function StudentDirectoryTable({
 }: StudentDirectoryTableProps) {
   return (
     <div className="overflow-hidden rounded-2xl border border-brand-100/40 bg-white shadow-sm">
+      <div className="overflow-x-auto">
       {/* Header — warm brand gradient */}
       <div
-        className="flex items-center gap-4 px-5 py-3"
+        className="flex min-w-[640px] items-center gap-4 px-5 py-3"
         style={{ background: SURFACES.tableHeader }}
       >
         <div className="flex w-9 shrink-0" aria-hidden />
@@ -69,7 +70,7 @@ export function StudentDirectoryTable({
             return (
               <div
                 key={student.id}
-                className={`group flex items-center gap-4 px-5 py-3.5 transition-all duration-150 ${
+                className={`group flex min-w-[640px] items-center gap-4 px-5 py-3.5 transition-all duration-150 ${
                   isOdd ? 'bg-brand-50/20' : 'bg-white'
                 } hover:bg-brand-50/50`}
               >
@@ -128,7 +129,7 @@ export function StudentDirectoryTable({
                 <div className="w-24 shrink-0 text-right">
                   <Link
                     href={`/school/students/${student.id}`}
-                    className="inline-flex items-center justify-center rounded-lg border border-brand-200/80 bg-brand-50/50 px-3 py-1 text-[12px] font-semibold text-brand-700 transition-all duration-200 hover:bg-brand-600 hover:text-white hover:border-brand-600 hover:shadow-sm"
+                    className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border border-brand-200/80 bg-brand-50/50 px-3 py-2 text-[12px] font-semibold text-brand-700 transition-all duration-200 hover:bg-brand-600 hover:text-white hover:border-brand-600 hover:shadow-sm sm:min-h-0 sm:min-w-0 sm:py-1"
                   >
                     View
                   </Link>
@@ -138,6 +139,7 @@ export function StudentDirectoryTable({
           })}
         </div>
       )}
+      </div>
 
       {/* Footer — subtle count */}
       <div className="border-t border-brand-50 bg-brand-50/10 px-5 py-2.5">

@@ -8,31 +8,25 @@ import {
   type RecordIdentityAttestationRequest,
 } from '@loomis/contracts';
 import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-  Button,
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   Form,
-  FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  cn,
 } from '@loomis/ui-web';
+import { Camera, FileText, ScrollText, Shield } from 'lucide-react';
 import { useForm, type Resolver } from 'react-hook-form';
 
-import { attestationTypeLabel } from '@/lib/student/student-labels';
+import {
+  SmartFieldLabel,
+  SmartFormFooter,
+  SmartFormHeader,
+  SmartHint,
+} from '@/components/shared/smart-form';
+import { SEMANTIC } from '@/lib/design/surfaces';
+import { attestationTypeHint, attestationTypeLabel } from '@/lib/student/student-labels';
 import { studentErrorMessage } from '@/lib/student/student-errors';
 
 const ATTESTATION_TYPES = [
@@ -42,9 +36,17 @@ const ATTESTATION_TYPES = [
   'parent_consent',
 ] as const satisfies readonly IdentityAttestationType[];
 
+const ATTESTATION_ICONS = {
+  birth_certificate: FileText,
+  previous_school_record: ScrollText,
+  admission_photograph: Camera,
+  parent_consent: Shield,
+} as const;
+
 interface RecordAttestationDialogProps {
   tenantId: string;
   studentId: string;
+  studentName?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onRecorded?: () => void;
@@ -53,6 +55,7 @@ interface RecordAttestationDialogProps {
 export function RecordAttestationDialog({
   tenantId,
   studentId,
+  studentName,
   open,
   onOpenChange,
   onRecorded,
@@ -65,6 +68,8 @@ export function RecordAttestationDialog({
       attestationType: 'birth_certificate',
     },
   });
+
+  const selected = form.watch('attestationType');
 
   const onSubmit = form.handleSubmit(async (values) => {
     try {
@@ -79,64 +84,90 @@ export function RecordAttestationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Record identity attestation</DialogTitle>
-          <DialogDescription>
-            At least one attestation must be on file before billable enrollment (FR-SIS-002).
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="flex max-h-[min(92vh,640px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
+        <SmartFormHeader
+          eyebrow="Compliance"
+          title="Record identity document"
+          description={
+            studentName
+              ? `Log what you verified for ${studentName}. At least one record is required before billable enrollment.`
+              : 'Log what you verified on file. At least one record is required before billable enrollment.'
+          }
+        />
 
-        <Alert variant="warning">
-          <AlertTitle>Compliance requirement</AlertTitle>
-          <AlertDescription>
-            This attestation is recorded in the audit trail and cannot be removed once submitted.
-          </AlertDescription>
-        </Alert>
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+          <div className={cn('mb-5 rounded-2xl border p-4', SEMANTIC.warning.surfaceSubtle)}>
+            <p className={cn('text-[13px] font-bold', SEMANTIC.warning.title)}>Permanent audit record</p>
+            <p className={cn('mt-1 text-[12px] leading-relaxed', SEMANTIC.warning.text)}>
+              This cannot be removed after submission. Only record documents you have physically verified.
+            </p>
+          </div>
 
-        <Form {...form}>
-          <form onSubmit={onSubmit} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="attestationType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Attestation type</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {ATTESTATION_TYPES.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {attestationTypeLabel(type)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <Form {...form}>
+            <form id="record-attestation-form" onSubmit={onSubmit} className="space-y-4">
+              <SmartFieldLabel>What did you verify?</SmartFieldLabel>
+              <FormField
+                control={form.control}
+                name="attestationType"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {ATTESTATION_TYPES.map((type) => {
+                        const Icon = ATTESTATION_ICONS[type];
+                        const active = field.value === type;
+                        return (
+                          <button
+                            key={type}
+                            type="button"
+                            onClick={() => field.onChange(type)}
+                            className={cn(
+                              'flex flex-col items-start rounded-xl border px-3.5 py-3 text-left transition duration-200',
+                              active
+                                ? 'border-brand-400 bg-brand-50/80 shadow-sm ring-1 ring-brand-200/60'
+                                : 'border-neutral-200 bg-white hover:border-brand-200 hover:bg-brand-50/30',
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                'mb-2 flex size-8 items-center justify-center rounded-lg',
+                                active ? 'bg-brand-600 text-white' : 'bg-neutral-100 text-neutral-500',
+                              )}
+                            >
+                              <Icon aria-hidden className="size-4" />
+                            </span>
+                            <span className="text-[13px] font-bold text-neutral-900">
+                              {attestationTypeLabel(type)}
+                            </span>
+                            <span className="mt-1 text-[11px] leading-snug text-neutral-500">
+                              {attestationTypeHint(type)}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {selected ? (
+                      <SmartHint>You selected: {attestationTypeLabel(selected)}</SmartHint>
+                    ) : null}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            {form.formState.errors.root ? (
-              <p className="text-sm text-destructive" role="alert">
-                {form.formState.errors.root.message}
-              </p>
-            ) : null}
+              {form.formState.errors.root ? (
+                <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] font-medium text-red-800">
+                  {form.formState.errors.root.message}
+                </p>
+              ) : null}
+            </form>
+          </Form>
+        </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={record.isPending}>
-                {record.isPending ? 'Recording…' : 'Record attestation'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+        <SmartFormFooter
+          formId="record-attestation-form"
+          submitLabel="Record attestation"
+          pending={record.isPending}
+          onCancel={() => onOpenChange(false)}
+        />
       </DialogContent>
     </Dialog>
   );

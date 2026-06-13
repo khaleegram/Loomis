@@ -68,7 +68,7 @@ export function StudentHero({ metrics, isLoading }: StudentHeroProps) {
     <div className="relative overflow-hidden rounded-2xl border border-brand-100/40 bg-white shadow-sm">
       {/* Header area — warm brand gradient */}
       <div
-        className="relative px-6 pb-16 pt-6 sm:px-8 sm:pb-20 sm:pt-8 lg:px-10 lg:pt-10"
+        className="relative px-4 pb-16 pt-5 sm:px-6 sm:pb-20 sm:pt-6 lg:px-10 lg:pt-10"
         style={{ background: SURFACES.hero }}
       >
         <div className="mb-3 flex items-center gap-2">
@@ -149,7 +149,7 @@ export function StudentHeroSkeleton() {
   return (
     <div className="relative overflow-hidden rounded-2xl border border-brand-100/40 bg-white shadow-sm">
       <div
-        className="animate-pulse px-6 pb-16 pt-6 sm:px-8 sm:pb-20 sm:pt-8 lg:px-10 lg:pt-10"
+        className="animate-pulse px-4 pb-16 pt-5 sm:px-6 sm:pb-20 sm:pt-6 lg:px-10 lg:pt-10"
         style={{ background: SURFACES.hero }}
       >
         <div className="mb-3 h-5 w-48 rounded-lg bg-brand-100" />
