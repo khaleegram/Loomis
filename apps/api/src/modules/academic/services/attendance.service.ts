@@ -4,6 +4,7 @@ import type {
   SyncOfflineAttendanceRequest,
 } from '@loomis/contracts';
 import { staffRepository } from '../../hrm/repository/staff.repository.js';
+import { studentRepository } from '../../student/repository/student.repository.js';
 import { writeAudit } from '../../../shared/audit.js';
 import { LoomisError } from '../../../shared/errors.js';
 import { academicOpsEvents } from '../events/ops-events.js';
@@ -81,17 +82,22 @@ export const attendanceService = {
       actorUserId: actor.userId,
       action: 'academic.attendance.marked',
       resourceType: 'attendance',
-      resourceId: `${input.termId}:${input.classArmId}:${input.attendanceDate}:${input.session}`,
+      resourceId: input.classArmId,
       sensitivity: 'child_pii',
       result: 'success',
       requestId,
       metadata: {
         termId: input.termId,
         classArmId: input.classArmId,
+        attendanceDate: input.attendanceDate,
         session: input.session,
         count: records.length,
       },
     });
+
+    const absentStudentIds = records
+      .filter((record) => record.status === 'absent')
+      .map((record) => record.studentId);
 
     await academicOpsEvents.publishAttendanceMarked({
       tenantId,
@@ -100,6 +106,7 @@ export const attendanceService = {
       attendanceDate: input.attendanceDate,
       session: input.session,
       count: records.length,
+      absentStudentIds,
       markedById: actor.userId,
     });
 
@@ -277,6 +284,9 @@ export const attendanceService = {
     await academicOpsEvents.publishAttendanceAmended({
       tenantId,
       attendanceRecordId: recordId,
+      studentId: record.studentId,
+      attendanceDate: record.attendanceDate,
+      session: record.session,
       previousStatus,
       newStatus: input.status,
       amendedById: actor.userId,
@@ -297,6 +307,92 @@ export const attendanceService = {
   ) {
     requireTenant(actor, tenantId);
     return attendanceRepository.list(tenantId, filter);
+  },
+
+  async listStudentAttendance(tenantId: string, termId: string, actor: ActorContext) {
+    requireTenant(actor, tenantId);
+    if (actor.role !== 'student') {
+      throw new LoomisError('FORBIDDEN', 403, 'Student role required');
+    }
+
+    const student = await studentRepository.findStudentByUserId(tenantId, actor.userId);
+    if (!student) {
+      throw new LoomisError('STUDENT_NOT_FOUND', 404, 'Student profile not found');
+    }
+
+    return this.listChildAttendance(tenantId, student.id, termId, actor);
+  },
+
+  /** Term attendance for a student — school oversight roles (US-SIS / attendance.view). */
+  async listStudentAttendanceForStaff(
+    tenantId: string,
+    studentId: string,
+    termId: string,
+    actor: ActorContext,
+  ) {
+    requireTenant(actor, tenantId);
+    const oversightRoles = new Set(['school_owner', 'principal', 'admin_officer']);
+    if (!oversightRoles.has(actor.role)) {
+      throw new LoomisError('FORBIDDEN', 403, 'You do not have permission to view student attendance');
+    }
+
+    const student = await studentRepository.findStudentById(tenantId, studentId);
+    if (!student) {
+      throw new LoomisError('STUDENT_NOT_FOUND', 404, 'Student not found');
+    }
+
+    return this.listChildAttendance(tenantId, studentId, termId, actor);
+  },
+
+  async listParentChildAttendance(
+    tenantId: string,
+    studentId: string,
+    termId: string,
+    actor: ActorContext,
+  ) {
+    if (actor.role !== 'parent') {
+      throw new LoomisError('FORBIDDEN', 403, 'Parent role required');
+    }
+
+    const linked = await studentRepository.hasActiveParentLink(tenantId, actor.userId, studentId);
+    if (!linked) {
+      throw new LoomisError('FORBIDDEN', 403, 'You are not linked to this student');
+    }
+
+    return this.listChildAttendance(tenantId, studentId, termId, actor);
+  },
+
+  async listChildAttendance(
+    tenantId: string,
+    studentId: string,
+    termId: string,
+    _actor: ActorContext,
+  ) {
+    const enrollment = await studentRepository.findEnrollmentForTerm(tenantId, studentId, termId);
+    if (
+      !enrollment ||
+      !['active', 'active_billable', 'suspended'].includes(enrollment.status)
+    ) {
+      throw new LoomisError('STUDENT_ENROLLMENT_NOT_FOUND', 404, 'No active enrollment for this term');
+    }
+
+    const records = await attendanceRepository.list(tenantId, {
+      termId,
+      classArmId: enrollment.classArmId,
+      studentId,
+    });
+
+    const summary = summarizeAttendance(records);
+    const classArm = await academicRepository.findClassArmById(tenantId, enrollment.classArmId);
+    const level = classArm
+      ? await academicRepository.findClassLevelById(tenantId, classArm.classLevelId)
+      : null;
+
+    return {
+      records,
+      summary,
+      classArmLabel: classArm && level ? `${level.code} ${classArm.name}` : null,
+    };
   },
 };
 
@@ -365,4 +461,17 @@ async function resolveActiveClassTeacher(
   const profile = await resolveStaffProfile(tenantId, actor);
   await assertActiveClassTeacherForArm(tenantId, termId, classArmId, profile.id);
   return profile;
+}
+
+function summarizeAttendance(
+  records: Array<{ status: string }>,
+): { present: number; absent: number; late: number; excused: number } {
+  const summary = { present: 0, absent: 0, late: 0, excused: 0 };
+  for (const record of records) {
+    if (record.status === 'present') summary.present += 1;
+    if (record.status === 'absent') summary.absent += 1;
+    if (record.status === 'late') summary.late += 1;
+    if (record.status === 'excused') summary.excused += 1;
+  }
+  return summary;
 }

@@ -5,6 +5,7 @@ import type {
   UpdateAssignmentRequest,
 } from '@loomis/contracts';
 import { staffRepository } from '../../hrm/repository/staff.repository.js';
+import { studentRepository } from '../../student/repository/student.repository.js';
 import { writeAudit } from '../../../shared/audit.js';
 import { LoomisError } from '../../../shared/errors.js';
 import { academicOpsEvents } from '../events/ops-events.js';
@@ -154,6 +155,54 @@ export const assignmentService = {
     return assignmentRepository.listAssignments(tenantId, filter);
   },
 
+  async listMyAssignments(tenantId: string, termId: string, actor: ActorContext) {
+    requireTenant(actor, tenantId);
+    if (actor.role !== 'student') {
+      throw new LoomisError('FORBIDDEN', 403, 'Student role required');
+    }
+
+    const student = await studentRepository.findStudentByUserId(tenantId, actor.userId);
+    if (!student) {
+      throw new LoomisError('STUDENT_NOT_FOUND', 404, 'Student profile not found');
+    }
+
+    const enrollment = await studentRepository.findEnrollmentForTerm(tenantId, student.id, termId);
+    if (
+      !enrollment ||
+      !['active', 'active_billable', 'suspended'].includes(enrollment.status)
+    ) {
+      throw new LoomisError('STUDENT_ENROLLMENT_NOT_FOUND', 404, 'No active enrollment for this term');
+    }
+
+    const rows = await assignmentRepository.listPublishedForClassArm(
+      tenantId,
+      termId,
+      enrollment.classArmId,
+    );
+    const assignmentIds = rows.map((row) => row.id);
+    const studentSubmissions = await assignmentRepository.listSubmissionsForStudent(
+      tenantId,
+      student.id,
+      assignmentIds,
+    );
+    const submissionByAssignment = new Map(
+      studentSubmissions.map((submission) => [submission.assignmentId, submission]),
+    );
+
+    const classArm = await academicRepository.findClassArmById(tenantId, enrollment.classArmId);
+    const level = classArm
+      ? await academicRepository.findClassLevelById(tenantId, classArm.classLevelId)
+      : null;
+
+    return {
+      assignments: rows.map((row) => ({
+        ...row,
+        mySubmission: submissionByAssignment.get(row.id) ?? null,
+      })),
+      classArmLabel: classArm && level ? `${level.code} ${classArm.name}` : null,
+    };
+  },
+
   /**
    * A student submits work. The assignment must be published; a submission after
    * the due date is flagged late automatically (US-ACA-007).
@@ -178,11 +227,15 @@ export const assignmentService = {
       );
     }
 
-    const studentId = actor.userId;
+    const student = await studentRepository.findStudentByUserId(tenantId, actor.userId);
+    if (!student) {
+      throw new LoomisError('STUDENT_NOT_FOUND', 404, 'Student profile not found');
+    }
+
     const existing = await assignmentRepository.findSubmissionByStudent(
       tenantId,
       assignmentId,
-      studentId,
+      student.id,
     );
     if (existing) {
       throw new LoomisError(
@@ -195,7 +248,7 @@ export const assignmentService = {
     const isLate = Date.now() > assignment.dueAt.getTime();
     const submission = await assignmentRepository.createSubmission(tenantId, {
       assignmentId,
-      studentId,
+      studentId: student.id,
       content: input.content ?? null,
       storageObjectId: input.storageObjectId ?? null,
       isLate,
@@ -211,14 +264,14 @@ export const assignmentService = {
       sensitivity: 'child_pii',
       result: 'success',
       requestId,
-      metadata: { assignmentId, isLate },
+      metadata: { assignmentId, isLate, studentId: student.id },
     });
 
     await academicOpsEvents.publishAssignmentSubmitted({
       tenantId,
       assignmentId,
       submissionId: submission.id,
-      studentId,
+      studentId: student.id,
       isLate,
     });
 

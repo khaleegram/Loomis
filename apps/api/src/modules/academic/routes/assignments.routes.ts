@@ -4,11 +4,13 @@ import {
   createSubmissionRequest,
   gradeSubmissionRequest,
   listAssignmentsQuery,
+  myAssignmentsQuery,
   updateAssignmentRequest,
   type CreateAssignmentRequest,
   type CreateSubmissionRequest,
   type GradeSubmissionRequest,
   type ListAssignmentsQuery,
+  type MyAssignmentsQuery,
   type UpdateAssignmentRequest,
 } from '@loomis/contracts';
 import { authenticate } from '../../../middleware/authenticate.js';
@@ -19,6 +21,7 @@ import {
   createAssignmentHandler,
   gradeSubmissionHandler,
   listAssignmentsHandler,
+  listMyAssignmentsHandler,
   listSubmissionsHandler,
   publishAssignmentHandler,
   submitAssignmentHandler,
@@ -71,6 +74,15 @@ export async function assignmentRoutes(app: FastifyInstance): Promise<void> {
       preValidation: [validateQuery(listAssignmentsQuery)],
     },
     listAssignmentsHandler,
+  );
+
+  app.get<{ Params: { tenantId: string }; Querystring: MyAssignmentsQuery }>(
+    '/tenants/:tenantId/assignments/me',
+    {
+      preHandler: [authenticate, requireTenantMatch, requireRole('student')],
+      preValidation: [validateQuery(myAssignmentsQuery)],
+    },
+    listMyAssignmentsHandler,
   );
 
   app.post<{ Params: { tenantId: string; assignmentId: string }; Body: CreateSubmissionRequest }>(

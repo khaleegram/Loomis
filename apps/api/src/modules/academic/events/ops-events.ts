@@ -30,11 +30,12 @@ export const academicOpsEvents = {
     attendanceDate: string;
     session: string;
     count: number;
+    absentStudentIds: string[];
     markedById: string;
   }) {
     return outboxRepository.publish({
       aggregateType: 'attendance',
-      aggregateId: `${params.termId}:${params.classArmId}:${params.attendanceDate}:${params.session}`,
+      aggregateId: params.classArmId,
       eventType: ACADEMIC_OPS_EVENT_TYPES.attendanceMarked,
       tenantId: params.tenantId,
       payload: { ...params },
@@ -59,6 +60,9 @@ export const academicOpsEvents = {
   async publishAttendanceAmended(params: {
     tenantId: string;
     attendanceRecordId: string;
+    studentId: string;
+    attendanceDate: string;
+    session: string;
     previousStatus: string;
     newStatus: string;
     amendedById: string;

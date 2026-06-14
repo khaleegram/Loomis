@@ -648,6 +648,9 @@ export const academicRepository = {
       };
 
       if (existing) {
+        if (existing.status === 'submitted') {
+          return null;
+        }
         const [entry] = await tx
           .update(gradebookEntries)
           .set({
@@ -692,6 +695,78 @@ export const academicRepository = {
         )
         .orderBy(asc(gradebookEntries.subjectId), asc(gradebookEntries.studentId)),
     );
+  },
+
+  async lockGradebookEntries(input: {
+    tenantId: string;
+    termId: string;
+    classArmId: string;
+    subjectId: string;
+  }) {
+    return withTenantContext(input.tenantId, async (tx) => {
+      const now = new Date();
+      const entries = await tx
+        .select()
+        .from(gradebookEntries)
+        .where(
+          and(
+            eq(gradebookEntries.tenantId, input.tenantId),
+            eq(gradebookEntries.termId, input.termId),
+            eq(gradebookEntries.classArmId, input.classArmId),
+            eq(gradebookEntries.subjectId, input.subjectId),
+          ),
+        );
+
+      let lockedCount = 0;
+      let alreadyLockedCount = 0;
+
+      for (const entry of entries) {
+        if (entry.status === 'submitted') {
+          alreadyLockedCount += 1;
+          continue;
+        }
+        if (entry.status === 'correction_pending') {
+          continue;
+        }
+        await tx
+          .update(gradebookEntries)
+          .set({ status: 'submitted', submittedAt: now, updatedAt: now })
+          .where(
+            and(
+              eq(gradebookEntries.tenantId, input.tenantId),
+              eq(gradebookEntries.id, entry.id),
+            ),
+          );
+        lockedCount += 1;
+      }
+
+      return { lockedCount, alreadyLockedCount };
+    });
+  },
+
+  async findGradebookEntryForStudent(input: {
+    tenantId: string;
+    termId: string;
+    classArmId: string;
+    subjectId: string;
+    studentId: string;
+  }) {
+    return withTenantContext(input.tenantId, async (tx) => {
+      const [entry] = await tx
+        .select()
+        .from(gradebookEntries)
+        .where(
+          and(
+            eq(gradebookEntries.tenantId, input.tenantId),
+            eq(gradebookEntries.termId, input.termId),
+            eq(gradebookEntries.classArmId, input.classArmId),
+            eq(gradebookEntries.subjectId, input.subjectId),
+            eq(gradebookEntries.studentId, input.studentId),
+          ),
+        )
+        .limit(1);
+      return entry ?? null;
+    });
   },
 
   async findGradebookEntryById(tenantId: string, entryId: string) {
@@ -871,5 +946,39 @@ export const academicRepository = {
       }
       return published;
     });
+  },
+
+  async findPublishedResult(tenantId: string, termId: string, studentId: string) {
+    return withTenantContext(tenantId, async (tx) => {
+      const [row] = await tx
+        .select()
+        .from(results)
+        .where(
+          and(
+            eq(results.tenantId, tenantId),
+            eq(results.termId, termId),
+            eq(results.studentId, studentId),
+            eq(results.status, 'published'),
+          ),
+        )
+        .limit(1);
+      return row ?? null;
+    });
+  },
+
+  async listGradebookEntriesForStudent(tenantId: string, termId: string, studentId: string) {
+    return withTenantContext(tenantId, async (tx) =>
+      tx
+        .select()
+        .from(gradebookEntries)
+        .where(
+          and(
+            eq(gradebookEntries.tenantId, tenantId),
+            eq(gradebookEntries.termId, termId),
+            eq(gradebookEntries.studentId, studentId),
+          ),
+        )
+        .orderBy(asc(gradebookEntries.subjectId)),
+    );
   },
 };

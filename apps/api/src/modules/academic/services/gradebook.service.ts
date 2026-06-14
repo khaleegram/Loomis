@@ -1,5 +1,6 @@
 import { LoomisError } from '../../../shared/errors.js';
 import { staffService } from '../../hrm/services/staff.service.js';
+import { studentRepository } from '../../student/repository/student.repository.js';
 import { workflowService } from '../../workflow/index.js';
 import type { WorkflowCompletedEvent } from '../../workflow/events/types.js';
 import { academicRepository } from '../repository/academic.repository.js';
@@ -9,6 +10,7 @@ import type {
   CreateGradingSchemeInput,
   GradeCalculation,
   ListGradebookInput,
+  LockGradebookInput,
   PublishResultsRequestInput,
   RequestGradeCorrectionInput,
   UpsertGradebookEntryInput,
@@ -22,10 +24,22 @@ function calculateGrade(
   scheme: Pick<GradingSchemeRow, 'continuousAssessmentWeight' | 'examWeight' | 'gradeBands'>,
   input: Pick<UpsertGradebookEntryInput, 'continuousAssessmentScore' | 'examScore'>,
 ): GradeCalculation {
-  const totalScore = Math.round(
-    (input.continuousAssessmentScore * scheme.continuousAssessmentWeight) / 100 +
-      (input.examScore * scheme.examWeight) / 100,
-  );
+  if (input.continuousAssessmentScore > scheme.continuousAssessmentWeight) {
+    throw new LoomisError(
+      'VALIDATION_ERROR',
+      422,
+      `CA score cannot exceed ${scheme.continuousAssessmentWeight}`,
+    );
+  }
+  if (input.examScore > scheme.examWeight) {
+    throw new LoomisError(
+      'VALIDATION_ERROR',
+      422,
+      `Exam score cannot exceed ${scheme.examWeight}`,
+    );
+  }
+
+  const totalScore = input.continuousAssessmentScore + input.examScore;
   const band = scheme.gradeBands.find(
     (candidate) => totalScore >= candidate.minScore && totalScore <= candidate.maxScore,
   );
@@ -57,6 +71,30 @@ async function requireTeacherSubjectAssignment(params: {
     );
   }
   return assignment;
+}
+
+/** Subject teachers (including class teachers with a subject assignment) need that assignment; principals may enter any sheet. */
+async function requireGradebookWriteAccess(params: {
+  tenantId: string;
+  actor: ActorContext;
+  termId: string;
+  classArmId: string;
+  subjectId: string;
+}): Promise<{ staffProfileId: string }> {
+  if (params.actor.role === 'principal') {
+    const profile = await staffService.findActiveProfileByUserId(params.tenantId, params.actor.userId);
+    if (!profile || profile.status !== 'active') {
+      throw new LoomisError(
+        'ACADEMIC_GRADEBOOK_FORBIDDEN',
+        403,
+        'Principal must have an active staff profile to enter grades',
+      );
+    }
+    return { staffProfileId: profile.id };
+  }
+
+  const assignment = await requireTeacherSubjectAssignment(params);
+  return { staffProfileId: assignment.staffProfileId };
 }
 
 async function requireReadableGradebook(tenantId: string, input: ListGradebookInput, actor: ActorContext) {
@@ -146,7 +184,7 @@ export const gradebookService = {
     if (!scheme) {
       throw new LoomisError('ACADEMIC_GRADING_SCHEME_NOT_FOUND', 404, 'Grading scheme not found');
     }
-    const assignment = await requireTeacherSubjectAssignment({
+    const writer = await requireGradebookWriteAccess({
       tenantId,
       actor,
       termId: config.termId,
@@ -159,9 +197,23 @@ export const gradebookService = {
       gradebook: input,
       examConfig: config,
       calculation,
-      teacherStaffProfileId: assignment.staffProfileId,
+      teacherStaffProfileId: writer.staffProfileId,
     });
     if (!entry) {
+      const existing = await academicRepository.findGradebookEntryForStudent({
+        tenantId,
+        termId: config.termId,
+        classArmId: config.classArmId,
+        subjectId: config.subjectId,
+        studentId: input.studentId,
+      });
+      if (existing?.status === 'submitted') {
+        throw new LoomisError(
+          'ACADEMIC_GRADEBOOK_LOCKED',
+          409,
+          'Gradebook is locked — request a correction to change submitted scores',
+        );
+      }
       throw new LoomisError(
         'ACADEMIC_GRADE_CORRECTION_PENDING',
         409,
@@ -169,6 +221,72 @@ export const gradebookService = {
       );
     }
     return entry;
+  },
+
+  async lockGradebook(tenantId: string, input: LockGradebookInput, actor: ActorContext) {
+    requireTenant(actor, tenantId);
+    await requireTerm(tenantId, input.termId);
+    await requireGradebookWriteAccess({
+      tenantId,
+      actor,
+      termId: input.termId,
+      classArmId: input.classArmId,
+      subjectId: input.subjectId,
+    });
+
+    const config = await academicRepository.listExamConfigs(tenantId, input.termId);
+    const examConfig = config.find(
+      (candidate) =>
+        candidate.classArmId === input.classArmId && candidate.subjectId === input.subjectId,
+    );
+    if (!examConfig) {
+      throw new LoomisError('ACADEMIC_EXAM_CONFIG_NOT_FOUND', 404, 'Exam config not found');
+    }
+
+    const rosterRows = await studentRepository.listTermEnrollmentRoster(tenantId, input.termId);
+    const rosterStudentIds = rosterRows
+      .filter(
+        (row) =>
+          row.classArmId === input.classArmId &&
+          (row.status === 'active' || row.status === 'active_billable' || row.status === 'suspended'),
+      )
+      .map((row) => row.studentId);
+
+    const entries = await academicRepository.listGradebookEntries({
+      tenantId,
+      termId: input.termId,
+      classArmId: input.classArmId,
+      subjectId: input.subjectId,
+    });
+
+    const entryByStudent = new Map(entries.map((entry) => [entry.studentId, entry]));
+    const missingStudents = rosterStudentIds.filter((studentId) => {
+      const entry = entryByStudent.get(studentId);
+      return !entry || entry.continuousAssessmentScore == null || entry.examScore == null;
+    });
+
+    if (missingStudents.length > 0) {
+      throw new LoomisError(
+        'ACADEMIC_GRADEBOOK_INCOMPLETE',
+        422,
+        `${missingStudents.length} student(s) still need complete scores before locking`,
+      );
+    }
+
+    if (entries.some((entry) => entry.status === 'correction_pending')) {
+      throw new LoomisError(
+        'ACADEMIC_GRADE_CORRECTION_PENDING',
+        409,
+        'Resolve pending grade corrections before locking',
+      );
+    }
+
+    const { lockedCount, alreadyLockedCount } = await academicRepository.lockGradebookEntries({
+      tenantId,
+      ...input,
+    });
+
+    return { lockedCount, alreadyLockedCount };
   },
 
   async listGradebookEntries(tenantId: string, input: ListGradebookInput, actor: ActorContext) {
@@ -194,7 +312,7 @@ export const gradebookService = {
     if (entry.status === 'correction_pending') {
       throw new LoomisError('ACADEMIC_GRADE_CORRECTION_PENDING', 409, 'A correction is already pending');
     }
-    await requireTeacherSubjectAssignment({
+    await requireGradebookWriteAccess({
       tenantId,
       actor,
       termId: entry.termId,
@@ -241,6 +359,13 @@ export const gradebookService = {
     if (entries.length === 0) {
       throw new LoomisError('ACADEMIC_RESULTS_EMPTY', 422, 'No gradebook entries found for this class');
     }
+    if (entries.some((entry) => entry.status === 'draft')) {
+      throw new LoomisError(
+        'ACADEMIC_GRADEBOOK_INCOMPLETE',
+        422,
+        'All gradebook entries must be locked before publishing results',
+      );
+    }
     if (entries.some((entry) => entry.status === 'correction_pending')) {
       throw new LoomisError(
         'ACADEMIC_RESULTS_CORRECTION_PENDING',
@@ -268,6 +393,98 @@ export const gradebookService = {
       publishedById: actor.userId,
       results: resultRows,
     });
+  },
+
+  async listStudentPublishedResults(tenantId: string, termId: string, actor: ActorContext) {
+    requireTenant(actor, tenantId);
+    if (actor.role !== 'student') {
+      throw new LoomisError('FORBIDDEN', 403, 'Student role required');
+    }
+
+    const student = await studentRepository.findStudentByUserId(tenantId, actor.userId);
+    if (!student) {
+      throw new LoomisError('STUDENT_NOT_FOUND', 404, 'Student profile not found');
+    }
+
+    return this.getChildPublishedResults(tenantId, student.id, termId);
+  },
+
+  async listParentChildPublishedResults(
+    tenantId: string,
+    studentId: string,
+    termId: string,
+    actor: ActorContext,
+  ) {
+    if (actor.role !== 'parent') {
+      throw new LoomisError('FORBIDDEN', 403, 'Parent role required');
+    }
+
+    const linked = await studentRepository.hasActiveParentLink(tenantId, actor.userId, studentId);
+    if (!linked) {
+      throw new LoomisError('FORBIDDEN', 403, 'You are not linked to this student');
+    }
+
+    return this.getChildPublishedResults(tenantId, studentId, termId);
+  },
+
+  async getChildPublishedResults(tenantId: string, studentId: string, termId: string) {
+    const term = await academicRepository.findTermById(tenantId, termId);
+    if (!term) {
+      throw new LoomisError('ACADEMIC_TERM_NOT_FOUND', 404, 'Academic term not found');
+    }
+
+    const enrollment = await studentRepository.findEnrollmentForTerm(tenantId, studentId, termId);
+    if (
+      !enrollment ||
+      !['active', 'active_billable', 'suspended'].includes(enrollment.status)
+    ) {
+      throw new LoomisError('STUDENT_ENROLLMENT_NOT_FOUND', 404, 'No active enrollment for this term');
+    }
+
+    const classArm = await academicRepository.findClassArmById(tenantId, enrollment.classArmId);
+    const level = classArm
+      ? await academicRepository.findClassLevelById(tenantId, classArm.classLevelId)
+      : null;
+    const classArmLabel = classArm && level ? `${level.code} ${classArm.name}` : null;
+
+    const published = await academicRepository.findPublishedResult(tenantId, termId, studentId);
+    if (!published) {
+      return {
+        termId,
+        termName: term.name,
+        classArmLabel,
+        published: false,
+        publishedAt: null,
+        averageScore: null,
+        subjects: [],
+      };
+    }
+
+    const entries = await academicRepository.listGradebookEntriesForStudent(
+      tenantId,
+      termId,
+      studentId,
+    );
+    const visibleEntries = entries.filter((entry) =>
+      ['submitted', 'corrected'].includes(entry.status),
+    );
+
+    return {
+      termId,
+      termName: term.name,
+      classArmLabel,
+      published: true,
+      publishedAt: published.publishedAt.toISOString(),
+      averageScore: published.averageScore,
+      subjects: visibleEntries.map((entry) => ({
+        subjectId: entry.subjectId,
+        continuousAssessmentScore: entry.continuousAssessmentScore,
+        examScore: entry.examScore,
+        totalScore: entry.totalScore,
+        grade: entry.grade,
+        remark: entry.remark,
+      })),
+    };
   },
 
   async handleWorkflowCompleted(payload: WorkflowCompletedEvent): Promise<void> {

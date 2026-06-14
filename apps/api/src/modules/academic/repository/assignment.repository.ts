@@ -92,6 +92,33 @@ export const assignmentRepository = {
     });
   },
 
+  async listPublishedForClassArm(tenantId: string, termId: string, classArmId: string) {
+    return withTenantContext(tenantId, async (tx) =>
+      tx
+        .select()
+        .from(assignments)
+        .where(
+          and(
+            eq(assignments.tenantId, tenantId),
+            eq(assignments.termId, termId),
+            eq(assignments.classArmId, classArmId),
+            eq(assignments.status, 'published'),
+          ),
+        )
+        .orderBy(asc(assignments.dueAt)),
+    );
+  },
+
+  async listSubmissionsForStudent(tenantId: string, studentId: string, assignmentIds: string[]) {
+    if (assignmentIds.length === 0) return [];
+    return withTenantContext(tenantId, async (tx) =>
+      tx
+        .select()
+        .from(submissions)
+        .where(and(eq(submissions.tenantId, tenantId), eq(submissions.studentId, studentId))),
+    );
+  },
+
   async createSubmission(
     tenantId: string,
     input: {

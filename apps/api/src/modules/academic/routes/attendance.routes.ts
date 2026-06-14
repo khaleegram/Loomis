@@ -3,11 +3,13 @@ import {
   amendAttendanceRequest,
   listAttendanceQuery,
   markAttendanceRequest,
+  myAttendanceQuery,
   registerDeviceKeyRequest,
   syncOfflineAttendanceRequest,
   type AmendAttendanceRequest,
   type ListAttendanceQuery,
   type MarkAttendanceRequest,
+  type MyAttendanceQuery,
   type RegisterDeviceKeyRequest,
   type SyncOfflineAttendanceRequest,
 } from '@loomis/contracts';
@@ -19,6 +21,8 @@ import {
   amendAttendanceHandler,
   listAttendanceHandler,
   listDeviceKeysHandler,
+  listStudentAttendanceHandler,
+  listStaffStudentAttendanceHandler,
   markAttendanceHandler,
   registerDeviceKeyHandler,
   revokeDeviceKeyHandler,
@@ -67,6 +71,31 @@ export async function attendanceRoutes(app: FastifyInstance): Promise<void> {
       preValidation: [validateQuery(listAttendanceQuery)],
     },
     listAttendanceHandler,
+  );
+
+  app.get<{ Params: { tenantId: string }; Querystring: MyAttendanceQuery }>(
+    '/tenants/:tenantId/attendance/me',
+    {
+      preHandler: [authenticate, requireTenantMatch, requireRole('student')],
+      preValidation: [validateQuery(myAttendanceQuery)],
+    },
+    listStudentAttendanceHandler,
+  );
+
+  app.get<{
+    Params: { tenantId: string; studentId: string };
+    Querystring: MyAttendanceQuery;
+  }>(
+    '/tenants/:tenantId/students/:studentId/attendance',
+    {
+      preHandler: [
+        authenticate,
+        requireTenantMatch,
+        requireRole('school_owner', 'principal', 'admin_officer'),
+      ],
+      preValidation: [validateQuery(myAttendanceQuery)],
+    },
+    listStaffStudentAttendanceHandler,
   );
 
   // ── Per-tenant device signing keys (MOB-007) ──────────────────────────────────

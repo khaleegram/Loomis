@@ -2,13 +2,17 @@ import type { FastifyInstance } from 'fastify';
 import {
   createExamConfigRequest,
   createGradingSchemeRequest,
+  lockGradebookRequest,
   listGradebookQuery,
+  myResultsQuery,
   publishResultsRequest,
   requestGradeCorrectionRequest,
   upsertGradebookEntryRequest,
   type CreateExamConfigRequest,
   type CreateGradingSchemeRequest,
   type ListGradebookQuery,
+  type LockGradebookRequest,
+  type MyResultsQuery,
   type PublishResultsRequest,
   type RequestGradeCorrectionRequest,
   type UpsertGradebookEntryRequest,
@@ -25,6 +29,8 @@ import {
   listExamConfigsHandler,
   listGradebookEntriesHandler,
   listGradingSchemesHandler,
+  listStudentPublishedResultsHandler,
+  lockGradebookHandler,
   publishResultsHandler,
   requestGradeCorrectionHandler,
   upsertGradebookEntryHandler,
@@ -39,6 +45,7 @@ const gradebookReaders = [
   'teacher',
   'class_teacher',
 ] as const;
+const gradebookWriters = ['teacher', 'class_teacher', 'principal'] as const;
 
 /** Grading schemes, gradebook entries, corrections and result publication. */
 export async function gradebookRoutes(app: FastifyInstance): Promise<void> {
@@ -75,7 +82,7 @@ export async function gradebookRoutes(app: FastifyInstance): Promise<void> {
   app.put<{ Params: { tenantId: string }; Body: UpsertGradebookEntryRequest }>(
     '/tenants/:tenantId/gradebook/entries',
     {
-      preHandler: [authenticate, requireTenantMatch, requireRole('teacher')],
+      preHandler: [authenticate, requireTenantMatch, requireRole(...gradebookWriters)],
       preValidation: [validateBody(upsertGradebookEntryRequest)],
     },
     upsertGradebookEntryHandler,
@@ -90,10 +97,19 @@ export async function gradebookRoutes(app: FastifyInstance): Promise<void> {
     listGradebookEntriesHandler,
   );
 
+  app.post<{ Params: { tenantId: string }; Body: LockGradebookRequest }>(
+    '/tenants/:tenantId/gradebook/lock',
+    {
+      preHandler: [authenticate, requireTenantMatch, requireRole(...gradebookWriters), requireIdempotencyKey],
+      preValidation: [validateBody(lockGradebookRequest)],
+    },
+    lockGradebookHandler,
+  );
+
   app.post<{ Params: { tenantId: string; entryId: string }; Body: RequestGradeCorrectionRequest }>(
     '/tenants/:tenantId/gradebook/entries/:entryId/corrections',
     {
-      preHandler: [authenticate, requireTenantMatch, requireRole('teacher'), requireIdempotencyKey],
+      preHandler: [authenticate, requireTenantMatch, requireRole(...gradebookWriters), requireIdempotencyKey],
       preValidation: [validateBody(requestGradeCorrectionRequest)],
     },
     requestGradeCorrectionHandler,
@@ -112,5 +128,14 @@ export async function gradebookRoutes(app: FastifyInstance): Promise<void> {
       preValidation: [validateBody(publishResultsRequest)],
     },
     publishResultsHandler,
+  );
+
+  app.get<{ Params: { tenantId: string }; Querystring: MyResultsQuery }>(
+    '/tenants/:tenantId/results/me',
+    {
+      preHandler: [authenticate, requireTenantMatch, requireRole('student')],
+      preValidation: [validateQuery(myResultsQuery)],
+    },
+    listStudentPublishedResultsHandler,
   );
 }

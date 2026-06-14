@@ -11,9 +11,12 @@ import type {
   ListTimetableSubjectOptionsQuery,
   MarkAttendanceRequest,
   MyTimetableQuery,
+  MyAttendanceQuery,
+  MyAssignmentsQuery,
   PublishTimetableRequest,
   RegisterDeviceKeyRequest,
   SyncOfflineAttendanceRequest,
+  TeachingStaffContextQuery,
   UpdateAssignmentRequest,
 } from '@loomis/contracts';
 import { sendSuccess } from '../../../shared/http.js';
@@ -21,6 +24,7 @@ import { assignmentService } from '../services/assignment.service.js';
 import { attendanceService } from '../services/attendance.service.js';
 import { deviceKeyService } from '../services/device-key.service.js';
 import { timetableService } from '../services/timetable.service.js';
+import { teachingService } from '../services/teaching.service.js';
 import { bellScheduleService } from '../services/bell-schedule.service.js';
 import { requireActor } from './_context.js';
 import {
@@ -91,6 +95,42 @@ export async function listAttendanceHandler(
     requireActor(req),
   );
   return sendSuccess(reply, { records: records.map(attendanceRecordToResponse) });
+}
+
+export async function listStudentAttendanceHandler(
+  req: FastifyRequest<{ Params: TenantParams; Querystring: MyAttendanceQuery }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const result = await attendanceService.listStudentAttendance(
+    req.params.tenantId,
+    req.query.termId,
+    requireActor(req),
+  );
+  return sendSuccess(reply, {
+    records: result.records.map(attendanceRecordToResponse),
+    summary: result.summary,
+    classArmLabel: result.classArmLabel,
+  });
+}
+
+export async function listStaffStudentAttendanceHandler(
+  req: FastifyRequest<{
+    Params: TenantParams & { studentId: string };
+    Querystring: MyAttendanceQuery;
+  }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const result = await attendanceService.listStudentAttendanceForStaff(
+    req.params.tenantId,
+    req.params.studentId,
+    req.query.termId,
+    requireActor(req),
+  );
+  return sendSuccess(reply, {
+    records: result.records.map(attendanceRecordToResponse),
+    summary: result.summary,
+    classArmLabel: result.classArmLabel,
+  });
 }
 
 // ── Attendance device keys (MOB-007) ─────────────────────────────────────────
@@ -188,7 +228,21 @@ export async function listStudentTimetableHandler(
     entries: result.entries.map(timetableEntryToResponse),
     classArmId: result.classArmId,
     classArmLabel: result.classArmLabel,
+    classTeacherClassArmId: result.classTeacherClassArmId ?? null,
+    classTeacherClassArmLabel: result.classTeacherClassArmLabel ?? null,
   });
+}
+
+export async function getTeachingStaffContextHandler(
+  req: FastifyRequest<{ Params: TenantParams; Querystring: TeachingStaffContextQuery }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const result = await teachingService.getStaffContext(
+    req.params.tenantId,
+    req.query.termId,
+    requireActor(req),
+  );
+  return sendSuccess(reply, result);
 }
 
 export async function publishTimetableHandler(
@@ -321,6 +375,24 @@ export async function listAssignmentsHandler(
     requireActor(req),
   );
   return sendSuccess(reply, { assignments: assignments.map(assignmentToResponse) });
+}
+
+export async function listMyAssignmentsHandler(
+  req: FastifyRequest<{ Params: TenantParams; Querystring: MyAssignmentsQuery }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const result = await assignmentService.listMyAssignments(
+    req.params.tenantId,
+    req.query.termId,
+    requireActor(req),
+  );
+  return sendSuccess(reply, {
+    assignments: result.assignments.map((row) => ({
+      ...assignmentToResponse(row),
+      mySubmission: row.mySubmission ? submissionToResponse(row.mySubmission) : null,
+    })),
+    classArmLabel: result.classArmLabel,
+  });
 }
 
 export async function submitAssignmentHandler(

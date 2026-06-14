@@ -193,10 +193,35 @@ export const timetableService = {
         classArmLabel: `${row.classLevelCode} ${row.classArmName}`,
       }));
 
+      let classTeacherClassArmId: string | null = null;
+      let classTeacherClassArmLabel: string | null = null;
+
+      if (actor.role === 'class_teacher') {
+        const classTeacherAssignment = await staffRepository.findActiveClassTeacherForStaffTerm(
+          tenantId,
+          profile.id,
+          termId,
+        );
+        if (classTeacherAssignment) {
+          classTeacherClassArmId = classTeacherAssignment.classArmId;
+          const classArm = await academicRepository.findClassArmById(
+            tenantId,
+            classTeacherAssignment.classArmId,
+          );
+          const level = classArm
+            ? await academicRepository.findClassLevelById(tenantId, classArm.classLevelId)
+            : null;
+          classTeacherClassArmLabel =
+            classArm && level ? `${level.code} ${classArm.name}` : null;
+        }
+      }
+
       return {
         entries,
         classArmId: undefined,
         classArmLabel: null,
+        classTeacherClassArmId,
+        classTeacherClassArmLabel,
       };
     }
 

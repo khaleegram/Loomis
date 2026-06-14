@@ -9,6 +9,7 @@ import type {
   CreateExamConfigRequest,
   CreateGradingSchemeRequest,
   ListGradebookQuery,
+  LockGradebookRequest,
   PublishResultsRequest,
   RequestGradeCorrectionRequest,
   StagePromotionRequest,
@@ -36,6 +37,7 @@ export type CreateGradingSchemeInput = CreateGradingSchemeRequest;
 export type CreateExamConfigInput = CreateExamConfigRequest;
 export type UpsertGradebookEntryInput = UpsertGradebookEntryRequest;
 export type ListGradebookInput = ListGradebookQuery;
+export type LockGradebookInput = LockGradebookRequest;
 export type RequestGradeCorrectionInput = RequestGradeCorrectionRequest;
 export type PublishResultsRequestInput = PublishResultsRequest;
 

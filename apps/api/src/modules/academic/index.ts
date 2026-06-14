@@ -8,6 +8,7 @@ import { classStructureRoutes } from './routes/class-structure.routes.js';
 import { gradebookRoutes } from './routes/gradebook.routes.js';
 import { promotionRoutes } from './routes/promotion.routes.js';
 import { termsRoutes } from './routes/terms.routes.js';
+import { teachingRoutes } from './routes/teaching.routes.js';
 import { timetableRoutes } from './routes/timetable.routes.js';
 
 /**
@@ -24,6 +25,7 @@ export async function academicModule(app: FastifyInstance): Promise<void> {
   await app.register(gradebookRoutes);
   await app.register(attendanceRoutes);
   await app.register(timetableRoutes);
+  await app.register(teachingRoutes);
   await app.register(assignmentRoutes);
 }
 

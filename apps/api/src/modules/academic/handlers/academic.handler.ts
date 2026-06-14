@@ -10,6 +10,8 @@ import type {
   CreateExamConfigRequest,
   CreateGradingSchemeRequest,
   ListGradebookQuery,
+  LockGradebookRequest,
+  MyResultsQuery,
   PublishResultsRequest,
   RequestGradeCorrectionRequest,
   StagePromotionRequest,
@@ -355,6 +357,18 @@ export async function listGradebookEntriesHandler(
   return sendSuccess(reply, { entries: entries.map(gradebookEntryToResponse) });
 }
 
+export async function lockGradebookHandler(
+  req: FastifyRequest<{ Params: TenantParams; Body: LockGradebookRequest }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const result = await gradebookService.lockGradebook(
+    req.params.tenantId,
+    req.body,
+    requireActor(req),
+  );
+  return sendSuccess(reply, result);
+}
+
 export async function requestGradeCorrectionHandler(
   req: FastifyRequest<{ Params: EntryParams; Body: RequestGradeCorrectionRequest }>,
   reply: FastifyReply,
@@ -374,4 +388,16 @@ export async function publishResultsHandler(
 ): Promise<FastifyReply> {
   const published = await gradebookService.publishResults(req.params.tenantId, req.body, requireActor(req));
   return sendSuccess(reply, { results: published.map(resultToResponse) }, 201);
+}
+
+export async function listStudentPublishedResultsHandler(
+  req: FastifyRequest<{ Params: TenantParams; Querystring: MyResultsQuery }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const result = await gradebookService.listStudentPublishedResults(
+    req.params.tenantId,
+    req.query.termId,
+    requireActor(req),
+  );
+  return sendSuccess(reply, result);
 }
