@@ -3,6 +3,7 @@ import {
   GraduationCap,
   LayoutDashboard,
   Percent,
+  ScrollText,
   ShieldCheck,
   Users,
   UserCheck,
@@ -25,6 +26,9 @@ export interface SchoolNavItem {
   section?: 'workspace' | 'ledger';
 }
 
+/** Roles that use the focused teacher workspace — hide school-wide admin nav noise. */
+const TEACHING_STAFF_ROLES: Role[] = ['teacher', 'class_teacher'];
+
 export const SCHOOL_NAV: SchoolNavItem[] = [
   {
     label: 'Dashboard',
@@ -33,12 +37,13 @@ export const SCHOOL_NAV: SchoolNavItem[] = [
     always: true,
     hideForRoles: ['timetable_officer'],
   },
-  { label: 'Staff', href: '/school/staff', icon: Users, capabilities: ['staff.onboard'] },
+  { label: 'Staff', href: '/school/staff', icon: Users, capabilities: ['staff.onboard'], hideForRoles: TEACHING_STAFF_ROLES },
   {
     label: 'Students',
     href: '/school/students',
     icon: GraduationCap,
     capabilities: ['admissions.manage', 'admissions.approve', 'student.promote'],
+    hideForRoles: TEACHING_STAFF_ROLES,
   },
   {
     label: 'Academic',
@@ -52,6 +57,7 @@ export const SCHOOL_NAV: SchoolNavItem[] = [
       'student.graduate',
       'class_structure.manage',
     ],
+    hideForRoles: TEACHING_STAFF_ROLES,
   },
   {
     label: 'Timetable',
@@ -71,6 +77,7 @@ export const SCHOOL_NAV: SchoolNavItem[] = [
     icon: Percent,
     section: 'ledger',
     capabilities: ['fee.configure', 'payment.log', 'payment.verify', 'refund.initiate', 'refund.approve'],
+    hideForRoles: TEACHING_STAFF_ROLES,
   },
   {
     label: 'PSF Obligations',
@@ -78,18 +85,26 @@ export const SCHOOL_NAV: SchoolNavItem[] = [
     icon: ShieldCheck,
     section: 'ledger',
     capabilities: ['fee.configure'],
+    hideForRoles: TEACHING_STAFF_ROLES,
   },
   {
     label: 'Exams',
     href: '/school/exams',
     icon: ClipboardList,
     capabilities: ['grading_scheme.configure', 'result.publish', 'gradebook.read'],
+    hideForRoles: TEACHING_STAFF_ROLES,
   },
   {
     label: 'Gradebook',
     href: '/school/gradebook',
     icon: BookOpen,
     capabilities: ['gradebook.write', 'gradebook.read'],
+  },
+  {
+    label: 'Report cards',
+    href: '/school/report-cards',
+    icon: ScrollText,
+    capabilities: ['gradebook.read', 'gradebook.write'],
   },
   {
     label: 'Attendance',
@@ -102,12 +117,14 @@ export const SCHOOL_NAV: SchoolNavItem[] = [
     href: '/school/workflows',
     icon: ShieldCheck,
     capabilities: ['staff.onboard', 'refund.approve', 'result.publish'],
+    hideForRoles: TEACHING_STAFF_ROLES,
   },
   {
     label: 'Communications',
     href: '/school/comms',
     icon: Users,
     capabilities: ['staff.onboard', 'attendance.mark', 'gradebook.read'],
+    hideForRoles: ['teacher'],
   },
   { label: 'Settings', href: '/school/settings', icon: Settings, always: true },
 ];
@@ -141,4 +158,17 @@ export function formatStaffStatus(status: string): string {
     default:
       return status;
   }
+}
+
+export function schoolNavLabel(item: SchoolNavItem, role: Role): string {
+  if (item.href === '/school/dashboard' && role === 'class_teacher') {
+    return 'My Class';
+  }
+  if (item.href === '/school/timetable') {
+    if (role === 'teacher' || role === 'class_teacher') return 'My Schedule';
+  }
+  if (item.href === '/school/gradebook' && role === 'class_teacher') {
+    return 'Class Gradebook';
+  }
+  return item.label;
 }

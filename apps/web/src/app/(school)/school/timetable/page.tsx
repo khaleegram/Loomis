@@ -8,8 +8,6 @@ import {
 
   useDeleteTimetableEntry,
 
-  useMyTimetable,
-
   useTimetable,
 
   useTimetableSubjectOptions,
@@ -46,6 +44,7 @@ import { TimetableScheduleCanvas } from '@/components/academic/ops/timetable-sch
 
 import { TimetableWeekGrid } from '@/components/academic/ops/timetable-week-grid';
 
+import { MyScheduleView } from '@/components/staff/my-schedule-view';
 import { PageBody } from '@/components/school/school-shell';
 
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
@@ -60,10 +59,11 @@ import {
 
 } from '@/lib/academic/use-academic-ops-context';
 
-import { useCan, useCanAny } from '@/lib/auth/use-capability';
+import { useCan, useCanAny, useRole } from '@/lib/auth/use-capability';
 
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 
+import { isTeachingStaffRole } from '@/lib/timetable/is-teaching-staff';
 import { useBellScheduleSlots } from '@/lib/timetable/use-bell-schedule-slots';
 
 
@@ -72,11 +72,15 @@ export default function TimetablePage() {
 
   const tenantId = useTenantId();
 
+  const role = useRole();
+
   const canManage = useCan('timetable.manage');
 
   const canView = useCanAny(['timetable.manage', 'timetable.view']);
 
-  const isStaffViewer = canView && !canManage;
+  const isTeachingStaff = isTeachingStaffRole(role);
+
+  const isClassTimetableViewer = canView && !canManage && role !== null && !isTeachingStaff;
 
   const [assignSlot, setAssignSlot] = useState<TimetableSlotTarget | null>(null);
 
@@ -89,42 +93,24 @@ export default function TimetablePage() {
   const ctx = useAcademicOpsContext(tenantId ?? '');
 
   const filters =
-
     ctx.termId && ctx.classArmId
-
       ? { termId: ctx.termId, classArmId: ctx.classArmId }
-
       : null;
-
-
 
   const { scheduleSlots } = useBellScheduleSlots(tenantId, ctx.yearId);
 
-
-
-  const timetableQuery = useTimetable(tenantId ?? '', !isStaffViewer ? filters : null);
-
-  const myTimetableQuery = useMyTimetable(tenantId ?? '', isStaffViewer ? ctx.termId : null);
+  const timetableQuery = useTimetable(tenantId ?? '', isClassTimetableViewer ? filters : null);
 
   const summaryQuery = useTimetableSummary(tenantId ?? '', canManage ? ctx.termId : null);
 
   const subjectOptionsQuery = useTimetableSubjectOptions(tenantId ?? '', canManage ? filters : null);
 
-
-
   const createEntry = useCreateTimetableEntry(tenantId ?? '');
 
   const deleteEntry = useDeleteTimetableEntry(tenantId ?? '');
 
-
-
-  const entries = isStaffViewer
-    ? (myTimetableQuery.data?.entries ?? [])
-    : (timetableQuery.data?.entries ?? []);
-
-  const timetableLoading = isStaffViewer
-    ? myTimetableQuery.isLoading && Boolean(ctx.termId)
-    : timetableQuery.isLoading && Boolean(filters);
+  const entries = timetableQuery.data?.entries ?? [];
+  const timetableLoading = timetableQuery.isLoading && Boolean(filters);
 
   const subjectOptions = subjectOptionsQuery.data?.options ?? [];
 
@@ -294,7 +280,7 @@ export default function TimetablePage() {
 
           />
 
-        ) : (
+        ) : isClassTimetableViewer ? (
 
           <>
 
@@ -302,7 +288,7 @@ export default function TimetablePage() {
 
               canManage={false}
 
-              viewerMode={isStaffViewer ? 'personal' : 'class'}
+              viewerMode="class"
 
               classLabel={classLabel}
 
@@ -328,8 +314,6 @@ export default function TimetablePage() {
 
               classArmId={ctx.classArmId}
 
-              hideClassSelection={isStaffViewer}
-
               onYearChange={(id) => {
 
                 ctx.setYearId(id);
@@ -346,7 +330,11 @@ export default function TimetablePage() {
 
           </>
 
-        )}
+        ) : isTeachingStaff ? (
+
+          <MyScheduleView tenantId={tenantId} />
+
+        ) : null}
 
 
 
@@ -388,29 +376,15 @@ export default function TimetablePage() {
 
           />
 
-        ) : isStaffViewer ? (
+        ) : isClassTimetableViewer ? (
 
-          !ctx.termId ? (
+          !filters ? (
 
             <div className={`${ACADEMIC_UI.dataPanel} p-8 text-center`}>
 
-              <p className="text-[13px] text-neutral-500">Select an academic year and term to view your schedule.</p>
+              <p className="text-[13px] text-neutral-500">Select year, term, and class to view the timetable.</p>
 
             </div>
-
-          ) : myTimetableQuery.isError ? (
-
-            <Alert>
-
-              <AlertDescription>
-
-                Could not load your schedule. If timetables have not been published for this term yet, check back
-
-                after the timetable officer publishes.
-
-              </AlertDescription>
-
-            </Alert>
 
           ) : (
 
@@ -426,9 +400,7 @@ export default function TimetablePage() {
 
                 showTermStructure
 
-                showClassLabel
-
-                emptyMessage="No published lessons assigned to you for this term yet."
+                emptyMessage="No published timetable for this class yet."
 
               />
 
@@ -436,35 +408,7 @@ export default function TimetablePage() {
 
           )
 
-        ) : !filters ? (
-
-          <div className={`${ACADEMIC_UI.dataPanel} p-8 text-center`}>
-
-            <p className="text-[13px] text-neutral-500">Select year, term, and class to view the timetable.</p>
-
-          </div>
-
-        ) : (
-
-          <div className={`${ACADEMIC_UI.dataPanel} p-4 sm:p-5`}>
-
-            <TimetableWeekGrid
-
-              entries={entries}
-
-              scheduleSlots={scheduleSlots}
-
-              isLoading={timetableQuery.isLoading}
-
-              showTermStructure
-
-              emptyMessage="No published timetable for this class yet."
-
-            />
-
-          </div>
-
-        )}
+        ) : null}
 
       </div>
 

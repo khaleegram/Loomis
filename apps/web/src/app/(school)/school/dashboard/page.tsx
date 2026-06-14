@@ -36,7 +36,10 @@ import {
   DashboardToolbar,
 } from '@/components/dashboard/dashboard-primitives';
 import { PageBody } from '@/components/school/school-shell';
+import { ClassTeacherDashboard } from '@/components/staff/class-teacher-dashboard';
+import { TeacherLanding } from '@/components/staff/teacher-landing';
 import { useAuth } from '@/lib/auth/auth-context';
+import { isClassTeacherRole, isTeacherRole } from '@/lib/timetable/is-teaching-staff';
 
 const ROLE_LABELS: Record<string, string> = {
   school_owner: 'School Owner',
@@ -123,6 +126,22 @@ export default function SchoolDashboardPage() {
   const canExport = role ? can(role, 'ledger.view') || can(role, 'admissions.manage') : false;
   const termLabel = activeTerm ? activeTerm.name ?? 'This Term' : 'No active term';
   const operationsClear = inboxCount === 0 && pendingAdmissionCount === 0;
+
+  if (role && isClassTeacherRole(role)) {
+    return (
+      <PageBody className="max-w-[1200px] px-4 py-5 sm:px-6 sm:py-6 lg:px-7 lg:py-7">
+        <ClassTeacherDashboard tenantId={tenantId} displayName={session?.displayName} />
+      </PageBody>
+    );
+  }
+
+  if (role && isTeacherRole(role)) {
+    return (
+      <PageBody className="max-w-[1200px] px-4 py-5 sm:px-6 sm:py-6 lg:px-7 lg:py-7">
+        <TeacherLanding displayName={session?.displayName} />
+      </PageBody>
+    );
+  }
 
   return (
     <PageBody className="max-w-[1200px] px-4 py-5 sm:px-6 sm:py-6 lg:px-7 lg:py-7">
