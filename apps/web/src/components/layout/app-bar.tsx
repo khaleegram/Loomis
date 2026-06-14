@@ -78,6 +78,7 @@ export interface AppBarWorkspaceProps {
   label: string;
   value: string;
   onClick?: () => void;
+  icon?: ReactNode;
 }
 
 export interface AppBarProps {
@@ -116,9 +117,11 @@ export function AppBar({
       onClick={workspaceMenu ? undefined : workspace.onClick}
       className="flex max-w-[13rem] shrink-0 items-center gap-2 rounded-xl border border-black/[0.06] bg-white px-3 py-1.5 text-[13.5px] font-semibold text-neutral-800 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-150 hover:bg-neutral-50 hover:border-black/[0.10] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/30 active:scale-[0.98] lg:max-w-[15rem]"
     >
-      <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 text-[10px] font-bold text-white shadow-sm shadow-brand-700/25">
-        L
-      </span>
+      {workspace.icon ?? (
+        <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 text-[10px] font-bold text-white shadow-sm shadow-brand-700/25">
+          L
+        </span>
+      )}
       <span className="truncate">{workspace.value}</span>
       <ChevronDown aria-hidden className="size-3.5 shrink-0 text-neutral-400" />
     </button>
