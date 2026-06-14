@@ -25,9 +25,13 @@ import { staffRepository } from '../src/modules/hrm/repository/staff.repository.
 import { admissionService } from '../src/modules/student/services/admission.service.js';
 import { enrollmentService } from '../src/modules/student/services/enrollment.service.js';
 import { studentService } from '../src/modules/student/services/student.service.js';
+import { timetableService } from '../src/modules/academic/services/timetable.service.js';
+import { assignmentService } from '../src/modules/academic/services/assignment.service.js';
+import { assignmentRepository } from '../src/modules/academic/repository/assignment.repository.js';
 import { psfRateService } from '../src/modules/tenant/services/psf-rate.service.js';
 import { tenantService } from '../src/modules/tenant/services/tenant.service.js';
 import { withTenantContext } from '../src/shared/tenant-context.js';
+import { uuidv7 } from 'uuidv7';
 
 const DEMO_DOMAIN = 'demo.loomis.local';
 const DEV_PASSWORD = 'LoomisDev2026!';
@@ -36,7 +40,17 @@ const DEV_TOTP_BASE32 = 'JBSWY3DPEHPK3PXP';
 const TIER_CODE = 'demo';
 const PSF_RATE_MINOR = 500_000;
 const SUBJECT_MATH_ID = '019c0000-0000-7000-8000-000000000001';
+const SUBJECT_ENG_ID = '019c0000-0000-7000-8000-000000000002';
 const MARKER_EMAIL = `principal@${DEMO_DOMAIN}`;
+
+const DEMO_TIMETABLE_SLOTS = [
+  { dayOfWeek: 1, startMinute: 480, endMinute: 520 },
+  { dayOfWeek: 1, startMinute: 520, endMinute: 560 },
+  { dayOfWeek: 2, startMinute: 480, endMinute: 520 },
+  { dayOfWeek: 3, startMinute: 480, endMinute: 520 },
+  { dayOfWeek: 4, startMinute: 480, endMinute: 520 },
+  { dayOfWeek: 5, startMinute: 480, endMinute: 520 },
+] as const;
 
 interface PlatformDemoAccountSpec {
   email: string;
@@ -268,6 +282,7 @@ function printCredentials(tenantId: string) {
   console.log('    /school/exams/publish  — exam officer (result publish + step-up MFA)');
   console.log('    /school/gradebook      — teacher (entry) / class teacher (read-only)');
   console.log('    /school/attendance     — class teacher');
+  console.log('    /school/timetable      — teacher / class teacher (My Schedule)');
   console.log('');
   console.log('  Start stack:  pnpm db:up && pnpm --filter @loomis/api db:migrate && pnpm dev');
   console.log('══════════════════════════════════════════════════════════════');
@@ -326,6 +341,35 @@ async function seedStudents(
     ids.push(studentId);
   }
   return ids;
+}
+
+async function seedDemoTimetable(
+  tenantId: string,
+  termId: string,
+  classArmId: string,
+  teacherStaffProfileId: string,
+  actor: { userId: string; role: Role; tenantId: string },
+) {
+  const seedKey = uuidv7();
+  for (let i = 0; i < DEMO_TIMETABLE_SLOTS.length; i++) {
+    const slot = DEMO_TIMETABLE_SLOTS[i]!;
+    await timetableService.createEntry(
+      tenantId,
+      {
+        termId,
+        classArmId,
+        subjectId: i % 2 === 0 ? SUBJECT_MATH_ID : SUBJECT_ENG_ID,
+        teacherStaffProfileId,
+        dayOfWeek: slot.dayOfWeek,
+        startMinute: slot.startMinute,
+        endMinute: slot.endMinute,
+      },
+      actor,
+      `${seedKey}-${i}`,
+    );
+  }
+
+  await timetableService.publishTimetable(tenantId, { termId }, actor, `${seedKey}-publish`);
 }
 
 async function main() {
@@ -489,6 +533,41 @@ async function main() {
     },
     actor,
   );
+
+  console.log('  Publishing demo timetable for teachers…');
+  await seedDemoTimetable(tenant.id, term.id, arm.id, teacher.staffProfileId, actor);
+
+  console.log('  Creating demo homework assignment…');
+  const teacherUser = await userRepository.findByEmail(`teacher@${DEMO_DOMAIN}`);
+  if (!teacherUser) throw new Error('Demo teacher user missing');
+  const teacherActor = { userId: teacherUser.id, role: 'teacher' as Role, tenantId: tenant.id };
+  await assignmentService.createAssignment(
+    tenant.id,
+    {
+      termId: term.id,
+      classArmId: arm.id,
+      subjectId: SUBJECT_MATH_ID,
+      title: 'Algebra practice — Week 1',
+      instructions: 'Complete exercises 1–10 from the textbook chapter on linear equations.',
+      dueAt: new Date('2025-11-30T23:59:00.000Z').toISOString(),
+      maxScore: 20,
+    },
+    teacherActor,
+    `${uuidv7()}-assignment-create`,
+  );
+  const demoAssignments = await assignmentRepository.listAssignments(tenant.id, {
+    termId: term.id,
+    classArmId: arm.id,
+  });
+  const draftAssignment = demoAssignments.find((item) => item.status === 'draft');
+  if (draftAssignment) {
+    await assignmentService.publishAssignment(
+      tenant.id,
+      draftAssignment.id,
+      teacherActor,
+      `${uuidv7()}-assignment-publish`,
+    );
+  }
 
   printCredentials(tenant.id);
   console.log('Demo seed completed successfully.');

@@ -7,7 +7,7 @@
  * Idempotent: skips if principal@loomis.com already exists.
  * Does not replace the small demo school from db:seed.
  */
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import type { Role, StaffPrimaryRole } from '@loomis/contracts';
 import { uuidv7 } from 'uuidv7';
 import { tiers } from '../drizzle/schema/tenant.js';
@@ -25,6 +25,7 @@ import { mfaService } from '../src/modules/identity/services/mfa.service.js';
 import { passwordService } from '../src/modules/identity/services/password.service.js';
 import { MFA_MANDATORY_ROLES } from '../src/modules/identity/types.js';
 import { staffRepository } from '../src/modules/hrm/repository/staff.repository.js';
+import { studentRepository } from '../src/modules/student/repository/student.repository.js';
 import { admissionService } from '../src/modules/student/services/admission.service.js';
 import { enrollmentService } from '../src/modules/student/services/enrollment.service.js';
 import { studentService } from '../src/modules/student/services/student.service.js';
@@ -124,13 +125,15 @@ function buildStaffSpecs(): StaffSpec[] {
   ];
 
   for (let i = 1; i <= 16; i++) {
+    // teacher01 is a plain subject teacher demo account — not a class teacher (CON-003).
+    const isClassTeacher = i >= 2 && i <= 13;
     specs.push({
       email: seedEmail(`teacher${String(i).padStart(2, '0')}`),
-      role: i <= 12 ? 'class_teacher' : 'teacher',
+      role: isClassTeacher ? 'class_teacher' : 'teacher',
       fullName: `Teacher ${String(i).padStart(2, '0')}`,
       primaryRole: 'teacher',
       phone: `+234801100${String(100 + i).padStart(4, '0')}`,
-      classTeacher: i <= 12,
+      classTeacher: isClassTeacher,
     });
   }
   return specs;
@@ -285,12 +288,264 @@ function printRichCredentials(tenantId: string) {
   console.log(`    • ${seedEmail('principal')}  (principal)`);
   console.log(`    • ${seedEmail('timetable')}  (timetable officer → /school/timetable)`);
   console.log(`    • ${seedEmail('exam')}  (exam officer → /school/exams)`);
-  console.log(`    • ${seedEmail('teacher01')}  (class teacher JSS1 A)`);
+  console.log(`    • ${seedEmail('teacher01')}  (subject teacher — My Schedule / assignments)`);
+  console.log(`    • ${seedEmail('teacher03')}  (class teacher JSS1 B — attendance)`);
   console.log('');
   console.log('  Data: 12 classes · 467 students · 20 staff · published timetables');
   console.log('  Try: /school/timetable · /school/students · /school/academic');
   console.log('══════════════════════════════════════════════════════════════');
   console.log('');
+}
+
+type TeacherRef = { email: string; staffProfileId: string };
+
+/** One class teacher per arm — teacher01 is intentionally excluded (subject teacher only). */
+const CLASS_TEACHER_BY_ARM_INDEX = [
+  'teacher02',
+  'teacher03',
+  'teacher04',
+  'teacher05',
+  'teacher06',
+  'teacher07',
+  'teacher08',
+  'teacher09',
+  'teacher10',
+  'teacher11',
+  'teacher12',
+  'teacher13',
+] as const;
+
+function resolveClassTeacherForArm(
+  teachers: TeacherRef[],
+  _armLabel: string,
+  armIndex: number,
+): TeacherRef | undefined {
+  const byLocal = (local: string) => teachers.find((t) => t.email === seedEmail(local));
+  const local = CLASS_TEACHER_BY_ARM_INDEX[armIndex];
+  if (local) return byLocal(local);
+  return teachers[armIndex + 1];
+}
+
+async function findClassArmByLevelAndName(
+  tenantId: string,
+  yearId: string,
+  levelCode: string,
+  armName: string,
+) {
+  const levels = await academicRepository.listClassLevels(tenantId);
+  const level = levels.find((row) => row.code === levelCode);
+  if (!level) return null;
+  const arms = await academicRepository.listClassArms(tenantId, yearId);
+  return arms.find((arm) => arm.classLevelId === level.id && arm.name === armName) ?? null;
+}
+
+/** Idempotent fix — teacher01 must stay a subject teacher, not a class teacher. */
+async function ensureTeacher01SubjectTeacherOnly(tenantId: string): Promise<boolean> {
+  const principal = await userRepository.findByEmail(MARKER_EMAIL);
+  const teacher01User = await userRepository.findByEmail(seedEmail('teacher01'));
+  const teacher03User = await userRepository.findByEmail(seedEmail('teacher03'));
+  if (!principal?.tenantId || principal.tenantId !== tenantId || !teacher01User || !teacher03User) {
+    return false;
+  }
+
+  const teacher01Profile = await staffRepository.findProfileByUserId(tenantId, teacher01User.id);
+  const teacher03Profile = await staffRepository.findProfileByUserId(tenantId, teacher03User.id);
+  if (!teacher01Profile || !teacher03Profile) return false;
+
+  let changed = false;
+
+  if (teacher01User.role !== 'teacher') {
+    await userRepository.updateRole(teacher01User.id, 'teacher');
+    changed = true;
+  }
+
+  await withTenantContext(tenantId, async (tx) => {
+    const now = new Date();
+    const deactivated = await tx
+      .update(roleAssignments)
+      .set({ active: false, effectiveTo: now, updatedAt: now })
+      .where(
+        and(
+          eq(roleAssignments.tenantId, tenantId),
+          eq(roleAssignments.staffProfileId, teacher01Profile.id),
+          eq(roleAssignments.role, 'class_teacher'),
+          eq(roleAssignments.active, true),
+        ),
+      )
+      .returning({ id: roleAssignments.id });
+    if (deactivated.length > 0) changed = true;
+  });
+
+  const years = await academicRepository.listYears(tenantId);
+  const year = years.find((y) => y.status === 'active') ?? years[0];
+  if (!year) return changed;
+
+  const terms = await academicRepository.listTermsByYear(tenantId, year.id);
+  const openTerm = terms.find((t) => t.status === 'open');
+  if (!openTerm) return changed;
+
+  const teacher01Assignment = await staffRepository.findActiveClassTeacherForStaffTerm(
+    tenantId,
+    teacher01Profile.id,
+    openTerm.id,
+  );
+  if (!teacher01Assignment) return changed;
+
+  const jss1B = await findClassArmByLevelAndName(tenantId, year.id, 'JSS1', 'B');
+  console.log('  Fixing teacher01 — removing class teacher privileges…');
+
+  await staffRepository.assignClassTeacher({
+    tenantId,
+    staffProfileId: teacher03Profile.id,
+    termId: openTerm.id,
+    classArmId: teacher01Assignment.classArmId,
+    actorUserId: principal.id,
+    replacedAssignmentId: teacher01Assignment.id,
+  });
+
+  if (jss1B && teacher01Assignment.classArmId !== jss1B.id) {
+    console.log(`    Reassigned ${teacher01Assignment.classArmId} CT from teacher01 → teacher03`);
+  } else {
+    console.log('    JSS1 B class teacher is now teacher03 (teacher01 is subject-only)');
+  }
+
+  return true;
+}
+
+/** Deterministic demo score in [floor(45% of max), max]. */
+function seededComponentScore(seed: string, max: number): number {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+  const min = Math.max(0, Math.floor(max * 0.45));
+  return min + (hash % (max - min + 1));
+}
+
+/** Idempotent — fills gradebook for every JSS1 B student × every subject (report card demo). */
+async function seedJss1BGradebookEntries(tenantId: string): Promise<boolean> {
+  const principal = await userRepository.findByEmail(MARKER_EMAIL);
+  if (!principal?.tenantId || principal.tenantId !== tenantId) return false;
+
+  const actor = { userId: principal.userId, role: 'principal' as Role, tenantId };
+
+  const years = await academicRepository.listYears(tenantId);
+  const year = years.find((y) => y.status === 'active') ?? years[0];
+  if (!year) return false;
+
+  const terms = await academicRepository.listTermsByYear(tenantId, year.id);
+  const openTerm = terms.find((t) => t.status === 'open');
+  if (!openTerm) return false;
+
+  const jss1B = await findClassArmByLevelAndName(tenantId, year.id, 'JSS1', 'B');
+  if (!jss1B) return false;
+
+  const schemes = await academicRepository.listGradingSchemes(tenantId);
+  let scheme = schemes.find((row) => row.isDefault) ?? schemes[0];
+  if (!scheme) {
+    scheme = await gradebookService.createGradingScheme(
+      tenantId,
+      {
+        name: 'Greenfield Standard 40/60',
+        continuousAssessmentWeight: 40,
+        examWeight: 60,
+        passMark: 40,
+        gradeBands: [
+          { minScore: 70, maxScore: 100, grade: 'A', remark: 'Excellent' },
+          { minScore: 60, maxScore: 69, grade: 'B', remark: 'Very Good' },
+          { minScore: 50, maxScore: 59, grade: 'C', remark: 'Good' },
+          { minScore: 45, maxScore: 49, grade: 'D', remark: 'Pass' },
+          { minScore: 0, maxScore: 44, grade: 'F', remark: 'Fail' },
+        ],
+        isDefault: true,
+      },
+      actor,
+    );
+  }
+
+  let examConfigs = await academicRepository.listExamConfigs(tenantId, openTerm.id);
+  let configsCreated = 0;
+  for (const subject of SUBJECTS) {
+    const hasConfig = examConfigs.some(
+      (config) => config.classArmId === jss1B.id && config.subjectId === subject.id,
+    );
+    if (hasConfig) continue;
+    try {
+      await gradebookService.createExamConfig(
+        tenantId,
+        {
+          termId: openTerm.id,
+          classArmId: jss1B.id,
+          subjectId: subject.id,
+          gradingSchemeId: scheme.id,
+          title: `JSS1 B ${subject.code}`,
+        },
+        actor,
+      );
+      configsCreated++;
+    } catch (err) {
+      const code = err instanceof Error && 'code' in err ? (err as { code?: string }).code : undefined;
+      if (code !== 'ACADEMIC_EXAM_CONFIG_CONFLICT') throw err;
+    }
+  }
+
+  if (configsCreated > 0) {
+    console.log(`    ${configsCreated} exam sheet(s) created for JSS1 B.`);
+  }
+
+  examConfigs = await academicRepository.listExamConfigs(tenantId, openTerm.id);
+  const jss1BConfigs = examConfigs.filter((config) => config.classArmId === jss1B.id);
+  if (jss1BConfigs.length === 0) return false;
+
+  const roster = await studentRepository.listTermEnrollmentRoster(tenantId, openTerm.id);
+  const students = roster.filter((row) => row.classArmId === jss1B.id);
+  if (students.length === 0) return false;
+
+  const existingEntries = await academicRepository.listGradebookEntries({
+    tenantId,
+    termId: openTerm.id,
+    classArmId: jss1B.id,
+  });
+
+  const expectedCount = students.length * jss1BConfigs.length;
+  if (existingEntries.length >= expectedCount) {
+    console.log(`  JSS1 B report cards already complete (${existingEntries.length} entries).`);
+    return false;
+  }
+
+  console.log(
+    `  Seeding JSS1 B report card grades (${students.length} students × ${jss1BConfigs.length} subjects)…`,
+  );
+
+  let created = 0;
+  for (const student of students) {
+    for (const config of jss1BConfigs) {
+      const exists = existingEntries.some(
+        (entry) => entry.studentId === student.studentId && entry.subjectId === config.subjectId,
+      );
+      if (exists) continue;
+
+      const ca = seededComponentScore(`${student.studentId}:${config.subjectId}:ca`, 40);
+      const exam = seededComponentScore(`${student.studentId}:${config.subjectId}:exam`, 60);
+
+      await gradebookService.upsertGradebookEntry(
+        tenantId,
+        {
+          examConfigId: config.id,
+          studentId: student.studentId,
+          continuousAssessmentScore: ca,
+          examScore: exam,
+        },
+        actor,
+      );
+      created++;
+    }
+  }
+
+  if (created > 0) {
+    console.log(`    ${created} gradebook entries created for JSS1 B.`);
+  }
+  return created > 0;
 }
 
 async function seedTimetables(
@@ -318,7 +573,14 @@ async function seedTimetables(
       continue;
     }
 
-    if (existing.length === 0) {
+    // Drop incomplete drafts from a failed prior run so the full week can be rebuilt.
+    const incompleteDrafts = existing.filter((e) => e.status === 'draft');
+    for (const draft of incompleteDrafts) {
+      await timetableRepository.deleteById(tenantId, draft.id);
+    }
+
+    const remaining = await timetableRepository.list(tenantId, openTermId, arm.id, false);
+    if (remaining.length === 0) {
       for (let slotIndex = 0; slotIndex < PERIOD_SLOTS.length; slotIndex++) {
         const slot = PERIOD_SLOTS[slotIndex]!;
         const subjectIndex = slotIndex % SUBJECTS.length;
@@ -342,12 +604,17 @@ async function seedTimetables(
     }
   }
 
-  await timetableService.publishTimetable(
-    tenantId,
-    { termId: openTermId },
-    timetableActor,
-    SEED_REQUEST_ID,
-  );
+  try {
+    await timetableService.publishTimetable(
+      tenantId,
+      { termId: openTermId },
+      timetableActor,
+      SEED_REQUEST_ID,
+    );
+  } catch (err) {
+    const code = err instanceof Error && 'code' in err ? (err as { code?: string }).code : undefined;
+    if (code !== 'ACADEMIC_TIMETABLE_NOTHING_TO_PUBLISH') throw err;
+  }
 }
 
 /** Finish timetables when a prior run failed after enrolling students. */
@@ -384,8 +651,17 @@ async function resumeRichSeedTimetables(tenantId: string): Promise<boolean> {
 async function main() {
   const existing = await userRepository.findByEmail(MARKER_EMAIL);
   if (existing?.tenantId) {
+    const reassigned = await ensureTeacher01SubjectTeacherOnly(existing.tenantId);
+    const gradesSeeded = await seedJss1BGradebookEntries(existing.tenantId);
     const resumed = await resumeRichSeedTimetables(existing.tenantId);
     printRichCredentials(existing.tenantId);
+    if (reassigned) {
+      console.log('teacher01 corrected to subject teacher — log out and back in to refresh JWT.');
+      console.log('Use teacher03@loomis.com for class teacher / attendance on JSS1 B.');
+    }
+    if (gradesSeeded) {
+      console.log('JSS1 B report card grades seeded — open Report cards → JSS1 B.');
+    }
     console.log(
       resumed ? 'Rich seed timetables completed (resumed).' : 'Rich seed already applied.',
     );
@@ -548,7 +824,7 @@ async function main() {
     );
     studentCounter += count;
 
-    const classTeacher = teachers[armIndex];
+    const classTeacher = resolveClassTeacherForArm(teachers, arm.label, armIndex);
     if (classTeacher) {
       await staffRepository.assignClassTeacher({
         tenantId: tenant.id,
@@ -605,12 +881,35 @@ async function main() {
     actor,
   );
 
+  for (const arm of classArms) {
+    for (const subject of SUBJECTS) {
+      if (arm.id === classArms[0]!.id && subject.id === SUBJECTS[0]!.id) continue;
+      try {
+        await gradebookService.createExamConfig(
+          tenant.id,
+          {
+            termId: openTerm.id,
+            classArmId: arm.id,
+            subjectId: subject.id,
+            gradingSchemeId: scheme.id,
+            title: `${arm.label} ${subject.code}`,
+          },
+          actor,
+        );
+      } catch {
+        // Idempotent — skip duplicates on re-seed
+      }
+    }
+  }
+
   await seedTimetables(
     tenant.id,
     openTerm.id,
     classArms,
     teachers.map((t) => ({ staffProfileId: t.staffProfileId })),
   );
+
+  await seedJss1BGradebookEntries(tenant.id);
 
   printRichCredentials(tenant.id);
   console.log('Rich seed completed.');

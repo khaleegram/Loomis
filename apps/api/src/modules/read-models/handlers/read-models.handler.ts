@@ -1,8 +1,10 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import type { ParentTimetableQuery } from '@loomis/contracts';
+import type { ParentResultsQuery, ParentTimetableQuery } from '@loomis/contracts';
 import { sendSuccess } from '../../../shared/http.js';
 import { LoomisError } from '../../../shared/errors.js';
-import { timetableEntryToResponse } from '../../academic/handlers/_ops-serializers.js';
+import { attendanceRecordToResponse, timetableEntryToResponse } from '../../academic/handlers/_ops-serializers.js';
+import { attendanceService } from '../../academic/services/attendance.service.js';
+import { gradebookService } from '../../academic/services/gradebook.service.js';
 import { timetableService } from '../../academic/services/timetable.service.js';
 import { parentDashboardReadService, regionalAnalyticsReadService } from '../services/index.js';
 
@@ -73,6 +75,48 @@ export async function getParentTimetableHandler(
     classArmId: result.classArmId,
     classArmLabel: result.classArmLabel,
   });
+}
+
+export async function getParentAttendanceHandler(
+  req: FastifyRequest<{ Querystring: ParentAttendanceQuery }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const tenantId = req.headers['x-tenant-id'];
+  if (typeof tenantId !== 'string' || !tenantId) {
+    throw new LoomisError('VALIDATION_ERROR', 400, 'X-Tenant-Id header is required');
+  }
+
+  const result = await attendanceService.listParentChildAttendance(
+    tenantId,
+    req.query.studentId,
+    req.query.termId,
+    requireActor(req),
+  );
+
+  return sendSuccess(reply, {
+    records: result.records.map(attendanceRecordToResponse),
+    summary: result.summary,
+    classArmLabel: result.classArmLabel,
+  });
+}
+
+export async function getParentResultsHandler(
+  req: FastifyRequest<{ Querystring: ParentResultsQuery }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const tenantId = req.headers['x-tenant-id'];
+  if (typeof tenantId !== 'string' || !tenantId) {
+    throw new LoomisError('VALIDATION_ERROR', 400, 'X-Tenant-Id header is required');
+  }
+
+  const result = await gradebookService.listParentChildPublishedResults(
+    tenantId,
+    req.query.studentId,
+    req.query.termId,
+    requireActor(req),
+  );
+
+  return sendSuccess(reply, result);
 }
 
 export async function getRegionalAnalyticsHandler(
