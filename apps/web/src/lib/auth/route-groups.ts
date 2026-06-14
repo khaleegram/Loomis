@@ -47,6 +47,8 @@ export const ROLE_GROUP: Record<Role, RouteGroup> = {
 export function homePathForRole(role: Role): string {
   if (role === 'dpo') return '/platform/compliance';
   if (role === 'timetable_officer') return '/school/timetable';
+  if (role === 'teacher') return '/school/timetable';
+  if (role === 'class_teacher') return '/school/dashboard';
   return GROUP_PREFIX[ROLE_GROUP[role]];
 }
 

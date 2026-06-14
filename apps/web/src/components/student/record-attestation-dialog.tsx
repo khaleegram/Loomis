@@ -86,6 +86,7 @@ export function RecordAttestationDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[min(92vh,640px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
         <SmartFormHeader
+          surface="dialog"
           eyebrow="Compliance"
           title="Record identity document"
           description={

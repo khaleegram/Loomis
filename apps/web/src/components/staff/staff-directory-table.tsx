@@ -5,10 +5,9 @@ import type { StaffDirectoryEntryResponse } from '@loomis/contracts';
 import { Skeleton } from '@loomis/ui-web';
 
 import { ProfileAvatar } from '@/components/shared/profile-avatar';
-import { formatRoleLabel } from '@/components/school/school-nav-config';
 import { StaffStatusBadge } from '@/components/staff/staff-status-badge';
 import { SEMANTIC, SURFACES } from '@/lib/design/surfaces';
-import { formatStaffJoinedDate } from '@/lib/staff/staff-labels';
+import { formatStaffExtensionLabels, formatStaffJoinedDate } from '@/lib/staff/staff-labels';
 import { StaffRoleHoverSelect } from '@/components/staff/staff-role-hover-select';
 import { StaffQuickActionSheet } from '@/components/staff/staff-quick-action-sheet';
 
@@ -67,6 +66,10 @@ export function StaffDirectoryTable({
           <div>
             {staff.map((member, i) => {
               const isOdd = i % 2 === 1;
+              const extensionLabels = formatStaffExtensionLabels(
+                member.roleExtensions,
+                member.primaryRole,
+              );
               return (
                 <div
                   key={member.id}
@@ -107,13 +110,12 @@ export function StaffDirectoryTable({
                     <StaffRoleHoverSelect
                       staffProfileId={member.id}
                       primaryRole={member.primaryRole}
+                      roleExtensions={member.roleExtensions}
                       status={member.status}
                       onSuccess={onRefresh}
                     />
-                    {member.roleExtensions.length > 0 ? (
-                      <span className="ml-1 text-[11px] text-neutral-400">
-                        +{member.roleExtensions.map((r) => formatRoleLabel(r)).join(', ')}
-                      </span>
+                    {extensionLabels ? (
+                      <span className="ml-1 text-[11px] text-neutral-400">+{extensionLabels}</span>
                     ) : null}
                   </div>
 

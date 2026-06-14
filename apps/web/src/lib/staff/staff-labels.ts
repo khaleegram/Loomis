@@ -1,10 +1,42 @@
-import type { StaffDirectoryEntryResponse, StaffPrimaryRole } from '@loomis/contracts';
+import type { StaffDirectoryEntryResponse, StaffPrimaryRole, StaffRole } from '@loomis/contracts';
+
+import { formatRoleLabel } from '@/components/school/school-nav-config';
 
 /** Roles where the school must always have coverage (FR-HRM-005). */
 export const SINGLETON_PRIMARY_ROLES = new Set<StaffPrimaryRole>(['accountant', 'exam_officer']);
 
 export function isSingletonPrimaryRole(role: StaffPrimaryRole | null | undefined): boolean {
   return role != null && SINGLETON_PRIMARY_ROLES.has(role);
+}
+
+export function hasClassTeacherExtension(
+  roleExtensions: readonly StaffRole[] | null | undefined,
+): boolean {
+  return roleExtensions?.includes('class_teacher') === true;
+}
+
+/** Human-facing role label — promotes teacher + class_teacher extension to "Class Teacher". */
+export function formatStaffDisplayRole(
+  primaryRole: StaffPrimaryRole | null | undefined,
+  roleExtensions?: readonly StaffRole[] | null,
+): string {
+  if (!primaryRole) return 'No role';
+  if (primaryRole === 'teacher' && hasClassTeacherExtension(roleExtensions)) {
+    return formatRoleLabel('class_teacher');
+  }
+  return formatRoleLabel(primaryRole);
+}
+
+/** Extension suffixes excluding class_teacher when already shown in the primary label. */
+export function formatStaffExtensionLabels(
+  roleExtensions: readonly StaffRole[],
+  primaryRole?: StaffPrimaryRole | null,
+): string | null {
+  const visible = roleExtensions.filter(
+    (extension) => !(primaryRole === 'teacher' && extension === 'class_teacher'),
+  );
+  if (visible.length === 0) return null;
+  return visible.map((extension) => formatRoleLabel(extension)).join(', ');
 }
 
 export function staffInitials(fullName: string): string {

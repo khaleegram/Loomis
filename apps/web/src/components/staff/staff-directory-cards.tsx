@@ -56,6 +56,7 @@ function StaffCard({
         <StaffRoleHoverSelect
           staffProfileId={member.id}
           primaryRole={member.primaryRole}
+          roleExtensions={member.roleExtensions}
           status={member.status}
           size="sm"
           onSuccess={onRefresh}

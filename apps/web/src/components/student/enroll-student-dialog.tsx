@@ -119,6 +119,7 @@ export function EnrollStudentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[min(92vh,720px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
         <SmartFormHeader
+          surface="dialog"
           eyebrow="Enrollment"
           title="Place in class"
           description="Assign this student to a class for the current term. They become active in the register once confirmed."

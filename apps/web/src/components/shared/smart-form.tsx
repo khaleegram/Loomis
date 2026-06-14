@@ -1,6 +1,14 @@
 'use client';
 
-import { cn } from '@loomis/ui-web';
+import {
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  cn,
+} from '@loomis/ui-web';
 import { Check, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
@@ -240,18 +248,49 @@ export function SmartFormHeader({
   eyebrow,
   title,
   description,
+  surface = 'plain',
 }: {
   eyebrow?: string;
   title: string;
   description?: string;
+  /** Use `sheet` or `dialog` inside Radix Sheet/Dialog for a11y (required Title). */
+  surface?: 'plain' | 'sheet' | 'dialog';
 }) {
+  const headerClass = 'space-y-1 border-b border-neutral-100 px-6 pb-5 pt-6 text-left';
+  const titleClass = 'text-lg font-extrabold tracking-tight text-neutral-900';
+  const descriptionClass = 'text-[13px] leading-relaxed text-neutral-500';
+
+  const eyebrowNode = eyebrow ? <p className={ACADEMIC_UI.sectionLabel}>{eyebrow}</p> : null;
+
+  if (surface === 'sheet') {
+    return (
+      <SheetHeader className={headerClass}>
+        {eyebrowNode}
+        <SheetTitle className={titleClass}>{title}</SheetTitle>
+        {description ? (
+          <SheetDescription className={descriptionClass}>{description}</SheetDescription>
+        ) : null}
+      </SheetHeader>
+    );
+  }
+
+  if (surface === 'dialog') {
+    return (
+      <DialogHeader className={headerClass}>
+        {eyebrowNode}
+        <DialogTitle className={titleClass}>{title}</DialogTitle>
+        {description ? (
+          <DialogDescription className={descriptionClass}>{description}</DialogDescription>
+        ) : null}
+      </DialogHeader>
+    );
+  }
+
   return (
-    <div className="space-y-1 border-b border-neutral-100 px-6 pb-5 pt-6 text-left">
-      {eyebrow ? <p className={ACADEMIC_UI.sectionLabel}>{eyebrow}</p> : null}
-      <h2 className="text-lg font-extrabold tracking-tight text-neutral-900">{title}</h2>
-      {description ? (
-        <p className="text-[13px] leading-relaxed text-neutral-500">{description}</p>
-      ) : null}
+    <div className={headerClass}>
+      {eyebrowNode}
+      <h2 className={titleClass}>{title}</h2>
+      {description ? <p className={descriptionClass}>{description}</p> : null}
     </div>
   );
 }

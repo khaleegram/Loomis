@@ -8,12 +8,13 @@ import {
   staffPrimaryRole,
   type StaffPrimaryRole,
   type StaffProfileStatus,
+  type StaffRole,
 } from '@loomis/contracts';
 import { ArrowLeft, Check, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 
 import { formatRoleLabel } from '@/components/school/school-nav-config';
 import { useCan } from '@/lib/auth/use-capability';
-import { isSingletonPrimaryRole } from '@/lib/staff/staff-labels';
+import { formatStaffDisplayRole, isSingletonPrimaryRole } from '@/lib/staff/staff-labels';
 import { SEMANTIC } from '@/lib/design/surfaces';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 
@@ -34,6 +35,7 @@ interface MenuPosition {
 interface StaffRoleHoverSelectProps {
   staffProfileId: string;
   primaryRole: StaffPrimaryRole | null;
+  roleExtensions?: readonly StaffRole[];
   status: StaffProfileStatus;
   size?: 'sm' | 'md';
   onSuccess?: () => void;
@@ -82,6 +84,7 @@ function computeMenuPosition(
 export function StaffRoleHoverSelect({
   staffProfileId,
   primaryRole,
+  roleExtensions = [],
   status,
   size = 'md',
   onSuccess,
@@ -110,7 +113,7 @@ export function StaffRoleHoverSelect({
   });
 
   const editable = canChangeRole && status === 'active';
-  const label = primaryRole ? formatRoleLabel(primaryRole) : 'No role';
+  const label = formatStaffDisplayRole(primaryRole, roleExtensions);
   const vacatedSingleton = isSingletonPrimaryRole(primaryRole);
 
   const replacementCandidates =

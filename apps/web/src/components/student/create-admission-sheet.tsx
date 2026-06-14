@@ -93,6 +93,7 @@ export function CreateAdmissionSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-lg">
         <SmartFormHeader
+          surface="sheet"
           eyebrow="Admissions"
           title="Register new applicant"
           description="Capture the student and a guardian contact. A reference number is generated when you submit."

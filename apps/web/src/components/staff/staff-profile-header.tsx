@@ -4,11 +4,14 @@ import type { StaffDetailResponse } from '@loomis/contracts';
 import type { ComponentProps, ReactNode } from 'react';
 import { Badge, Button, Skeleton } from '@loomis/ui-web';
 import { ProfileAvatar } from '@/components/shared/profile-avatar';
-import { formatRoleLabel } from '@/components/school/school-nav-config';
 import { StaffRoleHoverSelect } from '@/components/staff/staff-role-hover-select';
 import { StaffStatusBadge } from '@/components/staff/staff-status-badge';
 import { SURFACES } from '@/lib/design/surfaces';
-import { formatStaffJoinedDate } from '@/lib/staff/staff-labels';
+import {
+  formatStaffDisplayRole,
+  formatStaffExtensionLabels,
+  formatStaffJoinedDate,
+} from '@/lib/staff/staff-labels';
 
 interface StaffProfileHeaderProps {
   staff: StaffDetailResponse;
@@ -16,10 +19,7 @@ interface StaffProfileHeaderProps {
 }
 
 export function StaffProfileHeader({ staff, actions }: StaffProfileHeaderProps) {
-  const extensions =
-    staff.roleExtensions.length > 0
-      ? staff.roleExtensions.map((r) => formatRoleLabel(r)).join(', ')
-      : null;
+  const extensions = formatStaffExtensionLabels(staff.roleExtensions, staff.primaryRole);
 
   return (
     <div className="card overflow-hidden rounded-2xl">
@@ -60,6 +60,7 @@ export function StaffProfileHeader({ staff, actions }: StaffProfileHeaderProps) 
                   <StaffRoleHoverSelect
                     staffProfileId={staff.id}
                     primaryRole={staff.primaryRole}
+                    roleExtensions={staff.roleExtensions}
                     status={staff.status}
                   />
                 ) : null}
@@ -93,7 +94,7 @@ export function StaffProfileHeader({ staff, actions }: StaffProfileHeaderProps) 
             Primary Role
           </dt>
           <dd className="mt-1 text-[13px] font-semibold text-neutral-900">
-            {formatRoleLabel(staff.primaryRole)}
+            {formatStaffDisplayRole(staff.primaryRole, staff.roleExtensions)}
           </dd>
         </div>
         <div className="group rounded-xl bg-brand-50/20 p-3 transition-colors hover:bg-brand-50/40">

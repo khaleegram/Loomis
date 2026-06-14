@@ -78,6 +78,7 @@ export function InitiateParentLinkDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[min(92vh,680px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
         <SmartFormHeader
+          surface="dialog"
           eyebrow="Parent portal"
           title="Invite a parent"
           description="We email a one-time code so the parent can link their account. You cannot verify on their behalf."

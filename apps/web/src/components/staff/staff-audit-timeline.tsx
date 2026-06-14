@@ -2,7 +2,10 @@
 
 import type { StaffDetailResponse } from '@loomis/contracts';
 import { Clock, Mail, Shield, UserCheck, UserX, BookOpen, Users } from 'lucide-react';
-import { formatRoleLabel } from '@/components/school/school-nav-config';
+import {
+  formatStaffDisplayRole,
+  formatStaffExtensionLabels,
+} from '@/lib/staff/staff-labels';
 import { SEMANTIC } from '@/lib/design/surfaces';
 
 interface AuditEvent {
@@ -47,7 +50,7 @@ export function StaffAuditTimeline({ staff, className }: StaffAuditTimelineProps
       iconColor: SEMANTIC.success.iconColor,
       date: new Date(staff.joinedAt),
       title: 'Invitation accepted',
-      description: `${staff.fullName} completed account setup and joined as ${formatRoleLabel(staff.primaryRole)}`,
+      description: `${staff.fullName} completed account setup and joined as ${formatStaffDisplayRole(staff.primaryRole, staff.roleExtensions)}`,
       type: 'invitation',
     });
   }
@@ -61,7 +64,11 @@ export function StaffAuditTimeline({ staff, className }: StaffAuditTimelineProps
       iconColor: 'text-gold-600',
       date: staff.updatedAt ? new Date(staff.updatedAt) : new Date(),
       title: 'Current role assignment',
-      description: `${formatRoleLabel(staff.primaryRole)}${staff.roleExtensions.length > 0 ? ' + ' + staff.roleExtensions.map((r) => formatRoleLabel(r)).join(', ') : ''}`,
+      description: (() => {
+        const extensions = formatStaffExtensionLabels(staff.roleExtensions, staff.primaryRole);
+        const roleLabel = formatStaffDisplayRole(staff.primaryRole, staff.roleExtensions);
+        return extensions ? `${roleLabel} + ${extensions}` : roleLabel;
+      })(),
       type: 'role',
     });
   }

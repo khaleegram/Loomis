@@ -44,6 +44,7 @@ import {
   FormLabel,
   FormMessage,
   Input,
+  Label,
   Select,
   SelectContent,
   SelectItem,
@@ -61,6 +62,10 @@ import { BookOpen, Briefcase, Shield, UserCog } from 'lucide-react';
 
 import { SEMANTIC, SURFACES } from '@/lib/design/surfaces';
 import { formatRoleLabel } from '@/components/school/school-nav-config';
+import {
+  formatStaffDisplayRole,
+  formatStaffExtensionLabels,
+} from '@/lib/staff/staff-labels';
 import { useCan } from '@/lib/auth/use-capability';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 import { DeactivationImpactPreview } from '@/components/staff/staff-deactivation-preview';
@@ -254,12 +259,18 @@ export function StaffMemberDetail({ staffProfileId, staff: staffProp }: StaffMem
             </div>
             <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-neutral-400">Primary role</p>
             <p className="mt-1 text-xl font-extrabold tracking-tight text-neutral-900">
-              {formatRoleLabel(staff.primaryRole)}
+              {formatStaffDisplayRole(staff.primaryRole, staff.roleExtensions)}
             </p>
             <p className="mt-0.5 text-[11px] text-neutral-400">
-              {staff.roleExtensions.length > 0
-                ? `+${staff.roleExtensions.map((r) => formatRoleLabel(r)).join(', ')}`
-                : 'No extensions'}
+              {(() => {
+                const extensionLabels = formatStaffExtensionLabels(
+                  staff.roleExtensions,
+                  staff.primaryRole,
+                );
+                if (extensionLabels) return `+${extensionLabels}`;
+                if (staff.roleExtensions.length === 0) return 'No extensions';
+                return null;
+              })()}
             </p>
           </div>
 
@@ -684,7 +695,7 @@ export function StaffMemberDetail({ staffProfileId, staff: staffProp }: StaffMem
         {canAssignSubject && staff.status === 'active' ? (
           <SectionCard title="Assign subject" description="Assign this teacher to a subject and class arm for a term.">
             <div className="mb-4 max-w-xs">
-              <FormLabel>Term</FormLabel>
+              <Label>Term</Label>
               <Select
                 value={activeTermId ?? ''}
                 onValueChange={(v) => setSelectedTermId(v)}

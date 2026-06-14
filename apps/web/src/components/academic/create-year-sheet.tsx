@@ -88,6 +88,7 @@ export function CreateYearSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
         <SmartFormHeader
+          surface="sheet"
           eyebrow="Academic calendar"
           title="Create academic year"
           description="Sets up a draft year and empty terms. Activation is a separate step — you can still adjust dates before going live."

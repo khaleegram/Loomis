@@ -2,7 +2,10 @@
 
 import type { StaffDetailResponse } from '@loomis/contracts';
 import { AlertTriangle, BookOpen, Shield, Users } from 'lucide-react';
-import { formatRoleLabel } from '@/components/school/school-nav-config';
+import {
+  formatStaffDisplayRole,
+  formatStaffExtensionLabels,
+} from '@/lib/staff/staff-labels';
 import { SEMANTIC } from '@/lib/design/surfaces';
 
 interface DeactivationImpactPreviewProps {
@@ -79,8 +82,14 @@ export function DeactivationImpactPreview({ staff, className }: DeactivationImpa
               <p className="text-[11px] text-neutral-500">
                 Role assignments for{' '}
                 <span className="font-medium text-neutral-700">
-                  {formatRoleLabel(staff.primaryRole)}
-                  {staff.roleExtensions.length > 0 ? ` + ${staff.roleExtensions.map((r) => formatRoleLabel(r)).join(', ')}` : ''}
+                  {(() => {
+                    const extensions = formatStaffExtensionLabels(
+                      staff.roleExtensions,
+                      staff.primaryRole,
+                    );
+                    const roleLabel = formatStaffDisplayRole(staff.primaryRole, staff.roleExtensions);
+                    return extensions ? `${roleLabel} + ${extensions}` : roleLabel;
+                  })()}
                 </span>{' '}
                 will be deactivated. All active sessions will be revoked immediately.
               </p>
