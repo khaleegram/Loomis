@@ -110,4 +110,84 @@ export const automatedNotificationService = {
       }
     });
   },
+
+  async handleAttendanceMarked(event: OutboxEnvelope): Promise<void> {
+    const payload = event.payload as {
+      tenantId: string;
+      attendanceDate: string;
+      session: string;
+      absentStudentIds: string[];
+    };
+
+    if (!payload.absentStudentIds?.length) return;
+
+    await withTenantContext(payload.tenantId, async (tx) => {
+      const claimed = await processedEventsRepository.claim(
+        tx,
+        event.event_id,
+        ACADEMIC_OPS_EVENT_TYPES.attendanceMarked,
+      );
+      if (!claimed) return;
+
+      for (const studentId of payload.absentStudentIds) {
+        const parentUserIds = await recipientRepository.parentUserIdsForStudent(
+          tx,
+          payload.tenantId,
+          studentId,
+        );
+
+        for (const userId of parentUserIds) {
+          await deliveryService.createAndDeliver({
+            tenantId: payload.tenantId,
+            userId,
+            notificationType: 'attendance_alert',
+            safeCopy: SAFE_NOTIFICATION_COPY.attendanceAbsent,
+            resourceId: studentId,
+            eventIdempotencyKey: `attendance-absent:${studentId}:${payload.attendanceDate}:${payload.session}:${userId}`,
+            channels: ['push'],
+          });
+        }
+      }
+    });
+  },
+
+  async handleAttendanceAmended(event: OutboxEnvelope): Promise<void> {
+    const payload = event.payload as {
+      tenantId: string;
+      studentId: string;
+      attendanceDate: string;
+      session: string;
+      previousStatus: string;
+      newStatus: string;
+    };
+
+    if (payload.newStatus !== 'absent' || payload.previousStatus === 'absent') return;
+
+    await withTenantContext(payload.tenantId, async (tx) => {
+      const claimed = await processedEventsRepository.claim(
+        tx,
+        event.event_id,
+        ACADEMIC_OPS_EVENT_TYPES.attendanceAmended,
+      );
+      if (!claimed) return;
+
+      const parentUserIds = await recipientRepository.parentUserIdsForStudent(
+        tx,
+        payload.tenantId,
+        payload.studentId,
+      );
+
+      for (const userId of parentUserIds) {
+        await deliveryService.createAndDeliver({
+          tenantId: payload.tenantId,
+          userId,
+          notificationType: 'attendance_alert',
+          safeCopy: SAFE_NOTIFICATION_COPY.attendanceAbsent,
+          resourceId: payload.studentId,
+          eventIdempotencyKey: `attendance-absent-amended:${payload.studentId}:${payload.attendanceDate}:${payload.session}:${userId}`,
+          channels: ['push'],
+        });
+      }
+    });
+  },
 };

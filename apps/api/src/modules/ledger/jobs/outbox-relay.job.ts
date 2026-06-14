@@ -1,5 +1,5 @@
-import { Queue, Worker, type ConnectionOptions } from 'bullmq';
-import { getEnv } from '../../../config/env.js';
+import { Queue, Worker } from 'bullmq';
+import { bullmqConnectionOptions } from '../../../shared/bullmq.js';
 import { dispatchEvent } from '../../../shared/events/registry.js';
 import { db } from '../../../shared/db.js';
 import { ledgerOutboxRepository } from '../repository/index.js';
@@ -10,17 +10,6 @@ const BATCH_SIZE = 50;
 let queue: Queue | null = null;
 let worker: Worker | null = null;
 
-function connectionOptions(): ConnectionOptions {
-  const url = new URL(getEnv().REDIS_URL);
-  return {
-    host: url.hostname,
-    port: Number(url.port || 6379),
-    ...(url.password ? { password: url.password } : {}),
-    ...(url.username && url.username !== 'default' ? { username: url.username } : {}),
-    ...(url.protocol === 'rediss:' ? { tls: {} } : {}),
-  };
-}
-
 /**
  * Drains `ledger.outbox_events` and dispatches to in-process consumers
  * (System Design §8.3). Replaces ad-hoc dispatchEvent calls at producers.
@@ -28,7 +17,7 @@ function connectionOptions(): ConnectionOptions {
 export async function startOutboxRelayJob(): Promise<void> {
   if (worker) return;
 
-  const connection = connectionOptions();
+  const connection = bullmqConnectionOptions();
   queue = new Queue(QUEUE_NAME, { connection });
 
   await queue.add(

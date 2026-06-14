@@ -15,4 +15,10 @@ export function registerCommsEventConsumers(): void {
   registerEventHandler(ACADEMIC_OPS_EVENT_TYPES.assignmentPublished, (event) =>
     automatedNotificationService.handleAssignmentPublished(event as never),
   );
+  registerEventHandler(ACADEMIC_OPS_EVENT_TYPES.attendanceMarked, (event) =>
+    automatedNotificationService.handleAttendanceMarked(event as never),
+  );
+  registerEventHandler(ACADEMIC_OPS_EVENT_TYPES.attendanceAmended, (event) =>
+    automatedNotificationService.handleAttendanceAmended(event as never),
+  );
 }

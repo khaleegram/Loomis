@@ -12,6 +12,11 @@ import {
   isFcmTokenInvalidError,
   sendFcmPush,
 } from '../gateways/fcm.gateway.js';
+import {
+  isWebPushConfigured,
+  isWebPushSubscriptionInvalidError,
+  sendWebPush,
+} from '../gateways/webpush.gateway.js';
 import { isSesConfigured, sendEmail } from '../gateways/ses.gateway.js';
 import { isTermiiConfigured, sendSms } from '../gateways/termii.gateway.js';
 import {
@@ -181,7 +186,21 @@ export const deliveryService = {
 
           for (const sub of subscriptions) {
             try {
-              if (sub.provider === 'fcm') {
+              if (sub.provider === 'webpush') {
+                if (!isWebPushConfigured()) {
+                  throw new LoomisError(
+                    'COMMS_PUSH_UNAVAILABLE',
+                    503,
+                    'Web push VAPID keys are not configured',
+                  );
+                }
+                await sendWebPush({
+                  subscriptionJson: sub.token,
+                  title: input.title,
+                  body: input.body,
+                  data: pushData,
+                });
+              } else if (sub.provider === 'fcm') {
                 if (!isFcmConfigured()) {
                   throw new LoomisError(
                     'COMMS_PUSH_UNAVAILABLE',
@@ -213,7 +232,11 @@ export const deliveryService = {
               anySent = true;
             } catch (err) {
               anyFailed = true;
-              if (isFcmTokenInvalidError(err) || isApnsTokenInvalidError(err)) {
+              if (
+                isFcmTokenInvalidError(err) ||
+                isApnsTokenInvalidError(err) ||
+                isWebPushSubscriptionInvalidError(err)
+              ) {
                 await pushSubscriptionRepository.deregisterByToken(tx, sub.token);
               }
             }

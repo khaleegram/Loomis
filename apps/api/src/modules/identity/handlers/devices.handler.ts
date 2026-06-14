@@ -1,5 +1,5 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import type { DeregisterDeviceRequest } from '@loomis/contracts';
+import type { DeregisterDeviceRequest, RegisterWebDeviceRequest } from '@loomis/contracts';
 import { LoomisError } from '../../../shared/errors.js';
 import { sendSuccess } from '../../../shared/http.js';
 import { deviceService } from '../services/device.service.js';
@@ -30,4 +30,22 @@ export async function deregisterDeviceHandler(
 
   await deviceService.deregisterDeviceForUser(user.sub, req.body.deviceId);
   return sendSuccess(reply, { deregistered: true });
+}
+
+/** POST /identity/devices/register-web — register browser for PWA push (US-PAR-002). */
+export async function registerWebDeviceHandler(
+  req: FastifyRequest<{ Body: RegisterWebDeviceRequest }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const user = req.authUser;
+  if (!user) {
+    throw new LoomisError('IDENTITY_SESSION_INVALIDATED', 401, 'Not authenticated');
+  }
+
+  const result = await deviceService.registerDevice(
+    user.sub,
+    req.body.deviceFingerprint,
+    'web',
+  );
+  return sendSuccess(reply, { deviceId: result.deviceId }, 201);
 }

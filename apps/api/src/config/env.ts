@@ -56,6 +56,11 @@ const envSchema = z.object({
   APNS_TEAM_ID: z.string().min(1).optional(),
   APNS_BUNDLE_ID: z.string().min(1).optional(),
   APNS_PRIVATE_KEY: z.string().min(1).optional(),
+
+  /** Web Push VAPID keys for PWA notifications (US-PAR-002). Generate with `npx web-push generate-vapid-keys`. */
+  WEB_PUSH_VAPID_PUBLIC_KEY: z.string().min(1).optional(),
+  WEB_PUSH_VAPID_PRIVATE_KEY: z.string().min(1).optional(),
+  WEB_PUSH_VAPID_SUBJECT: z.string().min(1).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

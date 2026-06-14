@@ -162,11 +162,11 @@ export const pushSubscriptions = commsSchema.table(
     userActiveIdx: index('push_subscriptions_user_active_idx').on(table.userId, table.active),
     platformValid: check(
       'push_subscriptions_platform_valid',
-      sql`${table.platform} IN ('android', 'ios')`,
+      sql`${table.platform} IN ('android', 'ios', 'web')`,
     ),
     providerValid: check(
       'push_subscriptions_provider_valid',
-      sql`${table.provider} IN ('fcm', 'apns')`,
+      sql`${table.provider} IN ('fcm', 'apns', 'webpush')`,
     ),
   }),
 );

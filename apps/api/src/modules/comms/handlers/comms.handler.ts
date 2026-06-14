@@ -7,6 +7,7 @@ import type {
   UpsertNotificationTemplateRequest,
 } from '@loomis/contracts';
 import { sendSuccess } from '../../../shared/http.js';
+import { getWebPushPublicKey, isWebPushConfigured } from '../gateways/webpush.gateway.js';
 import {
   messageService,
   notificationService,
@@ -106,6 +107,16 @@ export async function markNotificationReadHandler(
     requireActor(req),
   );
   return sendSuccess(reply, notificationToResponse(row));
+}
+
+export async function getWebPushConfigHandler(
+  _req: FastifyRequest,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  return sendSuccess(reply, {
+    webPushEnabled: isWebPushConfigured(),
+    vapidPublicKey: getWebPushPublicKey(),
+  });
 }
 
 export async function registerPushSubscriptionHandler(

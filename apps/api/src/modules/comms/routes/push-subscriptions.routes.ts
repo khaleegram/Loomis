@@ -9,12 +9,19 @@ import { requireTenantMatch } from '../../../middleware/require-tenant-match.js'
 import { validateBody } from '../../../shared/validation.js';
 import {
   deregisterPushSubscriptionHandler,
+  getWebPushConfigHandler,
   listPushSubscriptionsHandler,
   registerPushSubscriptionHandler,
 } from '../handlers/index.js';
 
 /** Push subscription routes (SRS §10.4 / US-COM-004). */
 export async function pushSubscriptionsRoutes(app: FastifyInstance): Promise<void> {
+  app.get(
+    '/comms/push/config',
+    { preHandler: [authenticate] },
+    getWebPushConfigHandler,
+  );
+
   app.post<{ Body: RegisterPushSubscriptionRequest }>(
     '/comms/push-subscriptions',
     {

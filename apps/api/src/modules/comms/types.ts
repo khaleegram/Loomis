@@ -57,6 +57,11 @@ export const SAFE_NOTIFICATION_COPY = {
     body: 'You have an upcoming assignment deadline. Tap to view.',
     deepLinkResourceType: 'assignment',
   },
+  attendanceAbsent: {
+    title: 'Attendance update',
+    body: 'Your child was marked absent today. Open the app for details.',
+    deepLinkResourceType: 'attendance',
+  },
   newMessage: {
     title: 'New message',
     body: 'You have a new school message. Tap to read.',

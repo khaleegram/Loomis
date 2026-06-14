@@ -5,7 +5,8 @@ import type { ActorContext, RegisterPushSubscriptionInput } from '../types.js';
 
 export const pushSubscriptionService = {
   async register(input: RegisterPushSubscriptionInput, actor: ActorContext) {
-    const provider = input.platform === 'android' ? 'fcm' : 'apns';
+    const provider =
+      input.platform === 'android' ? 'fcm' : input.platform === 'ios' ? 'apns' : 'webpush';
 
     return withTenantContext(input.tenantId ?? null, async (tx) => {
       const ownsDevice = await pushSubscriptionRepository.verifyDeviceOwnership(

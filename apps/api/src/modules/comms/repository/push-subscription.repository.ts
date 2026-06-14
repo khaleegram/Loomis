@@ -11,8 +11,8 @@ export const pushSubscriptionRepository = {
       userId: string;
       deviceId: string;
       tenantId?: string | null;
-      platform: 'android' | 'ios';
-      provider: 'fcm' | 'apns';
+      platform: 'android' | 'ios' | 'web';
+      provider: 'fcm' | 'apns' | 'webpush';
       token: string;
     },
   ) {

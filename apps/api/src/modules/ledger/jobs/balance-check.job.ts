@@ -1,22 +1,11 @@
-import { Queue, Worker, type ConnectionOptions } from 'bullmq';
-import { getEnv } from '../../../config/env.js';
+import { Queue, Worker } from 'bullmq';
+import { bullmqConnectionOptions } from '../../../shared/bullmq.js';
 import { balanceCheckService } from '../services/balance-check.service.js';
 
 const QUEUE_NAME = 'ledger-balance-check';
 
 let queue: Queue | null = null;
 let worker: Worker | null = null;
-
-function connectionOptions(): ConnectionOptions {
-  const url = new URL(getEnv().REDIS_URL);
-  return {
-    host: url.hostname,
-    port: Number(url.port || 6379),
-    ...(url.password ? { password: url.password } : {}),
-    ...(url.username && url.username !== 'default' ? { username: url.username } : {}),
-    ...(url.protocol === 'rediss:' ? { tls: {} } : {}),
-  };
-}
 
 /**
  * Nightly platform ledger balance check (System Design §8.3, 04:00 UTC).
@@ -25,7 +14,7 @@ function connectionOptions(): ConnectionOptions {
 export async function startBalanceCheckJob(): Promise<void> {
   if (worker) return;
 
-  const connection = connectionOptions();
+  const connection = bullmqConnectionOptions();
   queue = new Queue(QUEUE_NAME, { connection });
 
   await queue.add(

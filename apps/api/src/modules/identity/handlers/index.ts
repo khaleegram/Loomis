@@ -1,5 +1,5 @@
 export { changePasswordHandler } from './change-password.handler.js';
-export { deregisterDeviceHandler, listDevicesHandler } from './devices.handler.js';
+export { deregisterDeviceHandler, listDevicesHandler, registerWebDeviceHandler } from './devices.handler.js';
 export { loginHandler } from './login.handler.js';
 export { logoutHandler } from './logout.handler.js';
 export {

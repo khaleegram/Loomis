@@ -2,6 +2,7 @@ export {
   deregisterPushSubscriptionHandler,
   getMessageHandler,
   getThreadHandler,
+  getWebPushConfigHandler,
   listNotificationsHandler,
   listPushSubscriptionsHandler,
   listTemplatesHandler,
