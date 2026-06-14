@@ -1,165 +1,234 @@
-// @ts-nocheck
 'use client';
 
+import {
+  useAssignmentSubmissions,
+  useAssignments,
+  useCreateAssignment,
+  useGradeSubmission,
+  usePublishAssignment,
+} from '@loomis/api-client';
+import type { AssignmentResponse } from '@loomis/contracts';
+import { Alert, AlertDescription } from '@loomis/ui-web';
 import { useMemo, useState } from 'react';
-import { useAssignments, useCreateAssignment, useAcademicTerms, useAcademicYears, useClassStructure } from '@loomis/api-client';
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Form, FormControl, FormField, FormItem, FormLabel, FormMessage, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Textarea } from '@loomis/ui-web';
-import { Plus } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 
-import { PageBody, PageHeader } from '@/components/school/school-shell';
+import { AssignmentCreateSheet, AssignmentDetailSheet } from '@/components/academic/ops/assignment-sheets';
+import type { AssignmentTeachingSlot } from '@/components/academic/ops/assignment-subject-rail';
+import { AssignmentsHero, AssignmentsList } from '@/components/academic/ops/assignments-panel';
+import { AcademicScopePicker } from '@/components/academic/ops/academic-scope-picker';
+import { PageBody } from '@/components/school/school-shell';
+import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
+import { academicErrorMessage } from '@/lib/academic/academic-errors';
+import { formatSubjectLabel } from '@/lib/academic/ops-labels';
+import {
+  classArmOptions,
+  useAcademicOpsContext,
+} from '@/lib/academic/use-academic-ops-context';
+import { useCan, useCanAny, useRole } from '@/lib/auth/use-capability';
+import { isClassTeacherRole, isTeachingStaffRole } from '@/lib/timetable/is-teaching-staff';
+import { useTeachingStaffScope } from '@/lib/timetable/use-teaching-staff-scope';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
-import { useCan } from '@/lib/auth/use-capability';
-
-const assignmentSchema = z.object({
-  subjectId: z.string().min(1, 'Subject required'),
-  classArmId: z.string().min(1, 'Class required'),
-  title: z.string().min(1, 'Title required'),
-  instructions: z.string().optional(),
-  dueAt: z.string().min(1, 'Due date required'),
-  maxScore: z.coerce.number().min(1, 'Must be at least 1'),
-});
-
-type AssignmentForm = z.infer<typeof assignmentSchema>;
 
 export default function AssignmentsPage() {
   const tenantId = useTenantId();
-  const canCreate = useCan('gradebook.write');
-  const [adding, setAdding] = useState(false);
+  const role = useRole();
+  const canCreate = useCan('gradebook.write') || isClassTeacherRole(role);
+  const canView = useCanAny(['gradebook.write', 'gradebook.read']);
 
-  const yearsData = useAcademicYears(tenantId ?? '');
-  const activeYearId = useMemo(() => {
-    return ((yearsData.data as any)?.academicYears ?? []).find((y: any) => y.status === 'active')?.id ?? null;
-  }, [yearsData.data]);
+  const adminCtx = useAcademicOpsContext(tenantId ?? '');
+  const teacherCtx = useTeachingStaffScope(tenantId ?? '');
+  const ctx = isTeachingStaffRole(role) ? teacherCtx : adminCtx;
+  const [createOpen, setCreateOpen] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState<AssignmentResponse | null>(null);
+  const [publishingId, setPublishingId] = useState<string | null>(null);
+  const [gradingId, setGradingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  const termsData = useAcademicTerms(tenantId ?? '', activeYearId ?? '');
-  const openTermId = useMemo(() => {
-    return ((termsData.data as any)?.terms ?? []).find((t: any) => t.status === 'open')?.id ?? null;
-  }, [termsData.data]);
+  const filters =
+    ctx.termId && ctx.classArmId ? { termId: ctx.termId, classArmId: ctx.classArmId } : null;
 
-  const structureData = useClassStructure(tenantId ?? '', activeYearId ?? '');
-  const classArms = (structureData.data as any)?.arms ?? [];
+  const assignmentsQuery = useAssignments(tenantId ?? '', filters);
 
-  const { data, isLoading, isError, error } = useAssignments(tenantId ?? '');
+  const teachingSlots = useMemo((): AssignmentTeachingSlot[] => {
+    if (!isTeachingStaffRole(role)) return [];
+    const assignments = teacherCtx.teachingQuery.data?.subjectAssignments ?? [];
+    const termLabel =
+      teacherCtx.activeTerm?.name ??
+      teacherCtx.terms.find((term) => term.id === teacherCtx.termId)?.name ??
+      'Term';
+    return assignments.map((assignment) => ({
+      assignmentId: assignment.assignmentId,
+      termId: assignment.termId,
+      classArmId: assignment.classArmId,
+      subjectId: assignment.subjectId,
+      subjectLabel: formatSubjectLabel(assignment.subjectId),
+      classLabel: assignment.classArmLabel,
+      termLabel,
+    }));
+  }, [
+    role,
+    teacherCtx.teachingQuery.data?.subjectAssignments,
+    teacherCtx.activeTerm?.name,
+    teacherCtx.terms,
+    teacherCtx.termId,
+  ]);
 
   const createAssignment = useCreateAssignment(tenantId ?? '');
+  const publishAssignment = usePublishAssignment(tenantId ?? '');
+  const gradeSubmission = useGradeSubmission(tenantId ?? '');
+  const submissionsQuery = useAssignmentSubmissions(tenantId ?? '', selectedAssignment?.id ?? null);
 
-  const assignments = (data as any)?.assignments ?? [];
-
-  const form = useForm<AssignmentForm>({
-    resolver: zodResolver(assignmentSchema),
-    defaultValues: { subjectId: '', classArmId: '', title: '', instructions: '', dueAt: '', maxScore: 100 },
-  });
-
-  async function onAdd(values: AssignmentForm) {
-    try {
-      await createAssignment.mutateAsync({
-        termId: openTermId!,
-        classArmId: values.classArmId,
-        subjectId: values.subjectId,
-        title: values.title,
-        instructions: values.instructions ?? '',
-        dueAt: values.dueAt,
-        maxScore: values.maxScore,
-      });
-      form.reset();
-      setAdding(false);
-    } catch {
-      // handled by mutator
+  const assignments = assignmentsQuery.data?.assignments ?? [];
+  const classLabelByArmId = useMemo(() => {
+    const map = new Map<string, string>();
+    const options = isTeachingStaffRole(role)
+      ? teacherCtx.teachingClassArmOptions
+      : classArmOptions(ctx.arms, ctx.levels);
+    for (const option of options) {
+      map.set(option.id, option.label);
     }
-  }
+    return map;
+  }, [role, teacherCtx.teachingClassArmOptions, ctx.arms, ctx.levels]);
+
+  const classLabel = classLabelByArmId.get(ctx.classArmId ?? '') ?? null;
+  const termLabel = ctx.activeTerm?.name ?? null;
+  const publishedCount = assignments.filter((item) => item.status === 'published').length;
 
   if (!tenantId) {
     return (
-      <>
-        <PageHeader title="Assignments" />
-        <PageBody><p className="text-sm text-destructive">No tenant context.</p></PageBody>
-      </>
+      <PageBody className="max-w-[1400px] px-4 py-5 sm:px-6 sm:py-6 lg:px-12 lg:py-8">
+        <Alert variant="destructive">
+          <AlertDescription>No tenant context. Sign in again.</AlertDescription>
+        </Alert>
+      </PageBody>
+    );
+  }
+
+  if (!canView) {
+    return (
+      <PageBody className="max-w-[1400px] px-4 py-5 sm:px-6 sm:py-6 lg:px-12 lg:py-8">
+        <Alert>
+          <AlertDescription>You do not have permission to view assignments.</AlertDescription>
+        </Alert>
+      </PageBody>
     );
   }
 
   return (
-    <>
-      <PageHeader
-        title="Assignments"
-        description="Create and manage class assignments — US-ACA-007"
-        actions={canCreate ? <Button size="sm" onClick={() => setAdding(!adding)}><Plus className="mr-1.5 size-3.5" /> {adding ? 'Cancel' : 'New'}</Button> : null}
-      />
-      <PageBody>
-        {adding ? (
-          <Card className="mb-6">
-            <CardHeader><CardTitle className="text-base">New Assignment</CardTitle></CardHeader>
-            <CardContent>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onAdd)} className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <FormField control={form.control} name="title" render={({ field }) => (
-                    <FormItem><FormLabel>Title</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={form.control} name="subjectId" render={({ field }) => (
-                    <FormItem><FormLabel>Subject ID</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={form.control} name="classArmId" render={({ field }) => (
-                    <FormItem><FormLabel>Class</FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger>
-                        <SelectContent>{classArms.map((a: any) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="maxScore" render={({ field }) => (
-                    <FormItem><FormLabel>Max Score</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={form.control} name="dueAt" render={({ field }) => (
-                    <FormItem><FormLabel>Due Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={form.control} name="instructions" render={({ field }) => (
-                    <FormItem className="md:col-span-2"><FormLabel>Instructions</FormLabel><FormControl><Textarea rows={2} {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <div className="md:col-span-2 flex justify-end">
-                    <Button type="submit" disabled={createAssignment.isPending}>Create Assignment</Button>
-                  </div>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
+    <PageBody className="max-w-[1400px] px-4 py-5 sm:px-6 sm:py-6 lg:px-12 lg:py-8">
+      <div className="space-y-6">
+        <AssignmentsHero
+          classLabel={classLabel}
+          termLabel={termLabel}
+          assignmentCount={assignments.length}
+          publishedCount={publishedCount}
+          canCreate={canCreate}
+          onCreateClick={() => setCreateOpen(true)}
+          isLoading={assignmentsQuery.isLoading}
+        />
+
+        <AcademicScopePicker
+          years={ctx.sortedYears}
+          terms={ctx.terms}
+          classArmOptions={
+            isTeachingStaffRole(role)
+              ? teacherCtx.teachingClassArmOptions
+              : classArmOptions(ctx.arms, ctx.levels)
+          }
+          yearId={ctx.yearId}
+          termId={ctx.termId}
+          classArmId={ctx.classArmId}
+          onYearChange={(id) => {
+            ctx.setYearId(id);
+            ctx.setTermId(null);
+          }}
+          onTermChange={ctx.setTermId}
+          onClassArmChange={ctx.setClassArmId}
+          hideClassSelection={isTeachingStaffRole(role) ? teacherCtx.hideClassSelection : false}
+        />
+
+        {actionError ? (
+          <Alert variant="destructive">
+            <AlertDescription>{actionError}</AlertDescription>
+          </Alert>
         ) : null}
 
-        {isLoading ? (
-          <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}</div>
-        ) : isError ? (
-          <p className="text-sm text-destructive">{(error as Error).message}</p>
-        ) : assignments.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border py-16">
-            <p className="text-sm text-muted-foreground">No assignments found.</p>
+        {!filters ? (
+          <div className={`${ACADEMIC_UI.dataPanel} p-8 text-center`}>
+            <p className="text-[13px] text-neutral-500">Select year, term, and class to view assignments.</p>
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead>Class</TableHead>
-                <TableHead>Due</TableHead>
-                <TableHead>Score</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {assignments.map((a: any) => (
-                <TableRow key={a.id}>
-                  <TableCell className="font-medium">{a.title}</TableCell>
-                  <TableCell>{classArms.find((ca: any) => ca.id === a.classArmId)?.name ?? '—'}</TableCell>
-                  <TableCell>{a.dueAt ? new Date(a.dueAt).toLocaleDateString() : '—'}</TableCell>
-                  <TableCell>{a.maxScore}</TableCell>
-                  <TableCell><Badge variant={a.status === 'published' ? 'success' : a.status === 'closed' ? 'neutral' : 'warning'}>{a.status}</Badge></TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <AssignmentsList
+            assignments={assignments}
+            classLabelByArmId={classLabelByArmId}
+            isLoading={assignmentsQuery.isLoading}
+            canManage={canCreate}
+            publishingId={publishingId}
+            onOpen={setSelectedAssignment}
+            onPublish={async (assignmentId) => {
+              setActionError(null);
+              setPublishingId(assignmentId);
+              try {
+                await publishAssignment.mutateAsync(assignmentId);
+              } catch (err) {
+                setActionError(academicErrorMessage(err));
+              } finally {
+                setPublishingId(null);
+              }
+            }}
+          />
         )}
-      </PageBody>
-    </>
+      </div>
+
+      <AssignmentCreateSheet
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        teachingSlots={teachingSlots}
+        isSubmitting={createAssignment.isPending}
+        onSubmit={async (_values, slot) => {
+          setActionError(null);
+          try {
+            await createAssignment.mutateAsync({
+              termId: slot.termId,
+              classArmId: slot.classArmId,
+              subjectId: slot.subjectId,
+              title: _values.title,
+              instructions: _values.instructions,
+              dueAt: new Date(_values.dueAt).toISOString(),
+              maxScore: _values.maxScore,
+            });
+            ctx.setClassArmId(slot.classArmId);
+          } catch (err) {
+            setActionError(academicErrorMessage(err));
+            throw err;
+          }
+        }}
+      />
+
+      <AssignmentDetailSheet
+        open={Boolean(selectedAssignment)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedAssignment(null);
+        }}
+        assignment={selectedAssignment}
+        submissions={submissionsQuery.data?.submissions ?? []}
+        canGrade={canCreate}
+        gradingSubmissionId={gradingId}
+        onGrade={async (submissionId, values) => {
+          setActionError(null);
+          setGradingId(submissionId);
+          try {
+            await gradeSubmission.mutateAsync({
+              submissionId,
+              score: values.score,
+              feedback: values.feedback,
+            });
+          } catch (err) {
+            setActionError(academicErrorMessage(err));
+          } finally {
+            setGradingId(null);
+          }
+        }}
+      />
+    </PageBody>
   );
 }
