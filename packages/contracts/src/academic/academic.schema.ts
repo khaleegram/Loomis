@@ -605,6 +605,9 @@ export const timetableListResponse = z.object({
   entries: z.array(timetableEntryResponse),
   classArmId: z.string().uuid().optional(),
   classArmLabel: z.string().nullable().optional(),
+  /** When the viewer is a class teacher, the class they oversee this term. */
+  classTeacherClassArmId: z.string().uuid().nullable().optional(),
+  classTeacherClassArmLabel: z.string().nullable().optional(),
 });
 export type TimetableListResponse = z.infer<typeof timetableListResponse>;
 
@@ -715,11 +718,67 @@ export const myTimetableQuery = z.object({
 });
 export type MyTimetableQuery = z.infer<typeof myTimetableQuery>;
 
+export const teachingStaffContextQuery = z.object({
+  termId: z.string().uuid(),
+});
+export type TeachingStaffContextQuery = z.infer<typeof teachingStaffContextQuery>;
+
+export const teachingSubjectAssignmentResponse = z.object({
+  assignmentId: z.string().uuid(),
+  termId: z.string().uuid(),
+  classArmId: z.string().uuid(),
+  classArmLabel: z.string(),
+  subjectId: z.string().uuid(),
+});
+export type TeachingSubjectAssignmentResponse = z.infer<typeof teachingSubjectAssignmentResponse>;
+
+export const teachingClassTeacherAssignmentResponse = z.object({
+  termId: z.string().uuid(),
+  classArmId: z.string().uuid(),
+  classArmLabel: z.string(),
+});
+export type TeachingClassTeacherAssignmentResponse = z.infer<
+  typeof teachingClassTeacherAssignmentResponse
+>;
+
+export const teachingStaffContextResponse = z.object({
+  staffProfileId: z.string().uuid(),
+  subjectAssignments: z.array(teachingSubjectAssignmentResponse),
+  classTeacherAssignment: teachingClassTeacherAssignmentResponse.nullable(),
+});
+export type TeachingStaffContextResponse = z.infer<typeof teachingStaffContextResponse>;
+
 export const parentTimetableQuery = z.object({
   studentId: z.string().uuid(),
   termId: z.string().uuid(),
 });
 export type ParentTimetableQuery = z.infer<typeof parentTimetableQuery>;
+
+export const parentAttendanceQuery = parentTimetableQuery;
+export type ParentAttendanceQuery = z.infer<typeof parentAttendanceQuery>;
+
+export const parentResultsQuery = parentTimetableQuery;
+export type ParentResultsQuery = z.infer<typeof parentResultsQuery>;
+
+export const myAttendanceQuery = z.object({
+  termId: z.string().uuid(),
+});
+export type MyAttendanceQuery = z.infer<typeof myAttendanceQuery>;
+
+export const attendanceTermSummary = z.object({
+  present: z.number().int(),
+  absent: z.number().int(),
+  late: z.number().int(),
+  excused: z.number().int(),
+});
+export type AttendanceTermSummary = z.infer<typeof attendanceTermSummary>;
+
+export const childAttendanceResponse = z.object({
+  records: z.array(attendanceRecordResponse),
+  summary: attendanceTermSummary,
+  classArmLabel: z.string().nullable(),
+});
+export type ChildAttendanceResponse = z.infer<typeof childAttendanceResponse>;
 
 // ── Assignments & Submissions (SRS §4.5 FR-ACA-003; US-ACA-007) ───────────────
 //
@@ -779,6 +838,11 @@ export const assignmentListResponse = z.object({
 });
 export type AssignmentListResponse = z.infer<typeof assignmentListResponse>;
 
+export const myAssignmentsQuery = z.object({
+  termId: z.string().uuid(),
+});
+export type MyAssignmentsQuery = z.infer<typeof myAssignmentsQuery>;
+
 export const submissionStatus = z.enum(['submitted', 'late', 'graded', 'returned']);
 export type SubmissionStatus = z.infer<typeof submissionStatus>;
 
@@ -823,3 +887,14 @@ export const submissionListResponse = z.object({
   submissions: z.array(submissionResponse),
 });
 export type SubmissionListResponse = z.infer<typeof submissionListResponse>;
+
+export const studentAssignmentItemResponse = assignmentResponse.extend({
+  mySubmission: submissionResponse.nullable().optional(),
+});
+export type StudentAssignmentItemResponse = z.infer<typeof studentAssignmentItemResponse>;
+
+export const studentAssignmentListResponse = z.object({
+  assignments: z.array(studentAssignmentItemResponse),
+  classArmLabel: z.string().nullable(),
+});
+export type StudentAssignmentListResponse = z.infer<typeof studentAssignmentListResponse>;

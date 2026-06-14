@@ -3,6 +3,7 @@ import type {
   AmendAttendanceRequest,
   AttendanceListResponse,
   AttendanceRecordResponse,
+  ChildAttendanceResponse,
   MarkAttendanceRequest,
 } from '@loomis/contracts';
 import type { ApiClient } from '../../http/client.js';
@@ -101,3 +102,34 @@ export function useAmendAttendance(tenantId: string, filters: AttendanceListFilt
 }
 
 export type { AttendanceListFilters };
+
+export function useMyAttendance(tenantId: string, termId: string | null) {
+  const client = useApiClient();
+  return useQuery<ChildAttendanceResponse>({
+    queryKey: queryKeys.parent.myAttendance(tenantId, termId ?? ''),
+    queryFn: () =>
+      client.get<ChildAttendanceResponse>(
+        `/tenants/${tenantId}/attendance/me?termId=${encodeURIComponent(termId!)}`,
+      ),
+    staleTime: ATTENDANCE_STALE_MS,
+    enabled: Boolean(tenantId && termId),
+  });
+}
+
+/** Term attendance for a student — school oversight (principal / owner / admin). */
+export function useStudentTermAttendance(
+  tenantId: string,
+  studentId: string | null,
+  termId: string | null,
+) {
+  const client = useApiClient();
+  return useQuery<ChildAttendanceResponse>({
+    queryKey: queryKeys.students.termAttendance(tenantId, studentId ?? '', termId ?? ''),
+    queryFn: () =>
+      client.get<ChildAttendanceResponse>(
+        `/tenants/${tenantId}/students/${studentId}/attendance?termId=${encodeURIComponent(termId!)}`,
+      ),
+    staleTime: ATTENDANCE_STALE_MS,
+    enabled: Boolean(tenantId && studentId && termId),
+  });
+}

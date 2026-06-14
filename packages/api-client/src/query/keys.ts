@@ -26,6 +26,12 @@ export type AttendanceListFilters = {
   studentId?: string;
 };
 
+export type AssignmentListFilters = {
+  termId: string;
+  classArmId: string;
+  subjectId?: string;
+};
+
 export type PaymentsListFilters = {
   termId?: string;
   studentId?: string;
@@ -82,6 +88,8 @@ export const queryKeys = {
       ['students', tenantId, 'profile', studentId] as const,
     enrollmentRoster: (tenantId: string, termId: string) =>
       ['students', tenantId, 'enrollment-roster', termId] as const,
+    termAttendance: (tenantId: string, studentId: string, termId: string) =>
+      ['students', tenantId, studentId, 'attendance', termId] as const,
     leavingCertificates: (tenantId: string, academicYearId: string) =>
       ['students', tenantId, 'leaving-certificates', academicYearId] as const,
     certificates: (tenantId: string, studentId: string) =>
@@ -134,8 +142,14 @@ export const queryKeys = {
       ['academic', tenantId, 'bell-schedule', academicYearId] as const,
     studentTimetable: (tenantId: string, termId: string) =>
       ['academic', tenantId, 'timetable', 'me', termId] as const,
-    assignments: (tenantId: string, classArmId: string) =>
-      ['academic', tenantId, 'assignments', classArmId] as const,
+    teachingStaffContext: (tenantId: string, termId: string) =>
+      ['academic', tenantId, 'teaching', 'me', termId] as const,
+    assignments: (tenantId: string, filters: AssignmentListFilters | string) =>
+      ['academic', tenantId, 'assignments', filters] as const,
+    myAssignments: (tenantId: string, termId: string) =>
+      ['academic', tenantId, 'assignments', 'me', termId] as const,
+    assignmentSubmissions: (tenantId: string, assignmentId: string) =>
+      ['academic', tenantId, 'assignments', assignmentId, 'submissions'] as const,
     promotions: (tenantId: string, yearId: string) =>
       ['academic', tenantId, 'promotions', yearId] as const,
     progressions: (tenantId: string) => ['academic', tenantId, 'progressions'] as const,
@@ -169,6 +183,9 @@ export const queryKeys = {
       ['finance', tenantId, 'refunds', 'detail', refundId] as const,
     reconciliationExceptions: (tenantId: string) =>
       ['finance', tenantId, 'reconciliation', 'exceptions'] as const,
+  },
+  tenant: {
+    branding: (tenantId: string) => ['tenant', tenantId, 'branding'] as const,
   },
   /** Platform-level keys — no tenant context (platform actors have null tenant_id). */
   platform: {
@@ -231,6 +248,14 @@ export const queryKeys = {
     dashboard: () => ['parent', 'dashboard'] as const,
     timetable: (tenantId: string, studentId: string, termId: string) =>
       ['parent', 'timetable', tenantId, studentId, termId] as const,
+    attendance: (tenantId: string, studentId: string, termId: string) =>
+      ['parent', 'attendance', tenantId, studentId, termId] as const,
+    results: (tenantId: string, studentId: string, termId: string) =>
+      ['parent', 'results', tenantId, studentId, termId] as const,
+    myResults: (tenantId: string, termId: string) =>
+      ['student', 'results', tenantId, termId] as const,
+    myAttendance: (tenantId: string, termId: string) =>
+      ['student', 'attendance', tenantId, termId] as const,
   },
 
 } as const;

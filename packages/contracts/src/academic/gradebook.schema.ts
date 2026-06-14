@@ -102,6 +102,20 @@ export const listGradebookQuery = z.object({
 });
 export type ListGradebookQuery = z.infer<typeof listGradebookQuery>;
 
+/** US-ACA-002 — teacher locks subject gradebook before result publish. */
+export const lockGradebookRequest = z.object({
+  termId: z.string().uuid(),
+  classArmId: z.string().uuid(),
+  subjectId: z.string().uuid(),
+});
+export type LockGradebookRequest = z.infer<typeof lockGradebookRequest>;
+
+export const lockGradebookResponse = z.object({
+  lockedCount: z.number().int().min(0),
+  alreadyLockedCount: z.number().int().min(0),
+});
+export type LockGradebookResponse = z.infer<typeof lockGradebookResponse>;
+
 export const gradebookEntryResponse = z.object({
   id: z.string().uuid(),
   tenantId: z.string().uuid(),
@@ -188,3 +202,30 @@ export const resultListResponse = z.object({
   results: z.array(resultResponse),
 });
 export type ResultListResponse = z.infer<typeof resultListResponse>;
+
+/** Subject line on a published report card (US-PAR-003 / US-STU-001). */
+export const publishedSubjectResultResponse = z.object({
+  subjectId: z.string().uuid(),
+  continuousAssessmentScore: z.number().int(),
+  examScore: z.number().int(),
+  totalScore: z.number().int(),
+  grade: z.string(),
+  remark: z.string().nullable(),
+});
+export type PublishedSubjectResultResponse = z.infer<typeof publishedSubjectResultResponse>;
+
+export const childPublishedResultsResponse = z.object({
+  termId: z.string().uuid(),
+  termName: z.string().nullable(),
+  classArmLabel: z.string().nullable(),
+  published: z.boolean(),
+  publishedAt: z.string().datetime().nullable(),
+  averageScore: z.number().int().nullable(),
+  subjects: z.array(publishedSubjectResultResponse),
+});
+export type ChildPublishedResultsResponse = z.infer<typeof childPublishedResultsResponse>;
+
+export const myResultsQuery = z.object({
+  termId: z.string().uuid(),
+});
+export type MyResultsQuery = z.infer<typeof myResultsQuery>;

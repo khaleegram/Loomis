@@ -5,7 +5,11 @@ import type {
   SendClassMessageRequest,
   MessageResponse,
   NotificationResponse,
+  RegisterPushSubscriptionRequest,
+  PushSubscriptionResponse,
+  WebPushConfigResponse,
 } from '@loomis/contracts';
+import type { RegisterWebDeviceResponse } from '@loomis/contracts';
 import type { ApiClient } from '../../http/client.js';
 import { useIdempotentMutation } from '../../mutations/useIdempotentMutation.js';
 import { useApiClient } from '../context.js';
@@ -66,5 +70,30 @@ export function useMarkNotificationRead(tenantId: string) {
     mutationFn: (client, body) =>
       client.post(`/tenants/${tenantId}/comms/notifications/${body.notificationId}/read`, {}),
     invalidates: [queryKeys.comms.all(tenantId)],
+  });
+}
+
+export function useWebPushConfig() {
+  const client = useApiClient();
+  return useQuery({
+    queryKey: ['comms', 'push', 'config'] as const,
+    queryFn: () => client.get<WebPushConfigResponse>('/comms/push/config'),
+    staleTime: STALE_MS,
+  });
+}
+
+export function useRegisterWebDevice() {
+  return useIdempotentMutation<{ deviceFingerprint: string }, RegisterWebDeviceResponse>({
+    mutationFn: (client, body, idempotencyKey) =>
+      client.post<RegisterWebDeviceResponse>('/identity/devices/register-web', body, {
+        idempotencyKey,
+      }),
+  });
+}
+
+export function useRegisterPushSubscription() {
+  return useIdempotentMutation<RegisterPushSubscriptionRequest, PushSubscriptionResponse>({
+    mutationFn: (client, body, idempotencyKey) =>
+      client.post<PushSubscriptionResponse>('/comms/push-subscriptions', body, { idempotencyKey }),
   });
 }

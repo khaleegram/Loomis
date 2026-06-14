@@ -10,8 +10,6 @@ import type {
   TimetablePublishPreviewResponse,
   UpsertBellScheduleRequest,
   BellScheduleResponse,
-  AssignmentResponse,
-  CreateAssignmentRequest,
 } from '@loomis/contracts';
 import type { ApiClient } from '../../http/client.js';
 import { useIdempotentMutation } from '../../mutations/useIdempotentMutation.js';
@@ -185,41 +183,14 @@ export function useUpsertBellSchedule(tenantId: string) {
   });
 }
 
-// ── Assignments ─────────────────────────────────────────────────────────────────
-
-interface AssignmentListResponse {
-  assignments: AssignmentResponse[];
-}
-
-export function useAssignments(tenantId: string, classArmId?: string) {
-  const client = useApiClient();
-  const path = classArmId
-    ? `/tenants/${tenantId}/assignments?classArmId=${encodeURIComponent(classArmId)}`
-    : `/tenants/${tenantId}/assignments`;
-  return useQuery({
-    queryKey: queryKeys.academic.assignments(tenantId, classArmId ?? 'all'),
-    queryFn: () => client.get<AssignmentListResponse>(path),
-    staleTime: STALE_MS,
-    enabled: Boolean(tenantId),
-  });
-}
-
-export function useCreateAssignment(tenantId: string) {
-  return useIdempotentMutation<CreateAssignmentRequest, AssignmentResponse>({
-    mutationFn: (client, body, idempotencyKey) =>
-      client.post<AssignmentResponse>(`/tenants/${tenantId}/assignments`, body, { idempotencyKey }),
-    invalidates: [queryKeys.academic.all(tenantId)],
-  });
-}
-
-export function usePublishAssignment(tenantId: string, assignmentId: string) {
-  return useIdempotentMutation<void, AssignmentResponse>({
-    mutationFn: (client, _body, idempotencyKey) =>
-      client.post<AssignmentResponse>(
-        `/tenants/${tenantId}/assignments/${assignmentId}/publish`,
-        {},
-        { idempotencyKey },
-      ),
-    invalidates: [queryKeys.academic.all(tenantId)],
-  });
-}
+// Assignments hooks live in ./assignments.js
+export {
+  useAssignments,
+  useCreateAssignment,
+  usePublishAssignment,
+  useMyAssignments,
+  useUpdateAssignment,
+  useAssignmentSubmissions,
+  useSubmitAssignment,
+  useGradeSubmission,
+} from './assignments.js';

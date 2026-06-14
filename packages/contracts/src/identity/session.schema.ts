@@ -46,6 +46,17 @@ export const deregisterDeviceRequest = z.object({
 });
 export type DeregisterDeviceRequest = z.infer<typeof deregisterDeviceRequest>;
 
+/** Registers a web browser for push notifications (PWA / US-PAR-002). */
+export const registerWebDeviceRequest = z.object({
+  deviceFingerprint: z.string().min(16).max(256),
+});
+export type RegisterWebDeviceRequest = z.infer<typeof registerWebDeviceRequest>;
+
+export const registerWebDeviceResponse = z.object({
+  deviceId: z.string().uuid(),
+});
+export type RegisterWebDeviceResponse = z.infer<typeof registerWebDeviceResponse>;
+
 export const refreshTokenRequest = z.object({
   refreshToken: z.string().min(1),
 });

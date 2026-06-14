@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
+  ChildPublishedResultsResponse,
   CreateExamConfigRequest,
   CreateGradingSchemeRequest,
   ExamConfigListResponse,
@@ -9,6 +10,8 @@ import type {
   GradebookEntryResponse,
   GradingSchemeListResponse,
   GradingSchemeResponse,
+  LockGradebookRequest,
+  LockGradebookResponse,
   ListGradebookQuery,
   PublishResultsRequest,
   RequestGradeCorrectionRequest,
@@ -190,6 +193,17 @@ export function useRequestGradeCorrection(tenantId: string, entryId: string, fil
   });
 }
 
+/** Lock subject gradebook for a class (US-ACA-002). */
+export function useLockGradebook(tenantId: string, filters: GradebookListFilters) {
+  return useIdempotentMutation<LockGradebookRequest, LockGradebookResponse>({
+    mutationFn: (client, body, idempotencyKey) =>
+      client.post<LockGradebookResponse>(`/tenants/${tenantId}/gradebook/lock`, body, {
+        idempotencyKey,
+      }),
+    invalidates: [queryKeys.academic.gradebookEntries(tenantId, filters)],
+  });
+}
+
 export interface UsePublishResultsConfig {
   tenantId: string;
   termId: string;
@@ -207,6 +221,20 @@ export function usePublishResults(config: UsePublishResultsConfig) {
     invalidates: [
       queryKeys.academic.gradebookEntries(tenantId, { termId, classArmId }),
     ],
+  });
+}
+
+/** Published term results for the logged-in student (US-STU-001). */
+export function useMyResults(tenantId: string, termId: string | null) {
+  const client = useApiClient();
+  return useQuery<ChildPublishedResultsResponse>({
+    queryKey: queryKeys.parent.myResults(tenantId, termId ?? ''),
+    queryFn: () =>
+      client.get<ChildPublishedResultsResponse>(
+        `/tenants/${tenantId}/results/me?termId=${encodeURIComponent(termId!)}`,
+      ),
+    staleTime: GRADEBOOK_STALE_MS,
+    enabled: Boolean(tenantId && termId),
   });
 }
 

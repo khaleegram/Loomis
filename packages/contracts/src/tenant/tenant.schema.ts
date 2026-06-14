@@ -145,6 +145,25 @@ export const configurationListResponse = z.object({
 });
 export type ConfigurationListResponse = z.infer<typeof configurationListResponse>;
 
+// ── School branding (logo on reports, app bar, documents) ─────────────────────
+
+export const SCHOOL_BRANDING_CONFIG_KEY = 'school.branding';
+
+export const schoolBrandingConfig = z.object({
+  logoStorageObjectId: z.string().uuid().nullable(),
+});
+export type SchoolBrandingConfig = z.infer<typeof schoolBrandingConfig>;
+
+export const updateSchoolBrandingRequest = schoolBrandingConfig;
+export type UpdateSchoolBrandingRequest = z.infer<typeof updateSchoolBrandingRequest>;
+
+export const schoolBrandingResponse = z.object({
+  tenantId: z.string().uuid(),
+  tenantName: z.string(),
+  branding: schoolBrandingConfig,
+});
+export type SchoolBrandingResponse = z.infer<typeof schoolBrandingResponse>;
+
 // ── Tenant list (platform) ──────────────────────────────────────────────────────
 
 export const tenantListResponse = z.object({

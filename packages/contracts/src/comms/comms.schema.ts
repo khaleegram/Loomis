@@ -21,7 +21,7 @@ export type NotificationChannel = z.infer<typeof notificationChannel>;
 export const notificationStatus = z.enum(['pending', 'delivered', 'read', 'failed']);
 export type NotificationStatus = z.infer<typeof notificationStatus>;
 
-export const pushPlatform = z.enum(['android', 'ios']);
+export const pushPlatform = z.enum(['android', 'ios', 'web']);
 export type PushPlatform = z.infer<typeof pushPlatform>;
 
 export const COMMS_EVENT_TYPES = {
@@ -118,11 +118,17 @@ export const pushSubscriptionResponse = z.object({
   deviceId: z.string().uuid(),
   tenantId: z.string().uuid().nullable(),
   platform: pushPlatform,
-  provider: z.enum(['fcm', 'apns']),
+  provider: z.enum(['fcm', 'apns', 'webpush']),
   active: z.boolean(),
   createdAt: z.string().datetime(),
 });
 export type PushSubscriptionResponse = z.infer<typeof pushSubscriptionResponse>;
+
+export const webPushConfigResponse = z.object({
+  webPushEnabled: z.boolean(),
+  vapidPublicKey: z.string().nullable(),
+});
+export type WebPushConfigResponse = z.infer<typeof webPushConfigResponse>;
 
 export const notificationTemplateResponse = z.object({
   id: z.string().uuid(),
