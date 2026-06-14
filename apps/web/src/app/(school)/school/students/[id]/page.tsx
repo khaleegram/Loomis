@@ -34,6 +34,7 @@ import {
   StudentProfileHeader,
   StudentProfileHeaderSkeleton,
 } from '@/components/student/student-profile-header';
+import { StudentAttendanceTab } from '@/components/student/student-attendance-tab';
 import { StudentTimeline } from '@/components/student/student-timeline';
 import { TransferStudentDialog } from '@/components/student/transfer-student-dialog';
 import { PageBody, PageHeader } from '@/components/school/school-shell';
@@ -65,6 +66,7 @@ export default function StudentProfilePage({ params }: StudentProfilePageProps) 
   const { id: studentId } = use(params);
   const tenantId = useTenantId();
   const canViewFullProfile = useCan('audit.view');
+  const canViewAttendance = useCan('attendance.view');
   const canManage = useCan('admissions.manage');
   const canTransfer = useCanAny(['admissions.approve', 'student.promote']);
 
@@ -243,6 +245,14 @@ export default function StudentProfilePage({ params }: StudentProfilePageProps) 
                   >
                     Documents
                   </TabsTrigger>
+                  {canViewAttendance ? (
+                    <TabsTrigger
+                      value="attendance"
+                      className="rounded-lg px-4 py-2 text-[12px] font-semibold transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-brand-800 data-[state=active]:shadow-sm"
+                    >
+                      Attendance
+                    </TabsTrigger>
+                  ) : null}
                   <TabsTrigger
                     value="transfer"
                     className="rounded-lg px-4 py-2 text-[12px] font-semibold transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-brand-800 data-[state=active]:shadow-sm"
@@ -403,6 +413,17 @@ export default function StudentProfilePage({ params }: StudentProfilePageProps) 
                   </div>
                 )}
               </TabsContent>
+
+              {canViewAttendance && tenantId && student ? (
+                <TabsContent value="attendance">
+                  <StudentAttendanceTab
+                    tenantId={tenantId}
+                    studentId={studentId}
+                    firstName={student.firstName}
+                    lastName={student.lastName}
+                  />
+                </TabsContent>
+              ) : null}
 
               <TabsContent value="documents" className="space-y-4">
                 <div className="card rounded-2xl p-6">
