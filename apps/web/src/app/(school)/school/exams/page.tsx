@@ -26,6 +26,7 @@ import {
 import { useState } from 'react';
 
 import { GradingSchemeBuilder } from '@/components/academic/ops/grading-scheme-builder';
+import { ExamConfigSetupPanel } from '@/components/academic/ops/exam-config-setup-panel';
 import { GradeCorrectionReviewList } from '@/components/academic/ops/grade-correction-review-list';
 import { PageBody, PageHeader } from '@/components/school/school-shell';
 import { academicErrorMessage } from '@/lib/academic/academic-errors';
@@ -98,6 +99,7 @@ export default function SchoolExamsPage() {
           <TabsList>
             <TabsTrigger value="schemes">Grading schemes</TabsTrigger>
             {canConfigure ? <TabsTrigger value="builder">New scheme</TabsTrigger> : null}
+            {canConfigure ? <TabsTrigger value="configs">Exam configs</TabsTrigger> : null}
             <TabsTrigger value="corrections">Corrections queue</TabsTrigger>
           </TabsList>
 
@@ -165,6 +167,12 @@ export default function SchoolExamsPage() {
                   }
                 }}
               />
+            </TabsContent>
+          ) : null}
+
+          {canConfigure ? (
+            <TabsContent value="configs" className="mt-6">
+              <ExamConfigSetupPanel tenantId={tenantId} />
             </TabsContent>
           ) : null}
 

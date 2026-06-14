@@ -94,7 +94,7 @@ export function GradeCorrectionSheet({
             </div>
           </dl>
           <p className="mt-2 text-xs text-muted-foreground">
-            Weights: CA {caWeight}% · Exam {examWeight}%
+            Max scores: CA /{caWeight} · Exam /{examWeight} · Total /100
           </p>
         </div>
 

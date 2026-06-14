@@ -34,12 +34,18 @@ export function academicErrorMessage(err: unknown): string {
       return 'That verification code is incorrect or expired. Try again.';
     case 'IDENTITY_MFA_NOT_ENROLLED':
       return 'MFA must be enrolled before this action. Check Settings → Security.';
+    case 'FORBIDDEN':
+      return 'You do not have permission to change grades on this sheet.';
     case 'VALIDATION_ERROR':
-      return 'Please check the details you entered.';
+      return validationErrorMessage(err);
     case 'ACADEMIC_GRADING_SCHEME_CONFLICT':
       return 'A grading scheme with this name already exists.';
     case 'ACADEMIC_GRADEBOOK_FORBIDDEN':
       return 'You do not have permission to access this gradebook.';
+    case 'ACADEMIC_GRADEBOOK_LOCKED':
+      return 'This gradebook is locked. Submit a correction request to change submitted scores.';
+    case 'ACADEMIC_GRADEBOOK_INCOMPLETE':
+      return incompleteGradebookMessage(err);
     case 'ACADEMIC_EXAM_CONFIG_NOT_FOUND':
       return 'No exam configuration found for this class and subject.';
     case 'ACADEMIC_EXAM_CONFIG_CONFLICT':
@@ -82,6 +88,13 @@ export function academicErrorMessage(err: unknown): string {
   }
 }
 
+function validationErrorMessage(err: unknown): string {
+  if (err instanceof LoomisClientError && typeof err.message === 'string' && err.message.length > 0) {
+    return err.message;
+  }
+  return 'Please check the details you entered.';
+}
+
 function timetableConflictMessage(err: unknown): string {
   if (!(err instanceof LoomisClientError) || !err.details) {
     return 'This period overlaps an existing booking. Choose a different time, teacher, or class.';
@@ -109,4 +122,11 @@ function closureBlockedMessage(err: unknown): string {
     return 'Operational blockers remain. Provide an override reason or resolve them first.';
   }
   return 'Term closure is blocked. Resolve the listed conditions first.';
+}
+
+function incompleteGradebookMessage(err: unknown): string {
+  if (err instanceof LoomisClientError && typeof err.message === 'string' && err.message.length > 0) {
+    return err.message;
+  }
+  return 'Complete scores for every enrolled student before locking the gradebook.';
 }

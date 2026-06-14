@@ -65,6 +65,47 @@ h4 {
 }
 
 @keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes gradebook-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-5px);
+  }
+  40%,
+  80% {
+    transform: translateX(5px);
+  }
+}
+
+.animate-gradebook-shake {
+  animation: gradebook-shake 0.45s ease-in-out;
+}
+
+@media print {
+  body {
+    background: white !important;
+  }
+
+  aside,
+  nav,
+  header:not(#report-card-document header),
+  [data-print-hide='true'] {
+    display: none !important;
+  }
+
+  #report-card-document {
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
 }
