@@ -1,5 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import type { ChildAttendanceResponse, ChildPublishedResultsResponse, ParentDashboardResponse } from '@loomis/contracts';
+import type {
+  ChildAttendanceResponse,
+  ChildPublishedResultsResponse,
+  ParentDashboardResponse,
+  ParentFeeStatusResponse,
+} from '@loomis/contracts';
 import type { ApiClient } from '../../http/client.js';
 import { useApiClient } from '../context.js';
 import { queryKeys } from '../keys.js';
@@ -49,6 +54,26 @@ export function useParentResults(
     queryKey: queryKeys.parent.results(tenantId, studentId ?? '', termId ?? ''),
     queryFn: () =>
       client.get<ChildPublishedResultsResponse>(`/parents/me/results?${params.toString()}`, {
+        headers: { 'X-Tenant-Id': tenantId },
+      }),
+    staleTime: STALE_MS,
+    enabled: Boolean(tenantId && studentId && termId),
+  });
+}
+
+export function useParentFees(
+  tenantId: string,
+  studentId: string | null,
+  termId: string | null,
+) {
+  const client = useApiClient();
+  const params = new URLSearchParams();
+  if (studentId) params.set('studentId', studentId);
+  if (termId) params.set('termId', termId);
+  return useQuery<ParentFeeStatusResponse>({
+    queryKey: queryKeys.parent.fees(tenantId, studentId ?? '', termId ?? ''),
+    queryFn: () =>
+      client.get<ParentFeeStatusResponse>(`/parents/me/fees?${params.toString()}`, {
         headers: { 'X-Tenant-Id': tenantId },
       }),
     staleTime: STALE_MS,

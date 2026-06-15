@@ -23,7 +23,8 @@ import {
 } from '@loomis/ui-web';
 import { useMemo, useState } from 'react';
 
-import { PageBody, PageHeader } from '@/components/parent/parent-shell';
+import { PageBody } from '@/components/parent/parent-shell';
+import { StudentAssignmentsHero } from '@/components/student/student-assignments-hero';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { formatSubjectLabel } from '@/lib/academic/ops-labels';
 import { academicErrorMessage } from '@/lib/academic/academic-errors';
@@ -112,82 +113,89 @@ export default function StudentAssignmentsPage() {
   const terms = termsQuery.data?.terms ?? [];
   const [termId, setTermId] = useState<string | null>(null);
   const resolvedTermId = termId ?? pickOpenTermId(terms);
+  const termLabel = terms.find((term) => term.id === resolvedTermId)?.name ?? null;
 
   const assignmentsQuery = useMyAssignments(tenantId ?? '', resolvedTermId);
   const submitAssignment = useSubmitAssignment(tenantId ?? '');
 
+  const assignments = assignmentsQuery.data?.assignments ?? [];
+  const submittedCount = assignments.filter((item) => item.mySubmission != null).length;
+  const pendingCount = assignments.length - submittedCount;
+
   if (session?.role !== 'student') {
     return (
-      <>
-        <PageHeader title="Assignments" description="Student homework portal" />
-        <PageBody>
-          <Alert>
-            <AlertDescription>This page is for student accounts.</AlertDescription>
-          </Alert>
-        </PageBody>
-      </>
+      <PageBody className="max-w-[900px] px-4 py-5 sm:px-6 lg:px-12 lg:py-8">
+        <Alert>
+          <AlertDescription>This page is for student accounts.</AlertDescription>
+        </Alert>
+      </PageBody>
     );
   }
 
   return (
-    <>
-      <PageHeader title="My Assignments" description="Published homework for your class" />
-      <PageBody>
-        <div className="space-y-4">
-          {terms.length > 0 ? (
-            <div className={`${ACADEMIC_UI.dataPanel} p-4`}>
-              <Label className="text-[12px] text-neutral-500">Term</Label>
-              <Select value={resolvedTermId ?? ''} onValueChange={setTermId}>
-                <SelectTrigger className="mt-2 max-w-xs">
-                  <SelectValue placeholder="Select term" />
-                </SelectTrigger>
-                <SelectContent>
-                  {terms.map((term) => (
-                    <SelectItem key={term.id} value={term.id}>
-                      {term.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : null}
+    <PageBody className="max-w-[900px] px-4 py-5 sm:px-6 lg:px-12 lg:py-8">
+      <div className="space-y-6">
+        <StudentAssignmentsHero
+          termLabel={termLabel}
+          totalCount={assignments.length}
+          submittedCount={submittedCount}
+          pendingCount={pendingCount}
+          isLoading={assignmentsQuery.isLoading}
+        />
 
-          {actionError ? (
-            <Alert variant="destructive">
-              <AlertDescription>{actionError}</AlertDescription>
-            </Alert>
-          ) : null}
+        {terms.length > 1 ? (
+          <div className={`${ACADEMIC_UI.dataPanel} p-4`}>
+            <Label className="text-[12px] text-neutral-500">Term</Label>
+            <Select value={resolvedTermId ?? ''} onValueChange={setTermId}>
+              <SelectTrigger className="mt-2 max-w-xs">
+                <SelectValue placeholder="Select term" />
+              </SelectTrigger>
+              <SelectContent>
+                {terms.map((term) => (
+                  <SelectItem key={term.id} value={term.id}>
+                    {term.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
 
-          {assignmentsQuery.isLoading ? (
-            <Skeleton className="h-48 w-full rounded-2xl" />
-          ) : (assignmentsQuery.data?.assignments ?? []).length === 0 ? (
-            <div className={`${ACADEMIC_UI.dataPanel} p-8 text-center`}>
-              <p className="text-[13px] text-neutral-500">No published assignments for this term.</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {(assignmentsQuery.data?.assignments ?? []).map((item) => (
-                <AssignmentCard
-                  key={item.id}
-                  item={item}
-                  isSubmitting={submittingId === item.id}
-                  onSubmit={async (assignmentId, content) => {
-                    setActionError(null);
-                    setSubmittingId(assignmentId);
-                    try {
-                      await submitAssignment.mutateAsync({ assignmentId, content });
-                    } catch (err) {
-                      setActionError(academicErrorMessage(err));
-                    } finally {
-                      setSubmittingId(null);
-                    }
-                  }}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </PageBody>
-    </>
+        {actionError ? (
+          <Alert variant="destructive">
+            <AlertDescription>{actionError}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        {assignmentsQuery.isLoading ? (
+          <Skeleton className="h-48 w-full rounded-2xl" />
+        ) : assignments.length === 0 ? (
+          <div className={`${ACADEMIC_UI.dataPanel} p-8 text-center`}>
+            <p className="text-[13px] text-neutral-500">No published assignments for this term.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {assignments.map((item) => (
+              <AssignmentCard
+                key={item.id}
+                item={item}
+                isSubmitting={submittingId === item.id}
+                onSubmit={async (assignmentId, content) => {
+                  setActionError(null);
+                  setSubmittingId(assignmentId);
+                  try {
+                    await submitAssignment.mutateAsync({ assignmentId, content });
+                  } catch (err) {
+                    setActionError(academicErrorMessage(err));
+                  } finally {
+                    setSubmittingId(null);
+                  }
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </PageBody>
   );
 }
