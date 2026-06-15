@@ -4,12 +4,15 @@ import { useState } from 'react';
 import type { IvpCasePriority } from '@loomis/contracts';
 import { usePlatformRiskCases } from '@loomis/api-client';
 import { Alert, AlertDescription } from '@loomis/ui-web';
-import { ShieldCheck } from 'lucide-react';
+import { AlertTriangle, ShieldCheck, ShieldAlert, Eye } from 'lucide-react';
 
-import { PageBody, PageHeader } from '@/components/platform/platform-shell';
+import { PlatformConsoleHero } from '@/components/platform/platform-console-hero';
+import { PageBody } from '@/components/platform/platform-shell';
 import { RiskSummaryBand } from '@/components/platform/risk-summary-band';
 import { RiskCaseTable } from '@/components/platform/risk-case-table';
 import { RiskCaseSheet } from '@/components/platform/risk-case-sheet';
+import { PLATFORM_PAGE_CLASS } from '@/lib/platform/platform-ui';
+import { SURFACES } from '@/lib/design/surfaces';
 
 export default function RiskPage() {
   const [priorityFilter, setPriorityFilter] = useState<IvpCasePriority | null>(null);
@@ -35,12 +38,45 @@ export default function RiskPage() {
   const allClear = !isLoading && !isError && openCount === 0;
 
   return (
-    <>
-      <PageHeader
-        title="IVP Risk Cases"
-        description="Integrity Verification Protocol anomaly cases — triage, investigate, and resolve."
-      />
-      <PageBody>
+    <PageBody className={PLATFORM_PAGE_CLASS}>
+      <div className="space-y-6">
+        <PlatformConsoleHero
+          sectionLabel="Integrity verification"
+          title="IVP risk cases"
+          description="Triage, investigate, and resolve Integrity Verification Protocol anomaly cases."
+          isLoading={isLoading}
+          stats={[
+            {
+              label: 'Open cases',
+              value: String(openCount),
+              hint: 'Active investigations',
+              icon: ShieldAlert,
+              gradient: openCount > 0 ? SURFACES.kpi.g4 : SURFACES.kpi.g3,
+            },
+            {
+              label: 'Urgent',
+              value: String(counts.urgent),
+              hint: 'Highest priority',
+              icon: AlertTriangle,
+              gradient: SURFACES.kpi.g4,
+            },
+            {
+              label: 'Standard',
+              value: String(counts.standard),
+              hint: 'Normal queue',
+              icon: ShieldCheck,
+              gradient: SURFACES.kpi.g2,
+            },
+            {
+              label: 'Watchlist',
+              value: String(counts.watchlist),
+              hint: 'Monitoring only',
+              icon: Eye,
+              gradient: SURFACES.kpi.g1,
+            },
+          ]}
+        />
+
         {isError ? (
           <Alert variant="destructive">
             <AlertDescription>
@@ -48,40 +84,36 @@ export default function RiskPage() {
             </AlertDescription>
           </Alert>
         ) : allClear ? (
-          <div className="flex flex-col items-center justify-center gap-4 py-24 text-center">
-            <div className="flex size-16 items-center justify-center rounded-full bg-success/10">
-              <ShieldCheck aria-hidden className="size-8 text-success" />
+          <div className={`flex flex-col items-center justify-center gap-4 rounded-2xl border border-brand-100/40 bg-white py-24 text-center shadow-sm`}>
+            <div className="flex size-16 items-center justify-center rounded-full bg-accent-green-50">
+              <ShieldCheck aria-hidden className="size-8 text-accent-green-600" />
             </div>
             <div>
-              <p className="font-serif text-xl font-semibold text-foreground">All clear</p>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="text-xl font-extrabold text-neutral-900">All clear</p>
+              <p className="mt-1 text-[13px] text-neutral-500">
                 No active anomaly cases. The platform is clean.
               </p>
             </div>
           </div>
         ) : (
-          <div className="space-y-6">
+          <>
             <RiskSummaryBand
               counts={counts}
               activeFilter={priorityFilter}
               onFilter={setPriorityFilter}
               totalOpen={openCount}
             />
-
             <RiskCaseTable
               cases={cases}
               isLoading={isLoading}
               priorityFilter={priorityFilter}
               onRowClick={setSelectedCaseId}
             />
-          </div>
+          </>
         )}
-      </PageBody>
+      </div>
 
-      <RiskCaseSheet
-        caseId={selectedCaseId}
-        onClose={() => setSelectedCaseId(null)}
-      />
-    </>
+      <RiskCaseSheet caseId={selectedCaseId} onClose={() => setSelectedCaseId(null)} />
+    </PageBody>
   );
 }

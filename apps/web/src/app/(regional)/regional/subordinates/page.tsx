@@ -15,34 +15,35 @@ import {
   Alert,
   AlertDescription,
   Badge,
-  Button,
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
   Input,
   Sheet,
   SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
   Skeleton,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  cn,
 } from '@loomis/ui-web';
-import { Plus } from 'lucide-react';
+import { Mail, Phone, Plus, User, Users } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
-import { PageBody, PageHeader } from '@/components/regional/regional-shell';
+import { RegionalConsoleHero } from '@/components/regional/regional-console-hero';
+import { PageBody } from '@/components/regional/regional-shell';
+import {
+  FormSubmitError,
+  SmartFieldLabel,
+  SmartFormFooter,
+  SmartFormHeader,
+  SmartFormSection,
+  SmartHint,
+  smartInputClass,
+} from '@/components/shared/smart-form';
+import { REGIONAL_PAGE_CLASS, REGIONAL_UI } from '@/lib/regional/regional-ui';
+import { SURFACES } from '@/lib/design/surfaces';
 
 const createSubordinateFormSchema = z.object({
   userId: z.string().uuid('Enter a valid platform user UUID'),
@@ -135,20 +136,55 @@ export default function SubordinatesPage() {
     }
   }
 
+  const activeCount = (subordinates ?? []).filter((s) => s.status === 'active').length;
+  const pendingKyc = (subordinates ?? []).filter((s) => s.status === 'pending_kyc').length;
+
   return (
-    <>
-      <PageHeader
-        title="Subordinate Management"
-        description="Create and manage subordinates in your referral chain — US-REG-003"
-        actions={
-          <Button size="sm" onClick={() => setSheetOpen(true)}>
-            <Plus aria-hidden className="mr-1.5 size-4" />
-            Add Subordinate
-          </Button>
-        }
-      />
-      <PageBody>
-        <Alert className="mb-6">
+    <PageBody className={REGIONAL_PAGE_CLASS}>
+      <div className="space-y-6">
+        <RegionalConsoleHero
+          title="Subordinate management"
+          description="Create and manage subordinates in your referral chain — US-REG-003"
+          isLoading={isLoading}
+          actions={
+            <button type="button" className={REGIONAL_UI.btnPrimary} onClick={() => setSheetOpen(true)}>
+              <Plus aria-hidden className="size-4" />
+              Add subordinate
+            </button>
+          }
+          stats={[
+            {
+              label: 'Total',
+              value: String(subordinates?.length ?? 0),
+              hint: 'In your chain',
+              icon: Users,
+              gradient: SURFACES.kpi.g1,
+            },
+            {
+              label: 'Active',
+              value: String(activeCount),
+              hint: 'Verified',
+              icon: Users,
+              gradient: SURFACES.kpi.g2,
+            },
+            {
+              label: 'KYC pending',
+              value: String(pendingKyc),
+              hint: 'Awaiting platform ops',
+              icon: Users,
+              gradient: pendingKyc > 0 ? SURFACES.kpi.g4 : SURFACES.kpi.g3,
+            },
+            {
+              label: 'Policy',
+              value: 'Segregated',
+              hint: 'You cannot approve KYC',
+              icon: Users,
+              gradient: SURFACES.kpi.g4,
+            },
+          ]}
+        />
+
+        <Alert>
           <AlertDescription>
             You cannot approve your own subordinate&apos;s KYC — Platform Operations handles
             verification independently.
@@ -160,135 +196,172 @@ export default function SubordinatesPage() {
             <AlertDescription>Failed to load subordinates.</AlertDescription>
           </Alert>
         ) : (
-          <div className="rounded-lg border border-neutral-200 bg-white shadow-card dark:border-forest-800 dark:bg-forest-900">
-            <Table>
-              <TableHeader>
-                {table.getHeaderGroups().map((hg) => (
-                  <TableRow key={hg.id}>
-                    {hg.headers.map((header) => (
-                      <TableHead key={header.id}>
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  Array.from({ length: 4 }).map((_, i) => (
-                    <TableRow key={i}>
-                      {columns.map((_, j) => (
-                        <TableCell key={j}>
-                          <Skeleton className="h-4 w-full" />
-                        </TableCell>
+          <div className={`${REGIONAL_UI.dataPanel} overflow-hidden`}>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left text-[13px]">
+                <thead className={REGIONAL_UI.tableHeader}>
+                  {table.getHeaderGroups().map((hg) => (
+                    <tr key={hg.id}>
+                      {hg.headers.map((header) => (
+                        <th
+                          key={header.id}
+                          className="px-4 py-3 text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-500"
+                        >
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(header.column.columnDef.header, header.getContext())}
+                        </th>
                       ))}
-                    </TableRow>
-                  ))
-                ) : table.getRowModel().rows.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={columns.length} className="h-32 text-center">
-                      <p className="text-sm text-muted-foreground">No subordinates yet</p>
-                      <Button variant="link" className="mt-2" onClick={() => setSheetOpen(true)}>
-                        Create your first subordinate
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                    </tr>
+                  ))}
+                </thead>
+                <tbody>
+                  {isLoading ? (
+                    Array.from({ length: 4 }).map((_, i) => (
+                      <tr key={i} className="border-t border-brand-50/80">
+                        {columns.map((_, j) => (
+                          <td key={j} className="px-4 py-3">
+                            <Skeleton className="h-4 w-full" />
+                          </td>
+                        ))}
+                      </tr>
+                    ))
+                  ) : table.getRowModel().rows.length === 0 ? (
+                    <tr>
+                      <td colSpan={columns.length} className="px-4 py-16 text-center">
+                        <p className="text-[13px] text-neutral-500">No subordinates yet</p>
+                        <button
+                          type="button"
+                          className={`mt-3 ${REGIONAL_UI.btnPrimary}`}
+                          onClick={() => setSheetOpen(true)}
+                        >
+                          Create your first subordinate
+                        </button>
+                      </td>
+                    </tr>
+                  ) : (
+                    table.getRowModel().rows.map((row) => (
+                      <tr key={row.id} className="border-t border-brand-50/80">
+                        {row.getVisibleCells().map((cell) => (
+                          <td key={cell.id} className="px-4 py-3 text-neutral-800">
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </td>
+                        ))}
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
-      </PageBody>
+      </div>
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent className="overflow-y-auto sm:max-w-md">
-          <SheetHeader>
-            <SheetTitle className="font-serif">Add Subordinate</SheetTitle>
-            <SheetDescription>
-              The person must have a Loomis account. An invitation link is sent after creation.
-            </SheetDescription>
-          </SheetHeader>
-          <Form {...form}>
-            <form className="mt-6 space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
-              {form.formState.errors.root ? (
-                <Alert variant="destructive">
-                  <AlertDescription>{form.formState.errors.root.message}</AlertDescription>
-                </Alert>
-              ) : null}
-              <FormField
-                control={form.control}
-                name="contactName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Full name</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="contactEmail"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Personal email</FormLabel>
-                    <FormControl>
-                      <Input type="email" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="contactPhone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phone number</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="userId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Platform User ID</FormLabel>
-                    <FormControl>
-                      <Input placeholder="UUID from invitation acceptance" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Required by the referral API after the subordinate registers
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" className="w-full" disabled={createSubordinate.isPending}>
-                {createSubordinate.isPending ? 'Creating…' : 'Send Invitation'}
-              </Button>
-            </form>
-          </Form>
+        <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
+          <SmartFormHeader
+            surface="sheet"
+            eyebrow="Referral network"
+            title="Add subordinate"
+            description="They must already have a Loomis account. An invitation is sent after creation."
+          />
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+            <Form {...form}>
+              <form id="add-subordinate-form" className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
+                <FormSubmitError message={form.formState.errors.root?.message ?? null} />
+
+                <SmartFormSection title="Contact" description="How we reach them about referrals">
+                  <FormField
+                    control={form.control}
+                    name="contactName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <SmartFieldLabel>Full name</SmartFieldLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <User
+                              aria-hidden
+                              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400"
+                            />
+                            <Input {...field} className={cn(smartInputClass, 'pl-9')} />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="contactEmail"
+                      render={({ field }) => (
+                        <FormItem>
+                          <SmartFieldLabel>Personal email</SmartFieldLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Mail
+                                aria-hidden
+                                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400"
+                              />
+                              <Input type="email" {...field} className={cn(smartInputClass, 'pl-9')} />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="contactPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <SmartFieldLabel>Phone</SmartFieldLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Phone
+                                aria-hidden
+                                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400"
+                              />
+                              <Input {...field} className={cn(smartInputClass, 'pl-9')} />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </SmartFormSection>
+
+                <SmartFormSection title="Platform account" description="UUID from invitation acceptance">
+                  <FormField
+                    control={form.control}
+                    name="userId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Input
+                            placeholder="00000000-0000-0000-0000-000000000000"
+                            {...field}
+                            className={cn(smartInputClass, 'font-mono text-[12px]')}
+                          />
+                        </FormControl>
+                        <SmartHint>Required by the referral API after the subordinate registers.</SmartHint>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </SmartFormSection>
+              </form>
+            </Form>
+          </div>
+          <SmartFormFooter
+            formId="add-subordinate-form"
+            submitLabel="Send invitation"
+            pending={createSubordinate.isPending}
+            onCancel={() => setSheetOpen(false)}
+          />
         </SheetContent>
       </Sheet>
-    </>
+    </PageBody>
   );
 }

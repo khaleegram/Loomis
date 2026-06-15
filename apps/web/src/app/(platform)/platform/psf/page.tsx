@@ -1,25 +1,16 @@
 'use client';
 
-import { formatDistanceToNow } from 'date-fns';
-import { formatKobo } from '@loomis/core';
-import { usePlatformTenants, usePlatformPsfRates } from '@loomis/api-client';
-import {
-  Badge,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Skeleton,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@loomis/ui-web';
 import Link from 'next/link';
+import { formatDistanceToNow } from 'date-fns';
+import { Building2, Coins, ShieldCheck, TrendingUp } from 'lucide-react';
+import { formatKobo } from '@loomis/core';
+import { usePlatformPsfRates, usePlatformTenants } from '@loomis/api-client';
+import { Skeleton } from '@loomis/ui-web';
 
-import { PageBody, PageHeader } from '@/components/platform/platform-shell';
+import { PlatformConsoleHero } from '@/components/platform/platform-console-hero';
+import { PageBody } from '@/components/platform/platform-shell';
+import { PLATFORM_PAGE_CLASS, PLATFORM_UI } from '@/lib/platform/platform-ui';
+import { SURFACES } from '@/lib/design/surfaces';
 
 export default function PsfPage() {
   const { data: tenantsData, isLoading: tenantsLoading } = usePlatformTenants();
@@ -28,147 +19,145 @@ export default function PsfPage() {
   const isLoading = tenantsLoading || ratesLoading;
   const tenants = tenantsData?.tenants ?? [];
   const latestSnapshot = ratesData?.snapshots[0];
+  const activeSchools = tenants.filter((t) => t.status === 'active').length;
 
   return (
-    <>
-      <PageHeader
-        title="PSF Rate Configuration"
-        description="Platform-wide and per-school PSF rates. All changes require dual approval + step-up MFA."
-      />
-      <PageBody>
-        <div className="space-y-6">
-          {/* Global rate snapshot */}
-          <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle className="font-serif text-base">Global Default Rate</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {ratesLoading ? (
-                <Skeleton className="h-16 w-full" />
-              ) : latestSnapshot ? (
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="font-serif text-3xl font-semibold text-foreground">
-                      {formatKobo(latestSnapshot.rateMinor)}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Per student per term · Effective{' '}
-                      {new Date(latestSnapshot.effectiveFrom).toLocaleDateString('en-NG', {
-                        dateStyle: 'medium',
-                      })}
-                    </p>
-                  </div>
-                  <div className="text-right text-xs text-muted-foreground">
-                    <p>Last changed</p>
-                    <p className="font-medium text-foreground">
-                      {formatDistanceToNow(new Date(latestSnapshot.createdAt), {
-                        addSuffix: true,
-                      })}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No global rate configured yet.</p>
-              )}
-            </CardContent>
-          </Card>
+    <PageBody className={PLATFORM_PAGE_CLASS}>
+      <div className="space-y-6">
+        <PlatformConsoleHero
+          sectionLabel="Platform revenue"
+          title="PSF rate configuration"
+          description="Platform-wide and per-school PSF rates. All changes require dual approval and step-up MFA."
+          isLoading={isLoading}
+          stats={[
+            {
+              label: 'Global rate',
+              value: latestSnapshot ? formatKobo(latestSnapshot.rateMinor) : '—',
+              hint: 'Per student per term',
+              icon: Coins,
+              gradient: SURFACES.kpi.g1,
+            },
+            {
+              label: 'Schools',
+              value: String(tenants.length),
+              hint: `${activeSchools} active`,
+              icon: Building2,
+              gradient: SURFACES.kpi.g3,
+            },
+            {
+              label: 'Rate changes',
+              value: latestSnapshot
+                ? formatDistanceToNow(new Date(latestSnapshot.createdAt), { addSuffix: true })
+                : '—',
+              hint: 'Last global update',
+              icon: TrendingUp,
+              gradient: SURFACES.kpi.g2,
+            },
+            {
+              label: 'Integrity',
+              value: 'Protected',
+              hint: 'Zero rate permanently blocked',
+              icon: ShieldCheck,
+              gradient: SURFACES.kpi.g4,
+            },
+          ]}
+        />
 
-          {/* Per-school rate table */}
-          <Card className="overflow-hidden shadow-card">
-            <CardHeader>
-              <CardTitle className="font-serif text-base">Per-School Rates</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-b border-neutral-200 bg-neutral-50 hover:bg-neutral-50 dark:border-forest-800 dark:bg-forest-950">
-                    {['School', 'Region', 'Tier', 'PSF Rate', 'Status', ''].map((h) => (
-                      <TableHead
-                        key={h}
-                        className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-                      >
-                        {h}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
-                    Array.from({ length: 6 }).map((_, i) => (
-                      <TableRow key={i}>
-                        {Array.from({ length: 6 }).map((__, j) => (
-                          <TableCell key={j}>
-                            <Skeleton className="h-4 w-full" />
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))
-                  ) : tenants.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="py-16 text-center text-sm text-muted-foreground">
-                        No schools provisioned.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    tenants.map((tenant) => (
-                      <TableRow
-                        key={tenant.id}
-                        className="border-b border-neutral-100 dark:border-forest-800"
-                      >
-                        <TableCell className="font-medium">{tenant.name}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {tenant.region}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary" className="text-xs capitalize">
-                            {tenant.tierCode}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-mono text-sm tabular-nums">
-                          {tenant.currentPsfRateMinor != null
-                            ? formatKobo(tenant.currentPsfRateMinor)
-                            : (
-                              <span className="text-xs text-muted-foreground italic">
-                                Tier default
-                              </span>
-                            )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              tenant.status === 'active'
-                                ? 'default'
-                                : tenant.status === 'suspended'
-                                  ? 'destructive'
-                                  : 'secondary'
-                            }
-                          >
-                            {tenant.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Link
-                            href={`/platform/tenants/${tenant.id}`}
-                            className="text-xs font-medium text-brand-600 hover:underline dark:text-mint-400"
-                          >
-                            Manage →
-                          </Link>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-
-          <p className="text-xs text-muted-foreground">
-            CON-011: PSF rate of zero is permanently blocked. All rate changes are
-            dual-approved and require step-up MFA. Navigate to a school&apos;s detail page to
-            initiate a rate change request.
-          </p>
+        <div className={`${PLATFORM_UI.dataPanel} p-5 sm:p-6`}>
+          <p className={PLATFORM_UI.sectionLabel}>Global default</p>
+          {ratesLoading ? (
+            <Skeleton className="mt-3 h-16 w-full max-w-md rounded-xl" />
+          ) : latestSnapshot ? (
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-3xl font-extrabold tabular-nums text-neutral-900">
+                  {formatKobo(latestSnapshot.rateMinor)}
+                </p>
+                <p className="mt-1 text-[13px] text-neutral-500">
+                  Effective{' '}
+                  {new Date(latestSnapshot.effectiveFrom).toLocaleDateString('en-NG', {
+                    dateStyle: 'medium',
+                  })}
+                </p>
+              </div>
+              <p className="text-[12px] text-neutral-500">
+                Navigate to a school detail page to request a tenant-specific override.
+              </p>
+            </div>
+          ) : (
+            <p className="mt-3 text-[13px] text-neutral-500">No global rate configured yet.</p>
+          )}
         </div>
-      </PageBody>
-    </>
+
+        <div className={`${PLATFORM_UI.dataPanel} overflow-hidden`}>
+          <div className="border-b border-brand-50/80 px-5 py-4">
+            <p className={PLATFORM_UI.sectionLabel}>Per-school rates</p>
+            <p className="mt-1 text-[14px] font-semibold text-neutral-900">Tenant PSF snapshots</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-left text-[13px]">
+              <thead className={PLATFORM_UI.tableHeader}>
+                <tr>
+                  {['School', 'Region', 'Tier', 'PSF rate', 'Status', ''].map((head) => (
+                    <th
+                      key={head || 'action'}
+                      className="px-4 py-3 text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-500"
+                    >
+                      {head}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i} className="border-t border-brand-50/80">
+                      <td colSpan={6} className="px-4 py-3">
+                        <Skeleton className="h-4 w-full" />
+                      </td>
+                    </tr>
+                  ))
+                ) : tenants.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-12 text-center text-neutral-500">
+                      No schools provisioned.
+                    </td>
+                  </tr>
+                ) : (
+                  tenants.map((tenant) => (
+                    <tr key={tenant.id} className="border-t border-brand-50/80">
+                      <td className="px-4 py-3 font-semibold text-neutral-900">{tenant.name}</td>
+                      <td className="px-4 py-3 text-neutral-600">{tenant.region}</td>
+                      <td className="px-4 py-3 capitalize text-neutral-600">{tenant.tierCode}</td>
+                      <td className="px-4 py-3 font-mono tabular-nums text-neutral-800">
+                        {tenant.currentPsfRateMinor != null ? (
+                          formatKobo(tenant.currentPsfRateMinor)
+                        ) : (
+                          <span className="text-neutral-400">Tier default</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 capitalize text-neutral-600">{tenant.status}</td>
+                      <td className="px-4 py-3 text-right">
+                        <Link
+                          href={`/platform/tenants/${tenant.id}`}
+                          className="text-[12px] font-semibold text-brand-700 hover:underline"
+                        >
+                          Manage →
+                        </Link>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <p className="text-[12px] text-neutral-500">
+          CON-011: PSF rate of zero is permanently blocked. All rate changes are dual-approved and
+          require step-up MFA.
+        </p>
+      </div>
+    </PageBody>
   );
 }

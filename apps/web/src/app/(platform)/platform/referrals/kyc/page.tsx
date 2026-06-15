@@ -1,11 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Badge, Button, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@loomis/ui-web';
-import { Check, X } from 'lucide-react';
+import { Badge, Button, Skeleton } from '@loomis/ui-web';
+import { Check, FileCheck, ShieldCheck, X } from 'lucide-react';
 import { format } from 'date-fns';
 
-import { PageBody, PageHeader } from '@/components/platform/platform-shell';
+import { PlatformConsoleHero } from '@/components/platform/platform-console-hero';
+import { PageBody } from '@/components/platform/platform-shell';
+import { PLATFORM_PAGE_CLASS, PLATFORM_UI } from '@/lib/platform/platform-ui';
+import { SURFACES } from '@/lib/design/surfaces';
 import { useApiClient } from '@loomis/api-client';
 import { useQuery } from '@tanstack/react-query';
 
@@ -36,77 +39,148 @@ export default function KycPage() {
   const records = data?.records ?? [];
 
   async function handleApprove(kycId: string) {
+    setApproving(kycId);
     try {
       await client.post(`/platform/referral/kyc/${kycId}/approve`, {});
       refetch();
-    } catch { /* handled */ }
+    } catch {
+      /* handled */
+    }
     setApproving(null);
   }
 
   async function handleReject(kycId: string) {
+    setRejecting(kycId);
     try {
       await client.post(`/platform/referral/kyc/${kycId}/reject`, { reason: 'KYC requirements not met' });
       refetch();
-    } catch { /* handled */ }
+    } catch {
+      /* handled */
+    }
     setRejecting(null);
   }
 
   return (
-    <>
-      <PageHeader
-        title="KYC Verification"
-        description="Review and process pending KYC submissions from regional managers — US-REF-001"
-      />
-      <PageBody>
-        {isLoading ? (
-          <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}</div>
-        ) : isError ? (
-          <p className="text-sm text-destructive">Failed to load KYC records.</p>
-        ) : records.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border py-16">
-            <Check className="mb-2 size-8 text-success" />
-            <p className="text-sm text-muted-foreground">No pending KYC verifications.</p>
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Participant</TableHead>
-                <TableHead>Submitted</TableHead>
-                <TableHead>Documents</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {records.map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell className="font-medium">{r.participantName ?? r.participantId?.slice(0, 8)}</TableCell>
-                  <TableCell className="text-muted-foreground">{r.submittedAt ? format(new Date(r.submittedAt), 'dd/MM/yyyy') : '—'}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {(r.documentTypes ?? []).map((d) => (
-                        <Badge key={d} variant="outline" className="text-[10px]">{d}</Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell><Badge variant="warning">{r.status}</Badge></TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button size="sm" variant="default" onClick={() => handleApprove(r.id)} disabled={approving === r.id}>
-                        <Check className="mr-1 size-3.5" /> Approve
-                      </Button>
-                      <Button size="sm" variant="destructive" onClick={() => handleReject(r.id)} disabled={rejecting === r.id}>
-                        <X className="mr-1 size-3.5" /> Reject
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
+    <PageBody className={PLATFORM_PAGE_CLASS}>
+      <div className="space-y-6">
+        <PlatformConsoleHero
+          sectionLabel="Referral verification"
+          title="KYC verification queue"
+          description="Review and process pending KYC submissions from regional managers — US-REF-001"
+          isLoading={isLoading}
+          stats={[
+            {
+              label: 'Pending',
+              value: String(records.length),
+              hint: 'Awaiting review',
+              icon: FileCheck,
+              gradient: records.length > 0 ? SURFACES.kpi.g4 : SURFACES.kpi.g3,
+            },
+            {
+              label: 'Queue',
+              value: records.length === 0 ? 'Clear' : 'Active',
+              hint: 'Verification status',
+              icon: ShieldCheck,
+              gradient: SURFACES.kpi.g2,
+            },
+            {
+              label: 'Policy',
+              value: 'Segregated',
+              hint: 'RM cannot approve own sub',
+              icon: ShieldCheck,
+              gradient: SURFACES.kpi.g1,
+            },
+            {
+              label: 'SLA',
+              value: '72h',
+              hint: 'Target review window',
+              icon: FileCheck,
+              gradient: SURFACES.kpi.g4,
+            },
+          ]}
+        />
+
+        <div className={`${PLATFORM_UI.dataPanel} overflow-hidden`}>
+          {isLoading ? (
+            <div className="space-y-3 p-5">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-16 w-full rounded-xl" />
               ))}
-            </TableBody>
-          </Table>
-        )}
-      </PageBody>
-    </>
+            </div>
+          ) : isError ? (
+            <p className="p-6 text-[13px] text-destructive">Failed to load KYC records.</p>
+          ) : records.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="flex size-14 items-center justify-center rounded-full bg-accent-green-50">
+                <Check aria-hidden className="size-7 text-accent-green-600" />
+              </div>
+              <p className="mt-4 text-[15px] font-semibold text-neutral-800">No pending KYC verifications</p>
+              <p className="mt-1 text-[13px] text-neutral-500">All submissions have been processed.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left text-[13px]">
+                <thead className={PLATFORM_UI.tableHeader}>
+                  <tr>
+                    {['Participant', 'Submitted', 'Documents', 'Status', 'Actions'].map((h) => (
+                      <th
+                        key={h}
+                        className="px-4 py-3 text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-500"
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {records.map((r) => (
+                    <tr key={r.id} className="border-t border-brand-50/80">
+                      <td className="px-4 py-3 font-medium text-neutral-900">
+                        {r.participantName ?? r.participantId?.slice(0, 8)}
+                      </td>
+                      <td className="px-4 py-3 text-neutral-500">
+                        {r.submittedAt ? format(new Date(r.submittedAt), 'dd/MM/yyyy') : '—'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          {(r.documentTypes ?? []).map((d) => (
+                            <Badge key={d} variant="outline" className="text-[10px]">
+                              {d}
+                            </Badge>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge variant="warning">{r.status}</Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            className={PLATFORM_UI.btnPrimary}
+                            onClick={() => handleApprove(r.id)}
+                            disabled={approving === r.id}
+                          >
+                            <Check aria-hidden className="size-3.5" /> Approve
+                          </button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleReject(r.id)}
+                            disabled={rejecting === r.id}
+                          >
+                            <X aria-hidden className="size-3.5" /> Reject
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    </PageBody>
   );
 }

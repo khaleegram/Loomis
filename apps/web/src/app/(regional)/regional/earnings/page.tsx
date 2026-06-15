@@ -14,16 +14,14 @@ import {
   Badge,
   ProgressStrip,
   Skeleton,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
   cn,
 } from '@loomis/ui-web';
 
-import { PageBody, PageHeader } from '@/components/regional/regional-shell';
+import { RegionalConsoleHero } from '@/components/regional/regional-console-hero';
+import { PageBody } from '@/components/regional/regional-shell';
+import { REGIONAL_PAGE_CLASS, REGIONAL_UI } from '@/lib/regional/regional-ui';
+import { SURFACES } from '@/lib/design/surfaces';
+import { AlertTriangle, TrendingUp, Wallet } from 'lucide-react';
 
 function groupByCycle(
   earnings: EarningEntryResponse[],
@@ -90,149 +88,143 @@ export default function ReferralEarningsPage() {
   const heldTotal = summary?.totalHeldMinor ?? 0;
 
   return (
-    <>
-      <PageHeader
-        title="Referral Earnings"
-        description="Payout-cycle statement for your referral network — US-REG-004"
-      />
-      <PageBody>
-        <div className="space-y-6">
-          {/* Summary strip */}
-          <div className="grid grid-cols-1 gap-4 border-b border-neutral-200 pb-6 dark:border-forest-800 sm:grid-cols-3">
-            {isLoading ? (
-              Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-16 w-full" />
-              ))
-            ) : (
-              <>
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500">
-                    Current Cycle Accrued
-                  </p>
-                  <p className="mt-1 font-mono text-2xl font-semibold tabular-nums">
-                    {formatKobo(summary?.totalAccruedMinor ?? 0)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500">
-                    Total Paid to Date
-                  </p>
-                  <p className="mt-1 font-mono text-2xl font-semibold tabular-nums">
-                    {formatKobo(summary?.totalPaidMinor ?? 0)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500">
-                    Eligible for Payout
-                  </p>
-                  <p className="mt-1 font-mono text-2xl font-semibold tabular-nums text-gold-600 dark:text-gold-400">
-                    {formatKobo(summary?.totalEligibleMinor ?? 0)}
-                  </p>
-                </div>
-              </>
-            )}
+    <PageBody className={REGIONAL_PAGE_CLASS}>
+      <div className="space-y-6">
+        <RegionalConsoleHero
+          title="Referral earnings"
+          description="Payout-cycle statement for your referral network — US-REG-004"
+          isLoading={isLoading}
+          stats={[
+            {
+              label: 'Accrued',
+              value: formatKobo(summary?.totalAccruedMinor ?? 0),
+              hint: 'Current cycle',
+              icon: TrendingUp,
+              gradient: SURFACES.kpi.g1,
+            },
+            {
+              label: 'Paid',
+              value: formatKobo(summary?.totalPaidMinor ?? 0),
+              hint: 'Lifetime',
+              icon: Wallet,
+              gradient: SURFACES.kpi.g2,
+            },
+            {
+              label: 'Eligible',
+              value: formatKobo(summary?.totalEligibleMinor ?? 0),
+              hint: 'Ready for payout',
+              icon: Wallet,
+              gradient: SURFACES.kpi.g3,
+            },
+            {
+              label: 'Held',
+              value: formatKobo(heldTotal),
+              hint: 'IVP / disputes',
+              icon: AlertTriangle,
+              gradient: heldTotal > 0 ? SURFACES.kpi.g4 : SURFACES.kpi.g4,
+            },
+          ]}
+        />
+
+        {!isLoading && capEntries.length > 0 ? (
+          <ProgressStrip
+            label="40% per-tenant payout cap (current cycle)"
+            valueLabel={`${maxCapPct.toFixed(0)}% of cap used`}
+            percent={maxCapPct}
+            nearCap={maxCapPct >= 85}
+          />
+        ) : null}
+
+        {!isLoading && heldTotal > 0 ? (
+          <Alert variant="destructive">
+            <AlertDescription>
+              <span className="font-mono font-semibold">{formatKobo(heldTotal)}</span> held due to
+              IVP investigations or disputes — shown separately below.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        <div className={`${REGIONAL_UI.dataPanel} overflow-hidden`}>
+          <div className="border-b border-brand-50/80 px-5 py-4">
+            <p className={REGIONAL_UI.sectionLabel}>Statement</p>
+            <p className="mt-1 text-[14px] font-semibold text-neutral-900">Earnings by payout cycle</p>
           </div>
 
-          {!isLoading && capEntries.length > 0 ? (
-            <ProgressStrip
-              label="40% per-tenant payout cap (current cycle)"
-              valueLabel={`${maxCapPct.toFixed(0)}% of cap used`}
-              percent={maxCapPct}
-              nearCap={maxCapPct >= 85}
-            />
-          ) : null}
-
-          {!isLoading && heldTotal > 0 ? (
-            <Alert variant="destructive">
-              <AlertDescription>
-                <span className="font-mono font-semibold">{formatKobo(heldTotal)}</span> held due
-                to IVP investigations or disputes — shown separately below.
-              </AlertDescription>
-            </Alert>
-          ) : null}
-
-          {/* Bank statement body */}
-          <div className="rounded-lg border border-neutral-200 bg-white dark:border-forest-800 dark:bg-forest-900">
-            <div className="border-b border-neutral-200 px-6 py-4 dark:border-forest-800">
-              <h2 className="font-serif text-base font-semibold">Earnings Statement</h2>
-              <p className="text-xs text-muted-foreground">Grouped by payout cycle</p>
+          {isLoading ? (
+            <div className="space-y-4 p-6">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-24 w-full rounded-xl" />
+              ))}
             </div>
-
-            {isLoading ? (
-              <div className="space-y-4 p-6">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-24 w-full" />
-                ))}
-              </div>
-            ) : grouped.length === 0 ? (
-              <p className="p-8 text-center text-sm text-muted-foreground">
-                No earnings recorded yet. Onboard schools to begin accruing referral income.
-              </p>
-            ) : (
-              grouped.map(({ cycle, entries }) => (
-                <div
-                  key={cycle?.id ?? 'unassigned'}
-                  className="border-b border-neutral-100 last:border-0 dark:border-forest-800"
-                >
-                  <div className="bg-neutral-50 px-6 py-3 dark:bg-forest-950">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                      {cycle
-                        ? `${new Date(cycle.periodStart).toLocaleDateString('en-NG')} — ${new Date(cycle.periodEnd).toLocaleDateString('en-NG')}`
-                        : 'Unassigned cycle'}
-                    </p>
-                    {cycle ? (
-                      <Badge variant="outline" className="mt-1 text-[10px]">
-                        {cycle.status}
-                      </Badge>
-                    ) : null}
-                  </div>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>School</TableHead>
-                        <TableHead>PSF Settled</TableHead>
-                        <TableHead>Your Share</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
+          ) : grouped.length === 0 ? (
+            <p className="p-8 text-center text-[13px] text-neutral-500">
+              No earnings recorded yet. Onboard schools to begin accruing referral income.
+            </p>
+          ) : (
+            grouped.map(({ cycle, entries }) => (
+              <div key={cycle?.id ?? 'unassigned'} className="border-b border-brand-50/80 last:border-0">
+                <div className="bg-gradient-to-r from-neutral-50 to-brand-50/30 px-5 py-3">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-neutral-500">
+                    {cycle
+                      ? `${new Date(cycle.periodStart).toLocaleDateString('en-NG')} — ${new Date(cycle.periodEnd).toLocaleDateString('en-NG')}`
+                      : 'Unassigned cycle'}
+                  </p>
+                  {cycle ? (
+                    <Badge variant="outline" className="mt-1 text-[10px]">
+                      {cycle.status}
+                    </Badge>
+                  ) : null}
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-left text-[13px]">
+                    <thead className={REGIONAL_UI.tableHeader}>
+                      <tr>
+                        {['School', 'PSF settled', 'Your share', 'Status'].map((h) => (
+                          <th
+                            key={h}
+                            className="px-4 py-3 text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-500"
+                          >
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
                       {entries.map((e) => (
-                        <TableRow
+                        <tr
                           key={e.id}
                           className={cn(
-                            'font-mono tabular-nums',
-                            e.status === 'held' && 'bg-danger/5',
+                            'border-t border-brand-50/80 font-mono tabular-nums',
+                            e.status === 'held' && 'bg-red-50/50',
                           )}
                         >
-                          <TableCell className="text-xs">{e.tenantId.slice(0, 8)}…</TableCell>
-                          <TableCell>{formatKobo(e.psfSettledAmountMinor)}</TableCell>
-                          <TableCell>{formatKobo(e.amountMinor)}</TableCell>
-                          <TableCell>
+                          <td className="px-4 py-3 text-[12px] text-neutral-700">{e.tenantId.slice(0, 8)}…</td>
+                          <td className="px-4 py-3 text-neutral-800">{formatKobo(e.psfSettledAmountMinor)}</td>
+                          <td className="px-4 py-3 text-neutral-800">{formatKobo(e.amountMinor)}</td>
+                          <td className="px-4 py-3">
                             <span
                               className={cn(
-                                'text-xs',
-                                e.status === 'held' && 'font-semibold text-danger',
-                                e.status === 'paid' && 'text-success',
+                                'text-[12px]',
+                                e.status === 'held' && 'font-semibold text-destructive',
+                                e.status === 'paid' && 'text-accent-green-700',
                               )}
                             >
                               {statusLabel(e.status)}
                             </span>
                             {e.holdReason ? (
-                              <p className="mt-0.5 font-sans text-[10px] text-muted-foreground">
-                                {e.holdReason}
-                              </p>
+                              <p className="mt-0.5 font-sans text-[10px] text-neutral-500">{e.holdReason}</p>
                             ) : null}
-                          </TableCell>
-                        </TableRow>
+                          </td>
+                        </tr>
                       ))}
-                    </TableBody>
-                  </Table>
+                    </tbody>
+                  </table>
                 </div>
-              ))
-            )}
-          </div>
+              </div>
+            ))
+          )}
         </div>
-      </PageBody>
-    </>
+      </div>
+    </PageBody>
   );
 }

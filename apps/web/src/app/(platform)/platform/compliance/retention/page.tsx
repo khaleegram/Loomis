@@ -15,19 +15,13 @@ import {
   SelectTrigger,
   SelectValue,
   Skeleton,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
 } from '@loomis/ui-web';
+import { FileText, Scale, Shield } from 'lucide-react';
 
-import { PageBody, PageHeader } from '@/components/platform/platform-shell';
+import { PlatformConsoleHero } from '@/components/platform/platform-console-hero';
+import { PageBody } from '@/components/platform/platform-shell';
+import { PLATFORM_PAGE_CLASS, PLATFORM_UI } from '@/lib/platform/platform-ui';
+import { SURFACES } from '@/lib/design/surfaces';
 
 const RETENTION_PRESETS = [
   { label: '1 year', days: 365 },
@@ -53,12 +47,12 @@ function RetentionRow({ schedule }: { schedule: RetentionScheduleResponse }) {
   const presetValue = RETENTION_PRESETS.find((p) => p.days === schedule.retentionDays)?.days;
 
   return (
-    <TableRow>
-      <TableCell className="font-medium capitalize">
+    <tr className="border-t border-brand-50/80">
+      <td className="px-4 py-3 font-medium capitalize text-neutral-900">
         {schedule.dataCategory.replace(/_/g, ' ')}
-      </TableCell>
-      <TableCell className="max-w-md text-xs text-muted-foreground">{schedule.description}</TableCell>
-      <TableCell>
+      </td>
+      <td className="max-w-md px-4 py-3 text-[12px] text-neutral-500">{schedule.description}</td>
+      <td className="px-4 py-3">
         <Select
           value={String(presetValue ?? schedule.retentionDays)}
           onValueChange={handleChange}
@@ -80,115 +74,175 @@ function RetentionRow({ schedule }: { schedule: RetentionScheduleResponse }) {
             ) : null}
           </SelectContent>
         </Select>
-      </TableCell>
-      <TableCell>
+      </td>
+      <td className="px-4 py-3">
         <Badge variant="outline">{schedule.anonymiseOnly ? 'Anonymise' : 'Delete'}</Badge>
-      </TableCell>
-    </TableRow>
+      </td>
+    </tr>
   );
 }
 
+type Tab = 'retention' | 'consent';
+
 export default function RetentionConsentPage() {
+  const [tab, setTab] = useState<Tab>('retention');
   const { data: schedules, isLoading: schedulesLoading } = useRetentionSchedules();
   const { data: versions, isLoading: versionsLoading } = useConsentVersions();
 
-  return (
-    <>
-      <PageHeader
-        title="Retention & Consent"
-        description="NDPA data retention policies and consent templates — US-AUD-005"
-      />
-      <PageBody>
-        <Tabs defaultValue="retention">
-          <TabsList>
-            <TabsTrigger value="retention">Retention Policies</TabsTrigger>
-            <TabsTrigger value="consent">Consent Versions</TabsTrigger>
-          </TabsList>
+  const activeConsent = (versions ?? []).find((v) => v.isActive);
 
-          <TabsContent value="retention" className="mt-6">
-            <div className="rounded-lg border border-neutral-200 bg-white shadow-card dark:border-forest-800 dark:bg-forest-900">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Retention Period</TableHead>
-                    <TableHead>Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+  return (
+    <PageBody className={PLATFORM_PAGE_CLASS}>
+      <div className="space-y-6">
+        <PlatformConsoleHero
+          sectionLabel="Compliance · NDPA"
+          title="Retention & consent"
+          description="NDPA data retention policies and consent templates — US-AUD-005"
+          isLoading={schedulesLoading}
+          stats={[
+            {
+              label: 'Schedules',
+              value: String(schedules?.length ?? 0),
+              hint: 'Data categories',
+              icon: Scale,
+              gradient: SURFACES.kpi.g1,
+            },
+            {
+              label: 'Consent',
+              value: activeConsent?.versionLabel ?? 'None',
+              hint: 'Published version',
+              icon: FileText,
+              gradient: SURFACES.kpi.g2,
+            },
+            {
+              label: 'Versions',
+              value: String(versions?.length ?? 0),
+              hint: 'Historical records',
+              icon: Shield,
+              gradient: SURFACES.kpi.g3,
+            },
+            {
+              label: 'Policy',
+              value: 'NDPA',
+              hint: '2023 compliant',
+              icon: Shield,
+              gradient: SURFACES.kpi.g4,
+            },
+          ]}
+        />
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className={tab === 'retention' ? PLATFORM_UI.chipActive : PLATFORM_UI.chipInactive}
+            onClick={() => setTab('retention')}
+          >
+            Retention policies
+          </button>
+          <button
+            type="button"
+            className={tab === 'consent' ? PLATFORM_UI.chipActive : PLATFORM_UI.chipInactive}
+            onClick={() => setTab('consent')}
+          >
+            Consent versions
+          </button>
+        </div>
+
+        {tab === 'retention' ? (
+          <div className={`${PLATFORM_UI.dataPanel} overflow-hidden`}>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left text-[13px]">
+                <thead className={PLATFORM_UI.tableHeader}>
+                  <tr>
+                    {['Category', 'Description', 'Retention period', 'Action'].map((h) => (
+                      <th
+                        key={h}
+                        className="px-4 py-3 text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-500"
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
                   {schedulesLoading ? (
                     Array.from({ length: 4 }).map((_, i) => (
-                      <TableRow key={i}>
+                      <tr key={i} className="border-t border-brand-50/80">
                         {Array.from({ length: 4 }).map((_, j) => (
-                          <TableCell key={j}>
+                          <td key={j} className="px-4 py-3">
                             <Skeleton className="h-4 w-full" />
-                          </TableCell>
+                          </td>
                         ))}
-                      </TableRow>
+                      </tr>
                     ))
                   ) : (schedules ?? []).length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                    <tr>
+                      <td colSpan={4} className="px-4 py-12 text-center text-neutral-500">
                         No retention schedules configured
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                    </tr>
                   ) : (
                     (schedules ?? []).map((s) => <RetentionRow key={s.id} schedule={s} />)
                   )}
-                </TableBody>
-              </Table>
+                </tbody>
+              </table>
             </div>
-          </TabsContent>
-
-          <TabsContent value="consent" className="mt-6">
-            <div className="rounded-lg border border-neutral-200 bg-white shadow-card dark:border-forest-800 dark:bg-forest-900">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Version</TableHead>
-                    <TableHead>Effective</TableHead>
-                    <TableHead>Summary</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+          </div>
+        ) : (
+          <div className={`${PLATFORM_UI.dataPanel} overflow-hidden`}>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left text-[13px]">
+                <thead className={PLATFORM_UI.tableHeader}>
+                  <tr>
+                    {['Version', 'Effective', 'Summary', 'Status'].map((h) => (
+                      <th
+                        key={h}
+                        className="px-4 py-3 text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-500"
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
                   {versionsLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={4}>
+                    <tr>
+                      <td colSpan={4} className="px-4 py-3">
                         <Skeleton className="h-8 w-full" />
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                    </tr>
                   ) : (versions ?? []).length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                    <tr>
+                      <td colSpan={4} className="px-4 py-12 text-center text-neutral-500">
                         No consent versions published
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                    </tr>
                   ) : (
                     (versions ?? []).map((v) => (
-                      <TableRow key={v.id}>
-                        <TableCell className="font-mono text-sm">{v.versionLabel}</TableCell>
-                        <TableCell>
+                      <tr key={v.id} className="border-t border-brand-50/80">
+                        <td className="px-4 py-3 font-mono text-[13px] text-neutral-800">{v.versionLabel}</td>
+                        <td className="px-4 py-3 text-neutral-700">
                           {new Date(v.effectiveFrom).toLocaleDateString('en-NG')}
-                        </TableCell>
-                        <TableCell className="max-w-md truncate text-xs">{v.contentSummary}</TableCell>
-                        <TableCell>
+                        </td>
+                        <td className="max-w-md truncate px-4 py-3 text-[12px] text-neutral-500">
+                          {v.contentSummary}
+                        </td>
+                        <td className="px-4 py-3">
                           {v.isActive ? (
-                            <Badge className="bg-success/15 text-success">Active</Badge>
+                            <Badge className="bg-accent-green-100 text-accent-green-800">Active</Badge>
                           ) : (
                             <Badge variant="outline">Archived</Badge>
                           )}
-                        </TableCell>
-                      </TableRow>
+                        </td>
+                      </tr>
                     ))
                   )}
-                </TableBody>
-              </Table>
+                </tbody>
+              </table>
             </div>
-          </TabsContent>
-        </Tabs>
-      </PageBody>
-    </>
+          </div>
+        )}
+      </div>
+    </PageBody>
   );
 }

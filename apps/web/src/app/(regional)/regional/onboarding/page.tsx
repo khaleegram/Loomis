@@ -36,8 +36,11 @@ import {
 import { CheckCircle2, Lock } from 'lucide-react';
 import { uuidv7 } from 'uuidv7';
 
-import { PageBody, PageHeader } from '@/components/regional/regional-shell';
+import { RegionalConsoleHero } from '@/components/regional/regional-console-hero';
+import { PageBody } from '@/components/regional/regional-shell';
+import { REGIONAL_PAGE_CLASS, REGIONAL_UI } from '@/lib/regional/regional-ui';
 import { useOnboardingStore } from '@/lib/regional/onboarding-store';
+import { smartInputClass } from '@/components/shared/smart-form';
 
 const STEPS = ['School Identity', 'Contact', 'Attribution', 'Tier', 'Review'] as const;
 
@@ -144,44 +147,47 @@ export default function RegionalOnboardingPage() {
 
   if (success) {
     return (
-      <>
-        <PageHeader title="School Onboarded" description="Provisioning request submitted" />
-        <PageBody>
-          <Card className="mx-auto max-w-lg shadow-card">
-            <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
-              <CheckCircle2 aria-hidden className="size-12 text-success" />
-              <div>
-                <p className="font-serif text-xl font-semibold">{success.name}</p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Tracking ID: <span className="font-mono">{success.tenantId.slice(0, 13)}…</span>
-                </p>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Attribution pending KYC verification. You will be notified when the school goes live.
-              </p>
-              <Button
-                onClick={() => {
-                  setSuccess(null);
-                  idempotencyKeyRef.current = uuidv7();
-                }}
-              >
-                Onboard Another School
-              </Button>
-            </CardContent>
-          </Card>
-        </PageBody>
-      </>
+      <PageBody className={REGIONAL_PAGE_CLASS}>
+        <div className="space-y-6">
+          <RegionalConsoleHero
+            title="School onboarded"
+            description="Provisioning request submitted successfully"
+          />
+          <div className={`${REGIONAL_UI.dataPanel} mx-auto max-w-lg p-8 text-center`}>
+            <CheckCircle2 aria-hidden className="mx-auto size-12 text-accent-green-600" />
+            <p className="mt-4 text-xl font-extrabold text-neutral-900">{success.name}</p>
+            <p className="mt-2 text-[13px] text-neutral-500">
+              Tracking ID: <span className="font-mono">{success.tenantId.slice(0, 13)}…</span>
+            </p>
+            <p className="mt-4 text-[13px] text-neutral-500">
+              Attribution pending KYC verification. You will be notified when the school goes live.
+            </p>
+            <button
+              type="button"
+              className={`mt-6 ${REGIONAL_UI.btnPrimary}`}
+              onClick={() => {
+                setSuccess(null);
+                idempotencyKeyRef.current = uuidv7();
+              }}
+            >
+              Onboard another school
+            </button>
+          </div>
+        </div>
+      </PageBody>
     );
   }
 
   return (
-    <>
-      <PageHeader
-        title="Onboard a School"
-        description="Submit a new school to your referral network — US-REG-002"
-      />
-      <PageBody>
-        <div className="-mx-6 -mt-6 flex min-h-[calc(100vh-8rem)] flex-col lg:flex-row">
+    <PageBody className={`${REGIONAL_PAGE_CLASS} !px-0`}>
+      <div className="space-y-0">
+        <div className="px-4 sm:px-6 lg:px-7">
+          <RegionalConsoleHero
+            title="Onboard a school"
+            description="Submit a new school to your referral network — US-REG-002"
+          />
+        </div>
+        <div className="-mt-2 flex min-h-[calc(100vh-12rem)] flex-col lg:flex-row">
           {/* Split Heritage brand panel */}
           <aside className="flex w-full flex-col justify-between bg-brand-700 px-8 py-10 text-white lg:w-[40%] lg:min-h-full dark:bg-forest-800">
             <div>
@@ -237,7 +243,7 @@ export default function RegionalOnboardingPage() {
                         <FormItem>
                           <FormLabel>School name</FormLabel>
                           <FormControl>
-                            <Input placeholder="e.g. Grace Academy" {...field} />
+                            <Input placeholder="e.g. Grace Academy" className={smartInputClass} {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -279,7 +285,7 @@ export default function RegionalOnboardingPage() {
                         <FormItem>
                           <FormLabel>School contact email</FormLabel>
                           <FormControl>
-                            <Input type="email" placeholder="admin@school.edu.ng" {...field} />
+                            <Input type="email" placeholder="admin@school.edu.ng" className={smartInputClass} {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -292,7 +298,7 @@ export default function RegionalOnboardingPage() {
                         <FormItem>
                           <FormLabel>Physical address</FormLabel>
                           <FormControl>
-                            <Input placeholder="Street, LGA, State" {...field} />
+                            <Input placeholder="Street, LGA, State" className={smartInputClass} {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -392,20 +398,20 @@ export default function RegionalOnboardingPage() {
                     </Button>
                   ) : null}
                   {draft.step < 4 ? (
-                    <Button type="button" className="flex-1" onClick={() => void handleNext()}>
+                    <button type="button" className={`flex-1 ${REGIONAL_UI.btnPrimary}`} onClick={() => void handleNext()}>
                       Continue
-                    </Button>
+                    </button>
                   ) : (
-                    <Button type="submit" className="flex-1" disabled={provision.isPending}>
-                      {provision.isPending ? 'Submitting…' : 'Submit for Provisioning'}
-                    </Button>
+                    <button type="submit" className={`flex-1 ${REGIONAL_UI.btnPrimary}`} disabled={provision.isPending}>
+                      {provision.isPending ? 'Submitting…' : 'Submit for provisioning'}
+                    </button>
                   )}
                 </div>
               </form>
             </Form>
           </div>
         </div>
-      </PageBody>
-    </>
+      </div>
+    </PageBody>
   );
 }
