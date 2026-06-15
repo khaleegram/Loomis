@@ -20,7 +20,6 @@ import {
 import { authenticate } from '../../../middleware/authenticate.js';
 import { requireIdempotencyKey } from '../../../middleware/require-idempotency-key.js';
 import { requireRole } from '../../../middleware/require-role.js';
-import { requireStepUp } from '../../../middleware/require-step-up.js';
 import { requireTenantMatch } from '../../../middleware/require-tenant-match.js';
 import { validateBody, validateQuery } from '../../../shared/validation.js';
 import {
@@ -36,12 +35,13 @@ import {
   upsertGradebookEntryHandler,
 } from '../handlers/index.js';
 
-const gradingAdmins = ['school_owner', 'principal', 'exam_officer'] as const;
+const gradingAdmins = ['school_owner', 'principal', 'exam_officer', 'deputy_exam_officer'] as const;
 const gradebookReaders = [
   'school_owner',
   'principal',
   'admin_officer',
   'exam_officer',
+  'deputy_exam_officer',
   'teacher',
   'class_teacher',
 ] as const;
@@ -121,8 +121,7 @@ export async function gradebookRoutes(app: FastifyInstance): Promise<void> {
       preHandler: [
         authenticate,
         requireTenantMatch,
-        requireRole('exam_officer', 'principal'),
-        requireStepUp('result_publish'),
+        requireRole('exam_officer', 'deputy_exam_officer', 'principal'),
         requireIdempotencyKey,
       ],
       preValidation: [validateBody(publishResultsRequest)],

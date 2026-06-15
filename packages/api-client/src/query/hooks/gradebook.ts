@@ -16,12 +16,9 @@ import type {
   PublishResultsRequest,
   RequestGradeCorrectionRequest,
   ResultListResponse,
-  StepUpAction,
   UpsertGradebookEntryRequest,
 } from '@loomis/contracts';
 import type { ApiClient } from '../../http/client.js';
-import type { StepUpTokenResult } from '../../mutations/financial-mutation.js';
-import { useFinancialMutation } from '../../mutations/useFinancialMutation.js';
 import { useIdempotentMutation } from '../../mutations/useIdempotentMutation.js';
 import { useApiClient } from '../context.js';
 import {
@@ -208,19 +205,17 @@ export interface UsePublishResultsConfig {
   tenantId: string;
   termId: string;
   classArmId: string;
-  ensureStepUpToken: (action: StepUpAction) => Promise<StepUpTokenResult>;
 }
 
 /** Publish term results (US-ACA-004). */
 export function usePublishResults(config: UsePublishResultsConfig) {
-  const { tenantId, termId, classArmId, ensureStepUpToken } = config;
-  return useFinancialMutation<PublishResultsRequest, ResultListResponse>({
-    endpoint: `/tenants/${tenantId}/results/publish`,
-    action: 'result_publish',
-    ensureStepUpToken,
-    invalidates: [
-      queryKeys.academic.gradebookEntries(tenantId, { termId, classArmId }),
-    ],
+  const { tenantId, termId, classArmId } = config;
+  return useIdempotentMutation<PublishResultsRequest, ResultListResponse>({
+    mutationFn: (client, body, idempotencyKey) =>
+      client.post<ResultListResponse>(`/tenants/${tenantId}/results/publish`, body, {
+        idempotencyKey,
+      }),
+    invalidates: [queryKeys.academic.gradebookEntries(tenantId, { termId, classArmId })],
   });
 }
 

@@ -3,7 +3,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createGradingSchemeRequest, type CreateGradingSchemeRequest, type GradeBand } from '@loomis/contracts';
 import {
-  Checkbox,
   Form,
   FormControl,
   FormField,
@@ -136,7 +135,7 @@ function SchemeWeightSplit({
           style={{ width: `${caWeight}%` }}
         />
         <div
-          className="absolute inset-y-0 right-0 bg-[#c9a96e] transition-[width] duration-150 ease-out"
+          className="absolute inset-y-0 right-0 bg-brand-400 transition-[width] duration-150 ease-out"
           style={{ width: `${examWeight}%` }}
         />
         <button
@@ -175,7 +174,7 @@ function SchemeWeightSplit({
           </div>
         </label>
         <label className="rounded-xl bg-neutral-50 px-3 py-2.5 ring-1 ring-neutral-200/60">
-          <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-[#8a7348]">Exam</span>
+          <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-brand-700">Exam</span>
           <div className="mt-1 flex items-baseline gap-1">
             <input
               inputMode="numeric"
@@ -271,6 +270,7 @@ function GradeBandRow({
 export function GradingSchemeBuilder({ onSubmit, isSubmitting, errorMessage }: GradingSchemeBuilderProps) {
   type FormValues = z.input<typeof createGradingSchemeRequest>;
   const [templateId, setTemplateId] = useState('standard-40-60');
+  const [showGradeBands, setShowGradeBands] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(createGradingSchemeRequest),
@@ -315,13 +315,9 @@ export function GradingSchemeBuilder({ onSubmit, isSubmitting, errorMessage }: G
   return (
     <div className="mx-auto max-w-2xl space-y-8">
       <header className="px-1">
-        <p className={ACADEMIC_UI.sectionLabel}>Grading scheme</p>
-        <h2 className="mt-1 text-[1.625rem] font-extrabold tracking-tight text-neutral-900">
-          New scheme
-        </h2>
-        <p className="mt-2 max-w-lg text-[14px] leading-relaxed text-neutral-500">
-          Set how continuous assessment and exam scores combine. Weights must total exactly 100% before
-          you save.
+        <h2 className="text-[1.375rem] font-extrabold tracking-tight text-neutral-900">Grading scheme</h2>
+        <p className="mt-1.5 max-w-lg text-[13px] leading-relaxed text-neutral-500">
+          Pick a template and save. One scheme applies to the whole school.
         </p>
       </header>
 
@@ -410,27 +406,6 @@ export function GradingSchemeBuilder({ onSubmit, isSubmitting, errorMessage }: G
                 )}
               />
             </Row>
-
-            <Row label="School default" hint="Applies to every class and subject — no per-class setup needed.">
-              <FormField
-                control={form.control}
-                name="isDefault"
-                render={({ field }) => (
-                  <FormItem className="flex items-center justify-end space-y-0">
-                    <FormControl>
-                      <label className="relative inline-flex cursor-pointer items-center">
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          className="size-5 rounded-md data-[state=checked]:bg-brand-600"
-                        />
-                        <span className="sr-only">Set as tenant default</span>
-                      </label>
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            </Row>
           </Group>
 
           <Group title="Weight split" caption="Drag the handle or type percentages directly.">
@@ -446,26 +421,34 @@ export function GradingSchemeBuilder({ onSubmit, isSubmitting, errorMessage }: G
             </div>
           </Group>
 
-          <Group title="Grade bands" caption="Define letter grades and score ranges for this scheme.">
-            {gradeBands.map((band, index) => (
-              <GradeBandRow key={`${band.grade}-${index}`} band={band} index={index} onChange={updateBand} />
-            ))}
+          <Group title="Grade letters" caption="Optional — templates already include standard A–F bands.">
+            <div className="px-4 py-3 sm:px-5">
+              <button
+                type="button"
+                className={ACADEMIC_UI.btnSecondarySm}
+                onClick={() => setShowGradeBands((open) => !open)}
+              >
+                {showGradeBands ? 'Hide grade letters' : 'Customize grade letters'}
+              </button>
+            </div>
+            {showGradeBands
+              ? gradeBands.map((band, index) => (
+                  <GradeBandRow key={`${band.grade}-${index}`} band={band} index={index} onChange={updateBand} />
+                ))
+              : null}
             <FormMessage>{form.formState.errors.gradeBands?.message}</FormMessage>
           </Group>
 
           <div className={cn(panelClass, 'p-4 sm:p-5')}>
-            <p className="text-[12px] leading-relaxed text-neutral-500">
-              Mark as school default to apply this scheme to all classes automatically for the open term.
-            </p>
             <button
               type="submit"
               disabled={!weightsValid || isSubmitting}
               className={cn(
                 ACADEMIC_UI.btnPrimary,
-                'mt-4 h-12 w-full justify-center rounded-xl text-[15px] font-semibold shadow-sm',
+                'h-12 w-full justify-center rounded-xl text-[15px] font-semibold shadow-sm',
               )}
             >
-              {isSubmitting ? 'Saving…' : 'Save grading scheme'}
+              {isSubmitting ? 'Saving…' : 'Save scheme'}
             </button>
           </div>
         </form>

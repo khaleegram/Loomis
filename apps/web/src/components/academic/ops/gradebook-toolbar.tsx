@@ -24,8 +24,6 @@ interface GradebookToolbarProps {
   canSubmitLock?: boolean;
   isLocking?: boolean;
   onLock?: () => void;
-  /** When true, class scope is handled by AcademicScopePicker above the workspace. */
-  hideScopeBar?: boolean;
 }
 
 /** Teacher score-entry chrome — class scope + Excel-style subject sheet tabs. */
@@ -43,57 +41,46 @@ export function GradebookToolbar({
   canSubmitLock,
   isLocking,
   onLock,
-  hideScopeBar = false,
 }: GradebookToolbarProps) {
-  const trailing = (
-    <>
-      {schemeLabel ? (
-        <span className="hidden text-[11px] text-neutral-500 xl:inline">{schemeLabel}</span>
-      ) : null}
-      {canLock && onLock ? (
-        <button
-          type="button"
-          disabled={isFullyLocked || !canSubmitLock || isLocking}
-          onClick={onLock}
-          className={`inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-            isFullyLocked
-              ? 'border-accent-green-300 bg-accent-green-50 text-accent-green-800'
-              : `${SEMANTIC.cta.primary} border-transparent`
-          }`}
-        >
-          {isFullyLocked ? (
-            <>
-              <Lock aria-hidden className="size-3.5" />
-              Locked
-            </>
-          ) : (
-            <>
-              <Unlock aria-hidden className="size-3.5" />
-              {isLocking ? 'Locking…' : 'Lock sheet'}
-            </>
-          )}
-        </button>
-      ) : null}
-    </>
-  );
-
-  if (hideScopeBar && subjectTabs.length === 0 && !schemeLabel && !(canLock && onLock)) {
-    return null;
-  }
-
   return (
     <div className="flex w-full flex-col gap-2">
-      {!hideScopeBar ? (
-        <GradebookScopeBar
-          classArmOptions={arms}
-          classArmId={classArmId}
-          onClassArmChange={onClassArmChange}
-          hideClassSelection={hideClassSelection}
-          trailing={trailing}
-        />
-      ) : hideScopeBar && (schemeLabel || (canLock && onLock)) ? (
-        <div className="flex flex-wrap items-center justify-end gap-2 px-1 py-0.5">{trailing}</div>
-      ) : null}
+      <GradebookScopeBar
+        classArmOptions={arms}
+        classArmId={classArmId}
+        onClassArmChange={onClassArmChange}
+        hideClassSelection={hideClassSelection}
+        trailing={
+          <>
+            {schemeLabel ? (
+              <span className="hidden text-[11px] text-neutral-500 xl:inline">{schemeLabel}</span>
+            ) : null}
+            {canLock && onLock ? (
+              <button
+                type="button"
+                disabled={isFullyLocked || !canSubmitLock || isLocking}
+                onClick={onLock}
+                className={`inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                  isFullyLocked
+                    ? 'border-accent-green-300 bg-accent-green-50 text-accent-green-800'
+                    : `${SEMANTIC.cta.primary} border-transparent`
+                }`}
+              >
+                {isFullyLocked ? (
+                  <>
+                    <Lock aria-hidden className="size-3.5" />
+                    Locked
+                  </>
+                ) : (
+                  <>
+                    <Unlock aria-hidden className="size-3.5" />
+                    {isLocking ? 'Locking…' : 'Lock sheet'}
+                  </>
+                )}
+              </button>
+            ) : null}
+          </>
+        }
+      />
 
       {subjectTabs.length > 0 && onSubjectChange ? (
         <div

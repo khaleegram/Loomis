@@ -29,13 +29,16 @@ export interface SchoolNavItem {
 /** Roles that use the focused teacher workspace — hide school-wide admin nav noise. */
 const TEACHING_STAFF_ROLES: Role[] = ['teacher', 'class_teacher'];
 
+/** Exam officer — focused nav; still needs school-wide gradebook and report cards. */
+const EXAM_OFFICER_ROLES: Role[] = ['exam_officer', 'deputy_exam_officer'];
+
 export const SCHOOL_NAV: SchoolNavItem[] = [
   {
     label: 'Dashboard',
     href: '/school/dashboard',
     icon: LayoutDashboard,
     always: true,
-    hideForRoles: ['timetable_officer'],
+    hideForRoles: ['timetable_officer', ...EXAM_OFFICER_ROLES],
   },
   { label: 'Staff', href: '/school/staff', icon: Users, capabilities: ['staff.onboard'], hideForRoles: TEACHING_STAFF_ROLES },
   {
@@ -64,12 +67,14 @@ export const SCHOOL_NAV: SchoolNavItem[] = [
     href: '/school/timetable',
     icon: BookOpen,
     capabilities: ['timetable.manage', 'timetable.view'],
+    hideForRoles: EXAM_OFFICER_ROLES,
   },
   {
     label: 'Assignments',
     href: '/school/assignments',
     icon: ClipboardList,
     capabilities: ['gradebook.write', 'gradebook.read'],
+    hideForRoles: EXAM_OFFICER_ROLES,
   },
   {
     label: 'Finance',
@@ -111,20 +116,21 @@ export const SCHOOL_NAV: SchoolNavItem[] = [
     href: '/school/attendance',
     icon: UserCheck,
     capabilities: ['attendance.mark', 'attendance.view'],
+    hideForRoles: EXAM_OFFICER_ROLES,
   },
   {
     label: 'Workflows',
     href: '/school/workflows',
     icon: ShieldCheck,
     capabilities: ['staff.onboard', 'refund.approve', 'result.publish'],
-    hideForRoles: TEACHING_STAFF_ROLES,
+    hideForRoles: [...EXAM_OFFICER_ROLES, ...TEACHING_STAFF_ROLES],
   },
   {
     label: 'Communications',
     href: '/school/comms',
     icon: Users,
     capabilities: ['staff.onboard', 'attendance.mark', 'gradebook.read'],
-    hideForRoles: ['teacher'],
+    hideForRoles: ['teacher', ...EXAM_OFFICER_ROLES],
   },
   { label: 'Settings', href: '/school/settings', icon: Settings, always: true },
 ];
@@ -169,6 +175,12 @@ export function schoolNavLabel(item: SchoolNavItem, role: Role): string {
   }
   if (item.href === '/school/gradebook' && role === 'class_teacher') {
     return 'Class Gradebook';
+  }
+  if (item.href === '/school/gradebook' && EXAM_OFFICER_ROLES.includes(role)) {
+    return 'Gradebook';
+  }
+  if (item.href === '/school/exams' && EXAM_OFFICER_ROLES.includes(role)) {
+    return 'Exams';
   }
   return item.label;
 }

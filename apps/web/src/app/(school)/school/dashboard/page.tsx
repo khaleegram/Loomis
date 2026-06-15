@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 import { can } from '@loomis/core';
 import {
   useStudents,
@@ -39,6 +40,7 @@ import { PageBody } from '@/components/school/school-shell';
 import { ClassTeacherDashboard } from '@/components/staff/class-teacher-dashboard';
 import { TeacherLanding } from '@/components/staff/teacher-landing';
 import { useAuth } from '@/lib/auth/auth-context';
+import { isExamOfficerRole } from '@/lib/auth/is-exam-officer';
 import { isClassTeacherRole, isTeacherRole } from '@/lib/timetable/is-teaching-staff';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -48,6 +50,7 @@ const ROLE_LABELS: Record<string, string> = {
   accountant: 'Accountant',
   cashier: 'Cashier',
   exam_officer: 'Exam Officer',
+  deputy_exam_officer: 'Deputy Exam Officer',
   teacher: 'Teacher',
   class_teacher: 'Class Teacher',
 };
@@ -61,8 +64,16 @@ function fmtNaira(minor: number): string {
 
 export default function SchoolDashboardPage() {
   const { session } = useAuth();
+  const router = useRouter();
   const tenantId = session?.tenantId ?? '';
   const role = session?.role;
+
+  useEffect(() => {
+    if (role && isExamOfficerRole(role)) {
+      router.replace('/school/exams');
+    }
+  }, [role, router]);
+
   const roleLabel =
     role != null
       ? (ROLE_LABELS[role] ?? role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()))
@@ -126,6 +137,10 @@ export default function SchoolDashboardPage() {
   const canExport = role ? can(role, 'ledger.view') || can(role, 'admissions.manage') : false;
   const termLabel = activeTerm ? activeTerm.name ?? 'This Term' : 'No active term';
   const operationsClear = inboxCount === 0 && pendingAdmissionCount === 0;
+
+  if (role && isExamOfficerRole(role)) {
+    return null;
+  }
 
   if (role && isClassTeacherRole(role)) {
     return (

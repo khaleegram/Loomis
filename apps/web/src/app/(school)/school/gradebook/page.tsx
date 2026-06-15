@@ -16,15 +16,13 @@ import type { GradebookEntryResponse, StudentGender, StudentResponse } from '@lo
 import { Alert, AlertDescription, Tabs, TabsList, TabsTrigger } from '@loomis/ui-web';
 import { useMemo, useState } from 'react';
 
-import { AcademicScopePicker } from '@/components/academic/ops/academic-scope-picker';
 import { ConsolidatedGradebook } from '@/components/academic/ops/consolidated-gradebook';
 import { GradeCorrectionSheet } from '@/components/academic/ops/grade-correction-sheet';
-import { GradebookHero } from '@/components/academic/ops/gradebook-hero';
+import { GradebookScopeBar } from '@/components/academic/ops/gradebook-scope-bar';
 import { GradebookSpreadsheet, type GradebookRow } from '@/components/academic/ops/gradebook-spreadsheet';
 import { GradebookToolbar } from '@/components/academic/ops/gradebook-toolbar';
 import { GradebookWorkspace } from '@/components/academic/ops/gradebook-workspace';
 import { PageBody } from '@/components/school/school-shell';
-import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { academicErrorMessage } from '@/lib/academic/academic-errors';
 import {
   computeGradebookProgress,
@@ -70,7 +68,6 @@ export default function GradebookPage() {
   const router = useRouter();
   const role = useRole();
   const canWriteCapability = useCan('gradebook.write');
-  const canRead = useCan('gradebook.read');
   const canView = useCanAny(['gradebook.write', 'gradebook.read']);
 
   const adminCtx = useAcademicOpsContext(tenantId ?? '');
@@ -198,8 +195,9 @@ export default function GradebookPage() {
     teacherCtx.classTeacherClassArmLabel ??
     null;
 
-  const subjectLabel = resolvedSubjectId ? formatSubjectLabel(resolvedSubjectId) : null;
-  const termLabel = ctx.activeTerm?.name ?? null;
+  const armOptions = isTeachingStaffRole(role)
+    ? teacherCtx.teachingClassArmOptions
+    : classArmOptions(ctx.arms, ctx.levels);
 
   async function handleLock() {
     if (!ctx.termId || !ctx.classArmId || !resolvedSubjectId) return;
@@ -217,7 +215,7 @@ export default function GradebookPage() {
 
   if (!tenantId) {
     return (
-      <PageBody className="max-w-[1400px] px-4 py-5 sm:px-6 lg:px-12 lg:py-8">
+      <PageBody className="px-4 py-5 sm:px-6 lg:px-8">
         <Alert variant="destructive">
           <AlertDescription>No tenant context. Sign in again.</AlertDescription>
         </Alert>
@@ -227,7 +225,7 @@ export default function GradebookPage() {
 
   if (!canView) {
     return (
-      <PageBody className="max-w-[1400px] px-4 py-5 sm:px-6 lg:px-12 lg:py-8">
+      <PageBody className="px-4 py-5 sm:px-6 lg:px-8">
         <Alert>
           <AlertDescription>You do not have permission to view the gradebook.</AlertDescription>
         </Alert>
@@ -252,26 +250,33 @@ export default function GradebookPage() {
         : `CA /${caMax} + Exam /${examMax} = /100 · Tab · Enter saves`;
 
   return (
-    <PageBody className="max-w-[1400px] px-4 py-5 sm:px-6 lg:px-12 lg:py-8">
-      <div className="space-y-4">
-        <GradebookHero
-          variant={isClassTeacherView ? 'classTeacher' : 'teacher'}
-          classLabel={classLabel}
-          termLabel={termLabel}
-          subjectLabel={isClassTeacherView ? null : subjectLabel}
-          rosterCount={rosterStudents.length}
-          entries={entries}
-          isLoading={isLoading}
-          canLock={canWrite && !isClassTeacherView}
-          isLocking={lockGradebook.isSubmitting}
-          onLock={handleLock}
-        />
+    <PageBody className="flex flex-col px-3 py-3 sm:px-4 lg:px-6 lg:py-4">
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <h1 className="text-[15px] font-bold text-neutral-800">Gradebook</h1>
+          <p className="text-[11px] text-neutral-500">
+            {isDualClassTeacher
+              ? 'Switch between your class register and the subjects you teach.'
+              : isClassTeacherView
+                ? 'Consolidated register for your class — all subjects, all students.'
+                : 'Enter scores one subject sheet at a time. For full student reports, use Report cards.'}
+          </p>
+        </div>
+        <div className="flex flex-col items-end gap-0.5">
+          <Link href="/school/report-cards" className="text-[12px] font-semibold text-brand-700 hover:underline">
+            Report cards →
+          </Link>
+          <span className="truncate text-[11px] text-neutral-500">
+            {[classLabel, ctx.activeTerm?.name].filter(Boolean).join(' · ')}
+          </span>
+        </div>
+      </div>
 
-        {isDualClassTeacher ? (
+      {isDualClassTeacher ? (
         <Tabs
           value={effectiveWorkspaceTab}
           onValueChange={(value) => setWorkspaceTab(value as GradebookWorkspaceTab)}
-          className="w-full max-w-md"
+          className="mb-2 w-full max-w-md"
         >
           <TabsList className="grid h-8 w-full grid-cols-2 rounded-md border border-neutral-200 bg-neutral-100 p-0.5">
             <TabsTrigger
@@ -288,21 +293,10 @@ export default function GradebookPage() {
             </TabsTrigger>
           </TabsList>
         </Tabs>
-        ) : null}
-
-        <AcademicScopePicker
-          classArmOptions={
-            isTeachingStaffRole(role)
-              ? teacherCtx.teachingClassArmOptions
-              : classArmOptions(ctx.arms, ctx.levels)
-          }
-          classArmId={ctx.classArmId}
-          onClassArmChange={ctx.setClassArmId}
-          hideClassSelection={teacherCtx.hideClassSelection}
-        />
+      ) : null}
 
       {(lockError || (classConfigs.length === 0 && !isClassTeacherView)) ? (
-        <div className="space-y-2">
+        <div className="mb-2 space-y-2">
           {lockError ? (
             <Alert variant="destructive">
               <AlertDescription>{lockError}</AlertDescription>
@@ -313,7 +307,7 @@ export default function GradebookPage() {
               <AlertDescription>
                 No exam sheet for this class.{' '}
                 <Link href="/school/exams" className="font-semibold text-brand-700 underline">
-                  Exam officer: configure sheets
+                  Exam officer: set up grading
                 </Link>
               </AlertDescription>
             </Alert>
@@ -322,43 +316,38 @@ export default function GradebookPage() {
       ) : null}
 
       {isReadOnlyViewer ? (
-        <Alert>
+        <Alert className="mb-2">
           <AlertDescription>You can review scores here but cannot edit with your current role.</AlertDescription>
         </Alert>
       ) : null}
 
       {saveError ? (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="mb-2">
           <AlertDescription>{saveError}</AlertDescription>
         </Alert>
       ) : null}
 
       {entries.some((e) => e.status === 'correction_pending') && !isClassTeacherView ? (
-        <Alert variant="warning">
+        <Alert variant="warning" className="mb-2">
           <AlertDescription>Some rows have corrections awaiting exam officer review.</AlertDescription>
         </Alert>
       ) : null}
 
-      {!ctx.termId || !ctx.classArmId ? (
-        <div className={`${ACADEMIC_UI.dataPanel} p-10 text-center`}>
-          <p className="text-[15px] font-semibold text-neutral-800">Choose your class to open the gradebook</p>
-          <p className="mt-2 text-[13px] text-neutral-500">
-            Choose a class in the scope bar above.
-          </p>
-        </div>
-      ) : (
       <GradebookWorkspace
         toolbar={
-          isClassTeacherView ? null : (
-            <GradebookToolbar
-              classArmOptions={
-                isTeachingStaffRole(role)
-                  ? teacherCtx.teachingClassArmOptions
-                  : classArmOptions(ctx.arms, ctx.levels)
-              }
+          isClassTeacherView ? (
+            <GradebookScopeBar
+              classArmOptions={armOptions}
               classArmId={ctx.classArmId}
               onClassArmChange={ctx.setClassArmId}
-              hideScopeBar
+              hideClassSelection={teacherCtx.hideClassSelection}
+            />
+          ) : (
+            <GradebookToolbar
+              classArmOptions={armOptions}
+              classArmId={ctx.classArmId}
+              onClassArmChange={ctx.setClassArmId}
+              hideClassSelection={teacherCtx.hideClassSelection}
               subjectTabs={subjectTabs}
               activeSubjectId={resolvedSubjectId}
               onSubjectChange={setSubjectId}
@@ -413,7 +402,6 @@ export default function GradebookPage() {
           />
         )}
       </GradebookWorkspace>
-      )}
 
       <GradeCorrectionSheet
         open={Boolean(correctionEntry)}
@@ -435,7 +423,6 @@ export default function GradebookPage() {
           }
         }}
       />
-      </div>
     </PageBody>
   );
 }

@@ -3,19 +3,9 @@
 import { useDecideWorkflow, useWorkflowInbox } from '@loomis/api-client';
 import type { WorkflowInboxItemResponse } from '@loomis/contracts';
 import { Alert, AlertDescription, Skeleton, Textarea } from '@loomis/ui-web';
-import { Gavel } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
-import {
-  WorkflowStatusBadge,
-  WorkflowStepStatusBadge,
-} from '@/components/academic/ops/workflow-status-badges';
-import {
-  FormSubmitError,
-  SmartFormPanel,
-  SmartFormPanelHeader,
-  SmartFormSection,
-} from '@/components/shared/smart-form';
+import { FormSubmitError } from '@/components/shared/smart-form';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { academicErrorMessage } from '@/lib/academic/academic-errors';
 
@@ -35,7 +25,6 @@ function CorrectionCard({
   const decide = useDecideWorkflow(tenantId, item.instance.id, item.activeStep.id);
 
   const payload = item.instance.payload as {
-    gradebookEntryId?: string;
     continuousAssessmentScore?: number;
     examScore?: number;
     totalScore?: number;
@@ -57,65 +46,23 @@ function CorrectionCard({
   }
 
   return (
-    <SmartFormPanel
-      header={
-        <SmartFormPanelHeader
-          icon={Gavel}
-          title={item.instance.title ?? 'Grade correction'}
-          subtitle={`Step ${item.activeStep.sequence} · ${item.activeStep.approverRole.replace(/_/g, ' ')}`}
-          badge={
-            <div className="flex flex-wrap gap-2">
-              <WorkflowStatusBadge status={item.instance.status} />
-              <WorkflowStepStatusBadge status={item.activeStep.status} />
-            </div>
-          }
-        />
-      }
-      footer={
-        <div className="flex flex-wrap gap-2 px-5 py-4">
-          <button
-            type="button"
-            className={ACADEMIC_UI.btnPrimary}
-            disabled={decide.isSubmitting}
-            onClick={() => void submit('approve')}
-          >
-            Approve
-          </button>
-          <button
-            type="button"
-            className={ACADEMIC_UI.btnSecondary}
-            disabled={decide.isSubmitting}
-            onClick={() => void submit('return')}
-          >
-            Return
-          </button>
-          <button
-            type="button"
-            className="inline-flex items-center justify-center rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-2 text-[13px] font-semibold text-destructive transition hover:bg-destructive/10 disabled:opacity-50"
-            disabled={decide.isSubmitting}
-            onClick={() => void submit('reject')}
-          >
-            Reject
-          </button>
-        </div>
-      }
-    >
-      {payload.reason ? (
-        <p className="text-[13px] text-neutral-700">
-          <span className="font-semibold text-neutral-900">Reason: </span>
-          {payload.reason}
-        </p>
-      ) : null}
+    <div className={`${ACADEMIC_UI.dataPanel} overflow-hidden`}>
+      <div className="border-b border-brand-50/80 px-4 py-3 sm:px-5">
+        <p className="text-[15px] font-bold text-neutral-900">Score change request</p>
+        {payload.reason ? (
+          <p className="mt-1 text-[13px] text-neutral-600">{payload.reason}</p>
+        ) : null}
+      </div>
 
-      <dl className="mt-4 grid grid-cols-2 gap-3 rounded-xl border border-neutral-200 bg-neutral-50/50 p-3 text-[13px] sm:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-3 px-4 py-4 text-[13px] sm:grid-cols-4 sm:px-5">
         <div>
-          <dt className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">Proposed CA</dt>
+          <dt className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">CA</dt>
           <dd className="mt-0.5 font-mono tabular-nums font-semibold text-neutral-900">
             {payload.continuousAssessmentScore ?? '—'}
           </dd>
         </div>
         <div>
-          <dt className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">Proposed exam</dt>
+          <dt className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">Exam</dt>
           <dd className="mt-0.5 font-mono tabular-nums font-semibold text-neutral-900">
             {payload.examScore ?? '—'}
           </dd>
@@ -132,18 +79,46 @@ function CorrectionCard({
         </div>
       </dl>
 
-      <SmartFormSection title="Decision comment" description="Optional — recorded in the workflow audit log.">
+      <div className="border-t border-brand-50/80 px-4 py-3 sm:px-5">
+        <label className="text-[12px] font-semibold text-neutral-700">Note (optional)</label>
         <Textarea
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          placeholder="Explain your decision for the requester"
+          placeholder="Add a note for the teacher"
           rows={2}
-          className="min-h-[72px] resize-y text-[13px]"
+          className="mt-1.5 min-h-[64px] resize-y text-[13px]"
         />
-      </SmartFormSection>
+      </div>
 
       <FormSubmitError message={error} />
-    </SmartFormPanel>
+
+      <div className="flex flex-wrap gap-2 border-t border-brand-50/80 px-4 py-3 sm:px-5">
+        <button
+          type="button"
+          className={ACADEMIC_UI.btnPrimary}
+          disabled={decide.isSubmitting}
+          onClick={() => void submit('approve')}
+        >
+          Approve
+        </button>
+        <button
+          type="button"
+          className={ACADEMIC_UI.btnSecondary}
+          disabled={decide.isSubmitting}
+          onClick={() => void submit('return')}
+        >
+          Send back
+        </button>
+        <button
+          type="button"
+          className="inline-flex items-center justify-center rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-2 text-[13px] font-semibold text-destructive transition hover:bg-destructive/10 disabled:opacity-50"
+          disabled={decide.isSubmitting}
+          onClick={() => void submit('reject')}
+        >
+          Reject
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -175,9 +150,12 @@ export function GradeCorrectionReviewList({ tenantId }: GradeCorrectionReviewLis
 
   if (corrections.length === 0) {
     return (
-      <Alert>
-        <AlertDescription>No grade correction requests awaiting your action.</AlertDescription>
-      </Alert>
+      <div className={`${ACADEMIC_UI.dataPanel} p-8 text-center`}>
+        <p className="text-[15px] font-semibold text-neutral-900">No corrections waiting</p>
+        <p className="mt-1 text-[13px] text-neutral-500">
+          When a teacher requests a score change, it shows up here for your review.
+        </p>
+      </div>
     );
   }
 

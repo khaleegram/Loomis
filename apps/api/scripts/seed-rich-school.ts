@@ -439,7 +439,7 @@ async function seedJss1BGradebookEntries(tenantId: string): Promise<boolean> {
   const principal = await userRepository.findByEmail(MARKER_EMAIL);
   if (!principal?.tenantId || principal.tenantId !== tenantId) return false;
 
-  const actor = { userId: principal.userId, role: 'principal' as Role, tenantId };
+  const actor = { userId: principal.id, role: 'principal' as Role, tenantId };
 
   const years = await academicRepository.listYears(tenantId);
   const year = years.find((y) => y.status === 'active') ?? years[0];
@@ -522,6 +522,7 @@ async function seedJss1BGradebookEntries(tenantId: string): Promise<boolean> {
   const expectedCount = students.length * jss1BConfigs.length;
   if (existingEntries.length >= expectedCount) {
     console.log(`  JSS1 B report cards already complete (${existingEntries.length} entries).`);
+    await lockJss1BGradebookSubjects(tenantId);
     return false;
   }
 
@@ -557,7 +558,71 @@ async function seedJss1BGradebookEntries(tenantId: string): Promise<boolean> {
   if (created > 0) {
     console.log(`    ${created} gradebook entries created for JSS1 B.`);
   }
+
+  await lockJss1BGradebookSubjects(tenantId);
   return created > 0;
+}
+
+/** Lock every JSS1 B subject sheet so exam publish pre-flight passes in demo. */
+async function lockJss1BGradebookSubjects(tenantId: string): Promise<void> {
+  const principal = await userRepository.findByEmail(MARKER_EMAIL);
+  if (!principal?.tenantId || principal.tenantId !== tenantId) return;
+
+  const actor = { userId: principal.id, role: 'principal' as Role, tenantId };
+
+  const years = await academicRepository.listYears(tenantId);
+  const year = years.find((y) => y.status === 'active') ?? years[0];
+  if (!year) return;
+
+  const terms = await academicRepository.listTermsByYear(tenantId, year.id);
+  const openTerm = terms.find((t) => t.status === 'open');
+  if (!openTerm) return;
+
+  const jss1B = await findClassArmByLevelAndName(tenantId, year.id, 'JSS1', 'B');
+  if (!jss1B) return;
+
+  const examConfigs = await academicRepository.listExamConfigs(tenantId, openTerm.id);
+  const jss1BConfigs = examConfigs.filter((config) => config.classArmId === jss1B.id);
+  if (jss1BConfigs.length === 0) return;
+
+  const entries = await academicRepository.listGradebookEntries({
+    tenantId,
+    termId: openTerm.id,
+    classArmId: jss1B.id,
+  });
+  if (entries.length === 0) return;
+
+  const draftSubjects = jss1BConfigs.filter((config) =>
+    entries.some(
+      (entry) => entry.subjectId === config.subjectId && entry.status === 'draft',
+    ),
+  );
+  if (draftSubjects.length === 0) return;
+
+  console.log(`  Locking JSS1 B gradebook (${draftSubjects.length} subject sheet(s))…`);
+  let lockedSheets = 0;
+  for (const config of draftSubjects) {
+    try {
+      const result = await gradebookService.lockGradebook(
+        tenantId,
+        {
+          termId: openTerm.id,
+          classArmId: jss1B.id,
+          subjectId: config.subjectId,
+        },
+        actor,
+      );
+      if (result.lockedCount > 0 || result.alreadyLockedCount > 0) {
+        lockedSheets++;
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`    Could not lock ${config.title}: ${message}`);
+    }
+  }
+  if (lockedSheets > 0) {
+    console.log(`    ${lockedSheets} subject sheet(s) locked — JSS1 B is ready to publish.`);
+  }
 }
 
 async function seedTimetables(
@@ -895,7 +960,7 @@ async function main() {
   const principal = staffProfiles.find((s) => s.email === MARKER_EMAIL);
   if (!principal) throw new Error('Principal missing');
 
-  const actor = { userId: principal.userId, role: 'principal' as Role, tenantId: tenant.id };
+  const actor = { userId: principal.id, role: 'principal' as Role, tenantId: tenant.id };
 
   const year = await academicYearService.createYear(
     tenant.id,
@@ -1014,7 +1079,7 @@ async function main() {
         staffProfileId: classTeacher.staffProfileId,
         termId: openTerm.id,
         classArmId: arm.id,
-        actorUserId: principal.userId,
+        actorUserId: principal.id,
       });
     }
 
@@ -1027,8 +1092,8 @@ async function main() {
         termId: openTerm.id,
         classArmId: arm.id,
         subjectId: subject.id,
-        actorUserId: principal.userId,
-        approvedById: principal.userId,
+        actorUserId: principal.id,
+        approvedById: principal.id,
       });
     }
   }
