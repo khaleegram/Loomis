@@ -3,6 +3,7 @@ import { academicEvents } from '../events/index.js';
 import { academicRepository } from '../repository/academic.repository.js';
 import type { ActorContext, CloseTermInput, ConfigureTermInput } from '../types.js';
 import { requireTenant, requireTerm } from './_shared.js';
+import { gradebookService } from './gradebook.service.js';
 import { termClosureGate } from './term-closure-gate.js';
 
 export const termService = {
@@ -84,6 +85,11 @@ export const termService = {
         throw new LoomisError('ACADEMIC_TERM_NOT_DRAFT', 409, 'Term is no longer in draft');
       }
       await academicEvents.publishTermOpened(tenantId, termId, term.academicYearId, actor.userId);
+      const schemes = await academicRepository.listGradingSchemes(tenantId);
+      const defaultScheme = schemes.find((scheme) => scheme.isDefault) ?? schemes[0];
+      if (defaultScheme) {
+        await gradebookService.provisionExamConfigsForTerm(tenantId, termId, actor);
+      }
       return opened;
     } catch (err) {
       // The partial unique index (one open term per year) raises a unique

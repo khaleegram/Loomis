@@ -16,6 +16,7 @@ import type {
   UpsertGradebookEntryInput,
 } from '../types.js';
 import { requireTenant, requireTerm } from './_shared.js';
+import { SCHOOL_SUBJECT_CATALOGUE } from '../subject-catalogue.js';
 
 type GradingSchemeRow = NonNullable<Awaited<ReturnType<typeof academicRepository.findGradingSchemeById>>>;
 type GradebookEntryRow = NonNullable<Awaited<ReturnType<typeof academicRepository.findGradebookEntryById>>>;
@@ -128,11 +129,66 @@ async function requireReadableGradebook(tenantId: string, input: ListGradebookIn
   }
 }
 
+async function autoProvisionExamConfigsForTerm(
+  tenantId: string,
+  termId: string,
+  gradingSchemeId: string,
+  configuredById: string,
+): Promise<number> {
+  const term = await requireTerm(tenantId, termId);
+  const arms = await academicRepository.listClassArms(tenantId, term.academicYearId);
+  const existing = await academicRepository.listExamConfigs(tenantId, termId);
+  const existingKeys = new Set(existing.map((config) => `${config.classArmId}:${config.subjectId}`));
+
+  let created = 0;
+  for (const arm of arms) {
+    const level = await academicRepository.findClassLevelById(tenantId, arm.classLevelId);
+    const armLabel = level ? `${level.code} ${arm.name}` : arm.name;
+    for (const subject of SCHOOL_SUBJECT_CATALOGUE) {
+      if (existingKeys.has(`${arm.id}:${subject.id}`)) continue;
+      try {
+        await academicRepository.createExamConfig(
+          tenantId,
+          {
+            termId,
+            classArmId: arm.id,
+            subjectId: subject.id,
+            gradingSchemeId,
+            title: `${armLabel} · ${subject.label}`,
+          },
+          configuredById,
+        );
+        existingKeys.add(`${arm.id}:${subject.id}`);
+        created++;
+      } catch (err) {
+        if (!isUniqueViolation(err)) throw err;
+      }
+    }
+  }
+  return created;
+}
+
+async function autoProvisionOpenTerms(tenantId: string, gradingSchemeId: string, actorUserId: string) {
+  const years = await academicRepository.listYears(tenantId);
+  for (const year of years) {
+    const terms = await academicRepository.listTermsByYear(tenantId, year.id);
+    for (const term of terms) {
+      if (term.status === 'open') {
+        await autoProvisionExamConfigsForTerm(tenantId, term.id, gradingSchemeId, actorUserId);
+      }
+    }
+  }
+}
+
 export const gradebookService = {
   async createGradingScheme(tenantId: string, input: CreateGradingSchemeInput, actor: ActorContext) {
     requireTenant(actor, tenantId);
     try {
-      return await academicRepository.createGradingScheme(tenantId, input, actor.userId);
+      const scheme = await academicRepository.createGradingScheme(tenantId, input, actor.userId);
+      if (input.isDefault) {
+        await autoProvisionOpenTerms(tenantId, scheme.id, actor.userId);
+      }
+      return scheme;
     } catch (err) {
       if (isUniqueViolation(err)) {
         throw new LoomisError('ACADEMIC_GRADING_SCHEME_CONFLICT', 409, 'Grading scheme already exists');
@@ -171,6 +227,31 @@ export const gradebookService = {
   async listExamConfigs(tenantId: string, termId: string, actor: ActorContext) {
     requireTenant(actor, tenantId);
     await requireTerm(tenantId, termId);
+    let configs = await academicRepository.listExamConfigs(tenantId, termId);
+    if (configs.length === 0) {
+      const schemes = await academicRepository.listGradingSchemes(tenantId);
+      const defaultScheme = schemes.find((scheme) => scheme.isDefault) ?? schemes[0];
+      if (defaultScheme) {
+        await autoProvisionExamConfigsForTerm(tenantId, termId, defaultScheme.id, actor.userId);
+        configs = await academicRepository.listExamConfigs(tenantId, termId);
+      }
+    }
+    return configs;
+  },
+
+  async provisionExamConfigsForTerm(tenantId: string, termId: string, actor: ActorContext) {
+    requireTenant(actor, tenantId);
+    await requireTerm(tenantId, termId);
+    const schemes = await academicRepository.listGradingSchemes(tenantId);
+    const defaultScheme = schemes.find((scheme) => scheme.isDefault) ?? schemes[0];
+    if (!defaultScheme) {
+      throw new LoomisError(
+        'ACADEMIC_GRADING_SCHEME_NOT_FOUND',
+        404,
+        'Create a default grading scheme before opening the gradebook',
+      );
+    }
+    await autoProvisionExamConfigsForTerm(tenantId, termId, defaultScheme.id, actor.userId);
     return academicRepository.listExamConfigs(tenantId, termId);
   },
 
