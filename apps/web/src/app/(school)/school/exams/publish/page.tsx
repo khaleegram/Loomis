@@ -2,17 +2,11 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { usePublishResults, useStepUpMfa, useGradebookEntries } from '@loomis/api-client';
+import { useGradebookEntries, usePublishResults, useStepUpMfa } from '@loomis/api-client';
 import { publishResultsRequest, type PublishResultsRequest } from '@loomis/contracts';
 import {
   Alert,
   AlertDescription,
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   Checkbox,
   Form,
   FormControl,
@@ -23,14 +17,23 @@ import {
   Skeleton,
 } from '@loomis/ui-web';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CheckCircle2, ClipboardList, Lock } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
-import { AcademicTermSelectors } from '@/components/academic/ops/academic-term-selectors';
+import { AcademicScopePicker } from '@/components/academic/ops/academic-scope-picker';
 import { StepUpMfaFields } from '@/components/academic/step-up-mfa-fields';
-import { PageBody, PageHeader } from '@/components/school/school-shell';
+import {
+  FormSubmitError,
+  SmartFormPanel,
+  SmartFormPanelHeader,
+  SmartFormSection,
+} from '@/components/shared/smart-form';
+import { PageBody } from '@/components/school/school-shell';
+import { ACADEMIC_PAGE_TITLE_STYLE, ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { academicErrorMessage } from '@/lib/academic/academic-errors';
+import { EXAMS_PAGE_CLASS } from '@/lib/academic/exams-ui';
 import {
   classArmOptions,
   useAcademicOpsContext,
@@ -54,6 +57,9 @@ export default function PublishResultsPage() {
   const ctx = useAcademicOpsContext(tenantId ?? '');
   const stepUp = useStepUpMfa();
   const mfaCodeRef = useRef('');
+
+  const arms = classArmOptions(ctx.arms, ctx.levels);
+  const classLabel = arms.find((arm) => arm.id === ctx.classArmId)?.label ?? null;
 
   const gradebookFilters =
     ctx.termId && ctx.classArmId
@@ -110,27 +116,21 @@ export default function PublishResultsPage() {
 
   if (!tenantId) {
     return (
-      <>
-        <PageHeader title="Publish results" />
-        <PageBody>
-          <Alert variant="destructive">
-            <AlertDescription>No tenant context. Sign in again.</AlertDescription>
-          </Alert>
-        </PageBody>
-      </>
+      <PageBody className={EXAMS_PAGE_CLASS}>
+        <Alert variant="destructive">
+          <AlertDescription>No tenant context. Sign in again.</AlertDescription>
+        </Alert>
+      </PageBody>
     );
   }
 
   if (!canPublish) {
     return (
-      <>
-        <PageHeader title="Publish results" />
-        <PageBody>
-          <Alert>
-            <AlertDescription>You do not have permission to publish results.</AlertDescription>
-          </Alert>
-        </PageBody>
-      </>
+      <PageBody className={EXAMS_PAGE_CLASS}>
+        <Alert>
+          <AlertDescription>You do not have permission to publish results.</AlertDescription>
+        </Alert>
+      </PageBody>
     );
   }
 
@@ -148,113 +148,147 @@ export default function PublishResultsPage() {
   });
 
   return (
-    <>
-      <PageHeader
-        title="Publish term results"
-        description="Make final results visible to students and parents (US-ACA-004). Requires step-up MFA."
-        actions={
-          <Button variant="outline" asChild>
-            <Link href="/school/exams">Back to exams</Link>
-          </Button>
-        }
-      />
-      <PageBody>
-        <div className="mx-auto max-w-3xl space-y-6">
-          <AcademicTermSelectors
-            years={ctx.sortedYears}
-            terms={ctx.terms}
-            classArmOptions={classArmOptions(ctx.arms, ctx.levels)}
-            yearId={ctx.yearId}
-            termId={ctx.termId}
-            classArmId={ctx.classArmId}
-            onYearChange={(id) => {
-              ctx.setYearId(id);
-              ctx.setTermId(null);
-            }}
-            onTermChange={ctx.setTermId}
-            onClassArmChange={ctx.setClassArmId}
-          />
+    <PageBody className={EXAMS_PAGE_CLASS}>
+      <div className="space-y-5">
+        <header className="flex flex-col gap-3 border-b border-neutral-200/80 pb-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className={ACADEMIC_UI.sectionLabel}>Exam Officer · irreversible action</p>
+            <h1 className="text-neutral-900" style={ACADEMIC_PAGE_TITLE_STYLE}>
+              Publish results
+            </h1>
+            <p className={ACADEMIC_UI.pageDesc}>
+              Make final term results visible to students and parents. Requires step-up MFA — cannot be undone.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/school/exams" className={ACADEMIC_UI.btnSecondary}>
+              Back to exams
+            </Link>
+            <Link href="/school/gradebook" className={ACADEMIC_UI.btnSecondary}>
+              Gradebook
+            </Link>
+          </div>
+        </header>
 
-          <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle className="text-base">Pre-flight checklist</CardTitle>
-              <CardDescription>All gradebook entries must be complete with no pending corrections.</CardDescription>
-            </CardHeader>
-            <CardContent>
+        <AcademicScopePicker
+          classArmOptions={arms}
+          classArmId={ctx.classArmId}
+          onClassArmChange={ctx.setClassArmId}
+          selectedClassMeta={
+            ctx.classArmId && !entriesQuery.isLoading
+              ? `${preflight.total} gradebook entries · ${classLabel ?? 'Class'}`
+              : undefined
+          }
+        />
+
+        {!ctx.termId || !ctx.classArmId ? (
+          <div className={`${ACADEMIC_UI.dataPanel} p-10 text-center`}>
+            <p className="text-[15px] font-semibold text-neutral-800">Select a class</p>
+            <p className="mt-2 text-[13px] text-neutral-500">
+              Choose your class above to run the publish pre-flight checklist.
+            </p>
+          </div>
+        ) : (
+          <div className="mx-auto max-w-3xl space-y-5">
+            <SmartFormPanel
+              header={
+                <SmartFormPanelHeader
+                  icon={preflight.ready ? CheckCircle2 : Lock}
+                  title="Pre-flight checklist"
+                  subtitle="All entries must be submitted with no pending corrections."
+                  badge={
+                    preflight.ready ? (
+                      <span className="rounded-full bg-accent-green-50 px-2.5 py-0.5 text-[11px] font-bold text-accent-green-700">
+                        Ready
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold text-amber-800">
+                        Blocked
+                      </span>
+                    )
+                  }
+                />
+              }
+            >
               {entriesQuery.isLoading ? (
-                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-24 w-full rounded-xl" />
               ) : (
-                <ul className="space-y-2 text-sm">
-                  <li className={preflight.total > 0 ? 'text-brand-600 dark:text-mint-400' : 'text-destructive'}>
+                <ul className="space-y-2 text-[13px]">
+                  <li className={preflight.total > 0 ? 'text-accent-green-700' : 'text-destructive'}>
                     {preflight.total > 0
                       ? `${preflight.total} gradebook entries found`
                       : 'No gradebook entries — cannot publish'}
                   </li>
-                  <li className={preflight.pending === 0 ? 'text-brand-600 dark:text-mint-400' : 'text-destructive'}>
+                  <li className={preflight.pending === 0 ? 'text-accent-green-700' : 'text-destructive'}>
                     {preflight.pending === 0
                       ? 'No pending grade corrections'
                       : `${preflight.pending} correction(s) still pending`}
                   </li>
                   {preflight.drafts > 0 ? (
-                    <li className="text-warning">{preflight.drafts} entries still in draft status</li>
+                    <li className="text-amber-700">{preflight.drafts} entries still in draft status</li>
                   ) : null}
                 </ul>
               )}
-            </CardContent>
-          </Card>
+            </SmartFormPanel>
 
-          <Form {...form}>
-            <form onSubmit={onSubmit} className="space-y-6">
-              <Card className="shadow-card">
-                <CardHeader>
-                  <CardTitle className="text-base">Confirm publication</CardTitle>
-                  <CardDescription>
-                    Published results cannot be unpublished. Further changes require the grade correction workflow.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="irreversibleAcknowledged"
-                    render={({ field }) => (
-                      <FormItem className="flex items-start gap-2 space-y-0">
-                        <FormControl>
-                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                        <FormLabel className="font-normal leading-relaxed">
-                          I understand that publishing is irreversible and results become immediately visible to
-                          students and parents.
-                        </FormLabel>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+            <SmartFormPanel
+              header={
+                <SmartFormPanelHeader
+                  icon={ClipboardList}
+                  title="Confirm publication"
+                  subtitle="Published results become immediately visible. Further changes require the grade correction workflow."
+                />
+              }
+              footer={
+                <div className="flex flex-col-reverse gap-2 px-5 py-4 sm:flex-row sm:justify-end">
+                  <Link href="/school/exams" className={`${ACADEMIC_UI.btnSecondary} justify-center`}>
+                    Cancel
+                  </Link>
+                  <button
+                    type="submit"
+                    form="publish-results-form"
+                    className={ACADEMIC_UI.btnPrimary}
+                    disabled={
+                      !preflight.ready || publish.isSubmitting || !form.watch('irreversibleAcknowledged')
+                    }
+                  >
+                    {publish.isSubmitting ? 'Publishing…' : 'Publish results'}
+                  </button>
+                </div>
+              }
+            >
+              <Form {...form}>
+                <form id="publish-results-form" onSubmit={onSubmit} className="space-y-5">
+                  <FormSubmitError message={form.formState.errors.root?.message ?? null} />
 
-                  <StepUpMfaFields control={form.control} name="mfaCode" />
+                  <SmartFormSection title="Acknowledgement">
+                    <FormField
+                      control={form.control}
+                      name="irreversibleAcknowledged"
+                      render={({ field }) => (
+                        <FormItem className="flex items-start gap-2 space-y-0 rounded-xl border border-neutral-200 bg-neutral-50/50 px-3 py-3">
+                          <FormControl>
+                            <Checkbox checked={field.value} onCheckedChange={field.onChange} className="mt-0.5" />
+                          </FormControl>
+                          <FormLabel className="font-normal leading-relaxed text-[13px] text-neutral-700">
+                            I understand that publishing is irreversible and results become immediately visible to
+                            students and parents.
+                          </FormLabel>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </SmartFormSection>
 
-                  {form.formState.errors.root ? (
-                    <Alert variant="destructive">
-                      <AlertDescription>{form.formState.errors.root.message}</AlertDescription>
-                    </Alert>
-                  ) : null}
-                </CardContent>
-              </Card>
-
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" asChild>
-                  <Link href="/school/exams">Cancel</Link>
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={!preflight.ready || publish.isSubmitting || !form.watch('irreversibleAcknowledged')}
-                >
-                  {publish.isSubmitting ? 'Publishing…' : 'Publish results'}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </div>
-      </PageBody>
-    </>
+                  <SmartFormSection title="Step-up verification">
+                    <StepUpMfaFields control={form.control} name="mfaCode" />
+                  </SmartFormSection>
+                </form>
+              </Form>
+            </SmartFormPanel>
+          </div>
+        )}
+      </div>
+    </PageBody>
   );
 }

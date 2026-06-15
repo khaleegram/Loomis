@@ -1,5 +1,6 @@
 'use client';
 
+import type { LucideIcon } from 'lucide-react';
 import {
   DialogDescription,
   DialogHeader,
@@ -10,10 +11,86 @@ import {
   cn,
 } from '@loomis/ui-web';
 import { Check, Search } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { SURFACES } from '@/lib/design/surfaces';
+
+export const smartFormPanelClass = ACADEMIC_UI.dataPanel;
+
+export function SmartFormPanel({
+  header,
+  children,
+  footer,
+  className,
+  bodyClassName,
+}: {
+  header?: ReactNode;
+  children: ReactNode;
+  footer?: ReactNode;
+  className?: string;
+  bodyClassName?: string;
+}) {
+  return (
+    <div className={cn(smartFormPanelClass, className)}>
+      {header}
+      <div className={cn('p-5 sm:p-6', bodyClassName)}>{children}</div>
+      {footer ? (
+        <div className="border-t border-neutral-100 bg-neutral-50/50">{footer}</div>
+      ) : null}
+    </div>
+  );
+}
+
+export function SmartFormPanelHeader({
+  icon: Icon,
+  title,
+  subtitle,
+  badge,
+}: {
+  icon?: LucideIcon;
+  title: string;
+  subtitle?: string;
+  badge?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-brand-50/80 bg-gradient-to-r from-neutral-50 to-brand-50/30 px-5 py-4">
+      <div className="flex items-start gap-3">
+        {Icon ? (
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-white shadow-sm">
+            <Icon aria-hidden className="size-5" />
+          </span>
+        ) : null}
+        <div>
+          <p className="text-[14px] font-bold text-neutral-900">{title}</p>
+          {subtitle ? <p className="mt-0.5 text-[12px] leading-relaxed text-neutral-500">{subtitle}</p> : null}
+        </div>
+      </div>
+      {badge}
+    </div>
+  );
+}
+
+export function SmartFormSection({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="space-y-3">
+      <div>
+        <p className={ACADEMIC_UI.sectionLabel}>{title}</p>
+        {description ? <p className="mt-0.5 text-[12px] text-neutral-500">{description}</p> : null}
+      </div>
+      {children}
+    </section>
+  );
+}
 
 export function SmartFieldLabel({
   children,

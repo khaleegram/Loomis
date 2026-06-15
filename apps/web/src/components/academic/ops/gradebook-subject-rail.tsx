@@ -50,7 +50,7 @@ export function GradebookSubjectRail({
       <div className="rounded-2xl border border-dashed border-neutral-200 bg-neutral-50/80 px-4 py-8 text-center">
         <BookOpen aria-hidden className="mx-auto mb-2 size-5 text-neutral-300" />
         <p className="text-[13px] font-medium text-neutral-600">
-          No exam configuration for your subjects in this class. Ask the exam officer to link grading schemes.
+          No gradebook sheets for this class yet. Ask the exam officer to create a default grading scheme.
         </p>
       </div>
     );
