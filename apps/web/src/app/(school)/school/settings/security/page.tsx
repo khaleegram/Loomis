@@ -1,7 +1,10 @@
 'use client';
 
 import { useDeregisterDevice, useDevices, useRevokeSession, useSessions } from '@loomis/api-client';
-import { Button } from '@loomis/ui-web';
+import { Button, Skeleton } from '@loomis/ui-web';
+import { MonitorSmartphone, Shield } from 'lucide-react';
+
+import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 
 export default function SecuritySettingsPage() {
   const sessions = useSessions();
@@ -10,37 +13,44 @@ export default function SecuritySettingsPage() {
   const deregisterDevice = useDeregisterDevice();
 
   return (
-    <>
-      <p className="mb-6 text-sm text-muted-foreground">
+    <div className="space-y-6">
+      <p className="text-[13px] text-neutral-500">
         Manage your active sessions and registered devices (US-HRM-008).
       </p>
-      <section className="mb-8">
-          <h2 className="mb-3 text-sm font-semibold text-neutral-900">Active sessions</h2>
+
+      <section>
+        <div className="mb-3 flex items-center gap-2">
+          <Shield aria-hidden className="size-4 text-brand-600" />
+          <h2 className="text-[14px] font-semibold text-neutral-900">Active sessions</h2>
+        </div>
+        <div className={`${ACADEMIC_UI.dataPanel} overflow-hidden`}>
           {sessions.isLoading ? (
-            <p className="text-sm text-neutral-500">Loading sessions…</p>
+            <div className="p-5">
+              <Skeleton className="h-20 w-full rounded-xl" />
+            </div>
           ) : sessions.isError ? (
-            <p className="text-sm text-red-600" role="alert">
+            <p className="p-5 text-[13px] text-destructive" role="alert">
               Failed to load sessions.
             </p>
           ) : (sessions.data?.sessions.length ?? 0) === 0 ? (
-            <p className="text-sm text-neutral-500">No active sessions.</p>
+            <p className="p-5 text-[13px] text-neutral-500">No active sessions.</p>
           ) : (
-            <ul className="divide-y divide-neutral-200 overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm">
+            <ul className="divide-y divide-brand-50/80">
               {sessions.data?.sessions.map((session) => (
                 <li
                   key={session.id}
-                  className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
+                  className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-[13px]"
                 >
                   <div>
                     <p className="font-medium text-neutral-900">
                       {session.platform ?? 'Unknown device'}
                       {session.isCurrent ? (
-                        <span className="ml-2 rounded-full bg-brand-50 px-2 py-0.5 text-xs text-brand-700">
+                        <span className="ml-2 rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-semibold text-brand-700">
                           Current
                         </span>
                       ) : null}
                     </p>
-                    <p className="text-xs text-neutral-500">
+                    <p className="text-[11px] text-neutral-500">
                       Last active {new Date(session.lastActiveAt).toLocaleString()}
                       {session.ipAddress ? ` · ${session.ipAddress}` : ''}
                     </p>
@@ -59,28 +69,35 @@ export default function SecuritySettingsPage() {
               ))}
             </ul>
           )}
-        </section>
+        </div>
+      </section>
 
-        <section>
-          <h2 className="mb-3 text-sm font-semibold text-neutral-900">Registered devices</h2>
+      <section>
+        <div className="mb-3 flex items-center gap-2">
+          <MonitorSmartphone aria-hidden className="size-4 text-brand-600" />
+          <h2 className="text-[14px] font-semibold text-neutral-900">Registered devices</h2>
+        </div>
+        <div className={`${ACADEMIC_UI.dataPanel} overflow-hidden`}>
           {devices.isLoading ? (
-            <p className="text-sm text-neutral-500">Loading devices…</p>
+            <div className="p-5">
+              <Skeleton className="h-20 w-full rounded-xl" />
+            </div>
           ) : devices.isError ? (
-            <p className="text-sm text-red-600" role="alert">
+            <p className="p-5 text-[13px] text-destructive" role="alert">
               Failed to load devices.
             </p>
           ) : (devices.data?.devices.length ?? 0) === 0 ? (
-            <p className="text-sm text-neutral-500">No registered devices.</p>
+            <p className="p-5 text-[13px] text-neutral-500">No registered devices.</p>
           ) : (
-            <ul className="divide-y divide-neutral-200 overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm">
+            <ul className="divide-y divide-brand-50/80">
               {devices.data?.devices.map((device) => (
                 <li
                   key={device.id}
-                  className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
+                  className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-[13px]"
                 >
                   <div>
                     <p className="font-medium capitalize text-neutral-900">{device.platform}</p>
-                    <p className="text-xs text-neutral-500">
+                    <p className="text-[11px] text-neutral-500">
                       Registered {new Date(device.registeredAt).toLocaleDateString()} · Last seen{' '}
                       {new Date(device.lastSeenAt).toLocaleString()}
                       {device.hasPersistentToken ? ' · Persistent MFA token' : ''}
@@ -98,7 +115,8 @@ export default function SecuritySettingsPage() {
               ))}
             </ul>
           )}
+        </div>
       </section>
-    </>
+    </div>
   );
 }

@@ -1,133 +1,83 @@
-// @ts-nocheck
 'use client';
 
-import { useState } from 'react';
-import { useWorkflowInbox, useDecideWorkflow } from '@loomis/api-client';
-import { Button, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@loomis/ui-web';
-import { Check, X, Clock } from 'lucide-react';
+import { useMemo } from 'react';
+import { useWorkflowInbox } from '@loomis/api-client';
+import type { WorkflowInboxItemResponse } from '@loomis/contracts';
+import { Alert, AlertDescription, Skeleton } from '@loomis/ui-web';
 
-import { PageBody, PageHeader } from '@/components/school/school-shell';
+import { WorkflowInboxHero } from '@/components/workflow/workflow-inbox-hero';
+import { WorkflowInboxItemCard } from '@/components/workflow/workflow-inbox-item';
+import { PageBody } from '@/components/school/school-shell';
+import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
+import { academicErrorMessage } from '@/lib/academic/academic-errors';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
+
+const pageClass = 'max-w-[1400px] px-4 py-5 sm:px-6 lg:px-12 lg:py-8';
 
 export default function WorkflowInboxPage() {
   const tenantId = useTenantId();
-  const [selectedStep, setSelectedStep] = useState<{ instanceId: string; stepId: string } | null>(null);
+  const inboxQuery = useWorkflowInbox(tenantId ?? '');
+  const items = inboxQuery.data?.items ?? [];
 
-  const { data, isLoading, isError, error } = useWorkflowInbox(tenantId ?? '');
-
-  const items = (data as any)?.items ?? [];
+  const metrics = useMemo(() => {
+    const gradeCorrectionCount = items.filter(
+      (item) => item.instance.workflowType === 'grade_correction',
+    ).length;
+    const refundCount = items.filter(
+      (item) => item.instance.workflowType === 'refund_request',
+    ).length;
+    return {
+      pendingCount: items.length,
+      gradeCorrectionCount,
+      refundCount,
+    };
+  }, [items]);
 
   if (!tenantId) {
     return (
-      <>
-        <PageHeader title="Workflow Inbox" />
-        <PageBody><p className="text-sm text-destructive">No tenant context.</p></PageBody>
-      </>
+      <PageBody className={pageClass}>
+        <Alert variant="destructive">
+          <AlertDescription>No tenant context.</AlertDescription>
+        </Alert>
+      </PageBody>
     );
   }
 
   return (
-    <>
-      <PageHeader
-        title="Workflow Inbox"
-        description="Pending approval tasks requiring your action — US-WRK-002"
-      />
-      <PageBody>
-        {isLoading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-20 w-full" />
+    <PageBody className={pageClass}>
+      <div className="space-y-6">
+        <WorkflowInboxHero
+          pendingCount={metrics.pendingCount}
+          gradeCorrectionCount={metrics.gradeCorrectionCount}
+          refundCount={metrics.refundCount}
+          isLoading={inboxQuery.isLoading}
+        />
+
+        {inboxQuery.isLoading ? (
+          <div className="space-y-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-28 w-full rounded-2xl" />
             ))}
           </div>
-        ) : isError ? (
-          <p className="text-sm text-destructive" role="alert">
-            {(error as Error).message ?? 'Failed to load workflow inbox.'}
-          </p>
+        ) : inboxQuery.isError ? (
+          <Alert variant="destructive">
+            <AlertDescription>{academicErrorMessage(inboxQuery.error)}</AlertDescription>
+          </Alert>
         ) : items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border py-16">
-            <p className="text-sm text-muted-foreground">No pending tasks.</p>
-            <p className="mt-1 text-xs text-muted-foreground">Approval requests will appear here when workflows require your action.</p>
+          <div className={`${ACADEMIC_UI.dataPanel} p-12 text-center`}>
+            <p className="text-[15px] font-semibold text-neutral-800">No pending tasks</p>
+            <p className="mx-auto mt-2 max-w-md text-[13px] text-neutral-500">
+              Approval requests will appear here when a workflow step is assigned to your role.
+            </p>
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Instance</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((item: any) => (
-                <TableRow key={item.instance?.id ?? Math.random()}>
-                  <TableCell className="font-medium">{item.instance?.workflowType ?? '—'}</TableCell>
-                  <TableCell>{item.instance?.status ?? '—'}</TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">{item.instance?.id?.slice(0, 8) ?? '—'}</TableCell>
-                  <TableCell className="text-right">
-                    {item.activeStep ? (
-                      <StepActions
-                        tenantId={tenantId}
-                        item={item}
-                        isSelected={selectedStep?.stepId === item.activeStep.id}
-                        onToggle={(info) =>
-                          setSelectedStep((s) =>
-                            s?.stepId === info.stepId ? null : info,
-                          )
-                        }
-                      />
-                    ) : (
-                      <span className="text-xs text-muted-foreground">No active step</span>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <div className="space-y-4">
+            {items.map((item: WorkflowInboxItemResponse) => (
+              <WorkflowInboxItemCard key={item.instance.id} tenantId={tenantId} item={item} />
+            ))}
+          </div>
         )}
-      </PageBody>
-    </>
-  );
-}
-
-function StepActions({
-  tenantId,
-  item,
-  isSelected,
-  onToggle,
-}: {
-  tenantId: string;
-  item: any;
-  isSelected: boolean;
-  onToggle: (info: { instanceId: string; stepId: string }) => void;
-}) {
-  const decide = useDecideWorkflow(tenantId, item.instance?.id, item.activeStep?.id);
-
-  async function handleDecision(decision: 'approve' | 'reject') {
-    try {
-      await decide.mutateAsync({ decision });
-      onToggle({ instanceId: item.instance?.id, stepId: item.activeStep?.id });
-    } catch {
-      // error handled by mutator
-    }
-  }
-
-  if (isSelected) {
-    return (
-      <div className="flex items-center justify-end gap-2">
-        <Button size="sm" variant="default" onClick={() => handleDecision('approve')} disabled={decide.isPending}>
-          <Check className="mr-1 size-3.5" /> Approve
-        </Button>
-        <Button size="sm" variant="destructive" onClick={() => handleDecision('reject')} disabled={decide.isPending}>
-          <X className="mr-1 size-3.5" /> Reject
-        </Button>
       </div>
-    );
-  }
-
-  return (
-    <Button size="sm" variant="outline" onClick={() => onToggle({ instanceId: item.instance?.id, stepId: item.activeStep?.id })}>
-      <Clock className="mr-1 size-3.5" /> Review
-    </Button>
+    </PageBody>
   );
 }

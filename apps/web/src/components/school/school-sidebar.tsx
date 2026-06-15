@@ -8,9 +8,11 @@ import { useSchoolBranding, useWorkflowInbox } from '@loomis/api-client';
 
 import { AppBar } from '@/components/layout/app-bar';
 import { navItemsToSearchItems } from '@/components/layout/smart-search-palette';
+import { SchoolAcademicSessionBar } from '@/components/school/school-academic-session-bar';
 import { SchoolLogo } from '@/components/shared/school-logo';
 import { WorkspaceMenu, type WorkspaceNavItem } from '@/components/layout/workspace-menu';
 import { useAuth } from '@/lib/auth/auth-context';
+import { useSchoolAcademic } from '@/lib/academic/school-academic-context';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 import {
   SCHOOL_NAV,
@@ -51,8 +53,13 @@ export function SchoolTopBar() {
   const { session, signOut } = useAuth();
   const { data: inboxData } = useWorkflowInbox(tenantId ?? '');
   const { data: branding } = useSchoolBranding(tenantId ?? '');
+  const { activeYear, activeTerm } = useSchoolAcademic();
   const inboxCount = inboxData?.items.length ?? 0;
   const schoolName = branding?.tenantName ?? 'School';
+  const sessionScope =
+    activeYear && activeTerm
+      ? `${schoolName} · ${activeYear.label} · ${activeTerm.name}`
+      : schoolName;
 
   if (!session) return null;
 
@@ -87,7 +94,8 @@ export function SchoolTopBar() {
       searchAriaLabel="Search school console"
       searchItems={navItemsToSearchItems(sections)}
       roleLabel={roleLabel}
-      scopeLine={schoolName}
+      scopeLine={sessionScope}
+      sessionControl={<SchoolAcademicSessionBar />}
       notificationCount={inboxCount > 0 ? inboxCount : undefined}
       workspaceMenu={
         <WorkspaceMenu

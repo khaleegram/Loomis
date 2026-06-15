@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
+  useAcademicYears,
   useCensusPreview,
   useLockCensus,
   useStepUpMfa,
@@ -13,11 +14,6 @@ import {
   Alert,
   AlertDescription,
   AlertTitle,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   Checkbox,
   Form,
   FormControl,
@@ -26,24 +22,21 @@ import {
   FormLabel,
   FormMessage,
   Input,
-  Separator,
   Skeleton,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  cn,
 } from '@loomis/ui-web';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
+import { CensusLockHero } from '@/components/academic/census-lock-hero';
+import { CensusLockStepper } from '@/components/academic/census-lock-stepper';
 import { StepUpMfaFields } from '@/components/academic/step-up-mfa-fields';
-import { PageBody, PageHeader } from '@/components/school/school-shell';
+import { PageBody } from '@/components/school/school-shell';
 import { academicErrorMessage } from '@/lib/academic/academic-errors';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
+import { SEMANTIC } from '@/lib/design/surfaces';
 import { useCan } from '@/lib/auth/use-capability';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 
@@ -54,6 +47,8 @@ const WIZARD_STEPS = [
   'PSF impact',
   'Confirm & lock',
 ] as const;
+
+const pageClass = 'max-w-[1400px] px-4 py-5 sm:px-6 lg:px-12 lg:py-8';
 
 const censusLockFormSchema = z.object({
   declaredBillableCount: z.number().int().nonnegative(),
@@ -70,43 +65,11 @@ const censusLockFormSchema = z.object({
 
 type CensusLockFormValues = z.infer<typeof censusLockFormSchema>;
 
-function KpiTile({
-  label,
-  value,
-  sub,
-  tone = 'default',
-}: {
-  label: string;
-  value: string | number;
-  sub?: string;
-  tone?: 'default' | 'warning' | 'brand';
-}) {
-  const toneClass =
-    tone === 'warning'
-      ? 'border-gold/40 bg-gold/5 dark:bg-gold/10'
-      : tone === 'brand'
-        ? 'border-brand-600/30 bg-brand-600/5 dark:border-mint-500/30 dark:bg-mint-500/5'
-        : 'border-border bg-card';
-  return (
-    <Card className={toneClass}>
-      <CardHeader className="pb-2">
-        <CardDescription>{label}</CardDescription>
-        <CardTitle className="font-serif text-2xl tabular-nums">{value}</CardTitle>
-        {sub ? <p className="text-xs text-muted-foreground">{sub}</p> : null}
-      </CardHeader>
-    </Card>
-  );
-}
-
 function CensusLockSkeleton() {
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Skeleton className="h-24" />
-        <Skeleton className="h-24" />
-        <Skeleton className="h-24" />
-      </div>
-      <Skeleton className="h-64 w-full" />
+    <div className="space-y-6">
+      <Skeleton className="h-16 w-full rounded-xl" />
+      <Skeleton className="h-64 w-full rounded-2xl" />
     </div>
   );
 }
@@ -119,6 +82,9 @@ export default function CensusLockPage() {
   const yearId = searchParams.get('yearId') ?? '';
   const canLock = useCan('census.lock');
   const [step, setStep] = useState(0);
+
+  const yearsQuery = useAcademicYears(tenantId ?? '');
+  const yearLabel = yearsQuery.data?.academicYears.find((year) => year.id === yearId)?.label ?? null;
 
   const preview = useCensusPreview(tenantId ?? '', termId);
   const stepUp = useStepUpMfa();
@@ -182,28 +148,24 @@ export default function CensusLockPage() {
 
   if (!canLock) {
     return (
-      <>
-        <PageHeader title="Lock enrollment census" />
-        <PageBody>
-          <p className="text-sm text-muted-foreground">You do not have permission to lock the census.</p>
-        </PageBody>
-      </>
+      <PageBody className={pageClass}>
+        <Alert>
+          <AlertDescription>You do not have permission to lock the census.</AlertDescription>
+        </Alert>
+      </PageBody>
     );
   }
 
   if (!tenantId || !termId || !yearId) {
     return (
-      <>
-        <PageHeader title="Lock enrollment census" />
-        <PageBody>
-          <Alert variant="destructive">
-            <AlertDescription>Missing term context. Return to Academic sessions.</AlertDescription>
-          </Alert>
-          <Link href="/school/academic/sessions" className={`mt-4 inline-flex ${ACADEMIC_UI.btnSecondary}`}>
-            Back to sessions
-          </Link>
-        </PageBody>
-      </>
+      <PageBody className={pageClass}>
+        <Alert variant="destructive">
+          <AlertDescription>Missing term context. Return to Academic sessions.</AlertDescription>
+        </Alert>
+        <Link href="/school/academic/sessions" className={`mt-4 inline-flex ${ACADEMIC_UI.btnSecondary}`}>
+          Back to sessions
+        </Link>
+      </PageBody>
     );
   }
 
@@ -244,38 +206,24 @@ export default function CensusLockPage() {
   }
 
   return (
-    <>
-      <PageHeader
-        title="Lock enrollment census"
-        description={`${preview.data?.termName ?? 'Term'} — irreversible PSF attestation (US-ASM-003).`}
-        actions={
-          <Link href="/school/academic/sessions" className={ACADEMIC_UI.btnSecondary}>
-            Back to sessions
-          </Link>
-        }
-      />
-      <PageBody>
-        <div className="mx-auto max-w-3xl space-y-6">
-          {/* Wizard stepper */}
-          <nav aria-label="Census lock progress">
-            <ol className="flex flex-wrap gap-2">
-              {WIZARD_STEPS.map((label, index) => (
-                <li
-                  key={label}
-                  className={`rounded-sm border px-3 py-1 text-xs font-medium ${
-                    index === step
-                      ? 'border-gold bg-gold/10 text-foreground dark:border-gold'
-                      : index < step
-                        ? 'border-brand-600/40 bg-brand-600/5 text-muted-foreground dark:border-mint-500/40'
-                        : 'border-border text-muted-foreground'
-                  }`}
-                >
-                  {index + 1}. {label}
-                </li>
-              ))}
-            </ol>
-          </nav>
+    <PageBody className={pageClass}>
+      <div className="space-y-6">
+        <CensusLockHero
+          termLabel={preview.data?.termName ?? null}
+          yearLabel={yearLabel}
+          systemCount={systemCount}
+          declaredCount={step >= 1 ? declaredCount : null}
+          minimumTermCommitment={mtc}
+          psfRateMinor={preview.data?.psfRateMinor ?? null}
+          psfTotalMinor={psfTotalMinor}
+          varianceWarning={varianceExceeded && step >= 1}
+          belowMtc={belowMtc && step >= 2}
+          isLoading={preview.isLoading}
+        />
 
+        <CensusLockStepper steps={WIZARD_STEPS} currentStep={step} />
+
+        <div className="mx-auto max-w-3xl space-y-6">
           {preview.isLoading ? <CensusLockSkeleton /> : null}
 
           {preview.isError ? (
@@ -295,220 +243,215 @@ export default function CensusLockPage() {
           ) : null}
 
           {preview.data ? (
-            <>
-              {/* KPI tiles — Dashboard Lock influence */}
-              <div className="grid gap-4 sm:grid-cols-3">
-                <KpiTile label="System count" value={systemCount} sub="Auto-populated billable enrollments" tone="brand" />
-                <KpiTile
-                  label="Declared count"
-                  value={step >= 1 ? declaredCount : '—'}
-                  sub="Your legal attestation"
-                  tone={varianceExceeded && step >= 1 ? 'warning' : 'default'}
-                />
-                <KpiTile
-                  label="Minimum Term Commitment"
-                  value={mtc ?? 'Not set'}
-                  sub={mtc === null ? 'Configured at onboarding' : 'Contractual floor'}
-                  tone={belowMtc && step >= 2 ? 'warning' : 'default'}
-                />
-              </div>
-
-              <Form {...form}>
-                <form onSubmit={onSubmit} className="space-y-6">
-                  {step === 0 ? (
-                    <Card className="shadow-card">
-                      <CardHeader>
-                        <CardTitle className="text-base">Billable enrollment breakdown</CardTitle>
-                        <CardDescription>By class level — read-only system count</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        {preview.data.classLevelBreakdown.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">
-                            No billable enrollments recorded yet. The declared count may be zero.
-                          </p>
-                        ) : (
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Class level</TableHead>
-                                <TableHead className="text-right">Billable students</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
+            <Form {...form}>
+              <form onSubmit={onSubmit} className="space-y-6">
+                {step === 0 ? (
+                  <div className={`${ACADEMIC_UI.dataPanel} overflow-hidden`}>
+                    <div className="border-b border-brand-50/80 px-5 py-4 sm:px-6">
+                      <p className={ACADEMIC_UI.sectionLabel}>Step 1</p>
+                      <p className="mt-1 text-[14px] font-semibold text-neutral-900">
+                        Billable enrollment breakdown
+                      </p>
+                      <p className="mt-1 text-[12px] text-neutral-500">
+                        By class level — read-only system count
+                      </p>
+                    </div>
+                    <div className="p-5 sm:p-6">
+                      {preview.data.classLevelBreakdown.length === 0 ? (
+                        <p className="text-[13px] text-neutral-500">
+                          No billable enrollments recorded yet. The declared count may be zero.
+                        </p>
+                      ) : (
+                        <div className="overflow-x-auto rounded-xl border border-brand-100/40">
+                          <table className="min-w-full text-left text-[13px]">
+                            <thead className={ACADEMIC_UI.tableHeader}>
+                              <tr>
+                                <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-500">
+                                  Class level
+                                </th>
+                                <th className="px-4 py-3 text-right text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-500">
+                                  Billable students
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
                               {preview.data.classLevelBreakdown.map((row) => (
-                                <TableRow key={row.classLevelId}>
-                                  <TableCell>
-                                    <span className="font-medium">{row.classLevelName}</span>
-                                    <span className="ml-2 text-xs text-muted-foreground">
-                                      {row.classLevelCode}
-                                    </span>
-                                  </TableCell>
-                                  <TableCell className="text-right tabular-nums">
+                                <tr key={row.classLevelId} className="border-t border-brand-50/80">
+                                  <td className="px-4 py-3">
+                                    <span className="font-semibold text-neutral-900">{row.classLevelName}</span>
+                                    <span className="ml-2 text-[11px] text-neutral-500">{row.classLevelCode}</span>
+                                  </td>
+                                  <td className="px-4 py-3 text-right font-mono tabular-nums text-neutral-800">
                                     {row.billableCount}
-                                  </TableCell>
-                                </TableRow>
+                                  </td>
+                                </tr>
                               ))}
-                            </TableBody>
-                          </Table>
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : null}
+
+                {step === 1 ? (
+                  <div className={`${ACADEMIC_UI.dataPanel} p-5 sm:p-6`}>
+                    <p className={ACADEMIC_UI.sectionLabel}>Step 2</p>
+                    <p className="mt-1 text-[14px] font-semibold text-neutral-900">Attest billable count</p>
+                    <p className="mt-1 text-[12px] text-neutral-500">
+                      Defaults to the system count ({systemCount}). Edit only if your attestation differs.
+                    </p>
+
+                    <div className="mt-4 space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="declaredBillableCount"
+                        render={({ field }) => (
+                          <FormItem className="max-w-xs">
+                            <FormLabel>Declared billable count</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min={0}
+                                className="h-11"
+                                {...field}
+                                onChange={(e) => field.onChange(Number(e.target.value))}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
                         )}
-                      </CardContent>
-                    </Card>
-                  ) : null}
-
-                  {step === 1 ? (
-                    <Card className="shadow-card">
-                      <CardHeader>
-                        <CardTitle className="text-base">Attest billable count</CardTitle>
-                        <CardDescription>
-                          Defaults to the system count ({systemCount}). Edit only if your attestation
-                          differs.
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <FormField
-                          control={form.control}
-                          name="declaredBillableCount"
-                          render={({ field }) => (
-                            <FormItem className="max-w-xs">
-                              <FormLabel>Declared billable count</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  {...field}
-                                  onChange={(e) => field.onChange(Number(e.target.value))}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        {varianceExceeded ? (
-                          <>
-                            <Alert variant="warning">
-                              <AlertTitle>Variance beyond {Math.round(varianceTolerance * 100)}%</AlertTitle>
-                              <AlertDescription>
-                                Your declared count differs from the system count. A documented reason is
-                                required.
-                              </AlertDescription>
-                            </Alert>
-                            <FormField
-                              control={form.control}
-                              name="varianceReason"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Variance reason</FormLabel>
-                                  <FormControl>
-                                    <Input {...field} placeholder="Explain the discrepancy" />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </>
-                        ) : null}
-                      </CardContent>
-                    </Card>
-                  ) : null}
-
-                  {step === 2 && belowMtc ? (
-                    <Card className="border-gold/40 shadow-card">
-                      <CardHeader>
-                        <CardTitle className="text-base">Below Minimum Term Commitment</CardTitle>
-                        <CardDescription>
-                          Declared {declaredCount} is below MTC {mtc}. Billing may apply at the MTC
-                          level per your agreement.
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <FormField
-                          control={form.control}
-                          name="belowMtcAcknowledged"
-                          render={({ field }) => (
-                            <FormItem className="flex items-start gap-3 rounded-md border border-gold/30 p-3">
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value}
-                                  onCheckedChange={(v) => field.onChange(v === true)}
-                                />
-                              </FormControl>
-                              <div>
-                                <FormLabel className="font-normal">
-                                  I acknowledge the count is below the Minimum Term Commitment and
-                                  understand the billing implications.
-                                </FormLabel>
+                      />
+                      {varianceExceeded ? (
+                        <>
+                          <div className={cn('rounded-xl border p-4', SEMANTIC.warning.surfaceSubtle)}>
+                            <p className={cn('text-[13px] font-semibold', SEMANTIC.warning.title)}>
+                              Variance beyond {Math.round(varianceTolerance * 100)}%
+                            </p>
+                            <p className={cn('mt-1 text-[12px]', SEMANTIC.warning.text)}>
+                              Your declared count differs from the system count. A documented reason is required.
+                            </p>
+                          </div>
+                          <FormField
+                            control={form.control}
+                            name="varianceReason"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Variance reason</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="Explain the discrepancy" className="h-11" />
+                                </FormControl>
                                 <FormMessage />
-                              </div>
-                            </FormItem>
-                          )}
-                        />
-                      </CardContent>
-                    </Card>
-                  ) : null}
+                              </FormItem>
+                            )}
+                          />
+                        </>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
 
-                  {step === 2 && !belowMtc ? (
-                    <Alert>
+                {step === 2 && belowMtc ? (
+                  <div className={cn(`${ACADEMIC_UI.dataPanel} p-5 sm:p-6`, SEMANTIC.warning.surfaceSubtle)}>
+                    <p className={ACADEMIC_UI.sectionLabel}>Step 3</p>
+                    <p className="mt-1 text-[14px] font-semibold text-neutral-900">
+                      Below Minimum Term Commitment
+                    </p>
+                    <p className="mt-1 text-[12px] text-neutral-500">
+                      Declared {declaredCount} is below MTC {mtc}. Billing may apply at the MTC level per your
+                      agreement.
+                    </p>
+                    <FormField
+                      control={form.control}
+                      name="belowMtcAcknowledged"
+                      render={({ field }) => (
+                        <FormItem className="mt-4 flex items-start gap-3 rounded-xl border border-gold-200/60 bg-white/80 p-4">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={(v) => field.onChange(v === true)}
+                            />
+                          </FormControl>
+                          <div>
+                            <FormLabel className="font-normal text-[13px] leading-relaxed text-neutral-700">
+                              I acknowledge the count is below the Minimum Term Commitment and understand the
+                              billing implications.
+                            </FormLabel>
+                            <FormMessage />
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                ) : null}
+
+                {step === 2 && !belowMtc ? (
+                  <div className={`${ACADEMIC_UI.dataPanel} p-5 sm:p-6`}>
+                    <p className={ACADEMIC_UI.sectionLabel}>Step 3</p>
+                    <p className="mt-1 text-[14px] font-semibold text-neutral-900">MTC check passed</p>
+                    <p className="mt-2 text-[13px] text-neutral-600">
+                      Declared count meets or exceeds the Minimum Term Commitment. No additional acknowledgement
+                      required.
+                    </p>
+                  </div>
+                ) : null}
+
+                {step === 3 ? (
+                  <div className={cn(`${ACADEMIC_UI.dataPanel} p-5 sm:p-6`, SEMANTIC.warning.surfaceSubtle)}>
+                    <p className={ACADEMIC_UI.sectionLabel}>Step 4</p>
+                    <p className="mt-1 text-[14px] font-semibold text-neutral-900">PSF obligation preview</p>
+                    <p className="mt-1 text-[12px] text-neutral-500">
+                      Obligations are created by census lock — not by payment.
+                    </p>
+                    <dl className="mt-4 space-y-2 text-[13px]">
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-neutral-500">Students attested</dt>
+                        <dd className="font-bold tabular-nums text-neutral-900">{declaredCount}</dd>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-neutral-500">PSF rate per student</dt>
+                        <dd className="font-semibold text-neutral-900">
+                          {preview.data.psfRateMinor ? formatKobo(preview.data.psfRateMinor) : '—'}
+                        </dd>
+                      </div>
+                      <div className="border-t border-gold-200/60 pt-3">
+                        <div className="flex justify-between gap-4">
+                          <dt className="font-semibold text-neutral-800">Total PSF exposure</dt>
+                          <dd className="text-lg font-extrabold tabular-nums text-gold-700">
+                            {psfTotalMinor !== null ? formatKobo(psfTotalMinor) : '—'}
+                          </dd>
+                        </div>
+                      </div>
+                    </dl>
+                    <p className="mt-3 text-[11px] text-neutral-500">
+                      Creates {declaredCount} immutable PSF obligation
+                      {declaredCount === 1 ? '' : 's'} plus a digitally signed attestation record.
+                    </p>
+                  </div>
+                ) : null}
+
+                {step === 4 ? (
+                  <div className="space-y-4">
+                    <Alert variant="destructive">
+                      <AlertTitle>Permanent census lock</AlertTitle>
                       <AlertDescription>
-                        Declared count meets or exceeds the Minimum Term Commitment. No additional
-                        acknowledgement required.
+                        <ul className="mt-2 list-disc space-y-1 pl-4 text-[13px]">
+                          <li>This action cannot be undone.</li>
+                          <li>PSF obligations are created now — not when fees are paid.</li>
+                          <li>A signed attestation record will be stored permanently.</li>
+                        </ul>
                       </AlertDescription>
                     </Alert>
-                  ) : null}
 
-                  {step === 3 ? (
-                    <Card className="border-gold/30 shadow-card">
-                      <CardHeader>
-                        <CardTitle className="text-base">PSF obligation preview</CardTitle>
-                        <CardDescription>
-                          Obligations are created by census lock — not by payment (financial integrity).
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-2 text-sm">
-                        <p>
-                          <span className="text-muted-foreground">Students attested:</span>{' '}
-                          <strong className="tabular-nums">{declaredCount}</strong>
-                        </p>
-                        <p>
-                          <span className="text-muted-foreground">PSF rate per student:</span>{' '}
-                          <strong>
-                            {preview.data.psfRateMinor
-                              ? formatKobo(preview.data.psfRateMinor)
-                              : '—'}
-                          </strong>
-                        </p>
-                        <Separator />
-                        <p className="font-serif text-lg">
-                          Total PSF exposure:{' '}
-                          <span className="text-gold dark:text-gold">
-                            {psfTotalMinor !== null ? formatKobo(psfTotalMinor) : '—'}
-                          </span>
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Creates {declaredCount} immutable PSF obligation
-                          {declaredCount === 1 ? '' : 's'} plus a digitally signed attestation record.
-                        </p>
-                      </CardContent>
-                    </Card>
-                  ) : null}
-
-                  {step === 4 ? (
-                    <div className="space-y-4">
-                      <Alert variant="destructive">
-                        <AlertTitle>Permanent census lock</AlertTitle>
-                        <AlertDescription>
-                          <ul className="mt-2 list-disc space-y-1 pl-4">
-                            <li>This action cannot be undone.</li>
-                            <li>PSF obligations are created now — not when fees are paid.</li>
-                            <li>A signed attestation record will be stored permanently.</li>
-                          </ul>
-                        </AlertDescription>
-                      </Alert>
+                    <div className={`${ACADEMIC_UI.dataPanel} space-y-4 p-5 sm:p-6`}>
+                      <p className={ACADEMIC_UI.sectionLabel}>Step 5</p>
+                      <p className="mt-1 text-[14px] font-semibold text-neutral-900">Confirm & lock</p>
 
                       <FormField
                         control={form.control}
                         name="psfAcknowledged"
                         render={({ field }) => (
-                          <FormItem className="flex items-start gap-3 rounded-md border border-border p-3">
+                          <FormItem className="flex items-start gap-3 rounded-xl border border-brand-100/60 bg-brand-50/30 p-4">
                             <FormControl>
                               <Checkbox
                                 checked={field.value === true}
@@ -516,7 +459,7 @@ export default function CensusLockPage() {
                               />
                             </FormControl>
                             <div>
-                              <FormLabel className="font-normal">
+                              <FormLabel className="font-normal text-[13px] leading-relaxed text-neutral-700">
                                 I understand {declaredCount} PSF obligation
                                 {declaredCount === 1 ? '' : 's'} will be created immediately.
                               </FormLabel>
@@ -530,7 +473,7 @@ export default function CensusLockPage() {
                         control={form.control}
                         name="immutableAcknowledged"
                         render={({ field }) => (
-                          <FormItem className="flex items-start gap-3 rounded-md border border-destructive/30 p-3">
+                          <FormItem className="flex items-start gap-3 rounded-xl border border-destructive/20 bg-destructive/5 p-4">
                             <FormControl>
                               <Checkbox
                                 checked={field.value === true}
@@ -538,9 +481,8 @@ export default function CensusLockPage() {
                               />
                             </FormControl>
                             <div>
-                              <FormLabel className="font-normal">
-                                I attest this count is accurate and accept that census lock is
-                                irreversible.
+                              <FormLabel className="font-normal text-[13px] leading-relaxed text-neutral-700">
+                                I attest this count is accurate and accept that census lock is irreversible.
                               </FormLabel>
                               <FormMessage />
                             </div>
@@ -550,48 +492,48 @@ export default function CensusLockPage() {
 
                       <StepUpMfaFields control={form.control} name="mfaCode" />
                     </div>
-                  ) : null}
+                  </div>
+                ) : null}
 
-                  {form.formState.errors.root ? (
-                    <Alert variant="destructive">
-                      <AlertDescription>{form.formState.errors.root.message}</AlertDescription>
-                    </Alert>
-                  ) : null}
+                {form.formState.errors.root ? (
+                  <Alert variant="destructive">
+                    <AlertDescription>{form.formState.errors.root.message}</AlertDescription>
+                  </Alert>
+                ) : null}
 
-                  <div className="flex flex-wrap justify-between gap-2">
+                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+                  <button
+                    type="button"
+                    disabled={step === 0}
+                    onClick={goBack}
+                    className={ACADEMIC_UI.btnSecondary}
+                  >
+                    Back
+                  </button>
+                  {step < WIZARD_STEPS.length - 1 ? (
                     <button
                       type="button"
-                      disabled={step === 0}
-                      onClick={goBack}
-                      className={ACADEMIC_UI.btnSecondary}
+                      onClick={goNext}
+                      disabled={preview.data.psfRateMinor === null}
+                      className={ACADEMIC_UI.btnPrimary}
                     >
-                      Back
+                      Continue
                     </button>
-                    {step < WIZARD_STEPS.length - 1 ? (
-                      <button
-                        type="button"
-                        onClick={goNext}
-                        disabled={preview.data.psfRateMinor === null}
-                        className={ACADEMIC_UI.btnPrimary}
-                      >
-                        Continue
-                      </button>
-                    ) : (
-                      <button
-                        type="submit"
-                        disabled={lockCensus.isSubmitting || preview.data.psfRateMinor === null}
-                        className={ACADEMIC_UI.btnPrimary}
-                      >
-                        {lockCensus.isSubmitting ? 'Locking census…' : 'Lock census'}
-                      </button>
-                    )}
-                  </div>
-                </form>
-              </Form>
-            </>
+                  ) : (
+                    <button
+                      type="submit"
+                      disabled={lockCensus.isSubmitting || preview.data.psfRateMinor === null}
+                      className={ACADEMIC_UI.btnPrimary}
+                    >
+                      {lockCensus.isSubmitting ? 'Locking census…' : 'Lock census'}
+                    </button>
+                  )}
+                </div>
+              </form>
+            </Form>
           ) : null}
         </div>
-      </PageBody>
-    </>
+      </div>
+    </PageBody>
   );
 }
