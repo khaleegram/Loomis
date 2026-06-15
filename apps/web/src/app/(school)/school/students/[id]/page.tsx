@@ -25,6 +25,7 @@ import {
 } from '@loomis/ui-web';
 import Link from 'next/link';
 import { use, useCallback, useMemo, useState } from 'react';
+import { ArrowLeft } from 'lucide-react';
 
 import { EnrollStudentDialog } from '@/components/student/enroll-student-dialog';
 import { InitiateParentLinkDialog } from '@/components/student/initiate-parent-link-dialog';
@@ -37,7 +38,7 @@ import {
 import { StudentAttendanceTab } from '@/components/student/student-attendance-tab';
 import { StudentTimeline } from '@/components/student/student-timeline';
 import { TransferStudentDialog } from '@/components/student/transfer-student-dialog';
-import { PageBody, PageHeader } from '@/components/school/school-shell';
+import { PageBody } from '@/components/school/school-shell';
 import { PhotoUpload } from '@/components/shared/photo-upload';
 import { useCan, useCanAny } from '@/lib/auth/use-capability';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
@@ -111,12 +112,9 @@ export default function StudentProfilePage({ params }: StudentProfilePageProps) 
 
   if (!tenantId) {
     return (
-      <>
-        <PageHeader title="Student profile" />
-        <PageBody>
-          <p className="text-sm text-destructive">No tenant context. Sign in again.</p>
-        </PageBody>
-      </>
+      <PageBody className="max-w-[1200px] px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+        <p className="text-sm text-destructive">No tenant context. Sign in again.</p>
+      </PageBody>
     );
   }
 
@@ -149,21 +147,24 @@ export default function StudentProfilePage({ params }: StudentProfilePageProps) 
     ) : null;
 
   return (
-    <>
-      <PageHeader
-        title="Student profile"
-        description="Complete student record and linked family information."
-        breadcrumbs={
-          <nav className="flex items-center gap-2 text-sm">
-            <Link href="/school/students" className="hover:text-foreground">
-              Students
+    <PageBody className="max-w-[1200px] px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.15em] text-neutral-400">
+            <Link href="/school/students" className="hover:text-brand-600 transition-colors">
+              Student registry
             </Link>
-            <span aria-hidden>/</span>
-            <span className="text-foreground">{studentName}</span>
-          </nav>
-        }
-      />
-      <PageBody className="max-w-[1200px] px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+            <span className="text-neutral-200">/</span>
+            <span className="text-neutral-500">{isLoading ? 'Loading…' : studentName}</span>
+          </div>
+          <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-[12px] text-neutral-600" asChild>
+            <Link href="/school/students">
+              <ArrowLeft className="size-3.5" aria-hidden />
+              Back
+            </Link>
+          </Button>
+        </div>
+
         {isLoading ? (
           <div className="space-y-6">
             <StudentProfileHeaderSkeleton />
@@ -482,7 +483,7 @@ export default function StudentProfilePage({ params }: StudentProfilePageProps) 
             <StudentTimeline student={student} />
           </div>
         )}
-      </PageBody>
+      </div>
 
       {student ? (
         <>
@@ -516,7 +517,7 @@ export default function StudentProfilePage({ params }: StudentProfilePageProps) 
           />
         </>
       ) : null}
-    </>
+    </PageBody>
   );
 }
 

@@ -127,21 +127,12 @@ export default function AssignmentsPage() {
         />
 
         <AcademicScopePicker
-          years={ctx.sortedYears}
-          terms={ctx.terms}
           classArmOptions={
             isTeachingStaffRole(role)
               ? teacherCtx.teachingClassArmOptions
               : classArmOptions(ctx.arms, ctx.levels)
           }
-          yearId={ctx.yearId}
-          termId={ctx.termId}
           classArmId={ctx.classArmId}
-          onYearChange={(id) => {
-            ctx.setYearId(id);
-            ctx.setTermId(null);
-          }}
-          onTermChange={ctx.setTermId}
           onClassArmChange={ctx.setClassArmId}
           hideClassSelection={isTeachingStaffRole(role) ? teacherCtx.hideClassSelection : false}
         />
@@ -154,7 +145,7 @@ export default function AssignmentsPage() {
 
         {!filters ? (
           <div className={`${ACADEMIC_UI.dataPanel} p-8 text-center`}>
-            <p className="text-[13px] text-neutral-500">Select year, term, and class to view assignments.</p>
+            <p className="text-[13px] text-neutral-500">Choose a class to view assignments.</p>
           </div>
         ) : (
           <AssignmentsList

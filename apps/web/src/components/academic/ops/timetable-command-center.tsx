@@ -1,25 +1,19 @@
 'use client';
 
-import type { AcademicTermResponse, AcademicYearResponse, TimetableTermSummaryResponse } from '@loomis/contracts';
+import type { TimetableTermSummaryResponse } from '@loomis/contracts';
 import { cn } from '@loomis/ui-web';
 import Link from 'next/link';
-import { CalendarDays, CheckCircle2, ChevronDown, Clock, GraduationCap, Layers, Sparkles } from 'lucide-react';
-import { useState } from 'react';
+import { CalendarDays, CheckCircle2, Clock, GraduationCap, Layers, Sparkles } from 'lucide-react';
 
 import { TimetableClassRail } from '@/components/academic/ops/timetable-class-rail';
 import { ACADEMIC_PAGE_TITLE_STYLE, ACADEMIC_UI } from '@/lib/academic/academic-ui';
+import { useSchoolAcademic } from '@/lib/academic/school-academic-context';
 import { PERIOD_PRESETS } from '@/lib/timetable/timetable-utils';
 import { SURFACES } from '@/lib/design/surfaces';
 
-interface TimetableCommandCenterProps {
-  years: AcademicYearResponse[];
-  terms: AcademicTermResponse[];
-  yearId: string | null;
-  termId: string | null;
+interface TimetableCommandStripProps {
   classArmId: string | null;
   classLabel: string | null;
-  onYearChange: (id: string) => void;
-  onTermChange: (id: string) => void;
   onSelectClassArm: (id: string) => void;
   summary: TimetableTermSummaryResponse | null;
   summaryLoading?: boolean;
@@ -40,15 +34,9 @@ function termStatusBadge(status: string): string {
   }
 }
 
-export function TimetableCommandCenter({
-  years,
-  terms,
-  yearId,
-  termId,
+export function TimetableCommandStrip({
   classArmId,
   classLabel,
-  onYearChange,
-  onTermChange,
   onSelectClassArm,
   summary,
   summaryLoading,
@@ -56,11 +44,8 @@ export function TimetableCommandCenter({
   selectedDraftCount = 0,
   publishHref,
   actions,
-}: TimetableCommandCenterProps) {
-  const [sessionOpen, setSessionOpen] = useState(false);
-
-  const activeYear = years.find((y) => y.id === yearId) ?? null;
-  const activeTerm = terms.find((t) => t.id === termId) ?? null;
+}: TimetableCommandStripProps) {
+  const { activeYear, activeTerm } = useSchoolAcademic();
   const termLabel = activeTerm?.name ?? null;
 
   const published = summary?.publishedClassArms ?? 0;
@@ -134,11 +119,7 @@ export function TimetableCommandCenter({
           </div>
 
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:items-end">
-            <button
-              type="button"
-              onClick={() => setSessionOpen((open) => !open)}
-              className="inline-flex min-h-[44px] w-full cursor-pointer items-center gap-2 rounded-xl border border-brand-200/80 bg-white/95 px-4 py-2.5 text-left shadow-sm backdrop-blur-sm transition hover:border-brand-300 hover:shadow-md sm:min-h-0 sm:w-auto"
-            >
+            <span className="inline-flex min-h-[44px] w-full items-center gap-2 rounded-xl border border-brand-200/80 bg-white/95 px-4 py-2.5 shadow-sm backdrop-blur-sm sm:min-h-0 sm:w-auto">
               <CalendarDays aria-hidden className="size-4 shrink-0 text-brand-600" />
               <span className="text-[13px] font-bold text-neutral-900">
                 {activeYear?.label ?? 'Year'}
@@ -154,58 +135,21 @@ export function TimetableCommandCenter({
                   {activeTerm.status.replace('_', ' ')}
                 </span>
               ) : null}
-              <ChevronDown
-                aria-hidden
-                className={cn('ml-auto size-4 text-neutral-400 transition sm:ml-0', sessionOpen && 'rotate-180')}
-              />
-            </button>
+            </span>
             {actions ? <div className="flex w-full flex-wrap gap-2 sm:justify-end">{actions}</div> : null}
           </div>
         </div>
 
-        {sessionOpen ? (
-          <div className="relative mt-4 grid gap-3 rounded-xl border border-white/70 bg-white/90 p-4 shadow-sm backdrop-blur-sm sm:grid-cols-2">
-            <label className="space-y-1.5">
-              <span className={ACADEMIC_UI.sectionLabel}>Academic year</span>
-              <select
-                value={yearId ?? ''}
-                onChange={(e) => onYearChange(e.target.value)}
-                className="h-11 w-full cursor-pointer rounded-xl border border-neutral-200 bg-white px-3 text-[13px] font-semibold text-neutral-900 outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-200/50"
-              >
-                {years.map((year) => (
-                  <option key={year.id} value={year.id}>
-                    {year.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="space-y-1.5">
-              <span className={ACADEMIC_UI.sectionLabel}>Term</span>
-              <select
-                value={termId ?? ''}
-                onChange={(e) => onTermChange(e.target.value)}
-                className="h-11 w-full cursor-pointer rounded-xl border border-neutral-200 bg-white px-3 text-[13px] font-semibold text-neutral-900 outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-200/50"
-              >
-                {terms.map((term) => (
-                  <option key={term.id} value={term.id}>
-                    {term.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        ) : null}
-
         <div className="relative z-10 -mb-20 mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {kpis.map((kpi) => {
-            const Icon = kpi.icon;
+            const Inner = kpi.icon;
             const inner = (
-              <div className="card overflow-hidden rounded-xl p-4 transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-5">
+              <div className="card overflow-hidden rounded-xl p-4 transition duration-200 hover:shadow-md sm:p-5">
                 <span
                   className="mb-3 flex size-9 items-center justify-center rounded-xl text-white shadow-sm"
                   style={{ background: kpi.gradient }}
                 >
-                  <Icon aria-hidden className="size-4" />
+                  <Inner aria-hidden className="size-4" />
                 </span>
                 <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-400">{kpi.label}</p>
                 <p

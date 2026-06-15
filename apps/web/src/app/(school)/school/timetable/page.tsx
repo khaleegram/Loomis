@@ -241,29 +241,9 @@ export default function TimetablePage() {
         {canManage ? (
 
           <TimetableCommandCenter
-
-            years={ctx.sortedYears}
-
-            terms={ctx.terms}
-
-            yearId={ctx.yearId}
-
-            termId={ctx.termId}
-
             classArmId={ctx.classArmId}
 
             classLabel={classLabel}
-
-            onYearChange={(id) => {
-
-              ctx.setYearId(id);
-
-              ctx.setTermId(null);
-
-            }}
-
-            onTermChange={ctx.setTermId}
-
             onSelectClassArm={ctx.setClassArmId}
 
             summary={summary ?? null}
@@ -301,29 +281,8 @@ export default function TimetablePage() {
             />
 
             <AcademicScopePicker
-
-              years={ctx.sortedYears}
-
-              terms={ctx.terms}
-
               classArmOptions={classArmOptions(ctx.arms, ctx.levels)}
-
-              yearId={ctx.yearId}
-
-              termId={ctx.termId}
-
               classArmId={ctx.classArmId}
-
-              onYearChange={(id) => {
-
-                ctx.setYearId(id);
-
-                ctx.setTermId(null);
-
-              }}
-
-              onTermChange={ctx.setTermId}
-
               onClassArmChange={ctx.setClassArmId}
 
             />

@@ -90,6 +90,7 @@ export interface AppBarProps {
   scopeLine: string;
   notificationCount?: number;
   topSlot?: ReactNode;
+  sessionControl?: ReactNode;
   workspaceMenu?: ReactNode;
 }
 
@@ -103,6 +104,7 @@ export function AppBar({
   scopeLine,
   notificationCount = 0,
   topSlot,
+  sessionControl,
   workspaceMenu,
 }: AppBarProps) {
   const { session, signOut } = useAuth();
@@ -144,6 +146,8 @@ export function AppBar({
           ) : (
             workspaceButton
           )}
+
+        {sessionControl}
 
         <div className="relative min-w-0 flex-1">
           <SmartSearchPalette

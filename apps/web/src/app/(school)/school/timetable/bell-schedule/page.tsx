@@ -11,7 +11,7 @@ import { BellScheduleEditor } from '@/components/academic/ops/bell-schedule-edit
 import { PageBody } from '@/components/school/school-shell';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { academicErrorMessage } from '@/lib/academic/academic-errors';
-import { useAcademicOpsContext } from '@/lib/academic/use-academic-ops-context';
+import { useSchoolAcademic } from '@/lib/academic/school-academic-context';
 import { useCan } from '@/lib/auth/use-capability';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 import { SURFACES } from '@/lib/design/surfaces';
@@ -19,8 +19,8 @@ import { SURFACES } from '@/lib/design/surfaces';
 export default function BellSchedulePage() {
   const tenantId = useTenantId();
   const canManage = useCan('timetable.manage');
-  const ctx = useAcademicOpsContext(tenantId ?? '');
-  const query = useBellSchedule(tenantId ?? '', ctx.yearId);
+  const { yearId, activeYear } = useSchoolAcademic();
+  const query = useBellSchedule(tenantId ?? '', yearId);
   const save = useUpsertBellSchedule(tenantId ?? '');
 
   const [slots, setSlots] = useState<BellScheduleSlot[]>([]);
@@ -82,23 +82,13 @@ export default function BellSchedulePage() {
           </p>
 
           <div className="mt-4">
-            <label className="space-y-1">
-              <span className={ACADEMIC_UI.sectionLabel}>Academic year</span>
-              <select
-                value={ctx.yearId ?? ''}
-                onChange={(e) => {
-                  ctx.setYearId(e.target.value);
-                  setDirty(false);
-                }}
-                className="h-11 w-full max-w-md rounded-xl border border-neutral-200 bg-white px-3 text-[13px] font-semibold sm:w-auto"
-              >
-                {ctx.sortedYears.map((year) => (
-                  <option key={year.id} value={year.id}>
-                    {year.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <span className={ACADEMIC_UI.sectionLabel}>Academic year</span>
+            <p className="mt-1 text-[13px] font-bold text-neutral-900">
+              {activeYear?.label ?? 'No year selected'}
+            </p>
+            <p className="mt-1 text-[12px] text-neutral-500">
+              Change year from the session bar. Every class timetable uses this bell schedule.
+            </p>
             {query.data?.isDefault ? (
               <p className="mt-2 text-[12px] font-medium text-amber-700">
                 Using Loomis default times — save to customise for your school.
@@ -138,12 +128,12 @@ export default function BellSchedulePage() {
             <button
               type="button"
               className={ACADEMIC_UI.btnPrimary}
-              disabled={!dirty || save.isPending || !ctx.yearId}
+              disabled={!dirty || save.isPending || !yearId}
               onClick={async () => {
-                if (!ctx.yearId) return;
+                if (!yearId) return;
                 setError(null);
                 try {
-                  await save.mutateAsync({ academicYearId: ctx.yearId, slots });
+                  await save.mutateAsync({ academicYearId: yearId, slots });
                   setDirty(false);
                   setSaved(true);
                 } catch (err) {

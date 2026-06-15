@@ -190,19 +190,10 @@ export default function AttendancePage() {
 
         <div className="pt-2">
           <AcademicScopePicker
-            years={ctx.sortedYears}
-            terms={ctx.terms}
             classArmOptions={
               isClassTeacherRole(role) ? teacherCtx.teachingClassArmOptions : classArmOptions(ctx.arms, ctx.levels)
             }
-            yearId={ctx.yearId}
-            termId={ctx.termId}
             classArmId={ctx.classArmId}
-            onYearChange={(id) => {
-              ctx.setYearId(id);
-              ctx.setTermId(null);
-            }}
-            onTermChange={ctx.setTermId}
             onClassArmChange={ctx.setClassArmId}
             hideClassSelection={isClassTeacherRole(role) ? teacherCtx.hideClassSelection : false}
           />
@@ -212,7 +203,7 @@ export default function AttendancePage() {
           <div className={`${ACADEMIC_UI.dataPanel} mt-6 p-10 text-center`}>
             <p className="text-[15px] font-semibold text-neutral-800">Choose your class to open the register</p>
             <p className="mt-2 text-[13px] text-neutral-500">
-              Select year, term, and class in the scope bar above.
+              Choose a class in the scope bar above.
             </p>
           </div>
         ) : (

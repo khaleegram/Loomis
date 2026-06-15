@@ -25,7 +25,6 @@ function uniqueClasses(entries: TimetableEntryResponse[]): number {
 export function MyScheduleView({ tenantId }: MyScheduleViewProps) {
   const ctx = useAcademicOpsContext(tenantId);
   const teachingQuery = useTeachingStaffContext(tenantId, ctx.termId);
-  const [sessionOpen, setSessionOpen] = useState(false);
   const [subjectFilter, setSubjectFilter] = useState<string | 'all'>('all');
 
   const { scheduleSlots } = useBellScheduleSlots(tenantId, ctx.yearId);
@@ -68,8 +67,6 @@ export function MyScheduleView({ tenantId }: MyScheduleViewProps) {
     return entries.filter((entry) => entry.subjectId === subjectFilter);
   }, [entries, subjectFilter]);
 
-  const activeYear = ctx.sortedYears.find((y) => y.id === ctx.yearId);
-  const activeTerm = ctx.terms.find((t) => t.id === ctx.termId);
   const classCount = uniqueClasses(entries);
 
   const stats = [
@@ -109,30 +106,26 @@ export function MyScheduleView({ tenantId }: MyScheduleViewProps) {
             My schedule
           </h1>
           <p className={ACADEMIC_UI.pageDesc}>
-            Your published periods for {activeTerm?.name ?? 'this term'}. Pick a subject to focus the
+            Your published periods for {ctx.activeTerm?.name ?? 'this term'}. Pick a subject to focus the
             grid — same view for every teacher.
           </p>
-          <button
-            type="button"
-            onClick={() => setSessionOpen((open) => !open)}
-            className="mt-4 inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-brand-200/80 bg-white/90 px-3 py-2 text-left shadow-xs transition hover:border-brand-300 sm:min-h-0"
-          >
+          <span className="mt-4 inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-brand-200/80 bg-white/90 px-3 py-2 shadow-xs sm:min-h-0">
             <CalendarDays aria-hidden className="size-4 shrink-0 text-brand-600" />
             <span className="text-[13px] font-bold text-neutral-900">
-              {activeYear?.label ?? 'Academic year'} · {activeTerm?.name ?? 'Term'}
+              {ctx.activeYear?.label ?? 'Academic year'} · {ctx.activeTerm?.name ?? 'Term'}
             </span>
-          </button>
+          </span>
 
           <div className="relative z-10 -mb-20 mt-6 grid grid-cols-3 gap-3 sm:gap-4">
             {stats.map((stat) => {
-              const Icon = stat.icon;
+              const StatIcon = stat.icon;
               return (
                 <div key={stat.label} className="card rounded-xl p-4 sm:p-5">
                   <span
                     className="mb-3 flex size-8 items-center justify-center rounded-xl text-white shadow-sm sm:size-9"
                     style={{ background: stat.gradient }}
                   >
-                    <Icon aria-hidden className="size-3.5 sm:size-4" />
+                    <StatIcon aria-hidden className="size-3.5 sm:size-4" />
                   </span>
                   <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-400">
                     {stat.label}
@@ -155,45 +148,9 @@ export function MyScheduleView({ tenantId }: MyScheduleViewProps) {
         </div>
       </div>
 
-      {sessionOpen ? (
-        <div className={`${ACADEMIC_UI.dataPanel} grid gap-3 p-4 sm:grid-cols-2`}>
-          <label className="space-y-1.5">
-            <span className={ACADEMIC_UI.sectionLabel}>Academic year</span>
-            <select
-              value={ctx.yearId ?? ''}
-              onChange={(e) => {
-                ctx.setYearId(e.target.value);
-                ctx.setTermId(null);
-              }}
-              className="h-11 w-full rounded-lg border border-neutral-200 bg-white px-3 text-[13px] font-medium text-neutral-900"
-            >
-              {ctx.sortedYears.map((year) => (
-                <option key={year.id} value={year.id}>
-                  {year.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="space-y-1.5">
-            <span className={ACADEMIC_UI.sectionLabel}>Term</span>
-            <select
-              value={ctx.termId ?? ''}
-              onChange={(e) => ctx.setTermId(e.target.value)}
-              className="h-11 w-full rounded-lg border border-neutral-200 bg-white px-3 text-[13px] font-medium text-neutral-900"
-            >
-              {ctx.terms.map((term) => (
-                <option key={term.id} value={term.id}>
-                  {term.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      ) : null}
-
       {!ctx.termId ? (
         <div className={`${ACADEMIC_UI.dataPanel} p-8 text-center`}>
-          <p className="text-[13px] text-neutral-500">Select a term to load your schedule.</p>
+          <p className="text-[13px] text-neutral-500">No term selected in the session bar.</p>
         </div>
       ) : scheduleQuery.isError ? (
         <Alert variant="destructive">
@@ -266,4 +223,4 @@ export function MyScheduleView({ tenantId }: MyScheduleViewProps) {
       )}
     </div>
   );
-};
+}

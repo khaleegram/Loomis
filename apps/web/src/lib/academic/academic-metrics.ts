@@ -1,5 +1,9 @@
 import type { AcademicTermResponse, AcademicYearResponse, PromotionRecordResponse } from '@loomis/contracts';
 
+import { pickActiveYear, pickOpenTerm } from '@/lib/academic/academic-session-utils';
+
+export { pickActiveYear, pickOpenTerm } from '@/lib/academic/academic-session-utils';
+
 export interface AcademicHubMetrics {
   yearCount: number;
   activeYearLabel: string | null;
@@ -11,14 +15,6 @@ export interface AcademicHubMetrics {
   stagedPromotions: number;
   confirmedPromotions: number;
   graduatedCount: number;
-}
-
-export function pickActiveYear(years: AcademicYearResponse[]): AcademicYearResponse | null {
-  return years.find((y) => y.status === 'active') ?? years.find((y) => y.status === 'draft') ?? years[0] ?? null;
-}
-
-export function pickOpenTerm(terms: AcademicTermResponse[]): AcademicTermResponse | null {
-  return terms.find((t) => t.status === 'open') ?? terms.find((t) => t.status === 'draft') ?? terms[0] ?? null;
 }
 
 export function computeAcademicMetrics(

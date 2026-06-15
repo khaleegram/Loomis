@@ -1,15 +1,19 @@
 'use client';
 
-import Link from 'next/link';
 import { useExamConfigs, useGradebookEntries, useGradingSchemes, useSchoolBranding, useStudents, useTermEnrollmentRoster } from '@loomis/api-client';
 import type { StudentGender, StudentResponse } from '@loomis/contracts';
 import { Alert, AlertDescription } from '@loomis/ui-web';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-import { GradebookScopeBar } from '@/components/academic/ops/gradebook-scope-bar';
+import { AcademicScopePicker } from '@/components/academic/ops/academic-scope-picker';
 import { ReportCardBrowser } from '@/components/academic/ops/report-card-browser';
+import { ReportCardHero } from '@/components/academic/ops/report-card-hero';
 import { PageBody } from '@/components/school/school-shell';
+import {
+  buildClassReportCardStats,
+  buildReportCardStudentRows,
+} from '@/lib/academic/report-card-filters';
 import {
   classArmOptions,
   useAcademicOpsContext,
@@ -110,6 +114,22 @@ export default function ReportCardsPage() {
       .sort((a, b) => a.admissionNo.localeCompare(b.admissionNo));
   }, [rosterQuery.data, ctx.classArmId, genderByStudentId]);
 
+  const passMark = activeScheme?.passMark ?? 40;
+
+  const reportCardRows = useMemo(
+    () =>
+      buildReportCardStudentRows({
+        students: rosterStudents,
+        subjectIds: allClassSubjectIds,
+        entries: entriesQuery.data?.entries ?? [],
+        rosterStudents,
+        passMark,
+      }),
+    [rosterStudents, allClassSubjectIds, entriesQuery.data, passMark],
+  );
+
+  const classStats = useMemo(() => buildClassReportCardStats(reportCardRows), [reportCardRows]);
+
   useEffect(() => {
     setSelectedStudentId(searchParams.get('studentId'));
   }, [ctx.classArmId, ctx.termId, searchParams]);
@@ -129,7 +149,7 @@ export default function ReportCardsPage() {
 
   if (!tenantId) {
     return (
-      <PageBody className="px-4 py-5 sm:px-6 lg:px-8">
+      <PageBody className="max-w-[1400px] px-4 py-5 sm:px-6 lg:px-12 lg:py-8">
         <Alert variant="destructive">
           <AlertDescription>No tenant context. Sign in again.</AlertDescription>
         </Alert>
@@ -139,7 +159,7 @@ export default function ReportCardsPage() {
 
   if (!canView) {
     return (
-      <PageBody className="px-4 py-5 sm:px-6 lg:px-8">
+      <PageBody className="max-w-[1400px] px-4 py-5 sm:px-6 lg:px-12 lg:py-8">
         <Alert>
           <AlertDescription>You do not have permission to view report cards.</AlertDescription>
         </Alert>
@@ -148,43 +168,30 @@ export default function ReportCardsPage() {
   }
 
   return (
-    <PageBody className="px-3 py-3 sm:px-4 lg:px-6 lg:py-4">
-      <div className="print:hidden mb-3 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-[15px] font-bold text-neutral-800">Report cards</h1>
-          <p className="mt-0.5 max-w-xl text-[12px] text-neutral-500">
-            Official term reports for each student — printable layout with subject breakdown, class position,
-            and grading scale. Live from the gradebook until results are published.
-          </p>
-        </div>
-        <Link href="/school/gradebook" className="text-[12px] font-semibold text-brand-700 hover:underline">
-          ← Score entry
-        </Link>
-      </div>
-
-      <div className="print:hidden mb-3 rounded-lg border border-neutral-200 bg-[#f8f6f1] px-3 py-2.5 sm:px-4">
-        <GradebookScopeBar
-          years={ctx.sortedYears}
-          terms={ctx.terms}
-          classArmOptions={
-            isTeachingStaffRole(role)
-              ? teacherCtx.teachingClassArmOptions
-              : classArmOptions(ctx.arms, ctx.levels)
-          }
-          yearId={ctx.yearId}
-          termId={ctx.termId}
-          classArmId={ctx.classArmId}
-          onYearChange={(id) => {
-            ctx.setYearId(id);
-            ctx.setTermId(null);
-          }}
-          onTermChange={ctx.setTermId}
-          onClassArmChange={ctx.setClassArmId}
-          hideClassSelection={isClassTeacherView && teacherCtx.hideClassSelection}
+    <PageBody className="max-w-[1400px] px-4 py-5 sm:px-6 lg:px-12 lg:py-8">
+      <div className="space-y-4">
+        <ReportCardHero
+          classLabel={classLabel}
+          termLabel={ctx.activeTerm?.name ?? null}
+          sessionLabel={ctx.activeYear?.label ?? null}
+          stats={classStats}
+          passMark={passMark}
+          isLoading={isLoading}
         />
-      </div>
 
-      <div className="mt-3">
+        <div className="print:hidden">
+          <AcademicScopePicker
+            classArmOptions={
+              isTeachingStaffRole(role)
+                ? teacherCtx.teachingClassArmOptions
+                : classArmOptions(ctx.arms, ctx.levels)
+            }
+            classArmId={ctx.classArmId}
+            onClassArmChange={ctx.setClassArmId}
+            hideClassSelection={isClassTeacherView && teacherCtx.hideClassSelection}
+          />
+        </div>
+
         <ReportCardBrowser
           students={rosterStudents}
           rosterStudents={rosterStudents}
@@ -200,7 +207,7 @@ export default function ReportCardsPage() {
           schemeName={activeScheme?.name}
           caWeight={activeScheme?.continuousAssessmentWeight ?? 40}
           examWeight={activeScheme?.examWeight ?? 60}
-          passMark={activeScheme?.passMark ?? 40}
+          passMark={passMark}
           gradeBands={activeScheme?.gradeBands ?? []}
           isLoading={isLoading}
         />
