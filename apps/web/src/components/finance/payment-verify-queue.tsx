@@ -7,11 +7,6 @@ import {
   Alert,
   AlertDescription,
   Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   JournalVoucherCard,
   LedgerEntryTable,
   Sheet,
@@ -31,6 +26,7 @@ import {
 import { useState } from 'react';
 
 import { PaymentStatusChip } from '@/components/finance/payment-status-chip';
+import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { financeErrorMessage } from '@/lib/finance/finance-errors';
 import {
   buildPaymentSettlementLegs,
@@ -100,32 +96,37 @@ export function PaymentVerifyQueue({ tenantId, termId, currentUserId }: PaymentV
 
   return (
     <>
-      <Card className="shadow-card">
-        <CardHeader>
-          <CardTitle>Verification queue</CardTitle>
-          <CardDescription>
-            Offline payments awaiting accountant verification (US-FIN-003). You cannot verify
-            payments you logged.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {paymentsQuery.isLoading ? <Skeleton className="h-48 w-full" /> : null}
+      <div className={ACADEMIC_UI.dataPanel}>
+        <div className="border-b border-brand-50 bg-gradient-to-r from-neutral-50 to-brand-50/30 px-4 py-4 sm:px-5">
+          <p className="text-[14px] font-bold text-neutral-900">Verification queue</p>
+          <p className="mt-0.5 text-[12px] text-neutral-500">
+            Offline payments awaiting accountant sign-off. You cannot verify payments you logged.
+          </p>
+        </div>
+        <div className="overflow-x-auto p-0">
+          {paymentsQuery.isLoading ? (
+            <div className="p-5">
+              <Skeleton className="h-48 w-full rounded-xl" />
+            </div>
+          ) : null}
           {paymentsQuery.isError ? (
-            <Alert variant="destructive">
-              <AlertDescription>Failed to load payments.</AlertDescription>
-            </Alert>
+            <div className="p-5">
+              <Alert variant="destructive">
+                <AlertDescription>Failed to load payments.</AlertDescription>
+              </Alert>
+            </div>
           ) : null}
 
           {!paymentsQuery.isLoading && payments.length === 0 ? (
-            <div className="py-12 text-center">
+            <div className="py-16 text-center">
               <PaymentStatusChip status="verified" className="mb-3" />
-              <p className="text-sm text-muted-foreground">No payments pending verification.</p>
+              <p className="text-[13px] text-neutral-500">No payments pending verification.</p>
             </div>
           ) : null}
 
           {payments.length > 0 ? (
             <Table>
-              <TableHeader>
+              <TableHeader className={ACADEMIC_UI.tableHeader}>
                 <TableRow>
                   <TableHead>Student</TableHead>
                   <TableHead>Amount</TableHead>
@@ -166,8 +167,8 @@ export function PaymentVerifyQueue({ tenantId, termId, currentUserId }: PaymentV
               </TableBody>
             </Table>
           ) : null}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <Sheet open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}>
         <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
@@ -234,7 +235,7 @@ export function PaymentVerifyQueue({ tenantId, termId, currentUserId }: PaymentV
                   <Button
                     onClick={() => void handleVerify()}
                     disabled={verifyMutation.isSubmitting}
-                    className="w-full"
+                    className={`${ACADEMIC_UI.btnPrimary} w-full`}
                   >
                     {verifyMutation.isSubmitting ? 'Verifying…' : 'Verify payment'}
                   </Button>

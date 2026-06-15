@@ -1,17 +1,40 @@
-// @ts-nocheck
 'use client';
 
 import { useState } from 'react';
+import type { ReconciliationExceptionResponse } from '@loomis/contracts';
 import { useReconciliationExceptions, useResolveReconciliationException } from '@loomis/api-client';
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Form, FormControl, FormField, FormItem, FormMessage, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Textarea } from '@loomis/ui-web';
-import { Check } from 'lucide-react';
+import {
+  Alert,
+  AlertDescription,
+  Badge,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormMessage,
+  Sheet,
+  SheetContent,
+  Skeleton,
+  Textarea,
+} from '@loomis/ui-web';
+import { CheckCircle2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
-import { PageBody, PageHeader } from '@/components/school/school-shell';
+import { FinanceReconciliationHero } from '@/components/finance/finance-reconciliation-hero';
+import { PageBody } from '@/components/school/school-shell';
+import {
+  FormSubmitError,
+  SmartFormFooter,
+  SmartFormHeader,
+  SmartFormSection,
+} from '@/components/shared/smart-form';
+import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 import { useCan } from '@/lib/auth/use-capability';
+
+const pageClass = 'max-w-[1400px] px-4 py-5 sm:px-6 lg:px-12 lg:py-8';
 
 const resolveSchema = z.object({
   resolutionNotes: z.string().min(10, 'Provide resolution notes (min 10 characters)'),
@@ -22,95 +45,185 @@ type ResolveForm = z.infer<typeof resolveSchema>;
 export default function ReconciliationPage() {
   const tenantId = useTenantId();
   const canResolve = useCan('payment.verify');
-  const [resolvingId, setResolvingId] = useState<string | null>(null);
+  const [activeException, setActiveException] = useState<ReconciliationExceptionResponse | null>(null);
 
   const { data, isLoading, isError, error } = useReconciliationExceptions(tenantId ?? '');
   const resolveMutation = useResolveReconciliationException(tenantId ?? '');
 
-  const exceptions = (data as any)?.exceptions ?? [];
+  const exceptions = data?.exceptions ?? [];
+  const openCount = exceptions.filter((ex) => ex.status === 'open').length;
+  const resolvedCount = exceptions.filter((ex) => ex.status === 'resolved').length;
 
   const form = useForm<ResolveForm>({
     resolver: zodResolver(resolveSchema),
     defaultValues: { resolutionNotes: '' },
   });
 
-  async function onResolve(exceptionId: string, values: ResolveForm) {
+  async function onResolve(values: ResolveForm) {
+    if (!activeException) return;
     try {
-      await resolveMutation.mutateAsync({ status: 'resolved', resolutionNotes: values.resolutionNotes } as any);
-      setResolvingId(null);
+      await resolveMutation.mutateAsync({
+        exceptionId: activeException.id,
+        status: 'resolved',
+        resolutionNotes: values.resolutionNotes,
+      });
+      setActiveException(null);
       form.reset();
-    } catch { /* handled */ }
+    } catch {
+      form.setError('root', { message: 'Resolution failed. Try again.' });
+    }
   }
 
   if (!tenantId) {
     return (
-      <>
-        <PageHeader title="Reconciliation" />
-        <PageBody><p className="text-sm text-destructive">No tenant context.</p></PageBody>
-      </>
+      <PageBody className={pageClass}>
+        <Alert variant="destructive">
+          <AlertDescription>No tenant context.</AlertDescription>
+        </Alert>
+      </PageBody>
     );
   }
 
   return (
-    <>
-      <PageHeader title="Payment Reconciliation" description="Review and resolve gateway reconciliation exceptions — US-FIN-007" />
-      <PageBody>
+    <PageBody className={pageClass}>
+      <div className="space-y-6">
+        <FinanceReconciliationHero
+          openCount={openCount}
+          resolvedCount={resolvedCount}
+          isLoading={isLoading}
+        />
+
         {isLoading ? (
-          <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}</div>
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-20 w-full rounded-xl" />
+            ))}
+          </div>
         ) : isError ? (
-          <p className="text-sm text-destructive">{(error as Error).message}</p>
+          <Alert variant="destructive">
+            <AlertDescription>{(error as Error).message}</AlertDescription>
+          </Alert>
         ) : exceptions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border py-16">
-            <Check className="mb-2 size-8 text-success" /> <p className="text-sm text-muted-foreground">All payments reconciled.</p>
+          <div className={`${ACADEMIC_UI.dataPanel} flex flex-col items-center justify-center py-16 text-center`}>
+            <div className="flex size-14 items-center justify-center rounded-full bg-accent-green-50">
+              <CheckCircle2 aria-hidden className="size-7 text-accent-green-600" />
+            </div>
+            <p className="mt-4 text-[15px] font-semibold text-neutral-800">All payments reconciled</p>
+            <p className="mt-1 text-[13px] text-neutral-500">No gateway exceptions pending review.</p>
           </div>
         ) : (
-          <Card>
-            <CardHeader><CardTitle className="text-base">{exceptions.length} Unresolved Exception{exceptions.length > 1 ? 's' : ''}</CardTitle></CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Gateway Ref</TableHead>
-                    <TableHead>Detected</TableHead>
-                    <TableHead>Status</TableHead>
-                    {canResolve ? <TableHead className="text-right">Action</TableHead> : null}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {exceptions.map((ex: any) => (
-                    <TableRow key={ex.id}>
-                      <TableCell className="font-medium capitalize">{ex.exceptionType?.replace(/_/g, ' ') ?? '—'}</TableCell>
-                      <TableCell className="font-mono text-xs">{ex.gatewayReference?.slice(0, 12) ?? '—'}</TableCell>
-                      <TableCell className="text-muted-foreground">{ex.createdAt ? new Date(ex.createdAt).toLocaleDateString() : '—'}</TableCell>
-                      <TableCell><Badge variant={ex.status === 'open' ? 'warning' : 'success'}>{ex.status}</Badge></TableCell>
+          <div className={`${ACADEMIC_UI.dataPanel} overflow-hidden`}>
+            <div className="border-b border-brand-50/80 px-5 py-4">
+              <p className={ACADEMIC_UI.sectionLabel}>Exception queue</p>
+              <p className="mt-1 text-[14px] font-semibold text-neutral-900">
+                {openCount} unresolved exception{openCount === 1 ? '' : 's'}
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left text-[13px]">
+                <thead className={ACADEMIC_UI.tableHeader}>
+                  <tr>
+                    {['Type', 'Gateway ref', 'Detected', 'Status', ...(canResolve ? ['Action'] : [])].map((h) => (
+                      <th
+                        key={h}
+                        className="px-4 py-3 text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-500"
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {exceptions.map((ex) => (
+                    <tr key={ex.id} className="border-t border-brand-50/80">
+                      <td className="px-4 py-3 font-medium capitalize text-neutral-900">
+                        {ex.exceptionType.replace(/_/g, ' ')}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-[11px] text-neutral-600">
+                        {ex.gatewayReference?.slice(0, 16) ?? '—'}
+                      </td>
+                      <td className="px-4 py-3 text-neutral-600">
+                        {new Date(ex.createdAt).toLocaleDateString('en-NG')}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge variant={ex.status === 'open' ? 'warning' : 'default'}>{ex.status}</Badge>
+                      </td>
                       {canResolve ? (
-                        <TableCell className="text-right">
-                          {resolvingId === ex.id ? (
-                            <Form {...form}>
-                              <form onSubmit={form.handleSubmit((v) => onResolve(ex.id, v))} className="flex items-end gap-2">
-                                <FormField control={form.control} name="resolutionNotes" render={({ field }) => (
-                                  <FormItem className="flex-1"><FormControl><Textarea rows={2} placeholder="Resolution notes…" {...field} /></FormControl><FormMessage /></FormItem>
-                                )} />
-                                <div className="flex gap-1">
-                                  <Button type="submit" size="sm" disabled={resolveMutation.isPending}>Resolve</Button>
-                                  <Button type="button" size="sm" variant="ghost" onClick={() => setResolvingId(null)}>Cancel</Button>
-                                </div>
-                              </form>
-                            </Form>
+                        <td className="px-4 py-3">
+                          {ex.status === 'open' ? (
+                            <button
+                              type="button"
+                              className={ACADEMIC_UI.btnSecondarySm}
+                              onClick={() => {
+                                setActiveException(ex);
+                                form.reset();
+                              }}
+                            >
+                              Resolve
+                            </button>
                           ) : (
-                            <Button size="sm" variant="outline" onClick={() => { setResolvingId(ex.id); form.setValue('resolutionNotes', ''); }}>Resolve</Button>
+                            <span className="text-[12px] text-neutral-400">—</span>
                           )}
-                        </TableCell>
+                        </td>
                       ) : null}
-                    </TableRow>
+                    </tr>
                   ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                </tbody>
+              </table>
+            </div>
+          </div>
         )}
-      </PageBody>
-    </>
+      </div>
+
+      <Sheet open={activeException != null} onOpenChange={(open) => !open && setActiveException(null)}>
+        <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
+          <SmartFormHeader
+            surface="sheet"
+            eyebrow="Reconciliation"
+            title="Resolve exception"
+            description={
+              activeException
+                ? `${activeException.exceptionType.replace(/_/g, ' ')} · ${activeException.gatewayReference?.slice(0, 16) ?? 'no ref'}`
+                : undefined
+            }
+          />
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+            <Form {...form}>
+              <form id="resolve-exception-form" className="space-y-5" onSubmit={form.handleSubmit(onResolve)}>
+                <FormSubmitError message={form.formState.errors.root?.message ?? null} />
+                <SmartFormSection
+                  title="Resolution notes"
+                  description="Document what was verified and how the mismatch was closed."
+                >
+                  <FormField
+                    control={form.control}
+                    name="resolutionNotes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Textarea
+                            rows={4}
+                            placeholder="Describe the investigation and resolution…"
+                            className="rounded-xl border-neutral-200 bg-white text-[13px] focus:border-brand-300 focus:ring-2 focus:ring-brand-200/50"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </SmartFormSection>
+              </form>
+            </Form>
+          </div>
+          <SmartFormFooter
+            formId="resolve-exception-form"
+            submitLabel="Mark resolved"
+            pending={resolveMutation.isPending}
+            onCancel={() => setActiveException(null)}
+          />
+        </SheetContent>
+      </Sheet>
+    </PageBody>
   );
 }

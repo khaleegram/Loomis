@@ -83,14 +83,14 @@ async function assertInvoicePayable(
 async function assertParentLinkedToStudent(
   tenantId: string,
   studentId: string,
+  parentUserId: string,
 ): Promise<void> {
-  const links = await studentRepository.listParentLinksForStudent(tenantId, studentId);
-  const hasActive = links.some((link) => link.status === 'active');
-  if (!hasActive) {
+  const linked = await studentRepository.hasActiveParentLink(tenantId, parentUserId, studentId);
+  if (!linked) {
     throw new LoomisError(
       'FINANCE_PARENT_NOT_LINKED',
       403,
-      'No active parent link exists for this student in this school',
+      'You are not linked to this student in this school',
     );
   }
 }
@@ -284,7 +284,7 @@ export const paymentService = {
         }
 
         const invoice = await assertInvoicePayable(tenantId, input.invoiceId, input.amountMinor);
-        await assertParentLinkedToStudent(tenantId, invoice.invoice.studentId);
+        await assertParentLinkedToStudent(tenantId, invoice.invoice.studentId, actor.userId);
 
         const gateway = gatewayAbstractionLayer.get(input.provider);
         const paymentId = uuidv7();

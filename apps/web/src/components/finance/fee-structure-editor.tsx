@@ -19,17 +19,11 @@ import {
   AlertDescription,
   Badge,
   Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   CurrencyInput,
   Form,
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
   Input,
   Select,
@@ -38,20 +32,22 @@ import {
   SelectTrigger,
   SelectValue,
   Skeleton,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
   Textarea,
 } from '@loomis/ui-web';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Trash2 } from 'lucide-react';
+import { Layers3, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
 
+import {
+  FormSubmitError,
+  SmartFormPanel,
+  SmartFormPanelHeader,
+  SmartFormSection,
+  smartInputClass,
+} from '@/components/shared/smart-form';
+import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { financeErrorMessage } from '@/lib/finance/finance-errors';
 import { formatFeeCategory } from '@/lib/finance/finance-labels';
 
@@ -183,24 +179,25 @@ export function FeeStructureEditor({
   }
 
   return (
-    <Card className="shadow-card">
-      <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
-        <div>
-          <CardTitle>{classLevelLabel}</CardTitle>
-          <CardDescription>
-            Fee structure for this class level (US-FIN-001). Amounts entered in Naira, stored as
-            kobo.
-          </CardDescription>
-        </div>
-        {structure ? (
-          <Badge variant={structure.status === 'active' ? 'default' : 'outline'}>
-            {structure.status} · v{structure.version}
-          </Badge>
-        ) : (
-          <Badge variant="outline">Not configured</Badge>
-        )}
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <SmartFormPanel
+      header={
+        <SmartFormPanelHeader
+          icon={Layers3}
+          title={classLevelLabel}
+          subtitle="Fee structure for this class level (US-FIN-001). Amounts in Naira, stored as kobo."
+          badge={
+            structure ? (
+              <Badge variant={structure.status === 'active' ? 'default' : 'outline'}>
+                {structure.status} · v{structure.version}
+              </Badge>
+            ) : (
+              <Badge variant="outline">Not configured</Badge>
+            )
+          }
+        />
+      }
+    >
+      <div className="space-y-4">
         {termOpen && structure ? (
           <Alert variant="warning">
             <AlertDescription>
@@ -219,179 +216,50 @@ export function FeeStructureEditor({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSave)} className="space-y-4">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Fee item</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead className="w-48">Amount</TableHead>
-                  {canDirectEdit || canCreate ? <TableHead className="w-12" /> : null}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {fields.map((field, index) => (
-                  <TableRow key={field.id}>
-                    <TableCell>
-                      <FormField
-                        control={form.control}
-                        name={`items.${index}.name`}
-                        render={({ field: f }) => (
-                          <FormItem>
-                            <FormControl>
-                              <Input {...f} disabled={readOnly && !canCreate} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <FormField
-                        control={form.control}
-                        name={`items.${index}.category`}
-                        render={({ field: f }) => (
-                          <FormItem>
-                            <Select
-                              value={f.value}
-                              onValueChange={f.onChange}
-                              disabled={readOnly && !canCreate}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {CATEGORY_OPTIONS.map((cat) => (
-                                  <SelectItem key={cat} value={cat}>
-                                    {formatFeeCategory(cat)}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <FormField
-                        control={form.control}
-                        name={`items.${index}.amountMinor`}
-                        render={({ field: f }) => (
-                          <FormItem>
-                            <FormControl>
-                              <CurrencyInput
-                                valueKobo={f.value}
-                                onChangeKobo={f.onChange}
-                                disabled={readOnly && !canCreate}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </TableCell>
-                    {canDirectEdit || canCreate ? (
-                      <TableCell>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          disabled={fields.length <= 1}
-                          onClick={() => remove(index)}
-                          aria-label="Remove fee item"
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </TableCell>
-                    ) : null}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-              <p className="font-mono text-sm tabular-nums text-foreground">
-                Total · <span className="font-semibold">{formatKobo(totalMinor || structure?.totalAmountMinor || 0)}</span>
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {(canDirectEdit || canCreate) && (
-                  <>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        append({ name: '', category: 'other', amountMinor: 0 })
-                      }
-                    >
-                      <Plus className="mr-1 size-4" />
-                      Add item
-                    </Button>
-                    <Button
-                      type="submit"
-                      size="sm"
-                      disabled={createMutation.isSubmitting || updateMutation.isSubmitting}
-                    >
-                      {structure ? 'Save structure' : 'Create structure'}
-                    </Button>
-                  </>
-                )}
-                {canAmend ? (
-                  <Button type="button" variant="outline" size="sm" onClick={() => setAmendMode((v) => !v)}>
-                    {amendMode ? 'Cancel amendment' : 'Request amendment'}
-                  </Button>
-                ) : null}
-              </div>
-            </div>
-
-            {form.formState.errors.root ? (
-              <Alert variant="destructive">
-                <AlertDescription>{form.formState.errors.root.message}</AlertDescription>
-              </Alert>
-            ) : null}
-          </form>
-        </Form>
-
-        {amendMode && canAmend ? (
-          <Form {...amendForm}>
-            <form onSubmit={amendForm.handleSubmit(onAmend)} className="space-y-4 rounded-sm border border-gold/30 bg-gold/5 p-4 dark:bg-forest-900">
-              <p className="text-sm font-medium text-foreground">Proposed amendment</p>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fee item</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead className="w-48">Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {amendFields.fields.map((field, index) => (
-                    <TableRow key={field.id}>
-                      <TableCell>
+            <div className={`${ACADEMIC_UI.dataPanel} overflow-hidden`}>
+              <table className="min-w-full text-left text-[13px]">
+                <thead className={ACADEMIC_UI.tableHeader}>
+                  <tr>
+                    {['Fee item', 'Category', 'Amount', ...(canDirectEdit || canCreate ? [''] : [])].map((h) => (
+                      <th
+                        key={h || 'actions'}
+                        className="px-4 py-3 text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-500"
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {fields.map((field, index) => (
+                    <tr key={field.id} className="border-t border-brand-50/80 align-top">
+                      <td className="px-4 py-3">
                         <FormField
-                          control={amendForm.control}
+                          control={form.control}
                           name={`items.${index}.name`}
                           render={({ field: f }) => (
                             <FormItem>
                               <FormControl>
-                                <Input {...f} />
+                                <Input {...f} disabled={readOnly && !canCreate} className={smartInputClass} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="px-4 py-3">
                         <FormField
-                          control={amendForm.control}
+                          control={form.control}
                           name={`items.${index}.category`}
                           render={({ field: f }) => (
                             <FormItem>
-                              <Select value={f.value} onValueChange={f.onChange}>
+                              <Select
+                                value={f.value}
+                                onValueChange={f.onChange}
+                                disabled={readOnly && !canCreate}
+                              >
                                 <FormControl>
-                                  <SelectTrigger>
+                                  <SelectTrigger className={smartInputClass}>
                                     <SelectValue />
                                   </SelectTrigger>
                                 </FormControl>
@@ -407,53 +275,200 @@ export function FeeStructureEditor({
                             </FormItem>
                           )}
                         />
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="px-4 py-3">
                         <FormField
-                          control={amendForm.control}
+                          control={form.control}
                           name={`items.${index}.amountMinor`}
                           render={({ field: f }) => (
                             <FormItem>
                               <FormControl>
-                                <CurrencyInput valueKobo={f.value} onChangeKobo={f.onChange} />
+                                <CurrencyInput
+                                  valueKobo={f.value}
+                                  onChangeKobo={f.onChange}
+                                  disabled={readOnly && !canCreate}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                      {canDirectEdit || canCreate ? (
+                        <td className="px-4 py-3">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={fields.length <= 1}
+                            onClick={() => remove(index)}
+                            aria-label="Remove fee item"
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </td>
+                      ) : null}
+                    </tr>
                   ))}
-                </TableBody>
-              </Table>
+                </tbody>
+              </table>
+            </div>
 
-              <FormField
-                control={amendForm.control}
-                name="justification"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Justification</FormLabel>
-                    <FormControl>
-                      <Textarea {...field} rows={3} placeholder="Why is this amendment required?" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-brand-50/80 pt-4">
+              <p className="font-mono text-sm tabular-nums text-neutral-800">
+                Total ·{' '}
+                <span className="font-extrabold">{formatKobo(totalMinor || structure?.totalAmountMinor || 0)}</span>
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {(canDirectEdit || canCreate) && (
+                  <>
+                    <button
+                      type="button"
+                      className={ACADEMIC_UI.btnSecondarySm}
+                      onClick={() => append({ name: '', category: 'other', amountMinor: 0 })}
+                    >
+                      <Plus className="size-4" />
+                      Add item
+                    </button>
+                    <button
+                      type="submit"
+                      className={ACADEMIC_UI.btnPrimarySm}
+                      disabled={createMutation.isSubmitting || updateMutation.isSubmitting}
+                    >
+                      {structure ? 'Save structure' : 'Create structure'}
+                    </button>
+                  </>
                 )}
+                {canAmend ? (
+                  <button type="button" className={ACADEMIC_UI.btnSecondarySm} onClick={() => setAmendMode((v) => !v)}>
+                    {amendMode ? 'Cancel amendment' : 'Request amendment'}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+
+            <FormSubmitError message={form.formState.errors.root?.message ?? null} />
+          </form>
+        </Form>
+
+        {amendMode && canAmend ? (
+          <SmartFormPanel
+            className="mt-4 ring-1 ring-brand-200/60"
+            header={
+              <SmartFormPanelHeader
+                title="Proposed amendment"
+                subtitle="Submitted to Principal for approval — structure stays unchanged until approved."
               />
+            }
+          >
+            <Form {...amendForm}>
+              <form onSubmit={amendForm.handleSubmit(onAmend)} className="space-y-4">
+                <div className={`${ACADEMIC_UI.dataPanel} overflow-hidden`}>
+                  <table className="min-w-full text-left text-[13px]">
+                    <thead className={ACADEMIC_UI.tableHeader}>
+                      <tr>
+                        {['Fee item', 'Category', 'Amount'].map((h) => (
+                          <th
+                            key={h}
+                            className="px-4 py-3 text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-500"
+                          >
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {amendFields.fields.map((field, index) => (
+                        <tr key={field.id} className="border-t border-brand-50/80 align-top">
+                          <td className="px-4 py-3">
+                            <FormField
+                              control={amendForm.control}
+                              name={`items.${index}.name`}
+                              render={({ field: f }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Input {...f} className={smartInputClass} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <FormField
+                              control={amendForm.control}
+                              name={`items.${index}.category`}
+                              render={({ field: f }) => (
+                                <FormItem>
+                                  <Select value={f.value} onValueChange={f.onChange}>
+                                    <FormControl>
+                                      <SelectTrigger className={smartInputClass}>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {CATEGORY_OPTIONS.map((cat) => (
+                                        <SelectItem key={cat} value={cat}>
+                                          {formatFeeCategory(cat)}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <FormField
+                              control={amendForm.control}
+                              name={`items.${index}.amountMinor`}
+                              render={({ field: f }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <CurrencyInput valueKobo={f.value} onChangeKobo={f.onChange} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-              {amendForm.formState.errors.root ? (
-                <Alert variant="destructive">
-                  <AlertDescription>{amendForm.formState.errors.root.message}</AlertDescription>
-                </Alert>
-              ) : null}
+                <SmartFormSection title="Justification" description="Required for Principal review">
+                  <FormField
+                    control={amendForm.control}
+                    name="justification"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Textarea
+                            {...field}
+                            rows={3}
+                            placeholder="Why is this amendment required?"
+                            className="rounded-xl border-neutral-200 bg-white text-[13px] focus:border-brand-300 focus:ring-2 focus:ring-brand-200/50"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </SmartFormSection>
 
-              <Button type="submit" disabled={amendMutation.isSubmitting}>
-                Submit for Principal approval
-              </Button>
-            </form>
-          </Form>
+                <FormSubmitError message={amendForm.formState.errors.root?.message ?? null} />
+
+                <button type="submit" className={ACADEMIC_UI.btnPrimary} disabled={amendMutation.isSubmitting}>
+                  Submit for Principal approval
+                </button>
+              </form>
+            </Form>
+          </SmartFormPanel>
         ) : null}
-      </CardContent>
-    </Card>
+      </div>
+    </SmartFormPanel>
   );
 }

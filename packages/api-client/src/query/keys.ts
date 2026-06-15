@@ -252,6 +252,8 @@ export const queryKeys = {
       ['parent', 'attendance', tenantId, studentId, termId] as const,
     results: (tenantId: string, studentId: string, termId: string) =>
       ['parent', 'results', tenantId, studentId, termId] as const,
+    fees: (tenantId: string, studentId: string, termId: string) =>
+      ['parent', 'fees', tenantId, studentId, termId] as const,
     myResults: (tenantId: string, termId: string) =>
       ['student', 'results', tenantId, termId] as const,
     myAttendance: (tenantId: string, termId: string) =>

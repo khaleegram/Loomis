@@ -7,22 +7,12 @@ import {
   Alert,
   AlertDescription,
   Badge,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
+  Skeleton,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Skeleton,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
 } from '@loomis/ui-web';
 import { useState } from 'react';
 
@@ -31,6 +21,7 @@ import {
   formatInvoiceStatus,
   formatStudentRef,
 } from '@/lib/finance/finance-labels';
+import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 
 interface OutstandingBalancesPanelProps {
   tenantId: string;
@@ -39,16 +30,10 @@ interface OutstandingBalancesPanelProps {
 
 function KpiTile({ label, value }: { label: string; value: string }) {
   return (
-    <Card className="shadow-card">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {label}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="font-mono text-xl font-semibold tabular-nums text-foreground">{value}</p>
-      </CardContent>
-    </Card>
+    <div className={`${ACADEMIC_UI.dataPanel} p-4`}>
+      <p className={ACADEMIC_UI.sectionLabel}>{label}</p>
+      <p className="mt-2 font-mono text-xl font-extrabold tabular-nums text-neutral-900">{value}</p>
+    </div>
   );
 }
 
@@ -128,55 +113,59 @@ export function OutstandingBalancesPanel({ tenantId, termId }: OutstandingBalanc
         </Alert>
       ) : null}
 
-      <Card className="shadow-card">
-        <CardHeader>
-          <CardTitle className="text-base">Student balances</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {balancesQuery.isLoading ? <Skeleton className="h-64 w-full" /> : null}
+      <div className={`${ACADEMIC_UI.dataPanel} overflow-hidden`}>
+        <div className="border-b border-brand-50/80 px-5 py-4">
+          <p className={ACADEMIC_UI.sectionLabel}>Student balances</p>
+        </div>
+        <div className="p-5">
+          {balancesQuery.isLoading ? <Skeleton className="h-64 w-full rounded-xl" /> : null}
           {!balancesQuery.isLoading && rows.length === 0 ? (
-            <p className="py-10 text-center text-sm text-muted-foreground">
+            <p className="py-10 text-center text-[13px] text-neutral-500">
               No students match the selected filters.
             </p>
           ) : null}
           {rows.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Class</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Charged</TableHead>
-                  <TableHead className="text-right">Paid</TableHead>
-                  <TableHead className="text-right">Balance</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((row) => (
-                  <TableRow key={row.invoiceId}>
-                    <TableCell className="font-mono text-sm">
-                      {formatStudentRef(row.studentId)}
-                    </TableCell>
-                    <TableCell>{formatClassLevelLabel(row.classLevelId)}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{formatInvoiceStatus(row.status)}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-mono tabular-nums">
-                      {formatKobo(row.amountChargedMinor)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono tabular-nums">
-                      {formatKobo(row.amountPaidMinor)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono font-semibold tabular-nums text-gold-600 dark:text-gold-400">
-                      {formatKobo(row.balanceMinor)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left text-[13px]">
+                <thead className={ACADEMIC_UI.tableHeader}>
+                  <tr>
+                    {['Student', 'Class', 'Status', 'Charged', 'Paid', 'Balance'].map((h) => (
+                      <th
+                        key={h}
+                        className="px-4 py-3 text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-500 last:text-right"
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row) => (
+                    <tr key={row.invoiceId} className="border-t border-brand-50/80">
+                      <td className="px-4 py-3 font-mono text-[12px] text-neutral-800">
+                        {formatStudentRef(row.studentId)}
+                      </td>
+                      <td className="px-4 py-3 text-neutral-700">{formatClassLevelLabel(row.classLevelId)}</td>
+                      <td className="px-4 py-3">
+                        <Badge variant="outline">{formatInvoiceStatus(row.status)}</Badge>
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono tabular-nums text-neutral-800">
+                        {formatKobo(row.amountChargedMinor)}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono tabular-nums text-neutral-800">
+                        {formatKobo(row.amountPaidMinor)}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono font-semibold tabular-nums text-brand-700">
+                        {formatKobo(row.balanceMinor)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : null}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

@@ -352,6 +352,39 @@ export const paymentsQuery = z.object({
 });
 export type PaymentsQuery = z.infer<typeof paymentsQuery>;
 
+// ── Parent portal fee status (US-PAR-004) ────────────────────────────────────
+
+export const parentFeesQuery = z.object({
+  studentId: z.string().uuid(),
+  termId: z.string().uuid(),
+});
+export type ParentFeesQuery = z.infer<typeof parentFeesQuery>;
+
+export const parentFeeLineItem = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  category: feeItemCategory,
+  amountMinor: koboAmount,
+  paidMinor: koboAmount,
+  balanceMinor: koboAmount,
+});
+export type ParentFeeLineItem = z.infer<typeof parentFeeLineItem>;
+
+export const parentFeeStatusResponse = z.object({
+  termId: z.string().uuid(),
+  studentId: z.string().uuid(),
+  classArmLabel: z.string().nullable(),
+  invoiceId: z.string().uuid().nullable(),
+  status: invoiceStatus.nullable(),
+  amountChargedMinor: koboAmount,
+  amountPaidMinor: koboAmount,
+  balanceMinor: koboAmount,
+  dueDate: calendarDate.nullable(),
+  lineItems: z.array(parentFeeLineItem),
+  onlinePaymentEnabled: z.boolean(),
+});
+export type ParentFeeStatusResponse = z.infer<typeof parentFeeStatusResponse>;
+
 // ── Refunds (US-FIN-006 / FR-FIN-007) ────────────────────────────────────────
 
 export const refundReasonCode = z.enum([

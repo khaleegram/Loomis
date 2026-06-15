@@ -7,6 +7,8 @@ import type {
   FeeStructureAmendmentResponse,
   FeeStructureListResponse,
   FeeStructureResponse,
+  InitializeOnlinePaymentRequest,
+  InitializeOnlinePaymentResponse,
   InvoiceListResponse,
   InvoiceResponse,
   LogOfflinePaymentRequest,
@@ -337,6 +339,23 @@ export function useVerifyOfflinePayment(tenantId: string, termId: string, paymen
   });
 }
 
+/** US-FIN-004 / US-PAR-004. Parent initiates online payment via gateway. */
+export function useInitializeOnlinePayment(tenantId: string, termId: string, studentId: string) {
+  return useIdempotentMutation<InitializeOnlinePaymentRequest, InitializeOnlinePaymentResponse>({
+    mutationFn: (client, body, idempotencyKey) =>
+      client.post<InitializeOnlinePaymentResponse>(
+        `/tenants/${tenantId}/payments/online/initialize`,
+        body,
+        { idempotencyKey },
+      ),
+    invalidates: [
+      ...financeInvalidation(tenantId, termId),
+      queryKeys.parent.fees(tenantId, studentId, termId),
+      queryKeys.parent.dashboard(),
+    ],
+  });
+}
+
 /** US-FIN-006. Cashier initiates refund request. */
 export function useCreateRefund(tenantId: string, termId: string) {
   return useIdempotentMutation<CreateRefundRequest, CreateRefundResponse>({
@@ -377,27 +396,34 @@ export function useDecideRefundWorkflow(config: UseDecideRefundWorkflowConfig) {
 }
 
 // ── Reconciliation ─────────────────────────────────────────────────────────────
-// @ts-nocheck
+
+type ResolveReconciliationBody = ResolveReconciliationExceptionRequest & {
+  exceptionId: string;
+};
 
 export function useReconciliationExceptions(tenantId: string) {
   const client = useApiClient();
   return useQuery({
     queryKey: queryKeys.finance.reconciliationExceptions(tenantId),
     queryFn: () =>
-      client.get<any>(`/tenants/${tenantId}/reconciliation/exceptions`),
+      client.get<ReconciliationExceptionListResponse>(
+        `/tenants/${tenantId}/reconciliation/exceptions`,
+      ),
     staleTime: 60_000,
     enabled: Boolean(tenantId),
   });
 }
 
 export function useResolveReconciliationException(tenantId: string) {
-  return useIdempotentMutation<any, any>({
-    mutationFn: (client, body, idempotencyKey) =>
-      client.post<any>(
-        `/tenants/${tenantId}/reconciliation/exceptions/${body.exceptionId}/resolve`,
-        body,
+  return useIdempotentMutation<ResolveReconciliationBody, ReconciliationExceptionResponse>({
+    mutationFn: (client, body, idempotencyKey) => {
+      const { exceptionId, ...payload } = body;
+      return client.post<ReconciliationExceptionResponse>(
+        `/tenants/${tenantId}/reconciliation/exceptions/${exceptionId}/resolve`,
+        payload,
         { idempotencyKey },
-      ),
+      );
+    },
     invalidates: [queryKeys.finance.reconciliationExceptions(tenantId)],
   });
 }

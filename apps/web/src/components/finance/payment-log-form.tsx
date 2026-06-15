@@ -12,12 +12,6 @@ import {
   Alert,
   AlertDescription,
   Badge,
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   CurrencyInput,
   Form,
   FormControl,
@@ -33,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
   Skeleton,
+  cn,
 } from '@loomis/ui-web';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMemo, useState } from 'react';
@@ -40,6 +35,12 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import { PaymentStatusChip } from '@/components/finance/payment-status-chip';
+import {
+  SmartFormSection,
+  FormSubmitError,
+  smartInputClass,
+} from '@/components/shared/smart-form';
+import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { financeErrorMessage } from '@/lib/finance/finance-errors';
 import {
   buildPaymentSettlementLegs,
@@ -145,18 +146,19 @@ export function PaymentLogForm({ tenantId, termId }: PaymentLogFormProps) {
 
   return (
     <div className="grid gap-6 lg:grid-cols-12">
-      <Card className="shadow-card lg:col-span-5">
-        <CardHeader>
-          <CardTitle>Find student</CardTitle>
-          <CardDescription>Search by name or admission number (US-FIN-002).</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <div className={`${ACADEMIC_UI.dataPanel} lg:col-span-5`}>
+        <div className="border-b border-brand-50 bg-gradient-to-r from-neutral-50 to-brand-50/30 px-4 py-4 sm:px-5">
+          <p className="text-[14px] font-bold text-neutral-900">Find student</p>
+          <p className="mt-0.5 text-[12px] text-neutral-500">Search by name or admission number.</p>
+        </div>
+        <div className="space-y-3 p-4 sm:p-5">
           <Input
             placeholder="Search students…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            className={smartInputClass}
           />
-          {isLoading ? <Skeleton className="h-40 w-full" /> : null}
+          {isLoading ? <Skeleton className="h-40 w-full rounded-xl" /> : null}
           <ul className="max-h-80 space-y-2 overflow-y-auto">
             {filteredStudents.map((student) => {
               const invoice = invoiceByStudent.get(student.id);
@@ -164,13 +166,13 @@ export function PaymentLogForm({ tenantId, termId }: PaymentLogFormProps) {
                 <li key={student.id}>
                   <button
                     type="button"
-                    className="flex w-full items-center justify-between rounded-sm border border-border bg-card px-3 py-2 text-left text-sm transition-colors hover:bg-muted/50"
+                    className="flex min-h-[44px] w-full items-center justify-between rounded-xl border border-neutral-200/80 bg-white px-3 py-2.5 text-left text-sm transition-colors hover:border-brand-200 hover:bg-brand-50/30"
                     onClick={() => selectStudentInvoice(student.id)}
                     disabled={!invoice}
                   >
                     <span>
                       {student.firstName} {student.lastName}
-                      <span className="ml-2 text-xs text-muted-foreground">{student.admissionNo}</span>
+                      <span className="ml-2 text-xs text-neutral-500">{student.admissionNo}</span>
                     </span>
                     {invoice ? (
                       <Badge variant="outline">{formatKobo(invoice.balanceMinor)} due</Badge>
@@ -182,28 +184,28 @@ export function PaymentLogForm({ tenantId, termId }: PaymentLogFormProps) {
               );
             })}
           </ul>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Card className="shadow-card lg:col-span-7">
-        <CardHeader>
-          <CardTitle>Log offline payment</CardTitle>
-          <CardDescription>
-            Provisional receipt issued. Verification must be done by another staff member.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <div className={`${ACADEMIC_UI.dataPanel} lg:col-span-7`}>
+        <div className="border-b border-brand-50 bg-gradient-to-r from-neutral-50 to-brand-50/30 px-4 py-4 sm:px-5">
+          <p className="text-[14px] font-bold text-neutral-900">Log offline payment</p>
+          <p className="mt-0.5 text-[12px] text-neutral-500">
+            Provisional receipt issued — verification by another staff member required.
+          </p>
+        </div>
+        <div className="p-4 sm:p-5">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
               {selectedInvoice ? (
-                <div className="rounded-sm border border-border bg-muted/30 p-3 text-sm">
-                  <p className="font-medium text-foreground">
+                <div className="rounded-xl border border-brand-200/60 bg-brand-50/30 p-4 text-[13px]">
+                  <p className="font-bold text-neutral-900">
                     Student {formatStudentRef(selectedInvoice.studentId)}
                   </p>
-                  <p className="text-muted-foreground">
+                  <p className="mt-1 text-neutral-600">
                     Charged {formatKobo(selectedInvoice.amountChargedMinor)} · Paid{' '}
                     {formatKobo(selectedInvoice.amountPaidMinor)} · Balance{' '}
-                    <span className="font-mono font-semibold text-foreground">
+                    <span className="font-mono font-extrabold text-neutral-900">
                       {formatKobo(selectedInvoice.balanceMinor)}
                     </span>
                   </p>
@@ -214,80 +216,84 @@ export function PaymentLogForm({ tenantId, termId }: PaymentLogFormProps) {
                 </Alert>
               )}
 
-              <FormField
-                control={form.control}
-                name="amountMinor"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Amount received</FormLabel>
-                    <FormControl>
-                      <CurrencyInput
-                        valueKobo={field.value}
-                        onChangeKobo={(kobo) => {
-                          const cap = selectedInvoice?.balanceMinor ?? kobo;
-                          field.onChange(Math.min(kobo, cap));
-                        }}
-                        disabled={!selectedInvoice}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid gap-4 sm:grid-cols-2">
+              <SmartFormSection title="Amount received">
                 <FormField
                   control={form.control}
-                  name="method"
+                  name="amountMinor"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Payment method</FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {offlinePaymentMethod.options.map((method) => (
-                            <SelectItem key={method} value={method}>
-                              {formatOfflinePaymentMethod(method as OfflinePaymentMethod)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="paymentDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Payment date</FormLabel>
                       <FormControl>
-                        <Input type="date" {...field} />
+                        <CurrencyInput
+                          valueKobo={field.value}
+                          onChangeKobo={(kobo) => {
+                            const cap = selectedInvoice?.balanceMinor ?? kobo;
+                            field.onChange(Math.min(kobo, cap));
+                          }}
+                          disabled={!selectedInvoice}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+              </SmartFormSection>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <SmartFormSection title="Payment method">
+                  <FormField
+                    control={form.control}
+                    name="method"
+                    render={({ field }) => (
+                      <FormItem>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger className={smartInputClass}>
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {offlinePaymentMethod.options.map((method) => (
+                              <SelectItem key={method} value={method}>
+                                {formatOfflinePaymentMethod(method as OfflinePaymentMethod)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </SmartFormSection>
+                <SmartFormSection title="Payment date">
+                  <FormField
+                    control={form.control}
+                    name="paymentDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Input type="date" className={smartInputClass} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </SmartFormSection>
               </div>
 
-              <FormField
-                control={form.control}
-                name="channelReference"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Reference (optional)</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Bank ref, teller no., etc." />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <SmartFormSection title="Reference" description="Bank ref, teller no., etc.">
+                <FormField
+                  control={form.control}
+                  name="channelReference"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input {...field} placeholder="Optional" className={smartInputClass} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </SmartFormSection>
 
               {amountMinor > 0 ? (
                 <JournalVoucherCard
@@ -296,11 +302,7 @@ export function PaymentLogForm({ tenantId, termId }: PaymentLogFormProps) {
                 />
               ) : null}
 
-              {form.formState.errors.root ? (
-                <Alert variant="destructive">
-                  <AlertDescription>{form.formState.errors.root.message}</AlertDescription>
-                </Alert>
-              ) : null}
+              <FormSubmitError message={form.formState.errors.root?.message ?? null} />
 
               {lastReceiptId ? (
                 <Alert>
@@ -311,17 +313,17 @@ export function PaymentLogForm({ tenantId, termId }: PaymentLogFormProps) {
                 </Alert>
               ) : null}
 
-              <Button
+              <button
                 type="submit"
                 disabled={!selectedInvoice || logPayment.isSubmitting}
-                className="w-full sm:w-auto"
+                className={`${ACADEMIC_UI.btnPrimary} w-full sm:w-auto`}
               >
                 {logPayment.isSubmitting ? 'Logging…' : 'Log payment'}
-              </Button>
+              </button>
             </form>
           </Form>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

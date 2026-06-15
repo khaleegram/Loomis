@@ -2,7 +2,10 @@ import type { FeeItemInput, OutstandingBalancesQuery } from '@loomis/contracts';
 import { uuidv7 } from 'uuidv7';
 import { writeDataAccess } from '../../../shared/audit.js';
 import { LoomisError } from '../../../shared/errors.js';
+import { getEnv } from '../../../config/env.js';
+import { academicRepository } from '../../academic/repository/index.js';
 import { termService } from '../../academic/index.js';
+import { studentRepository } from '../../student/repository/index.js';
 import { FINANCE_EVENT_TYPES } from '../events/types.js';
 import { financeRepository, type InvoiceWithItems } from '../repository/index.js';
 import type {
@@ -99,6 +102,39 @@ async function createInvoiceFromStructure(params: {
       },
     },
   });
+}
+
+function allocatePaidToLineItems(
+  items: Array<{ id: string; name: string; category: string; amountMinor: number }>,
+  amountPaidMinor: number,
+) {
+  let remainingPaid = amountPaidMinor;
+  return items.map((item) => {
+    const paidMinor = Math.min(item.amountMinor, Math.max(0, remainingPaid));
+    remainingPaid -= paidMinor;
+    return {
+      id: item.id,
+      name: item.name,
+      category: item.category,
+      amountMinor: item.amountMinor,
+      paidMinor,
+      balanceMinor: item.amountMinor - paidMinor,
+    };
+  });
+}
+
+async function resolveClassArmLabel(
+  tenantId: string,
+  studentId: string,
+  termId: string,
+): Promise<string | null> {
+  const enrollment = await studentRepository.findEnrollmentForTerm(tenantId, studentId, termId);
+  if (!enrollment) return null;
+  const classArm = await academicRepository.findClassArmById(tenantId, enrollment.classArmId);
+  const level = classArm
+    ? await academicRepository.findClassLevelById(tenantId, classArm.classLevelId)
+    : null;
+  return classArm && level ? `${level.code} ${classArm.name}` : classArm?.name ?? null;
 }
 
 export const invoiceService = {
@@ -298,5 +334,74 @@ export const invoiceService = {
     });
 
     return { termId, summary, rows };
+  },
+
+  /**
+   * US-PAR-004. Parent views linked child's term invoice and fee line breakdown.
+   * Per-line paid amounts are allocated in invoice item order (FIFO).
+   */
+  async listParentChildFeeStatus(
+    tenantId: string,
+    studentId: string,
+    termId: string,
+    actor: ActorContext,
+  ) {
+    if (actor.role !== 'parent') {
+      throw new LoomisError('FORBIDDEN', 403, 'Parent role required');
+    }
+
+    const linked = await studentRepository.hasActiveParentLink(tenantId, actor.userId, studentId);
+    if (!linked) {
+      throw new LoomisError('FORBIDDEN', 403, 'You are not linked to this student');
+    }
+
+    const classArmLabel = await resolveClassArmLabel(tenantId, studentId, termId);
+    const env = getEnv();
+    const onlinePaymentEnabled = Boolean(env.PAYSTACK_SECRET_KEY);
+
+    const found = await financeRepository.findInvoiceByTermStudent(tenantId, termId, studentId);
+    if (!found) {
+      return {
+        termId,
+        studentId,
+        classArmLabel,
+        invoiceId: null,
+        status: null,
+        amountChargedMinor: 0,
+        amountPaidMinor: 0,
+        balanceMinor: 0,
+        dueDate: null,
+        lineItems: [],
+        onlinePaymentEnabled,
+      };
+    }
+
+    const invoice = await financeRepository.findInvoiceById(tenantId, found.id);
+    if (!invoice) {
+      throw new LoomisError('FINANCE_INVOICE_NOT_FOUND', 404, 'Invoice not found');
+    }
+
+    await writeDataAccess({
+      tenantId,
+      actorUserId: actor.userId,
+      resourceType: 'invoice',
+      resourceCount: 1,
+      containsChildPii: false,
+      containsFinancialData: true,
+    });
+
+    return {
+      termId,
+      studentId,
+      classArmLabel,
+      invoiceId: invoice.invoice.id,
+      status: invoice.invoice.status,
+      amountChargedMinor: invoice.invoice.amountChargedMinor,
+      amountPaidMinor: invoice.invoice.amountPaidMinor,
+      balanceMinor: invoice.invoice.balanceMinor,
+      dueDate: invoice.invoice.dueDate,
+      lineItems: allocatePaidToLineItems(invoice.items, invoice.invoice.amountPaidMinor),
+      onlinePaymentEnabled,
+    };
   },
 };

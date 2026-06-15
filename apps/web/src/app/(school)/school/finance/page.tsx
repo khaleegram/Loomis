@@ -1,166 +1,135 @@
 'use client';
 
 import Link from 'next/link';
-import {
-  useAcademicTerms,
-  useAcademicYears,
-  useClassLevels,
-  useFeeStructures,
-} from '@loomis/api-client';
-import { Alert, AlertDescription, Button, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger } from '@loomis/ui-web';
+import { useClassLevels, useFeeStructures } from '@loomis/api-client';
+import { Alert, AlertDescription, Skeleton } from '@loomis/ui-web';
 import { useState } from 'react';
 
 import { FeeStructureEditor } from '@/components/finance/fee-structure-editor';
-import {
-  FinanceTermContext,
-  pickDefaultTerm,
-  pickDefaultYear,
-} from '@/components/finance/finance-term-context';
-import { PageBody, PageHeader } from '@/components/school/school-shell';
+import { FinanceFeeStructuresHero } from '@/components/finance/finance-fee-structures-hero';
+import { PageBody } from '@/components/school/school-shell';
+import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
+import { useSchoolAcademic } from '@/lib/academic/school-academic-context';
 import { useCan, useCanAny } from '@/lib/auth/use-capability';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
+
+const pageClass = 'max-w-[1400px] px-4 py-5 sm:px-6 lg:px-12 lg:py-8';
 
 export default function FinanceFeeStructuresPage() {
   const tenantId = useTenantId();
   const canConfigure = useCan('fee.configure');
   const canViewFinance = useCanAny(['fee.configure', 'payment.verify', 'payment.log']);
+  const { yearId, termId, activeYear, activeTerm, isLoading: sessionLoading } = useSchoolAcademic();
 
-  const [yearId, setYearId] = useState<string | null>(null);
-  const [termId, setTermId] = useState<string | null>(null);
   const [classLevelId, setClassLevelId] = useState<string | null>(null);
-
-  const yearsQuery = useAcademicYears(tenantId ?? '');
-  const years = yearsQuery.data?.academicYears ?? [];
-  const resolvedYearId = yearId ?? pickDefaultYear(years)?.id ?? null;
-
-  const termsQuery = useAcademicTerms(tenantId ?? '', resolvedYearId ?? '');
-  const terms = termsQuery.data?.terms ?? [];
-  const resolvedTermId = termId ?? pickDefaultTerm(terms)?.id ?? null;
-  const activeTerm = terms.find((t) => t.id === resolvedTermId) ?? null;
 
   const classLevelsQuery = useClassLevels(tenantId ?? '');
   const classLevels = classLevelsQuery.data?.levels ?? [];
   const resolvedClassLevelId = classLevelId ?? classLevels[0]?.id ?? null;
 
-  const feeStructuresQuery = useFeeStructures(tenantId ?? '', resolvedTermId ?? '');
+  const feeStructuresQuery = useFeeStructures(tenantId ?? '', termId ?? '');
   const structures = feeStructuresQuery.data?.feeStructures ?? [];
+
+  const isLoading =
+    sessionLoading ||
+    classLevelsQuery.isLoading ||
+    feeStructuresQuery.isLoading;
 
   if (!tenantId) {
     return (
-      <>
-        <PageHeader title="Fee structures" />
-        <PageBody>
-          <Alert variant="destructive">
-            <AlertDescription>No tenant context. Sign in again.</AlertDescription>
-          </Alert>
-        </PageBody>
-      </>
+      <PageBody className={pageClass}>
+        <Alert variant="destructive">
+          <AlertDescription>No tenant context. Sign in again.</AlertDescription>
+        </Alert>
+      </PageBody>
     );
   }
 
   if (!canViewFinance) {
     return (
-      <>
-        <PageHeader title="Fee structures" />
-        <PageBody>
-          <Alert>
-            <AlertDescription>You do not have permission to view fee structures.</AlertDescription>
-          </Alert>
-        </PageBody>
-      </>
+      <PageBody className={pageClass}>
+        <Alert>
+          <AlertDescription>You do not have permission to view fee structures.</AlertDescription>
+        </Alert>
+      </PageBody>
     );
   }
 
-  const isLoading =
-    yearsQuery.isLoading ||
-    termsQuery.isLoading ||
-    classLevelsQuery.isLoading ||
-    feeStructuresQuery.isLoading;
-
   return (
-    <>
-      <PageHeader
-        title="Fee structures"
-        description="Configure per-class fee items for the current term (US-FIN-001)."
-        actions={
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" asChild size="sm">
-              <Link href="/school/finance/balances">Outstanding balances</Link>
-            </Button>
-            <Button variant="outline" asChild size="sm">
-              <Link href="/school/finance/refunds">Refunds</Link>
-            </Button>
-          </div>
-        }
-      />
-      <PageBody>
-        <div className="space-y-6">
-          <FinanceTermContext
-            tenantId={tenantId}
-            yearId={resolvedYearId}
-            termId={resolvedTermId}
-            onYearChange={(id) => {
-              setYearId(id);
-              setTermId(null);
-            }}
-            onTermChange={setTermId}
-          />
+    <PageBody className={pageClass}>
+      <div className="space-y-6">
+        <FinanceFeeStructuresHero
+          termLabel={activeTerm?.name ?? null}
+          yearLabel={activeYear?.label ?? null}
+          classLevelCount={classLevels.length}
+          structureCount={structures.length}
+          canConfigure={canConfigure}
+          isLoading={isLoading}
+        />
 
-          {!resolvedTermId ? (
-            <Alert>
-              <AlertDescription>
-                Select an academic year and term, or configure terms in Academic sessions.
-              </AlertDescription>
-            </Alert>
-          ) : null}
+        {!termId ? (
+          <Alert>
+            <AlertDescription>
+              No billing term selected. Use the session bar to choose a term, or configure terms in
+              Academic sessions.
+            </AlertDescription>
+          </Alert>
+        ) : null}
 
-          {classLevels.length === 0 && !isLoading ? (
-            <Alert>
-              <AlertDescription>
-                No class levels configured. Set up your class structure in Academic sessions first.
-              </AlertDescription>
-            </Alert>
-          ) : null}
+        {classLevels.length === 0 && !isLoading ? (
+          <Alert>
+            <AlertDescription>
+              No class levels configured. Set up your class structure in Academic sessions first.
+            </AlertDescription>
+          </Alert>
+        ) : null}
 
-          {resolvedTermId && classLevels.length > 0 ? (
-            <Tabs
-              value={resolvedClassLevelId ?? undefined}
-              onValueChange={setClassLevelId}
-            >
-              <TabsList className="flex h-auto flex-wrap justify-start gap-1 bg-transparent p-0">
-                {classLevels.map((level) => (
-                  <TabsTrigger
-                    key={level.id}
-                    value={level.id}
-                    className="data-[state=active]:bg-brand-600 data-[state=active]:text-white dark:data-[state=active]:bg-mint-500 dark:data-[state=active]:text-forest-950"
-                  >
-                    {level.name}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
+        {termId && classLevels.length > 0 ? (
+          <>
+            <div className="flex flex-wrap gap-2">
               {classLevels.map((level) => (
-                <TabsContent key={level.id} value={level.id} className="mt-4">
-                  {isLoading ? (
-                    <Skeleton className="h-64 w-full" />
-                  ) : (
-                    <FeeStructureEditor
-                      tenantId={tenantId}
-                      termId={resolvedTermId}
-                      yearId={resolvedYearId!}
-                      classLevelId={level.id}
-                      classLevelLabel={level.name}
-                      termOpen={activeTerm?.status === 'open'}
-                      structure={structures.find((s) => s.classLevelId === level.id) ?? null}
-                      isLoading={false}
-                      canEdit={canConfigure}
-                    />
-                  )}
-                </TabsContent>
+                <button
+                  key={level.id}
+                  type="button"
+                  className={
+                    resolvedClassLevelId === level.id ? ACADEMIC_UI.chipActive : ACADEMIC_UI.chipInactive
+                  }
+                  onClick={() => setClassLevelId(level.id)}
+                >
+                  {level.name}
+                </button>
               ))}
-            </Tabs>
-          ) : null}
+            </div>
+
+            {resolvedClassLevelId ? (
+              isLoading ? (
+                <Skeleton className="h-64 w-full rounded-2xl" />
+              ) : (
+                <FeeStructureEditor
+                  tenantId={tenantId}
+                  termId={termId}
+                  yearId={yearId!}
+                  classLevelId={resolvedClassLevelId}
+                  classLevelLabel={classLevels.find((l) => l.id === resolvedClassLevelId)?.name ?? ''}
+                  termOpen={activeTerm?.status === 'open'}
+                  structure={structures.find((s) => s.classLevelId === resolvedClassLevelId) ?? null}
+                  isLoading={false}
+                  canEdit={canConfigure}
+                />
+              )
+            ) : null}
+          </>
+        ) : null}
+
+        <div className="flex flex-wrap gap-2 pt-2">
+          <Link href="/school/finance/payments/log" className={ACADEMIC_UI.btnSecondary}>
+            Log payment
+          </Link>
+          <Link href="/school/finance/reconciliation" className={ACADEMIC_UI.btnSecondary}>
+            Reconciliation
+          </Link>
         </div>
-      </PageBody>
-    </>
+      </div>
+    </PageBody>
   );
 }

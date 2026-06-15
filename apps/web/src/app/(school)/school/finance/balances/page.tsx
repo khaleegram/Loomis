@@ -1,94 +1,71 @@
 'use client';
 
-import Link from 'next/link';
-import { useAcademicTerms, useAcademicYears } from '@loomis/api-client';
-import { Alert, AlertDescription, Button } from '@loomis/ui-web';
-import { useState } from 'react';
+import { useOutstandingBalances } from '@loomis/api-client';
+import { Alert, AlertDescription } from '@loomis/ui-web';
 
-import { FinanceTermContext, pickDefaultTerm, pickDefaultYear } from '@/components/finance/finance-term-context';
+import { FinanceBalancesHero } from '@/components/finance/finance-balances-hero';
 import { OutstandingBalancesPanel } from '@/components/finance/outstanding-balances-panel';
-import { PageBody, PageHeader } from '@/components/school/school-shell';
+import { PageBody } from '@/components/school/school-shell';
+import { useSchoolAcademic } from '@/lib/academic/school-academic-context';
 import { useCan, useRole } from '@/lib/auth/use-capability';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
+
+const pageClass = 'max-w-[1400px] px-4 py-5 sm:px-6 lg:px-12 lg:py-8';
 
 export default function OutstandingBalancesPage() {
   const tenantId = useTenantId();
   const role = useRole();
   const canConfigure = useCan('fee.configure');
-  const canView =
-    canConfigure || role === 'principal' || role === 'school_owner';
+  const canView = canConfigure || role === 'principal' || role === 'school_owner';
+  const { termId, activeYear, activeTerm } = useSchoolAcademic();
 
-  const [yearId, setYearId] = useState<string | null>(null);
-  const [termId, setTermId] = useState<string | null>(null);
-
-  const yearsQuery = useAcademicYears(tenantId ?? '');
-  const years = yearsQuery.data?.academicYears ?? [];
-  const resolvedYearId = yearId ?? pickDefaultYear(years)?.id ?? null;
-
-  const termsQuery = useAcademicTerms(tenantId ?? '', resolvedYearId ?? '');
-  const terms = termsQuery.data?.terms ?? [];
-  const resolvedTermId = termId ?? pickDefaultTerm(terms)?.id ?? null;
+  const balancesQuery = useOutstandingBalances(tenantId ?? '', termId ?? '', {});
+  const summary = balancesQuery.data?.summary;
 
   if (!tenantId) {
     return (
-      <>
-        <PageHeader title="Outstanding balances" />
-        <PageBody>
-          <Alert variant="destructive">
-            <AlertDescription>No tenant context.</AlertDescription>
-          </Alert>
-        </PageBody>
-      </>
+      <PageBody className={pageClass}>
+        <Alert variant="destructive">
+          <AlertDescription>No tenant context.</AlertDescription>
+        </Alert>
+      </PageBody>
     );
   }
 
   if (!canView) {
     return (
-      <>
-        <PageHeader title="Outstanding balances" />
-        <PageBody>
-          <Alert>
-            <AlertDescription>
-              Outstanding balances are restricted to accountants and principals.
-            </AlertDescription>
-          </Alert>
-        </PageBody>
-      </>
+      <PageBody className={pageClass}>
+        <Alert>
+          <AlertDescription>
+            Outstanding balances are restricted to accountants and principals.
+          </AlertDescription>
+        </Alert>
+      </PageBody>
     );
   }
 
   return (
-    <>
-      <PageHeader
-        title="Outstanding balances"
-        description="Fee charged, paid, and balance per student for the current term (US-FIN-005)."
-        actions={
-          <Button variant="outline" asChild size="sm">
-            <Link href="/school/finance">Fee structures</Link>
-          </Button>
-        }
-      />
-      <PageBody>
-        <div className="space-y-6">
-          <FinanceTermContext
-            tenantId={tenantId}
-            yearId={resolvedYearId}
-            termId={resolvedTermId}
-            onYearChange={(id) => {
-              setYearId(id);
-              setTermId(null);
-            }}
-            onTermChange={setTermId}
-          />
-          {resolvedTermId ? (
-            <OutstandingBalancesPanel tenantId={tenantId} termId={resolvedTermId} />
-          ) : (
-            <Alert>
-              <AlertDescription>Select a term to view outstanding balances.</AlertDescription>
-            </Alert>
-          )}
-        </div>
-      </PageBody>
-    </>
+    <PageBody className={pageClass}>
+      <div className="space-y-6">
+        <FinanceBalancesHero
+          termLabel={activeTerm?.name ?? null}
+          yearLabel={activeYear?.label ?? null}
+          studentCount={summary?.studentCount ?? 0}
+          totalBalanceMinor={summary?.totalBalanceMinor ?? 0}
+          totalChargedMinor={summary?.totalChargedMinor ?? 0}
+          isLoading={balancesQuery.isLoading && Boolean(termId)}
+        />
+
+        {termId ? (
+          <OutstandingBalancesPanel tenantId={tenantId} termId={termId} />
+        ) : (
+          <Alert>
+            <AlertDescription>
+              No billing term selected. Use the session bar to choose a term.
+            </AlertDescription>
+          </Alert>
+        )}
+      </div>
+    </PageBody>
   );
 }
