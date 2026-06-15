@@ -1,11 +1,12 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import type { ParentResultsQuery, ParentTimetableQuery } from '@loomis/contracts';
+import type { ParentFeesQuery, ParentResultsQuery, ParentTimetableQuery } from '@loomis/contracts';
 import { sendSuccess } from '../../../shared/http.js';
 import { LoomisError } from '../../../shared/errors.js';
 import { attendanceRecordToResponse, timetableEntryToResponse } from '../../academic/handlers/_ops-serializers.js';
 import { attendanceService } from '../../academic/services/attendance.service.js';
 import { gradebookService } from '../../academic/services/gradebook.service.js';
 import { timetableService } from '../../academic/services/timetable.service.js';
+import { invoiceService } from '../../finance/services/invoice.service.js';
 import { parentDashboardReadService, regionalAnalyticsReadService } from '../services/index.js';
 
 function requireActor(req: FastifyRequest) {
@@ -110,6 +111,25 @@ export async function getParentResultsHandler(
   }
 
   const result = await gradebookService.listParentChildPublishedResults(
+    tenantId,
+    req.query.studentId,
+    req.query.termId,
+    requireActor(req),
+  );
+
+  return sendSuccess(reply, result);
+}
+
+export async function getParentFeesHandler(
+  req: FastifyRequest<{ Querystring: ParentFeesQuery }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const tenantId = req.headers['x-tenant-id'];
+  if (typeof tenantId !== 'string' || !tenantId) {
+    throw new LoomisError('VALIDATION_ERROR', 400, 'X-Tenant-Id header is required');
+  }
+
+  const result = await invoiceService.listParentChildFeeStatus(
     tenantId,
     req.query.studentId,
     req.query.termId,

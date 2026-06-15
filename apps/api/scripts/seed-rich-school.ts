@@ -10,7 +10,7 @@
 import { eq, and } from 'drizzle-orm';
 import type { Role, StaffPrimaryRole } from '@loomis/contracts';
 import { uuidv7 } from 'uuidv7';
-import { tiers } from '../drizzle/schema/tenant.js';
+import { tiers, tenants } from '../drizzle/schema/tenant.js';
 import { roleAssignments, staffProfiles } from '../drizzle/schema/hrm.js';
 import { academicRepository } from '../src/modules/academic/repository/academic.repository.js';
 import { academicYearService } from '../src/modules/academic/services/academic-year.service.js';
@@ -29,6 +29,10 @@ import { studentRepository } from '../src/modules/student/repository/student.rep
 import { admissionService } from '../src/modules/student/services/admission.service.js';
 import { enrollmentService } from '../src/modules/student/services/enrollment.service.js';
 import { studentService } from '../src/modules/student/services/student.service.js';
+import { financeRepository } from '../src/modules/finance/repository/index.js';
+import { feeStructureService } from '../src/modules/finance/services/fee-structure.service.js';
+import { invoiceService } from '../src/modules/finance/services/invoice.service.js';
+import { parentDashboardRepository } from '../src/modules/read-models/repository/index.js';
 import { psfRateService } from '../src/modules/tenant/services/psf-rate.service.js';
 import { tenantService } from '../src/modules/tenant/services/tenant.service.js';
 import { withTenantContext } from '../src/shared/tenant-context.js';
@@ -40,8 +44,15 @@ const DEV_TOTP_BASE32 = 'JBSWY3DPEHPK3PXP';
 const TIER_CODE = 'demo';
 const PSF_RATE_MINOR = 500_000;
 const MARKER_EMAIL = `principal@${SEED_EMAIL_DOMAIN}`;
+const PARENT_JSS3B_EMAIL = seedEmail('parent.jss3b');
+const PARENT_JSS3B_PHONE = '+2348015550196';
 /** Audit `request_id` column is UUID — not an arbitrary string. */
 const SEED_REQUEST_ID = uuidv7();
+const SEED_AUDIT = {
+  requestId: SEED_REQUEST_ID,
+  ipAddress: '127.0.0.1',
+  userAgent: 'seed-rich-school',
+};
 
 function seedEmail(local: string): string {
   return `${local}@${SEED_EMAIL_DOMAIN}`;
@@ -290,9 +301,10 @@ function printRichCredentials(tenantId: string) {
   console.log(`    • ${seedEmail('exam')}  (exam officer → /school/exams)`);
   console.log(`    • ${seedEmail('teacher01')}  (subject teacher — My Schedule / assignments)`);
   console.log(`    • ${seedEmail('teacher03')}  (class teacher JSS1 B — attendance)`);
+  console.log(`    • ${PARENT_JSS3B_EMAIL}  (parent — linked child in JSS3 B → /parent/fees)`);
   console.log('');
   console.log('  Data: 12 classes · 467 students · 20 staff · published timetables');
-  console.log('  Try: /school/timetable · /school/students · /school/academic');
+  console.log('  Try: /school/timetable · /school/students · /parent/fees');
   console.log('══════════════════════════════════════════════════════════════');
   console.log('');
 }
@@ -648,12 +660,178 @@ async function resumeRichSeedTimetables(tenantId: string): Promise<boolean> {
   return true;
 }
 
+/** Parent portal demo — linked to first JSS3 B student (GFA-0196). Idempotent. */
+async function ensureJss3BParentDemo(tenantId: string): Promise<{
+  ensured: boolean;
+  studentAdmissionNo?: string;
+  studentName?: string;
+}> {
+  const years = await academicRepository.listYears(tenantId);
+  const year = years.find((y) => y.status === 'active') ?? years[0];
+  if (!year) return { ensured: false };
+
+  const terms = await academicRepository.listTermsByYear(tenantId, year.id);
+  const openTerm = terms.find((t) => t.status === 'open');
+  if (!openTerm) return { ensured: false };
+
+  const jss3bArm = await findClassArmByLevelAndName(tenantId, year.id, 'JSS3', 'B');
+  if (!jss3bArm) return { ensured: false };
+
+  const roster = await studentRepository.listTermEnrollmentRoster(tenantId, openTerm.id);
+  const jss3bStudent = roster.find((row) => row.classArmId === jss3bArm.id);
+  if (!jss3bStudent) return { ensured: false };
+
+  const principal = await userRepository.findByEmail(MARKER_EMAIL);
+  if (!principal) return { ensured: false };
+
+  const actor = { userId: principal.id, role: 'principal' as Role, tenantId };
+  const parentFullName = 'Chidi Okonkwo';
+
+  let parentUser = await userRepository.findByEmail(PARENT_JSS3B_EMAIL);
+  if (!parentUser) {
+    const passwordHash = await passwordService.hash(DEV_PASSWORD);
+    parentUser = await userRepository.create({
+      email: PARENT_JSS3B_EMAIL,
+      passwordHash,
+      role: 'parent',
+      tenantId: null,
+      mfaRequired: false,
+      status: 'active',
+      phone: PARENT_JSS3B_PHONE,
+      displayName: `${parentFullName} (JSS3 B parent)`,
+    });
+  }
+
+  const parentIdentity = await studentRepository.upsertParentIdentity({
+    emailNormalized: PARENT_JSS3B_EMAIL.toLowerCase(),
+    phoneE164: PARENT_JSS3B_PHONE,
+    fullName: parentFullName,
+    userId: parentUser.id,
+  });
+  await studentRepository.markParentIdentityVerified(parentIdentity.id, 'email_otp');
+
+  const alreadyLinked = await studentRepository.hasActiveParentLink(
+    tenantId,
+    parentUser.id,
+    jss3bStudent.studentId,
+  );
+
+  if (!alreadyLinked) {
+    const link = await studentRepository.createParentLink(
+      tenantId,
+      parentIdentity.id,
+      jss3bStudent.studentId,
+      {
+        parentFullName,
+        parentEmail: PARENT_JSS3B_EMAIL,
+        parentPhone: PARENT_JSS3B_PHONE,
+        relationship: 'father',
+      },
+      principal.id,
+      'seed-no-otp',
+      new Date(Date.now() + 86_400_000),
+    );
+    await studentRepository.activateParentLink(tenantId, link.id, 'email_otp');
+  }
+
+  const tenant = await withTenantContext(null, async (tx) => {
+    const [row] = await tx
+      .select({ name: tenants.name })
+      .from(tenants)
+      .where(eq(tenants.id, tenantId))
+      .limit(1);
+    return row ?? null;
+  });
+  if (!tenant) return { ensured: false };
+
+  const levels = await academicRepository.listClassLevels(tenantId);
+  const jss3Level = levels.find((level) => level.code === 'JSS3');
+  if (!jss3Level) return { ensured: false };
+
+  let outstandingBalance = 0;
+  try {
+    const existingStructure = await financeRepository.findStructureByTermClass(
+      tenantId,
+      openTerm.id,
+      jss3Level.id,
+    );
+    if (!existingStructure) {
+      await feeStructureService.createFeeStructure(
+        tenantId,
+        {
+          academicYearId: year.id,
+          termId: openTerm.id,
+          classLevelId: jss3Level.id,
+          items: [
+            { name: 'Tuition', category: 'tuition', amountMinor: 15_000_000 },
+            { name: 'Development levy', category: 'development_levy', amountMinor: 2_500_000 },
+          ],
+        },
+        actor,
+        SEED_AUDIT,
+      );
+    }
+
+    const existingInvoice = await financeRepository.findInvoiceByTermStudent(
+      tenantId,
+      openTerm.id,
+      jss3bStudent.studentId,
+    );
+    if (!existingInvoice) {
+      const enrollment = await studentRepository.findEnrollmentForTerm(
+        tenantId,
+        jss3bStudent.studentId,
+        openTerm.id,
+      );
+      const invoice = await invoiceService.issueInvoice(
+        tenantId,
+        {
+          academicYearId: year.id,
+          termId: openTerm.id,
+          studentId: jss3bStudent.studentId,
+          enrollmentId: enrollment?.id,
+          classLevelId: jss3Level.id,
+          dueDate: '2025-12-01',
+        },
+        actor,
+        SEED_AUDIT,
+      );
+      outstandingBalance = invoice.invoice.balanceMinor;
+    } else {
+      outstandingBalance = existingInvoice.balanceMinor;
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn(`  Parent demo fees skipped: ${message}`);
+  }
+
+  await withTenantContext(tenantId, async (tx) => {
+    await parentDashboardRepository.upsertCard(tx, {
+      parentUserId: parentUser.id,
+      tenantId,
+      studentId: jss3bStudent.studentId,
+      schoolName: tenant.name,
+      studentFirstName: jss3bStudent.firstName,
+      classArmLabel: 'JSS3 B',
+      linkStatus: 'active',
+      outstandingBalanceMinor: outstandingBalance,
+    });
+  });
+
+  return {
+    ensured: true,
+    studentAdmissionNo: jss3bStudent.admissionNo,
+    studentName: `${jss3bStudent.firstName} ${jss3bStudent.lastName}`,
+  };
+}
+
 async function main() {
   const existing = await userRepository.findByEmail(MARKER_EMAIL);
   if (existing?.tenantId) {
     const reassigned = await ensureTeacher01SubjectTeacherOnly(existing.tenantId);
     const gradesSeeded = await seedJss1BGradebookEntries(existing.tenantId);
     const resumed = await resumeRichSeedTimetables(existing.tenantId);
+    const parentDemo = await ensureJss3BParentDemo(existing.tenantId);
     printRichCredentials(existing.tenantId);
     if (reassigned) {
       console.log('teacher01 corrected to subject teacher — log out and back in to refresh JWT.');
@@ -661,6 +839,11 @@ async function main() {
     }
     if (gradesSeeded) {
       console.log('JSS1 B report card grades seeded — open Report cards → JSS1 B.');
+    }
+    if (parentDemo.ensured) {
+      console.log(
+        `Parent demo ready — ${PARENT_JSS3B_EMAIL} linked to ${parentDemo.studentAdmissionNo} (${parentDemo.studentName}, JSS3 B).`,
+      );
     }
     console.log(
       resumed ? 'Rich seed timetables completed (resumed).' : 'Rich seed already applied.',
@@ -911,7 +1094,14 @@ async function main() {
 
   await seedJss1BGradebookEntries(tenant.id);
 
+  const parentDemo = await ensureJss3BParentDemo(tenant.id);
+
   printRichCredentials(tenant.id);
+  if (parentDemo.ensured) {
+    console.log(
+      `Parent demo ready — ${PARENT_JSS3B_EMAIL} linked to ${parentDemo.studentAdmissionNo} (${parentDemo.studentName}, JSS3 B).`,
+    );
+  }
   console.log('Rich seed completed.');
 }
 

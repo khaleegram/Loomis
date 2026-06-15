@@ -97,11 +97,19 @@ Sub-features within a domain (only if you must split):
 
 ### Already on new UI (extend, don’t re-skin from scratch)
 
-Staff, students, admissions, academic hub, dashboards, auth, platform tenants, settings shell. When building a feature that touches these, **match** their patterns — don’t regress them.
+Staff, students, admissions, academic hub, dashboards, auth, platform tenants, **platform console**, settings shell (**security**), **regional console**, **finance (structures, balances, reconciliation, payment log/verify)**, **parent fees & contact**, **attendance, assignments, timetable, gradebook, report cards** (page shells). When building a feature that touches these, **match** their patterns — don’t regress them.
+
+### UI migration backlog (ordered)
+
+Finish partial shells → finance (payment log + verify) → parent fees (wire API) → exams + publish ✅ → census lock ✅ → comms + workflows ✅ → platform + regional consoles ✅.
 
 ### Still scaffold / incomplete (common build targets)
 
-Attendance, gradebook, exams, assignments, timetable, finance, comms, workflows, parent portal pages, platform console, regional, settings security/appearance.
+Finance (structures, balances, reconciliation) ✅, parent contact ✅, settings security ✅.
+
+### Optional polish targets
+
+Finance refunds/PSF school pages, settings appearance/profile sub-sections, parent notification prefs API.
 
 ## Step 1 — Find the user stories (mandatory)
 
