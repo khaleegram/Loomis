@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { messages } from '../../../../drizzle/schema/comms.js';
+import { studentRepository } from '../../student/repository/student.repository.js';
 import { writeAudit } from '../../../shared/audit.js';
 import { LoomisError } from '../../../shared/errors.js';
 import { withTenantContext } from '../../../shared/tenant-context.js';
@@ -10,8 +11,9 @@ import type {
   ReplyToMessageInput,
   SendAnnouncementInput,
   SendClassMessageInput,
+  SendStudentParentMessageInput,
 } from '../types.js';
-import { ANNOUNCEMENT_ROLES, SAFE_NOTIFICATION_COPY } from '../types.js';
+import { ANNOUNCEMENT_ROLES, PARENT_MESSAGE_ROLES, SAFE_NOTIFICATION_COPY } from '../types.js';
 
 function requireTenant(actor: ActorContext, tenantId: string): void {
   if (actor.tenantId !== null && actor.tenantId !== tenantId) {
@@ -135,12 +137,46 @@ export const messageService = {
         .where(eq(messages.id, created.id));
 
       const message = { ...created, threadId: created.id };
-      const parentUserIds = await recipientRepository.parentUserIdsForClassArm(
-        tx,
-        tenantId,
-        input.termId,
-        input.classArmId,
-      );
+
+      let parentUserIds: string[];
+      if (input.studentIds?.length) {
+        const matched = await recipientRepository.countStudentsInClassArm(
+          tx,
+          tenantId,
+          input.termId,
+          input.classArmId,
+          input.studentIds,
+        );
+        if (matched !== input.studentIds.length) {
+          throw new LoomisError(
+            'COMMS_STUDENT_NOT_IN_CLASS',
+            422,
+            'All selected students must be actively enrolled in this class for the term',
+          );
+        }
+        parentUserIds = await recipientRepository.parentUserIdsForStudentsInClassArm(
+          tx,
+          tenantId,
+          input.termId,
+          input.classArmId,
+          input.studentIds,
+        );
+      } else {
+        parentUserIds = await recipientRepository.parentUserIdsForClassArm(
+          tx,
+          tenantId,
+          input.termId,
+          input.classArmId,
+        );
+      }
+
+      if (parentUserIds.length === 0) {
+        throw new LoomisError(
+          'COMMS_NO_RECIPIENTS',
+          422,
+          'No linked parent accounts found for the selected recipients',
+        );
+      }
 
       for (const userId of parentUserIds) {
         await deliveryService.createAndDeliver({
@@ -164,7 +200,118 @@ export const messageService = {
         sensitivity: 'standard',
         result: 'success',
         requestId,
-        metadata: { recipientCount: parentUserIds.length, classArmId: input.classArmId },
+        metadata: {
+          recipientCount: parentUserIds.length,
+          classArmId: input.classArmId,
+          studentCount: input.studentIds?.length ?? null,
+        },
+      });
+
+      return message;
+    });
+  },
+
+  async sendStudentParentMessage(
+    tenantId: string,
+    input: SendStudentParentMessageInput,
+    actor: ActorContext,
+    requestId: string,
+  ) {
+    requireTenant(actor, tenantId);
+    if (!PARENT_MESSAGE_ROLES.has(actor.role)) {
+      throw new LoomisError('FORBIDDEN', 403, 'Not authorised to message parents');
+    }
+
+    const enrollment = await studentRepository.findEnrollmentForTerm(
+      tenantId,
+      input.studentId,
+      input.termId,
+    );
+    if (!enrollment || !['active', 'active_billable'].includes(enrollment.status)) {
+      throw new LoomisError(
+        'COMMS_STUDENT_NOT_ENROLLED',
+        422,
+        'Student is not actively enrolled for this term',
+      );
+    }
+
+    return withTenantContext(tenantId, async (tx) => {
+      if (actor.role === 'class_teacher') {
+        const authorised = await recipientRepository.isClassTeacherForArm(
+          tx,
+          tenantId,
+          actor.userId,
+          input.termId,
+          enrollment.classArmId,
+        );
+        if (!authorised) {
+          throw new LoomisError(
+            'COMMS_CLASS_ARM_FORBIDDEN',
+            403,
+            'You are not the Class Teacher for this student\'s class',
+          );
+        }
+      }
+
+      const parentUserIds = await recipientRepository.parentUserIdsForStudent(
+        tx,
+        tenantId,
+        input.studentId,
+      );
+      if (parentUserIds.length === 0) {
+        throw new LoomisError(
+          'COMMS_NO_RECIPIENTS',
+          422,
+          'No linked parent accounts found for this student',
+        );
+      }
+
+      const created = await messageRepository.create(tx, {
+        tenantId,
+        threadId: crypto.randomUUID(),
+        senderUserId: actor.userId,
+        senderRole: actor.role,
+        messageType: 'class_broadcast',
+        classArmId: enrollment.classArmId,
+        termId: input.termId,
+        subject: input.subject,
+        body: input.body,
+      });
+
+      await tx
+        .update(messages)
+        .set({ threadId: created.id })
+        .where(eq(messages.id, created.id));
+
+      const message = { ...created, threadId: created.id };
+
+      for (const userId of parentUserIds) {
+        await deliveryService.createAndDeliver({
+          tenantId,
+          userId,
+          notificationType: 'class_message',
+          safeCopy: SAFE_NOTIFICATION_COPY.classMessage,
+          resourceId: message.id,
+          messageId: message.id,
+          requestId,
+          actorUserId: actor.userId,
+        });
+      }
+
+      await writeAudit({
+        tenantId,
+        actorUserId: actor.userId,
+        action: 'comms.student_parent_message.sent',
+        resourceType: 'message',
+        resourceId: message.id,
+        sensitivity: 'standard',
+        result: 'success',
+        requestId,
+        metadata: {
+          recipientCount: parentUserIds.length,
+          studentId: input.studentId,
+          classArmId: enrollment.classArmId,
+        },
       });
 
       return message;

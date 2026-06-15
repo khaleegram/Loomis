@@ -4,6 +4,7 @@ import type {
   ReplyToMessageRequest,
   SendAnnouncementRequest,
   SendClassMessageRequest,
+  SendStudentParentMessageRequest,
   UpsertNotificationTemplateRequest,
 } from '@loomis/contracts';
 import { sendSuccess } from '../../../shared/http.js';
@@ -40,6 +41,19 @@ export async function sendClassMessageHandler(
   reply: FastifyReply,
 ): Promise<FastifyReply> {
   const row = await messageService.sendClassMessage(
+    req.params.tenantId,
+    req.body,
+    requireActor(req),
+    req.id,
+  );
+  return sendSuccess(reply, messageToResponse(row), 201);
+}
+
+export async function sendStudentParentMessageHandler(
+  req: FastifyRequest<{ Params: { tenantId: string }; Body: SendStudentParentMessageRequest }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const row = await messageService.sendStudentParentMessage(
     req.params.tenantId,
     req.body,
     requireActor(req),

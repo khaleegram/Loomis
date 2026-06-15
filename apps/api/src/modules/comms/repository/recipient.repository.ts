@@ -55,6 +55,61 @@ export const recipientRepository = {
     return rows.map((r) => r.userId).filter((id): id is string => Boolean(id));
   },
 
+  async parentUserIdsForStudentsInClassArm(
+    tx: Executor,
+    tenantId: string,
+    termId: string,
+    classArmId: string,
+    studentIds: string[],
+  ): Promise<string[]> {
+    if (studentIds.length === 0) return [];
+
+    const rows = await tx
+      .selectDistinct({ userId: parentIdentities.userId })
+      .from(enrollments)
+      .innerJoin(parentLinks, eq(parentLinks.studentId, enrollments.studentId))
+      .innerJoin(parentIdentities, eq(parentIdentities.id, parentLinks.parentIdentityId))
+      .where(
+        and(
+          eq(enrollments.tenantId, tenantId),
+          eq(enrollments.termId, termId),
+          eq(enrollments.classArmId, classArmId),
+          inArray(enrollments.studentId, studentIds),
+          inArray(enrollments.status, ['active', 'active_billable']),
+          eq(parentLinks.tenantId, tenantId),
+          eq(parentLinks.status, 'active'),
+          sql`${parentIdentities.userId} IS NOT NULL`,
+        ),
+      );
+
+    return rows.map((r) => r.userId).filter((id): id is string => Boolean(id));
+  },
+
+  async countStudentsInClassArm(
+    tx: Executor,
+    tenantId: string,
+    termId: string,
+    classArmId: string,
+    studentIds: string[],
+  ): Promise<number> {
+    if (studentIds.length === 0) return 0;
+
+    const rows = await tx
+      .selectDistinct({ studentId: enrollments.studentId })
+      .from(enrollments)
+      .where(
+        and(
+          eq(enrollments.tenantId, tenantId),
+          eq(enrollments.termId, termId),
+          eq(enrollments.classArmId, classArmId),
+          inArray(enrollments.studentId, studentIds),
+          inArray(enrollments.status, ['active', 'active_billable']),
+        ),
+      );
+
+    return rows.length;
+  },
+
   async parentUserIdsForStudent(
     tx: Executor,
     tenantId: string,

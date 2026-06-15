@@ -3,9 +3,11 @@ import {
   replyToMessageRequest,
   sendAnnouncementRequest,
   sendClassMessageRequest,
+  sendStudentParentMessageRequest,
   type ReplyToMessageRequest,
   type SendAnnouncementRequest,
   type SendClassMessageRequest,
+  type SendStudentParentMessageRequest,
 } from '@loomis/contracts';
 import { authenticate } from '../../../middleware/authenticate.js';
 import { requireIdempotencyKey } from '../../../middleware/require-idempotency-key.js';
@@ -18,6 +20,7 @@ import {
   replyToMessageHandler,
   sendAnnouncementHandler,
   sendClassMessageHandler,
+  sendStudentParentMessageHandler,
 } from '../handlers/index.js';
 
 /** Messaging routes (FR-COM-001 / US-COM-001..003). */
@@ -48,6 +51,20 @@ export async function messagesRoutes(app: FastifyInstance): Promise<void> {
       preValidation: [validateBody(sendClassMessageRequest)],
     },
     sendClassMessageHandler,
+  );
+
+  app.post<{ Params: { tenantId: string }; Body: SendStudentParentMessageRequest }>(
+    '/tenants/:tenantId/comms/messages/student-parents',
+    {
+      preHandler: [
+        authenticate,
+        requireTenantMatch,
+        requireRole('school_owner', 'principal', 'admin_officer', 'class_teacher'),
+        requireIdempotencyKey,
+      ],
+      preValidation: [validateBody(sendStudentParentMessageRequest)],
+    },
+    sendStudentParentMessageHandler,
   );
 
   app.post<{ Params: { tenantId: string; messageId: string }; Body: ReplyToMessageRequest }>(

@@ -54,8 +54,19 @@ export const sendClassMessageRequest = z.object({
   classArmId: z.string().uuid(),
   subject: z.string().min(1).max(200),
   body: z.string().min(1).max(10_000),
+  /** When set, deliver only to parents of these enrolled students (same class arm). */
+  studentIds: z.array(z.string().uuid()).min(1).max(50).optional(),
 });
 export type SendClassMessageRequest = z.infer<typeof sendClassMessageRequest>;
+
+/** Message parents of a single enrolled student (class teacher or staff with parent.message). */
+export const sendStudentParentMessageRequest = z.object({
+  termId: z.string().uuid(),
+  studentId: z.string().uuid(),
+  subject: z.string().min(1).max(200),
+  body: z.string().min(1).max(10_000),
+});
+export type SendStudentParentMessageRequest = z.infer<typeof sendStudentParentMessageRequest>;
 
 export const replyToMessageRequest = z.object({
   body: z.string().min(1).max(10_000),

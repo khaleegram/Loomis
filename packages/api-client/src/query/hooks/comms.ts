@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import type {
   SendAnnouncementRequest,
   SendClassMessageRequest,
+  SendStudentParentMessageRequest,
   MessageResponse,
   NotificationResponse,
   RegisterPushSubscriptionRequest,
@@ -50,6 +51,16 @@ export function useSendClassMessage(tenantId: string) {
   return useIdempotentMutation<SendClassMessageRequest, MessageResponse>({
     mutationFn: (client, body, idempotencyKey) =>
       client.post<MessageResponse>(`/tenants/${tenantId}/comms/messages/class`, body, { idempotencyKey }),
+    invalidates: [queryKeys.comms.all(tenantId)],
+  });
+}
+
+export function useSendStudentParentMessage(tenantId: string) {
+  return useIdempotentMutation<SendStudentParentMessageRequest, MessageResponse>({
+    mutationFn: (client, body, idempotencyKey) =>
+      client.post<MessageResponse>(`/tenants/${tenantId}/comms/messages/student-parents`, body, {
+        idempotencyKey,
+      }),
     invalidates: [queryKeys.comms.all(tenantId)],
   });
 }

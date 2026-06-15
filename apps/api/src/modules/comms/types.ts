@@ -4,6 +4,7 @@ import type {
   ReplyToMessageRequest,
   SendAnnouncementRequest,
   SendClassMessageRequest,
+  SendStudentParentMessageRequest,
   UpsertNotificationTemplateRequest,
 } from '@loomis/contracts';
 
@@ -15,7 +16,15 @@ export interface ActorContext {
 
 export type SendAnnouncementInput = SendAnnouncementRequest;
 export type SendClassMessageInput = SendClassMessageRequest;
+export type SendStudentParentMessageInput = SendStudentParentMessageRequest;
 export type ReplyToMessageInput = ReplyToMessageRequest;
+
+export const PARENT_MESSAGE_ROLES = new Set([
+  'school_owner',
+  'principal',
+  'admin_officer',
+  'class_teacher',
+]);
 export type RegisterPushSubscriptionInput = RegisterPushSubscriptionRequest;
 export type UpsertNotificationTemplateInput = UpsertNotificationTemplateRequest;
 

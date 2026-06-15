@@ -11,5 +11,6 @@ export {
   replyToMessageHandler,
   sendAnnouncementHandler,
   sendClassMessageHandler,
+  sendStudentParentMessageHandler,
   upsertTemplateHandler,
 } from './comms.handler.js';
