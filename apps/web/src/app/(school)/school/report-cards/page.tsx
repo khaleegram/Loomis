@@ -8,12 +8,7 @@ import { useSearchParams } from 'next/navigation';
 
 import { AcademicScopePicker } from '@/components/academic/ops/academic-scope-picker';
 import { ReportCardBrowser } from '@/components/academic/ops/report-card-browser';
-import { ReportCardHero } from '@/components/academic/ops/report-card-hero';
 import { PageBody } from '@/components/school/school-shell';
-import {
-  buildClassReportCardStats,
-  buildReportCardStudentRows,
-} from '@/lib/academic/report-card-filters';
 import {
   classArmOptions,
   useAcademicOpsContext,
@@ -116,20 +111,6 @@ export default function ReportCardsPage() {
 
   const passMark = activeScheme?.passMark ?? 40;
 
-  const reportCardRows = useMemo(
-    () =>
-      buildReportCardStudentRows({
-        students: rosterStudents,
-        subjectIds: allClassSubjectIds,
-        entries: entriesQuery.data?.entries ?? [],
-        rosterStudents,
-        passMark,
-      }),
-    [rosterStudents, allClassSubjectIds, entriesQuery.data, passMark],
-  );
-
-  const classStats = useMemo(() => buildClassReportCardStats(reportCardRows), [reportCardRows]);
-
   useEffect(() => {
     setSelectedStudentId(searchParams.get('studentId'));
   }, [ctx.classArmId, ctx.termId, searchParams]);
@@ -168,50 +149,53 @@ export default function ReportCardsPage() {
   }
 
   return (
-    <PageBody className="max-w-[1400px] px-4 py-5 sm:px-6 lg:px-12 lg:py-8">
-      <div className="space-y-4">
-        <ReportCardHero
-          classLabel={classLabel}
-          termLabel={ctx.activeTerm?.name ?? null}
-          sessionLabel={ctx.activeYear?.label ?? null}
-          stats={classStats}
-          passMark={passMark}
-          isLoading={isLoading}
-        />
-
-        <div className="print:hidden">
-          <AcademicScopePicker
-            classArmOptions={
-              isTeachingStaffRole(role)
-                ? teacherCtx.teachingClassArmOptions
-                : classArmOptions(ctx.arms, ctx.levels)
-            }
-            classArmId={ctx.classArmId}
-            onClassArmChange={ctx.setClassArmId}
-            hideClassSelection={isClassTeacherView && teacherCtx.hideClassSelection}
-          />
+    <PageBody className="flex flex-col px-3 py-3 sm:px-4 lg:px-6 lg:py-4">
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2 print:hidden">
+        <div>
+          <h1 className="text-[15px] font-bold text-neutral-800">Report cards</h1>
+          <p className="text-[11px] text-neutral-500">
+            Term reports per student — search, refine, and notify parents.
+          </p>
         </div>
+        <span className="truncate text-[11px] text-neutral-500">
+          {[classLabel, ctx.activeTerm?.name].filter(Boolean).join(' · ')}
+        </span>
+      </div>
 
-        <ReportCardBrowser
-          students={rosterStudents}
-          rosterStudents={rosterStudents}
-          subjectIds={allClassSubjectIds}
-          entries={entriesQuery.data?.entries ?? []}
-          selectedStudentId={selectedStudentId}
-          onSelectStudent={setSelectedStudentId}
-          termName={ctx.activeTerm?.name}
-          sessionName={ctx.activeYear?.label}
-          classLabel={classLabel}
-          schoolName={brandingQuery.data?.tenantName}
-          logoStorageObjectId={brandingQuery.data?.branding.logoStorageObjectId}
-          schemeName={activeScheme?.name}
-          caWeight={activeScheme?.continuousAssessmentWeight ?? 40}
-          examWeight={activeScheme?.examWeight ?? 60}
-          passMark={passMark}
-          gradeBands={activeScheme?.gradeBands ?? []}
-          isLoading={isLoading}
+      <div className="mb-2 print:hidden">
+        <AcademicScopePicker
+          classArmOptions={
+            isTeachingStaffRole(role)
+              ? teacherCtx.teachingClassArmOptions
+              : classArmOptions(ctx.arms, ctx.levels)
+          }
+          classArmId={ctx.classArmId}
+          onClassArmChange={ctx.setClassArmId}
+          hideClassSelection={isClassTeacherView && teacherCtx.hideClassSelection}
         />
       </div>
+
+      <ReportCardBrowser
+        students={rosterStudents}
+        rosterStudents={rosterStudents}
+        subjectIds={allClassSubjectIds}
+        entries={entriesQuery.data?.entries ?? []}
+        selectedStudentId={selectedStudentId}
+        onSelectStudent={setSelectedStudentId}
+        classArmId={ctx.classArmId}
+        termId={ctx.termId}
+        termName={ctx.activeTerm?.name}
+        sessionName={ctx.activeYear?.label}
+        classLabel={classLabel}
+        schoolName={brandingQuery.data?.tenantName}
+        logoStorageObjectId={brandingQuery.data?.branding.logoStorageObjectId}
+        schemeName={activeScheme?.name}
+        caWeight={activeScheme?.continuousAssessmentWeight ?? 40}
+        examWeight={activeScheme?.examWeight ?? 60}
+        passMark={passMark}
+        gradeBands={activeScheme?.gradeBands ?? []}
+        isLoading={isLoading}
+      />
     </PageBody>
   );
 }

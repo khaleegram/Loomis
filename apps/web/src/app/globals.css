@@ -92,6 +92,11 @@ h4 {
   animation: gradebook-shake 0.45s ease-in-out;
 }
 
+@page {
+  size: A4 portrait;
+  margin: 10mm;
+}
+
 @media print {
   body {
     background: white !important;
@@ -99,13 +104,33 @@ h4 {
 
   aside,
   nav,
-  header:not(#report-card-document header),
-  [data-print-hide='true'] {
+  header:not(.report-card-document header),
+  [data-print-hide='true'],
+  .report-card-print-portal [data-print-hide='true'] {
     display: none !important;
   }
 
-  #report-card-document {
+  .report-card-print-portal {
+    position: static !important;
+    inset: auto !important;
+    z-index: auto !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+
+  .report-card-document {
     box-shadow: none !important;
     break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .report-card-print-sheet {
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .report-card-print-sheet:last-child {
+    break-after: auto;
+    page-break-after: auto;
   }
 }

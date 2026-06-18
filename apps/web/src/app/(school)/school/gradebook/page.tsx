@@ -14,7 +14,7 @@ import {
 } from '@loomis/api-client';
 import type { GradebookEntryResponse, StudentGender, StudentResponse } from '@loomis/contracts';
 import { Alert, AlertDescription, Tabs, TabsList, TabsTrigger } from '@loomis/ui-web';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { ConsolidatedGradebook } from '@/components/academic/ops/consolidated-gradebook';
 import { GradeCorrectionSheet } from '@/components/academic/ops/grade-correction-sheet';
@@ -34,9 +34,18 @@ import {
   useAcademicOpsContext,
 } from '@/lib/academic/use-academic-ops-context';
 import { useCan, useCanAny, useRole } from '@/lib/auth/use-capability';
+import { isExamOfficerRole } from '@/lib/auth/is-exam-officer';
 import { isClassTeacherRole, isTeachingStaffRole } from '@/lib/timetable/is-teaching-staff';
 import { useTeachingStaffScope } from '@/lib/timetable/use-teaching-staff-scope';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
+import { studentDisplayName } from '@/lib/student/student-labels';
+
+function matchesStudentSearch(student: StudentResponse, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  const name = studentDisplayName(student.firstName, student.lastName).toLowerCase();
+  return name.includes(q) || student.admissionNo.toLowerCase().includes(q);
+}
 
 type GradebookWorkspaceTab = 'register' | 'entry';
 
@@ -78,17 +87,23 @@ export default function GradebookPage() {
     isClassTeacherRole(role) && teacherCtxEntry.subjectAssignmentsForClass.length > 0;
   const isDualClassTeacher = hasSubjectTeaching;
 
-  const [workspaceTab, setWorkspaceTab] = useState<GradebookWorkspaceTab | null>(null);
-  const effectiveWorkspaceTab: GradebookWorkspaceTab =
-    workspaceTab ??
-    (isDualClassTeacher || (isClassTeacherRole(role) && !canWriteCapability) ? 'register' : 'entry');
+  /** Live class register — students × subjects (viewing, not per-subject entry). */
+  const isSchoolWideViewer =
+    isExamOfficerRole(role) || (canView && !canWriteCapability && !isTeachingStaffRole(role));
 
-  const isClassTeacherView = effectiveWorkspaceTab === 'register';
+  const defaultWorkspaceTab: GradebookWorkspaceTab =
+    isDualClassTeacher || isClassTeacherRole(role) || isSchoolWideViewer ? 'register' : 'entry';
+
+  const [workspaceTab, setWorkspaceTab] = useState<GradebookWorkspaceTab | null>(null);
+  const effectiveWorkspaceTab: GradebookWorkspaceTab = workspaceTab ?? defaultWorkspaceTab;
+
+  const isRegisterView = effectiveWorkspaceTab === 'register';
   const canWrite = canWriteCapability || (isDualClassTeacher && effectiveWorkspaceTab === 'entry');
-  const teacherCtx = isClassTeacherView ? teacherCtxRegister : teacherCtxEntry;
+  const teacherCtx = isRegisterView ? teacherCtxRegister : teacherCtxEntry;
   const ctx = isTeachingStaffRole(role) ? teacherCtx : adminCtx;
 
   const [subjectId, setSubjectId] = useState<string | null>(null);
+  const [studentSearch, setStudentSearch] = useState('');
   const [correctionEntry, setCorrectionEntry] = useState<GradebookEntryResponse | null>(null);
   const [correctionError, setCorrectionError] = useState<string | null>(null);
   const [lockError, setLockError] = useState<string | null>(null);
@@ -98,12 +113,12 @@ export default function GradebookPage() {
   const configs = examConfigsQuery.data?.configs ?? [];
   const classConfigs = useMemo(() => {
     const forClass = configs.filter((c) => c.classArmId === ctx.classArmId);
-    if (!isTeachingStaffRole(role) || isClassTeacherView) return forClass;
+    if (!isTeachingStaffRole(role) || isRegisterView) return forClass;
     const taughtSubjectIds = new Set(
       teacherCtxEntry.subjectAssignmentsForClass.map((assignment) => assignment.subjectId),
     );
     return forClass.filter((config) => taughtSubjectIds.has(config.subjectId));
-  }, [configs, ctx.classArmId, role, isClassTeacherView, teacherCtxEntry.subjectAssignmentsForClass]);
+  }, [configs, ctx.classArmId, role, isRegisterView, teacherCtxEntry.subjectAssignmentsForClass]);
 
   const classSubjectIds = useMemo(
     () => [...new Set(configs.filter((c) => c.classArmId === ctx.classArmId).map((c) => c.subjectId))].sort(),
@@ -118,7 +133,7 @@ export default function GradebookPage() {
       ? {
           termId: ctx.termId,
           classArmId: ctx.classArmId,
-          ...(isClassTeacherView ? {} : { subjectId: resolvedSubjectId ?? undefined }),
+          ...(isRegisterView ? {} : { subjectId: resolvedSubjectId ?? undefined }),
         }
       : null;
 
@@ -149,6 +164,15 @@ export default function GradebookPage() {
       )
       .sort((a, b) => a.admissionNo.localeCompare(b.admissionNo));
   }, [rosterQuery.data, ctx.classArmId, genderByStudentId]);
+
+  useEffect(() => {
+    setStudentSearch('');
+  }, [ctx.classArmId]);
+
+  const filteredRosterStudents = useMemo(() => {
+    if (!studentSearch.trim()) return rosterStudents;
+    return rosterStudents.filter((student) => matchesStudentSearch(student, studentSearch));
+  }, [rosterStudents, studentSearch]);
 
   const scheme = schemesQuery.data?.schemes.find((s) => s.id === activeConfig?.gradingSchemeId);
   const listFilters = gradebookFilters ?? { termId: '', classArmId: '', subjectId: undefined };
@@ -188,7 +212,7 @@ export default function GradebookPage() {
     rosterQuery.isLoading ||
     examConfigsQuery.isLoading ||
     studentsQuery.isLoading ||
-    (!isClassTeacherView && schemesQuery.isLoading);
+    (!isRegisterView && schemesQuery.isLoading);
 
   const classLabel =
     classArmOptions(ctx.arms, ctx.levels).find((arm) => arm.id === ctx.classArmId)?.label ??
@@ -233,16 +257,18 @@ export default function GradebookPage() {
     );
   }
 
-  const isReadOnlyViewer = !canWrite && !isClassTeacherView;
+  const isReadOnlyViewer = !canWrite && !isRegisterView;
   const caMax = scheme?.continuousAssessmentWeight ?? 40;
   const examMax = scheme?.examWeight ?? 60;
 
-  const statusLeft = isClassTeacherView
-    ? `${rosterStudents.length} students · read-only class register`
+  const statusLeft = isRegisterView
+    ? studentSearch.trim()
+      ? `${filteredRosterStudents.length}/${rosterStudents.length} students · ${classSubjectIds.length > 0 ? `${classSubjectIds.length} subjects` : 'live register'}`
+      : `${rosterStudents.length} students · ${classSubjectIds.length > 0 ? `${classSubjectIds.length} subjects` : 'live register'}`
     : `${progress.complete}/${progress.total} scored · ${progress.locked} locked`;
 
-  const statusRight = isClassTeacherView
-    ? 'Missing scores highlighted · open Report cards for a student view'
+  const statusRight = isRegisterView
+    ? 'Missing scores highlighted · click a student for their report card'
     : isReadOnlyViewer
       ? 'View only'
       : fullyLocked
@@ -257,9 +283,11 @@ export default function GradebookPage() {
           <p className="text-[11px] text-neutral-500">
             {isDualClassTeacher
               ? 'Switch between your class register and the subjects you teach.'
-              : isClassTeacherView
-                ? 'Consolidated register for your class — all subjects, all students.'
-                : 'Enter scores one subject sheet at a time. For full student reports, use Report cards.'}
+              : isRegisterView
+                ? isSchoolWideViewer
+                  ? 'Live class register — every student, every subject, all scores.'
+                  : 'Consolidated register for your class — all subjects, all students.'
+                : 'Enter scores one subject sheet at a time.'}
           </p>
         </div>
         <div className="flex flex-col items-end gap-0.5">
@@ -295,14 +323,28 @@ export default function GradebookPage() {
         </Tabs>
       ) : null}
 
-      {(lockError || (classConfigs.length === 0 && !isClassTeacherView)) ? (
+      {(lockError || rosterQuery.isError || entriesQuery.isError || (classConfigs.length === 0 && !isRegisterView)) ? (
         <div className="mb-2 space-y-2">
+          {rosterQuery.isError ? (
+            <Alert variant="destructive">
+              <AlertDescription>
+                Could not load class roster. {academicErrorMessage(rosterQuery.error)}
+              </AlertDescription>
+            </Alert>
+          ) : null}
+          {entriesQuery.isError ? (
+            <Alert variant="destructive">
+              <AlertDescription>
+                Could not load gradebook scores. {academicErrorMessage(entriesQuery.error)}
+              </AlertDescription>
+            </Alert>
+          ) : null}
           {lockError ? (
             <Alert variant="destructive">
               <AlertDescription>{lockError}</AlertDescription>
             </Alert>
           ) : null}
-          {classConfigs.length === 0 && !isClassTeacherView ? (
+          {classConfigs.length === 0 && !isRegisterView ? (
             <Alert>
               <AlertDescription>
                 No exam sheet for this class.{' '}
@@ -313,6 +355,32 @@ export default function GradebookPage() {
             </Alert>
           ) : null}
         </div>
+      ) : null}
+
+      {!ctx.termId || !ctx.classArmId ? (
+        <Alert className="mb-2">
+          <AlertDescription>
+            Select an academic term in the top bar and a class below to load the live register.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {isRegisterView && rosterStudents.length > 0 && classSubjectIds.length === 0 ? (
+        <Alert className="mb-2">
+          <AlertDescription>
+            This class has no exam sheets yet.{' '}
+            <Link href="/school/exams" className="font-semibold text-brand-700 underline">
+              Set up grading in Exams
+            </Link>
+            {' '}or try another class (demo scores are on JSS1 B).
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {isRegisterView && studentSearch.trim() && rosterStudents.length > 0 && filteredRosterStudents.length === 0 ? (
+        <Alert className="mb-2">
+          <AlertDescription>No students match &ldquo;{studentSearch.trim()}&rdquo; in this class.</AlertDescription>
+        </Alert>
       ) : null}
 
       {isReadOnlyViewer ? (
@@ -327,7 +395,7 @@ export default function GradebookPage() {
         </Alert>
       ) : null}
 
-      {entries.some((e) => e.status === 'correction_pending') && !isClassTeacherView ? (
+      {entries.some((e) => e.status === 'correction_pending') && !isRegisterView ? (
         <Alert variant="warning" className="mb-2">
           <AlertDescription>Some rows have corrections awaiting exam officer review.</AlertDescription>
         </Alert>
@@ -335,12 +403,14 @@ export default function GradebookPage() {
 
       <GradebookWorkspace
         toolbar={
-          isClassTeacherView ? (
+          isRegisterView ? (
             <GradebookScopeBar
               classArmOptions={armOptions}
               classArmId={ctx.classArmId}
               onClassArmChange={ctx.setClassArmId}
               hideClassSelection={teacherCtx.hideClassSelection}
+              studentSearch={studentSearch}
+              onStudentSearchChange={setStudentSearch}
             />
           ) : (
             <GradebookToolbar
@@ -367,11 +437,12 @@ export default function GradebookPage() {
           </>
         }
       >
-        {isClassTeacherView ? (
+        {isRegisterView ? (
           <ConsolidatedGradebook
             entries={entries}
-            students={rosterStudents}
+            students={filteredRosterStudents}
             subjectIds={classSubjectIds}
+            displayMode="full"
             isLoading={isLoading}
             onOpenReportCard={(studentId) =>
               router.push(`/school/report-cards?studentId=${studentId}`)

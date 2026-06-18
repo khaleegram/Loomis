@@ -13,6 +13,8 @@ interface ConsolidatedGradebookProps {
   students: StudentResponse[];
   /** All subject columns to show (e.g. from exam configs). Falls back to subjects present in entries. */
   subjectIds?: string[];
+  /** Summary = total + grade per subject (live class view). Full = CA, exam, total, grade. */
+  displayMode?: 'summary' | 'full';
   isLoading?: boolean;
   onOpenReportCard?: (studentId: string) => void;
 }
@@ -26,6 +28,7 @@ export function ConsolidatedGradebook({
   entries,
   students,
   subjectIds: subjectIdsProp,
+  displayMode = 'full',
   isLoading,
   onOpenReportCard,
 }: ConsolidatedGradebookProps) {
@@ -58,7 +61,7 @@ export function ConsolidatedGradebook({
 
   if (isLoading) return <ConsolidatedGradebookSkeleton />;
 
-  const colsPerSubject = 4;
+  const colsPerSubject = displayMode === 'full' ? 4 : 2;
   const colSpan = 2 + subjects.length * colsPerSubject;
 
   return (
@@ -85,12 +88,20 @@ export function ConsolidatedGradebook({
             <th className={`${GRADEBOOK_UI.cell} ${GRADEBOOK_UI.rowHeader}`} />
             {subjects.map((subjectId) => (
               <Fragment key={subjectId}>
-                <th className={`${GRADEBOOK_UI.cell} border-l-2 border-l-neutral-300 py-1 text-center text-[9px]`}>
-                  CA
+                {displayMode === 'full' ? (
+                  <>
+                    <th className={`${GRADEBOOK_UI.cell} border-l-2 border-l-neutral-300 py-1 text-center text-[9px]`}>
+                      CA
+                    </th>
+                    <th className={`${GRADEBOOK_UI.cell} py-1 text-center text-[9px]`}>Exam</th>
+                  </>
+                ) : null}
+                <th
+                  className={`${GRADEBOOK_UI.cell} border-l-2 border-l-neutral-300 bg-[#faf3e8]/80 py-1 text-center text-[9px]`}
+                >
+                  Total
                 </th>
-                <th className={`${GRADEBOOK_UI.cell} py-1 text-center text-[9px]`}>Exam</th>
-                <th className={`${GRADEBOOK_UI.cell} bg-[#faf3e8]/80 py-1 text-center text-[9px]`}>Ttl</th>
-                <th className={`${GRADEBOOK_UI.cell} bg-[#faf3e8]/80 py-1 text-center text-[9px]`}>Grd</th>
+                <th className={`${GRADEBOOK_UI.cell} bg-[#faf3e8]/80 py-1 text-center text-[9px]`}>Grade</th>
               </Fragment>
             ))}
           </tr>
@@ -137,23 +148,25 @@ export function ConsolidatedGradebook({
                   const highlight = incomplete ? 'bg-amber-50/70' : '';
                   return (
                     <Fragment key={subjectId}>
-                      <td
-                        className={`${GRADEBOOK_UI.cell} border-l-2 border-l-neutral-300 ${highlight}`}
-                      >
-                        <div
-                          className={`flex h-[32px] items-center justify-center font-mono text-[11px] tabular-nums ${GRADEBOOK_UI.scoreReadonly}`}
-                        >
-                          {entry?.continuousAssessmentScore ?? '—'}
-                        </div>
-                      </td>
-                      <td className={`${GRADEBOOK_UI.cell} ${highlight}`}>
-                        <div
-                          className={`flex h-[32px] items-center justify-center font-mono text-[11px] tabular-nums ${GRADEBOOK_UI.scoreReadonly}`}
-                        >
-                          {entry?.examScore ?? '—'}
-                        </div>
-                      </td>
-                      <td className={`${GRADEBOOK_UI.cell} bg-[#faf3e8]/50 ${highlight}`}>
+                      {displayMode === 'full' ? (
+                        <>
+                          <td className={`${GRADEBOOK_UI.cell} border-l-2 border-l-neutral-300 ${highlight}`}>
+                            <div
+                              className={`flex h-[32px] items-center justify-center font-mono text-[11px] tabular-nums ${GRADEBOOK_UI.scoreReadonly}`}
+                            >
+                              {entry?.continuousAssessmentScore ?? '—'}
+                            </div>
+                          </td>
+                          <td className={`${GRADEBOOK_UI.cell} ${highlight}`}>
+                            <div
+                              className={`flex h-[32px] items-center justify-center font-mono text-[11px] tabular-nums ${GRADEBOOK_UI.scoreReadonly}`}
+                            >
+                              {entry?.examScore ?? '—'}
+                            </div>
+                          </td>
+                        </>
+                      ) : null}
+                      <td className={`${GRADEBOOK_UI.cell} border-l-2 border-l-neutral-300 bg-[#faf3e8]/50 ${highlight}`}>
                         <div
                           className={`flex h-[32px] items-center justify-center font-mono text-[12px] font-semibold tabular-nums ${GRADEBOOK_UI.scoreReadonly}`}
                         >

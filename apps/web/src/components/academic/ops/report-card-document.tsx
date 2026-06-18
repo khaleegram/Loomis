@@ -331,8 +331,7 @@ export function ReportCardDocument({
 
   return (
     <article
-      id="report-card-document"
-      className={`relative mx-auto w-full max-w-[820px] ${GRADEBOOK_UI.reportCardDocument}`}
+      className={`report-card-document relative mx-auto w-full max-w-[820px] ${GRADEBOOK_UI.reportCardDocument}`}
     >
       <div aria-hidden className="pointer-events-none absolute inset-3 rounded-lg border border-brand-900/5" />
 

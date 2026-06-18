@@ -1,13 +1,15 @@
 'use client';
 
 import type { GradeBand, GradebookEntryResponse, StudentResponse } from '@loomis/contracts';
+import { useSendClassMessage, useSendStudentParentMessage } from '@loomis/api-client';
 import { Button, Skeleton } from '@loomis/ui-web';
-import { ChevronLeft, ChevronRight, Printer } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Send } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import { ReportCardControlBar } from '@/components/academic/ops/report-card-control-bar';
 import { ReportCardStudentRail } from '@/components/academic/ops/report-card-student-rail';
 import { StudentReportCard } from '@/components/academic/ops/student-report-card';
+import { academicErrorMessage } from '@/lib/academic/academic-errors';
 import { GRADEBOOK_UI } from '@/lib/academic/gradebook-ui';
 import {
   DEFAULT_REPORT_CARD_FILTERS,
@@ -17,7 +19,12 @@ import {
   type ReportCardFilters,
 } from '@/lib/academic/report-card-filters';
 import { formatSubjectLabel } from '@/lib/academic/ops-labels';
+import {
+  buildReportCardParentMessage,
+  chunkStudentIdsForClassMessage,
+} from '@/lib/academic/report-card-parent-message';
 import { studentDisplayName } from '@/lib/student/student-labels';
+import { useTenantId } from '@/lib/tenant/use-tenant-id';
 
 interface ReportCardBrowserProps {
   students: StudentResponse[];
@@ -26,6 +33,8 @@ interface ReportCardBrowserProps {
   rosterStudents: StudentResponse[];
   selectedStudentId: string | null;
   onSelectStudent: (studentId: string) => void;
+  classArmId: string | null;
+  termId: string | null;
   termName?: string | null;
   sessionName?: string | null;
   classLabel?: string | null;
@@ -39,10 +48,6 @@ interface ReportCardBrowserProps {
   isLoading?: boolean;
 }
 
-function printReportCard() {
-  window.print();
-}
-
 export function ReportCardBrowser({
   students,
   subjectIds,
@@ -50,6 +55,8 @@ export function ReportCardBrowser({
   rosterStudents,
   selectedStudentId,
   onSelectStudent,
+  classArmId,
+  termId,
   termName,
   sessionName,
   classLabel,
@@ -62,7 +69,13 @@ export function ReportCardBrowser({
   gradeBands,
   isLoading,
 }: ReportCardBrowserProps) {
+  const tenantId = useTenantId();
+  const sendClassMessage = useSendClassMessage(tenantId ?? '');
+  const sendStudentParentMessage = useSendStudentParentMessage(tenantId ?? '');
   const [filters, setFilters] = useState<ReportCardFilters>(DEFAULT_REPORT_CARD_FILTERS);
+  const [sendFeedback, setSendFeedback] = useState<string | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const isSending = sendClassMessage.isPending || sendStudentParentMessage.isPending;
 
   const displaySubjectIds = useMemo(
     () => (filters.subjectId ? [filters.subjectId] : subjectIds),
@@ -110,6 +123,50 @@ export function ReportCardBrowser({
     if (selectedVisible) return;
     onSelectStudent(filteredRows[0]!.student.id);
   }, [filteredRows, selectedStudentId, onSelectStudent]);
+
+  async function notifyParents(studentIds: string[]) {
+    if (!tenantId || !classArmId || !termId || studentIds.length === 0) return;
+
+    setSendFeedback(null);
+    setSendError(null);
+
+    const { subject, body } = buildReportCardParentMessage({
+      termName,
+      classLabel,
+      studentName:
+        studentIds.length === 1 && selectedStudent
+          ? studentDisplayName(selectedStudent.firstName, selectedStudent.lastName)
+          : null,
+    });
+
+    try {
+      if (studentIds.length === 1) {
+        await sendStudentParentMessage.mutateAsync({
+          termId,
+          studentId: studentIds[0]!,
+          subject,
+          body,
+        });
+        setSendFeedback('Message sent to parents.');
+        return;
+      }
+
+      const chunks = chunkStudentIdsForClassMessage(studentIds);
+      for (const batch of chunks) {
+        await sendClassMessage.mutateAsync({
+          termId,
+          classArmId,
+          subject,
+          body,
+          studentIds: batch,
+        });
+        sendClassMessage.regenerateIdempotencyKey();
+      }
+      setSendFeedback(`Message sent to parents of ${studentIds.length} students.`);
+    } catch (err) {
+      setSendError(academicErrorMessage(err));
+    }
+  }
 
   const studentSelectOptions = useMemo(
     () =>
@@ -175,7 +232,13 @@ export function ReportCardBrowser({
               'Select a student above'
             )}
           </p>
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {sendFeedback ? (
+              <span className="text-[11px] font-medium text-emerald-700">{sendFeedback}</span>
+            ) : null}
+            {sendError ? (
+              <span className="max-w-xs truncate text-[11px] font-medium text-red-600">{sendError}</span>
+            ) : null}
             <Button
               type="button"
               variant="outline"
@@ -200,18 +263,33 @@ export function ReportCardBrowser({
             </Button>
             <Button
               type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 gap-1.5 px-3"
+              disabled={!selectedStudent || isSending}
+              onClick={() =>
+                selectedStudent && notifyParents([selectedStudent.id])
+              }
+            >
+              <Send className="size-3.5" />
+              Notify parents
+            </Button>
+            <Button
+              type="button"
               size="sm"
               className="h-7 gap-1.5 bg-brand-700 px-3 text-white hover:bg-brand-800"
-              disabled={!selectedStudent}
-              onClick={printReportCard}
+              disabled={filteredRows.length === 0 || isSending}
+              onClick={() =>
+                notifyParents(filteredRows.map((row) => row.student.id))
+              }
             >
-              <Printer className="size-3.5" />
-              Print
+              <Send className="size-3.5" />
+              Notify class ({filteredRows.length})
             </Button>
           </div>
         </div>
 
-        <div className="px-3 py-4 sm:px-5 sm:py-6 print:p-0">
+        <div className="px-3 py-4 sm:px-5 sm:py-6">
           <StudentReportCard
             student={selectedStudent}
             subjectIds={displaySubjectIds}
