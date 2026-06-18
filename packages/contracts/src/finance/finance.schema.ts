@@ -276,6 +276,9 @@ export const verifyOfflinePaymentRequest = z.object({
 export type VerifyOfflinePaymentRequest = z.infer<typeof verifyOfflinePaymentRequest>;
 
 /** US-FIN-004. Parent initiates an online payment via a gateway. */
+export const paymentClientPlatform = z.enum(['web', 'mobile']);
+export type PaymentClientPlatform = z.infer<typeof paymentClientPlatform>;
+
 export const initializeOnlinePaymentRequest = z.object({
   invoiceId: z.string().uuid(),
   amountMinor: positiveKoboAmount,
@@ -283,8 +286,17 @@ export const initializeOnlinePaymentRequest = z.object({
   provider: paymentGatewayProvider.default('paystack'),
   method: onlinePaymentMethod.default('card'),
   payerEmail: z.string().email(),
+  /** Selects redirect URL after Paystack checkout (web vs mobile deep link). */
+  clientPlatform: paymentClientPlatform.default('web'),
 });
 export type InitializeOnlinePaymentRequest = z.infer<typeof initializeOnlinePaymentRequest>;
+
+export const paymentGatewayConfigResponse = z.object({
+  provider: paymentGatewayProvider,
+  publicKey: z.string().nullable(),
+  onlinePaymentEnabled: z.boolean(),
+});
+export type PaymentGatewayConfigResponse = z.infer<typeof paymentGatewayConfigResponse>;
 
 export const receiptLineItemResponse = z.object({
   name: z.string(),

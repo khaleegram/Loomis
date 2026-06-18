@@ -17,6 +17,7 @@ import { requireTenantMatch } from '../../../middleware/require-tenant-match.js'
 import { validateBody, validateQuery } from '../../../shared/validation.js';
 import {
   getPaymentHandler,
+  getPaymentGatewayConfigHandler,
   initializeOnlinePaymentHandler,
   listPaymentsHandler,
   logOfflinePaymentHandler,
@@ -29,6 +30,12 @@ import {
  * Online init = Parent. All writes require Idempotency-Key.
  */
 export async function paymentsRoutes(app: FastifyInstance): Promise<void> {
+  app.get(
+    '/finance/payment-gateway/config',
+    { preHandler: [authenticate] },
+    getPaymentGatewayConfigHandler,
+  );
+
   app.post<{ Params: { tenantId: string }; Body: LogOfflinePaymentRequest }>(
     '/tenants/:tenantId/payments/offline',
     {
@@ -87,7 +94,7 @@ export async function paymentsRoutes(app: FastifyInstance): Promise<void> {
       preHandler: [
         authenticate,
         requireTenantMatch,
-        requireRole('cashier', 'accountant', 'principal'),
+        requireRole('cashier', 'accountant', 'principal', 'parent'),
       ],
     },
     getPaymentHandler,

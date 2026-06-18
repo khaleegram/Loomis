@@ -26,6 +26,14 @@ export function requireParentActor(req: FastifyRequest, tenantId: string): Actor
   return { userId: user.sub, role: user.role, tenantId };
 }
 
+/** Parent or school staff actor for tenant-scoped finance reads (e.g. payment status). */
+export function requireSchoolFinanceActor(req: FastifyRequest, tenantId: string): ActorContext {
+  if (req.authUser?.role === 'parent') {
+    return requireParentActor(req, tenantId);
+  }
+  return requireTenantActor(req);
+}
+
 /** Captures request metadata for the immutable audit trail. */
 export function auditContext(req: FastifyRequest): AuditContext {
   return {

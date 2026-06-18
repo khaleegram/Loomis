@@ -289,8 +289,11 @@ export const paymentService = {
         const gateway = gatewayAbstractionLayer.get(input.provider);
         const paymentId = uuidv7();
         const env = getEnv();
-        const redirectBase = env.PAYMENT_REDIRECT_BASE_URL ?? 'http://localhost:3000/payments/complete';
-        const redirectUrl = `${redirectBase}?paymentId=${paymentId}`;
+        const redirectBase =
+          input.clientPlatform === 'mobile'
+            ? (env.PAYMENT_REDIRECT_MOBILE_URL ?? 'loomis://payments/complete')
+            : (env.PAYMENT_REDIRECT_BASE_URL ?? 'http://localhost:3000/payments/complete');
+        const redirectUrl = `${redirectBase}?paymentId=${paymentId}&tenantId=${tenantId}`;
 
         const initialized = await gateway.initializePayment({
           reference: paymentId,
@@ -364,6 +367,21 @@ export const paymentService = {
     if (!found) {
       throw new LoomisError('FINANCE_PAYMENT_NOT_FOUND', 404, 'Payment not found');
     }
+
+    if (actor.role === 'parent') {
+      if (found.payment.loggedById !== actor.userId) {
+        throw new LoomisError('FORBIDDEN', 403, 'You can only view your own payments');
+      }
+      const linked = await studentRepository.hasActiveParentLink(
+        tenantId,
+        actor.userId,
+        found.payment.studentId,
+      );
+      if (!linked) {
+        throw new LoomisError('FORBIDDEN', 403, 'You are not linked to this student');
+      }
+    }
+
     return found;
   },
 

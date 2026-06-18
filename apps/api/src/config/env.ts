@@ -36,6 +36,8 @@ const envSchema = z.object({
 
   /** Base URL for gateway redirect after online payment (parent portal). */
   PAYMENT_REDIRECT_BASE_URL: z.string().url().optional(),
+  /** Deep link / mobile return URL after Paystack checkout (e.g. loomis://payments/complete). */
+  PAYMENT_REDIRECT_MOBILE_URL: z.string().min(1).optional(),
 
   /** Public web app origin for links in transactional emails (defaults to http://localhost:3000 in dev). */
   WEB_APP_BASE_URL: z.string().url().optional(),

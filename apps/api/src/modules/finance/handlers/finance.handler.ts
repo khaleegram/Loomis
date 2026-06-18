@@ -12,9 +12,10 @@ import type {
   VerifyOfflinePaymentRequest,
 } from '@loomis/contracts';
 import { LoomisError } from '../../../shared/errors.js';
+import { getEnv } from '../../../config/env.js';
 import { sendSuccess } from '../../../shared/http.js';
 import { feeStructureService, invoiceService, paymentService } from '../services/index.js';
-import { auditContext, requireParentActor, requireTenantActor } from './_context.js';
+import { auditContext, requireParentActor, requireSchoolFinanceActor, requireTenantActor } from './_context.js';
 import {
   feeStructureToResponse,
   invoiceToResponse,
@@ -253,7 +254,19 @@ export async function getPaymentHandler(
   const result = await paymentService.getPayment(
     req.params.tenantId,
     req.params.paymentId,
-    requireTenantActor(req),
+    requireSchoolFinanceActor(req, req.params.tenantId),
   );
   return sendSuccess(reply, paymentToResponse(result));
+}
+
+export async function getPaymentGatewayConfigHandler(
+  _req: FastifyRequest,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const env = getEnv();
+  return sendSuccess(reply, {
+    provider: 'paystack' as const,
+    publicKey: env.PAYSTACK_PUBLIC_KEY ?? null,
+    onlinePaymentEnabled: Boolean(env.PAYSTACK_SECRET_KEY),
+  });
 }

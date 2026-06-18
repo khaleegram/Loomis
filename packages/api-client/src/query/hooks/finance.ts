@@ -14,6 +14,7 @@ import type {
   LogOfflinePaymentRequest,
   OutstandingBalancesResponse,
   PaymentListResponse,
+  PaymentGatewayConfigResponse,
   PaymentResponse,
   ReconciliationExceptionListResponse,
   ReconciliationExceptionResponse,
@@ -242,6 +243,31 @@ export function usePayment(tenantId: string, paymentId: string) {
   return useQuery({
     ...paymentQueryOptions(client, tenantId, paymentId),
     enabled: Boolean(tenantId && paymentId),
+  });
+}
+
+/** Poll payment status after Paystack redirect until verified or terminal failure. */
+export function usePaymentStatusPoll(tenantId: string, paymentId: string | null) {
+  const client = useApiClient();
+  return useQuery({
+    ...paymentQueryOptions(client, tenantId, paymentId ?? ''),
+    enabled: Boolean(tenantId && paymentId),
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      if (!status || status === 'verified' || status === 'failed' || status === 'cancelled') {
+        return false;
+      }
+      return 3_000;
+    },
+  });
+}
+
+export function usePaymentGatewayConfig() {
+  const client = useApiClient();
+  return useQuery<PaymentGatewayConfigResponse>({
+    queryKey: ['finance', 'payment-gateway', 'config'] as const,
+    queryFn: () => client.get<PaymentGatewayConfigResponse>('/finance/payment-gateway/config'),
+    staleTime: 60_000,
   });
 }
 

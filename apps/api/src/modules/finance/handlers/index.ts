@@ -5,6 +5,7 @@ export {
   getFeeStructureHandler,
   getInvoiceHandler,
   getPaymentHandler,
+  getPaymentGatewayConfigHandler,
   initializeOnlinePaymentHandler,
   issueInvoiceHandler,
   listFeeStructuresHandler,
