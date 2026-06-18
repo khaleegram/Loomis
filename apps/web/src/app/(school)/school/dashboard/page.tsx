@@ -38,6 +38,7 @@ import {
 } from '@/components/dashboard/dashboard-primitives';
 import { PageBody } from '@/components/school/school-shell';
 import { ClassTeacherDashboard } from '@/components/staff/class-teacher-dashboard';
+import { AdminOfficerDashboard } from '@/components/staff/admin-officer-dashboard';
 import { TeacherLanding } from '@/components/staff/teacher-landing';
 import { useAuth } from '@/lib/auth/auth-context';
 import { isExamOfficerRole } from '@/lib/auth/is-exam-officer';
@@ -146,6 +147,14 @@ export default function SchoolDashboardPage() {
     return (
       <PageBody className="max-w-[1200px] px-4 py-5 sm:px-6 sm:py-6 lg:px-7 lg:py-7">
         <ClassTeacherDashboard tenantId={tenantId} displayName={session?.displayName} />
+      </PageBody>
+    );
+  }
+
+  if (role === 'admin_officer') {
+    return (
+      <PageBody className="max-w-[1200px] px-4 py-5 sm:px-6 sm:py-6 lg:px-7 lg:py-7">
+        <AdminOfficerDashboard tenantId={tenantId} displayName={session?.displayName} />
       </PageBody>
     );
   }

@@ -29,6 +29,9 @@ export interface SchoolNavItem {
 /** Roles that use the focused teacher workspace — hide school-wide admin nav noise. */
 const TEACHING_STAFF_ROLES: Role[] = ['teacher', 'class_teacher'];
 
+/** Admin officer — registry & onboarding; no finance or approval workflows. */
+const ADMIN_OFFICER_ROLES: Role[] = ['admin_officer'];
+
 /** Exam officer — focused nav; still needs school-wide gradebook and report cards. */
 const EXAM_OFFICER_ROLES: Role[] = ['exam_officer', 'deputy_exam_officer'];
 
@@ -67,7 +70,7 @@ export const SCHOOL_NAV: SchoolNavItem[] = [
     href: '/school/timetable',
     icon: BookOpen,
     capabilities: ['timetable.manage', 'timetable.view'],
-    hideForRoles: EXAM_OFFICER_ROLES,
+    hideForRoles: [...EXAM_OFFICER_ROLES, ...ADMIN_OFFICER_ROLES],
   },
   {
     label: 'Assignments',
@@ -122,14 +125,14 @@ export const SCHOOL_NAV: SchoolNavItem[] = [
     label: 'Workflows',
     href: '/school/workflows',
     icon: ShieldCheck,
-    capabilities: ['staff.onboard', 'refund.approve', 'result.publish'],
-    hideForRoles: [...EXAM_OFFICER_ROLES, ...TEACHING_STAFF_ROLES],
+    capabilities: ['staff.onboard', 'refund.approve', 'result.publish', 'admissions.approve'],
+    hideForRoles: [...EXAM_OFFICER_ROLES, ...TEACHING_STAFF_ROLES, ...ADMIN_OFFICER_ROLES],
   },
   {
     label: 'Communications',
     href: '/school/comms',
     icon: Users,
-    capabilities: ['staff.onboard', 'attendance.mark', 'gradebook.read'],
+    capabilities: ['parent.message', 'staff.onboard'],
     hideForRoles: ['teacher', ...EXAM_OFFICER_ROLES],
   },
   { label: 'Settings', href: '/school/settings', icon: Settings, always: true },
@@ -169,6 +172,12 @@ export function formatStaffStatus(status: string): string {
 export function schoolNavLabel(item: SchoolNavItem, role: Role): string {
   if (item.href === '/school/dashboard' && role === 'class_teacher') {
     return 'My Class';
+  }
+  if (item.href === '/school/dashboard' && role === 'admin_officer') {
+    return 'Registry';
+  }
+  if (item.href === '/school/academic' && role === 'admin_officer') {
+    return 'Promotions & structure';
   }
   if (item.href === '/school/timetable') {
     if (role === 'teacher' || role === 'class_teacher') return 'My Schedule';
