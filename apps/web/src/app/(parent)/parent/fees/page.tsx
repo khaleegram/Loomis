@@ -94,6 +94,7 @@ function ParentFeesView() {
         invoiceId: fees.invoiceId,
         amountMinor: fees.balanceMinor,
         payerEmail,
+        clientPlatform: 'web',
       });
       window.location.assign(result.authorizationUrl);
     } catch (err) {

@@ -10,6 +10,7 @@ import {
   Calendar,
   GraduationCap,
   Users,
+  MessageSquare,
   Wallet,
 } from 'lucide-react';
 import { Skeleton } from '@loomis/ui-web';
@@ -66,6 +67,11 @@ export default function ParentDashboardPage() {
   );
 
   const publishedResults = cards.filter((card) => card.latestResultSummary?.averageScore != null).length;
+
+  const totalUnreadMessages = useMemo(
+    () => cards.reduce((sum, card) => sum + (card.unreadMessageCount ?? 0), 0),
+    [cards],
+  );
 
   const fmtNaira = (minor: number) => `₦${(minor / 100).toLocaleString()}`;
 
@@ -137,6 +143,18 @@ export default function ParentDashboardPage() {
             icon: BookOpen,
             color: BRONZE.gradients.g4,
           },
+          ...(!isStudent
+            ? [
+                {
+                  label: 'Inbox',
+                  value: isLoading ? '—' : String(totalUnreadMessages),
+                  sub: totalUnreadMessages > 0 ? 'Unread messages' : 'All read',
+                  subColor: totalUnreadMessages > 0 ? '#f59e0b' : '#16a34a',
+                  icon: MessageSquare,
+                  color: 'linear-gradient(135deg,#6366F1,#4338CA)',
+                },
+              ]
+            : []),
         ]}
       />
 
@@ -212,6 +230,15 @@ export default function ParentDashboardPage() {
                   </Link>
                   {!isStudent ? (
                     <Link
+                      href="/parent/messages"
+                      className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-neutral-200 bg-neutral-50 px-2 py-1.5 text-[11px] font-semibold text-neutral-600 hover:border-neutral-300"
+                    >
+                      <MessageSquare aria-hidden className="size-3" />
+                      Inbox
+                    </Link>
+                  ) : null}
+                  {!isStudent ? (
+                    <Link
                       href="/parent/fees"
                       className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-neutral-200 bg-neutral-50 px-2 py-1.5 text-[11px] font-semibold text-neutral-600 hover:border-neutral-300"
                     >
@@ -244,6 +271,16 @@ export default function ParentDashboardPage() {
             value={String(publishedResults)}
             sub="Published this term"
           />
+          {!isStudent ? (
+            <DashboardBottomCard
+              href="/parent/messages"
+              icon={MessageSquare}
+              gradient="linear-gradient(135deg,#6366F1,#4338CA)"
+              label="Inbox"
+              value={String(totalUnreadMessages)}
+              sub={totalUnreadMessages > 0 ? 'Unread school messages' : 'All caught up'}
+            />
+          ) : null}
           {!isStudent ? (
             <DashboardBottomCard
               href="/parent/fees"
