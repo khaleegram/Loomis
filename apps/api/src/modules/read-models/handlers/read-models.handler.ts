@@ -1,5 +1,10 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import type { ParentFeesQuery, ParentResultsQuery, ParentTimetableQuery } from '@loomis/contracts';
+import type {
+  ParentAttendanceQuery,
+  ParentFeesQuery,
+  ParentResultsQuery,
+  ParentTimetableQuery,
+} from '@loomis/contracts';
 import { sendSuccess } from '../../../shared/http.js';
 import { LoomisError } from '../../../shared/errors.js';
 import { attendanceRecordToResponse, timetableEntryToResponse } from '../../academic/handlers/_ops-serializers.js';

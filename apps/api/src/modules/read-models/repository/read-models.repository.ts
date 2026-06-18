@@ -82,6 +82,23 @@ export const parentDashboardRepository = {
       );
   },
 
+  async updateAttendanceSummary(
+    tx: Executor,
+    tenantId: string,
+    studentId: string,
+    attendanceSummary: { presentCount: number; totalCount: number; lastStatus: string | null },
+  ) {
+    await tx
+      .update(parentChildCards)
+      .set({ attendanceSummary, lastRefreshedAt: new Date(), updatedAt: new Date() })
+      .where(
+        and(
+          eq(parentChildCards.tenantId, tenantId),
+          eq(parentChildCards.studentId, studentId),
+        ),
+      );
+  },
+
   async listForParent(parentUserId: string) {
     return withTenantContext(null, async (tx) =>
       tx

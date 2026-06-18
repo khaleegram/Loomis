@@ -7,8 +7,13 @@ import { Alert, AlertDescription } from '@loomis/ui-web';
 
 import { CommsComposeAnnouncement } from '@/components/comms/comms-compose-announcement';
 import { CommsComposeClassMessage } from '@/components/comms/comms-compose-class-message';
+import { CommsComposeStaffClassMessage } from '@/components/comms/comms-compose-staff-class-message';
 import { CommsComposeStudentParent } from '@/components/comms/comms-compose-student-parent';
 import { CommsInbox } from '@/components/comms/comms-inbox';
+import {
+  CommsMessageDetailSheet,
+  type CommsNotificationContext,
+} from '@/components/comms/comms-message-detail-sheet';
 import { CommsNav, COMMS_NAV_ITEMS, type CommsSection } from '@/components/comms/comms-nav';
 import { CommsPageHeader } from '@/components/comms/comms-page-header';
 import { PageBody } from '@/components/school/school-shell';
@@ -18,7 +23,19 @@ import { useCan, useRole } from '@/lib/auth/use-capability';
 import { useTeachingStaffScope } from '@/lib/timetable/use-teaching-staff-scope';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 
+const STAFF_CLASS_MESSAGE_ROLES = new Set<Role>([
+  'school_owner',
+  'principal',
+  'admin_officer',
+  'exam_officer',
+  'deputy_exam_officer',
+]);
+
 const ANNOUNCEMENT_ROLES = new Set<Role>(['school_owner', 'principal', 'admin_officer']);
+
+function usesStaffClassComposer(role: Role | null): boolean {
+  return role ? STAFF_CLASS_MESSAGE_ROLES.has(role) : false;
+}
 
 function defaultSection(canAnnounce: boolean, canMessageParents: boolean): CommsSection {
   if (canAnnounce) return 'announcements';
@@ -26,13 +43,13 @@ function defaultSection(canAnnounce: boolean, canMessageParents: boolean): Comms
   return 'notifications';
 }
 
-function sectionSubtitle(section: CommsSection, isClassTeacher: boolean): string {
+function sectionSubtitle(section: CommsSection, isClassTeacher: boolean, isStaffBroadcaster: boolean): string {
   switch (section) {
     case 'announcements':
       return 'Broadcast school-wide updates to staff and parents.';
     case 'parents':
-      return isClassTeacher
-        ? 'Message all parents in your class, or parents of specific students.'
+      return isClassTeacher || isStaffBroadcaster
+        ? 'Message all parents in a class, or parents of specific students.'
         : 'Send a message to a student\'s linked parent accounts.';
     case 'notifications':
       return 'Your in-app inbox for announcements, alerts, and updates.';
@@ -45,6 +62,7 @@ export default function CommsPage() {
   const canAnnounce = role ? ANNOUNCEMENT_ROLES.has(role) : false;
   const canMessageParents = useCan('parent.message');
   const isClassTeacher = role === 'class_teacher';
+  const isStaffBroadcaster = usesStaffClassComposer(role);
 
   const teacherCtx = useTeachingStaffScope(tenantId ?? '', { mode: 'classTeacherClass' });
 
@@ -54,6 +72,7 @@ export default function CommsPage() {
 
   const notificationsQuery = useNotifications(tenantId ?? '');
   const markRead = useMarkNotificationRead(tenantId ?? '');
+  const [selected, setSelected] = useState<CommsNotificationContext | null>(null);
 
   const notifications = notificationsQuery.data?.notifications ?? [];
   const unreadCount = useMemo(
@@ -86,7 +105,7 @@ export default function CommsPage() {
       <div className="space-y-5">
         <CommsPageHeader
           unreadCount={unreadCount}
-          subtitle={sectionSubtitle(section, isClassTeacher)}
+          subtitle={sectionSubtitle(section, isClassTeacher, isStaffBroadcaster)}
         />
 
         <div className="lg:hidden">
@@ -106,6 +125,8 @@ export default function CommsPage() {
             {section === 'parents' && canMessageParents ? (
               isClassTeacher ? (
                 <CommsComposeClassMessage tenantId={tenantId} ctx={teacherCtx} />
+              ) : isStaffBroadcaster ? (
+                <CommsComposeStaffClassMessage tenantId={tenantId} />
               ) : (
                 <CommsComposeStudentParent tenantId={tenantId} />
               )
@@ -117,12 +138,27 @@ export default function CommsPage() {
                   notifications={notifications}
                   isLoading={notificationsQuery.isLoading}
                   isMarking={markRead.isPending}
-                  onMarkRead={(notificationId) => markRead.mutate({ notificationId })}
+                  selectedId={selected?.id ?? null}
+                  onSelect={(notification) =>
+                    setSelected({
+                      ...notification,
+                      tenantId: notification.tenantId ?? tenantId,
+                    })
+                  }
+                  onMarkRead={(notification) =>
+                    markRead.mutate({ notificationId: notification.id })
+                  }
                 />
               </div>
             ) : null}
           </main>
         </div>
+
+        <CommsMessageDetailSheet
+          notification={selected}
+          onClose={() => setSelected(null)}
+          showThread
+        />
       </div>
     </PageBody>
   );

@@ -236,6 +236,8 @@ export const queryKeys = {
   comms: {
     all: (tenantId: string) => ['comms', tenantId] as const,
     notifications: (tenantId: string) => ['comms', tenantId, 'notifications'] as const,
+    message: (tenantId: string, messageId: string) =>
+      ['comms', tenantId, 'message', messageId] as const,
     thread: (tenantId: string, messageId: string) =>
       ['comms', tenantId, 'threads', messageId] as const,
   },
