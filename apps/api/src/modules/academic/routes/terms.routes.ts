@@ -29,6 +29,8 @@ const termReaders = [
   'exam_officer',
   'teacher',
   'class_teacher',
+  'parent',
+  'student',
 ] as const;
 
 /** Academic term routes (FR-ASM-004/005/006; US-ASM-002/004). All under /api/v1. */

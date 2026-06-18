@@ -13,6 +13,7 @@ import { uuidv7 } from 'uuidv7';
 import { tiers, tenants } from '../drizzle/schema/tenant.js';
 import { roleAssignments, staffProfiles } from '../drizzle/schema/hrm.js';
 import { academicRepository } from '../src/modules/academic/repository/academic.repository.js';
+import { attendanceRepository } from '../src/modules/academic/repository/attendance.repository.js';
 import { academicYearService } from '../src/modules/academic/services/academic-year.service.js';
 import { classStructureService } from '../src/modules/academic/services/class-structure.service.js';
 import { gradebookService } from '../src/modules/academic/services/gradebook.service.js';
@@ -725,6 +726,110 @@ async function resumeRichSeedTimetables(tenantId: string): Promise<boolean> {
   return true;
 }
 
+/** Last N weekdays (Mon–Fri), oldest first. */
+function recentSchoolDays(count: number): string[] {
+  const days: string[] = [];
+  const cursor = new Date();
+  while (days.length < count) {
+    cursor.setDate(cursor.getDate() - 1);
+    const dow = cursor.getUTCDay();
+    if (dow !== 0 && dow !== 6) {
+      days.push(cursor.toISOString().slice(0, 10));
+    }
+  }
+  return days.reverse();
+}
+
+async function seedParentDemoAttendance(
+  tenantId: string,
+  openTermId: string,
+  classArmId: string,
+  studentId: string,
+  principalUserId: string,
+): Promise<{ presentCount: number; totalCount: number; lastStatus: string | null }> {
+  const existing = await attendanceRepository.list(tenantId, {
+    termId: openTermId,
+    classArmId,
+    studentId,
+  });
+  if (existing.length > 0) {
+    const summary = { present: 0, absent: 0, late: 0, excused: 0 };
+    for (const row of existing) {
+      if (row.status === 'present') summary.present += 1;
+      if (row.status === 'absent') summary.absent += 1;
+      if (row.status === 'late') summary.late += 1;
+      if (row.status === 'excused') summary.excused += 1;
+    }
+    const total = summary.present + summary.absent + summary.late + summary.excused;
+    return {
+      presentCount: summary.present + summary.late,
+      totalCount: total,
+      lastStatus: existing.at(-1)?.status ?? null,
+    };
+  }
+
+  const classTeacher = await staffRepository.findActiveClassTeacherForArm(
+    tenantId,
+    openTermId,
+    classArmId,
+  );
+  const principalProfile = await staffRepository.findProfileByUserId(tenantId, principalUserId);
+  if (!principalProfile) {
+    return { presentCount: 0, totalCount: 0, lastStatus: null };
+  }
+
+  let markedByStaffProfileId = principalProfile.id;
+  let markedByUserId = principalUserId;
+  if (classTeacher) {
+    markedByStaffProfileId = classTeacher.staffProfileId;
+    const teacherProfile = await staffRepository.findProfileById(
+      tenantId,
+      classTeacher.staffProfileId,
+    );
+    if (teacherProfile?.userId) markedByUserId = teacherProfile.userId;
+  }
+
+  const pattern = ['present', 'present', 'present', 'present', 'late', 'absent', 'excused'] as const;
+  const schoolDays = recentSchoolDays(28);
+  let lastStatus: string | null = null;
+
+  for (let i = 0; i < schoolDays.length; i++) {
+    const status = pattern[i % pattern.length]!;
+    await attendanceRepository.markBatch(
+      tenantId,
+      {
+        termId: openTermId,
+        classArmId,
+        attendanceDate: schoolDays[i]!,
+        session: 'morning',
+        markedByStaffProfileId,
+        markedByUserId,
+      },
+      [{ studentId, status }],
+    );
+    lastStatus = status;
+  }
+
+  const records = await attendanceRepository.list(tenantId, {
+    termId: openTermId,
+    classArmId,
+    studentId,
+  });
+  const summary = { present: 0, absent: 0, late: 0, excused: 0 };
+  for (const row of records) {
+    if (row.status === 'present') summary.present += 1;
+    if (row.status === 'absent') summary.absent += 1;
+    if (row.status === 'late') summary.late += 1;
+    if (row.status === 'excused') summary.excused += 1;
+  }
+  const total = summary.present + summary.absent + summary.late + summary.excused;
+  return {
+    presentCount: summary.present + summary.late,
+    totalCount: total,
+    lastStatus,
+  };
+}
+
 /** Parent portal demo — linked to first JSS3 B student (GFA-0196). Idempotent. */
 async function ensureJss3BParentDemo(tenantId: string): Promise<{
   ensured: boolean;
@@ -882,6 +987,24 @@ async function ensureJss3BParentDemo(tenantId: string): Promise<{
       outstandingBalanceMinor: outstandingBalance,
     });
   });
+
+  const attendanceSummary = await seedParentDemoAttendance(
+    tenantId,
+    openTerm.id,
+    jss3bArm.id,
+    jss3bStudent.studentId,
+    principal.id,
+  );
+  if (attendanceSummary.totalCount > 0) {
+    await withTenantContext(tenantId, async (tx) => {
+      await parentDashboardRepository.updateAttendanceSummary(
+        tx,
+        tenantId,
+        jss3bStudent.studentId,
+        attendanceSummary,
+      );
+    });
+  }
 
   return {
     ensured: true,

@@ -36,10 +36,23 @@ import {
   transferStudentOutHandler,
 } from '../handlers/index.js';
 
-const studentReaders = ['school_owner', 'principal', 'admin_officer'] as const;
+const studentReaders = [
+  'school_owner',
+  'principal',
+  'admin_officer',
+  'exam_officer',
+  'deputy_exam_officer',
+] as const;
 const studentWriters = ['school_owner', 'principal', 'admin_officer'] as const;
 const transferApprovers = ['school_owner', 'principal'] as const;
-const promotionRosterReaders = ['school_owner', 'principal', 'admin_officer', 'class_teacher'] as const;
+const promotionRosterReaders = [
+  'school_owner',
+  'principal',
+  'admin_officer',
+  'class_teacher',
+  'exam_officer',
+  'deputy_exam_officer',
+] as const;
 const certificateReaders = ['school_owner', 'principal', 'admin_officer', 'exam_officer'] as const;
 const certificateGenerators = ['school_owner', 'principal'] as const;
 

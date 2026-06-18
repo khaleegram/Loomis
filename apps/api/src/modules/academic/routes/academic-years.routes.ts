@@ -23,6 +23,8 @@ const yearReaders = [
   'exam_officer',
   'teacher',
   'class_teacher',
+  'parent',
+  'student',
 ] as const;
 
 /** Academic year routes (FR-ASM-001/002/003; US-ASM-001). All under /api/v1. */
