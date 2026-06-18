@@ -45,7 +45,14 @@ export async function messagesRoutes(app: FastifyInstance): Promise<void> {
       preHandler: [
         authenticate,
         requireTenantMatch,
-        requireRole('class_teacher'),
+        requireRole(
+          'class_teacher',
+          'school_owner',
+          'principal',
+          'admin_officer',
+          'exam_officer',
+          'deputy_exam_officer',
+        ),
         requireIdempotencyKey,
       ],
       preValidation: [validateBody(sendClassMessageRequest)],
@@ -59,7 +66,14 @@ export async function messagesRoutes(app: FastifyInstance): Promise<void> {
       preHandler: [
         authenticate,
         requireTenantMatch,
-        requireRole('school_owner', 'principal', 'admin_officer', 'class_teacher'),
+        requireRole(
+          'school_owner',
+          'principal',
+          'admin_officer',
+          'class_teacher',
+          'exam_officer',
+          'deputy_exam_officer',
+        ),
         requireIdempotencyKey,
       ],
       preValidation: [validateBody(sendStudentParentMessageRequest)],

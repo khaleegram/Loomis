@@ -13,12 +13,60 @@ import type {
   SendClassMessageInput,
   SendStudentParentMessageInput,
 } from '../types.js';
-import { ANNOUNCEMENT_ROLES, PARENT_MESSAGE_ROLES, SAFE_NOTIFICATION_COPY } from '../types.js';
+import {
+  ANNOUNCEMENT_ROLES,
+  CLASS_PARENT_BROADCAST_ROLES,
+  PARENT_MESSAGE_ROLES,
+  SAFE_NOTIFICATION_COPY,
+} from '../types.js';
 
 function requireTenant(actor: ActorContext, tenantId: string): void {
   if (actor.tenantId !== null && actor.tenantId !== tenantId) {
     throw new LoomisError('FORBIDDEN', 403, 'Tenant mismatch');
   }
+}
+
+type CreateAndDeliverInput = Parameters<typeof deliveryService.createManyInApp>[0][number] & {
+  channels?: Array<'email' | 'sms' | 'push'>;
+  requestId?: string;
+  actorUserId?: string | null;
+};
+
+/** In-app notifications are batched; email/SMS/push continue in the background. */
+async function deliverMessageNotifications(
+  recipientUserIds: string[],
+  buildInput: (userId: string) => CreateAndDeliverInput,
+): Promise<void> {
+  if (recipientUserIds.length === 0) return;
+
+  const built = recipientUserIds.map((userId) => buildInput(userId));
+  const inputs = built.map(
+    ({ tenantId, userId, notificationType, safeCopy, resourceId, messageId }) => ({
+      tenantId,
+      userId,
+      notificationType,
+      safeCopy,
+      resourceId,
+      ...(messageId != null ? { messageId } : {}),
+    }),
+  );
+  const created = await deliveryService.createManyInApp(inputs);
+
+  deliveryService.scheduleExternalDeliveries(
+    created.map((notification, index) => {
+      const channels = built[index]?.channels;
+      return {
+        notificationId: notification.id,
+        userId: notification.userId,
+        tenantId: notification.tenantId,
+        title: notification.title,
+        body: notification.body,
+        deepLinkResourceType: notification.deepLinkResourceType,
+        deepLinkResourceId: notification.deepLinkResourceId,
+        ...(channels != null ? { channels } : {}),
+      };
+    }),
+  );
 }
 
 export const messageService = {
@@ -40,7 +88,7 @@ export const messageService = {
       );
     }
 
-    return withTenantContext(tenantId, async (tx) => {
+    const { message, recipientIds } = await withTenantContext(tenantId, async (tx) => {
       const created = await messageRepository.create(tx, {
         tenantId,
         threadId: crypto.randomUUID(),
@@ -56,40 +104,40 @@ export const messageService = {
         .set({ threadId: created.id })
         .where(eq(messages.id, created.id));
 
-      const message = { ...created, threadId: created.id };
-      const recipientIds = await recipientRepository.announcementRecipientUserIds(
+      const resolvedMessage = { ...created, threadId: created.id };
+      const resolvedRecipientIds = await recipientRepository.announcementRecipientUserIds(
         tx,
         tenantId,
         input.audience,
       );
 
-      for (const userId of recipientIds) {
-        await deliveryService.createAndDeliver({
-          tenantId,
-          userId,
-          notificationType: 'school_announcement',
-          safeCopy: SAFE_NOTIFICATION_COPY.schoolAnnouncement,
-          resourceId: message.id,
-          messageId: message.id,
-          requestId,
-          actorUserId: actor.userId,
-        });
-      }
-
-      await writeAudit({
-        tenantId,
-        actorUserId: actor.userId,
-        action: 'comms.announcement.sent',
-        resourceType: 'message',
-        resourceId: message.id,
-        sensitivity: 'standard',
-        result: 'success',
-        requestId,
-        metadata: { recipientCount: recipientIds.length },
-      });
-
-      return message;
+      return { message: resolvedMessage, recipientIds: resolvedRecipientIds };
     });
+
+    await deliverMessageNotifications(recipientIds, (userId) => ({
+      tenantId,
+      userId,
+      notificationType: 'school_announcement',
+      safeCopy: SAFE_NOTIFICATION_COPY.schoolAnnouncement,
+      resourceId: message.id,
+      messageId: message.id,
+      requestId,
+      actorUserId: actor.userId,
+    }));
+
+    await writeAudit({
+      tenantId,
+      actorUserId: actor.userId,
+      action: 'comms.announcement.sent',
+      resourceType: 'message',
+      resourceId: message.id,
+      sensitivity: 'standard',
+      result: 'success',
+      requestId,
+      metadata: { recipientCount: recipientIds.length },
+    });
+
+    return message;
   },
 
   async sendClassMessage(
@@ -99,24 +147,28 @@ export const messageService = {
     requestId: string,
   ) {
     requireTenant(actor, tenantId);
-    if (actor.role !== 'class_teacher') {
-      throw new LoomisError('FORBIDDEN', 403, 'Only Class Teachers can send class messages');
+    const isClassTeacher = actor.role === 'class_teacher';
+    const isStaffBroadcaster = CLASS_PARENT_BROADCAST_ROLES.has(actor.role);
+    if (!isClassTeacher && !isStaffBroadcaster) {
+      throw new LoomisError('FORBIDDEN', 403, 'Not authorised to send class messages');
     }
 
-    return withTenantContext(tenantId, async (tx) => {
-      const authorised = await recipientRepository.isClassTeacherForArm(
-        tx,
-        tenantId,
-        actor.userId,
-        input.termId,
-        input.classArmId,
-      );
-      if (!authorised) {
-        throw new LoomisError(
-          'COMMS_CLASS_ARM_FORBIDDEN',
-          403,
-          'You are not the Class Teacher for this class arm',
+    const { message, parentUserIds } = await withTenantContext(tenantId, async (tx) => {
+      if (isClassTeacher) {
+        const authorised = await recipientRepository.isClassTeacherForArm(
+          tx,
+          tenantId,
+          actor.userId,
+          input.termId,
+          input.classArmId,
         );
+        if (!authorised) {
+          throw new LoomisError(
+            'COMMS_CLASS_ARM_FORBIDDEN',
+            403,
+            'You are not the Class Teacher for this class arm',
+          );
+        }
       }
 
       const created = await messageRepository.create(tx, {
@@ -136,9 +188,9 @@ export const messageService = {
         .set({ threadId: created.id })
         .where(eq(messages.id, created.id));
 
-      const message = { ...created, threadId: created.id };
+      const resolvedMessage = { ...created, threadId: created.id };
 
-      let parentUserIds: string[];
+      let resolvedParentUserIds: string[];
       if (input.studentIds?.length) {
         const matched = await recipientRepository.countStudentsInClassArm(
           tx,
@@ -154,7 +206,7 @@ export const messageService = {
             'All selected students must be actively enrolled in this class for the term',
           );
         }
-        parentUserIds = await recipientRepository.parentUserIdsForStudentsInClassArm(
+        resolvedParentUserIds = await recipientRepository.parentUserIdsForStudentsInClassArm(
           tx,
           tenantId,
           input.termId,
@@ -162,7 +214,7 @@ export const messageService = {
           input.studentIds,
         );
       } else {
-        parentUserIds = await recipientRepository.parentUserIdsForClassArm(
+        resolvedParentUserIds = await recipientRepository.parentUserIdsForClassArm(
           tx,
           tenantId,
           input.termId,
@@ -170,7 +222,7 @@ export const messageService = {
         );
       }
 
-      if (parentUserIds.length === 0) {
+      if (resolvedParentUserIds.length === 0) {
         throw new LoomisError(
           'COMMS_NO_RECIPIENTS',
           422,
@@ -178,37 +230,37 @@ export const messageService = {
         );
       }
 
-      for (const userId of parentUserIds) {
-        await deliveryService.createAndDeliver({
-          tenantId,
-          userId,
-          notificationType: 'class_message',
-          safeCopy: SAFE_NOTIFICATION_COPY.classMessage,
-          resourceId: message.id,
-          messageId: message.id,
-          requestId,
-          actorUserId: actor.userId,
-        });
-      }
-
-      await writeAudit({
-        tenantId,
-        actorUserId: actor.userId,
-        action: 'comms.class_message.sent',
-        resourceType: 'message',
-        resourceId: message.id,
-        sensitivity: 'standard',
-        result: 'success',
-        requestId,
-        metadata: {
-          recipientCount: parentUserIds.length,
-          classArmId: input.classArmId,
-          studentCount: input.studentIds?.length ?? null,
-        },
-      });
-
-      return message;
+      return { message: resolvedMessage, parentUserIds: resolvedParentUserIds };
     });
+
+    await deliverMessageNotifications(parentUserIds, (userId) => ({
+      tenantId,
+      userId,
+      notificationType: 'class_message',
+      safeCopy: SAFE_NOTIFICATION_COPY.classMessage,
+      resourceId: message.id,
+      messageId: message.id,
+      requestId,
+      actorUserId: actor.userId,
+    }));
+
+    await writeAudit({
+      tenantId,
+      actorUserId: actor.userId,
+      action: 'comms.class_message.sent',
+      resourceType: 'message',
+      resourceId: message.id,
+      sensitivity: 'standard',
+      result: 'success',
+      requestId,
+      metadata: {
+        recipientCount: parentUserIds.length,
+        classArmId: input.classArmId,
+        studentCount: input.studentIds?.length ?? null,
+      },
+    });
+
+    return message;
   },
 
   async sendStudentParentMessage(
@@ -235,7 +287,7 @@ export const messageService = {
       );
     }
 
-    return withTenantContext(tenantId, async (tx) => {
+    const { message, parentUserIds } = await withTenantContext(tenantId, async (tx) => {
       if (actor.role === 'class_teacher') {
         const authorised = await recipientRepository.isClassTeacherForArm(
           tx,
@@ -253,12 +305,12 @@ export const messageService = {
         }
       }
 
-      const parentUserIds = await recipientRepository.parentUserIdsForStudent(
+      const resolvedParentUserIds = await recipientRepository.parentUserIdsForStudent(
         tx,
         tenantId,
         input.studentId,
       );
-      if (parentUserIds.length === 0) {
+      if (resolvedParentUserIds.length === 0) {
         throw new LoomisError(
           'COMMS_NO_RECIPIENTS',
           422,
@@ -283,39 +335,40 @@ export const messageService = {
         .set({ threadId: created.id })
         .where(eq(messages.id, created.id));
 
-      const message = { ...created, threadId: created.id };
-
-      for (const userId of parentUserIds) {
-        await deliveryService.createAndDeliver({
-          tenantId,
-          userId,
-          notificationType: 'class_message',
-          safeCopy: SAFE_NOTIFICATION_COPY.classMessage,
-          resourceId: message.id,
-          messageId: message.id,
-          requestId,
-          actorUserId: actor.userId,
-        });
-      }
-
-      await writeAudit({
-        tenantId,
-        actorUserId: actor.userId,
-        action: 'comms.student_parent_message.sent',
-        resourceType: 'message',
-        resourceId: message.id,
-        sensitivity: 'standard',
-        result: 'success',
-        requestId,
-        metadata: {
-          recipientCount: parentUserIds.length,
-          studentId: input.studentId,
-          classArmId: enrollment.classArmId,
-        },
-      });
-
-      return message;
+      return {
+        message: { ...created, threadId: created.id },
+        parentUserIds: resolvedParentUserIds,
+      };
     });
+
+    await deliverMessageNotifications(parentUserIds, (userId) => ({
+      tenantId,
+      userId,
+      notificationType: 'class_message',
+      safeCopy: SAFE_NOTIFICATION_COPY.classMessage,
+      resourceId: message.id,
+      messageId: message.id,
+      requestId,
+      actorUserId: actor.userId,
+    }));
+
+    await writeAudit({
+      tenantId,
+      actorUserId: actor.userId,
+      action: 'comms.student_parent_message.sent',
+      resourceType: 'message',
+      resourceId: message.id,
+      sensitivity: 'standard',
+      result: 'success',
+      requestId,
+      metadata: {
+        recipientCount: parentUserIds.length,
+        studentId: input.studentId,
+        classArmId: enrollment.classArmId,
+      },
+    });
+
+    return message;
   },
 
   async replyToMessage(
@@ -334,7 +387,7 @@ export const messageService = {
       );
     }
 
-    return withTenantContext(tenantId, async (tx) => {
+    const { reply, notifyUserId } = await withTenantContext(tenantId, async (tx) => {
       const parentMessage = await messageRepository.findById(tx, tenantId, parentMessageId);
       if (!parentMessage) {
         throw new LoomisError('COMMS_MESSAGE_NOT_FOUND', 404, 'Message not found');
@@ -361,7 +414,7 @@ export const messageService = {
         );
       }
 
-      const reply = await messageRepository.create(tx, {
+      const createdReply = await messageRepository.create(tx, {
         tenantId,
         threadId: parentMessage.threadId,
         parentMessageId,
@@ -374,30 +427,32 @@ export const messageService = {
         body: input.body,
       });
 
-      await deliveryService.createAndDeliver({
-        tenantId,
-        userId: parentMessage.senderUserId,
-        notificationType: 'parent_reply',
-        safeCopy: SAFE_NOTIFICATION_COPY.parentReply,
-        resourceId: reply.id,
-        messageId: reply.id,
-        requestId,
-        actorUserId: actor.userId,
-      });
-
-      await writeAudit({
-        tenantId,
-        actorUserId: actor.userId,
-        action: 'comms.message.replied',
-        resourceType: 'message',
-        resourceId: reply.id,
-        sensitivity: 'standard',
-        result: 'success',
-        requestId,
-      });
-
-      return reply;
+      return { reply: createdReply, notifyUserId: parentMessage.senderUserId };
     });
+
+    await deliveryService.createAndDeliver({
+      tenantId,
+      userId: notifyUserId,
+      notificationType: 'parent_reply',
+      safeCopy: SAFE_NOTIFICATION_COPY.parentReply,
+      resourceId: reply.id,
+      messageId: reply.id,
+      requestId,
+      actorUserId: actor.userId,
+    });
+
+    await writeAudit({
+      tenantId,
+      actorUserId: actor.userId,
+      action: 'comms.message.replied',
+      resourceType: 'message',
+      resourceId: reply.id,
+      sensitivity: 'standard',
+      result: 'success',
+      requestId,
+    });
+
+    return reply;
   },
 
   async getThread(tenantId: string, threadId: string, actor: ActorContext) {

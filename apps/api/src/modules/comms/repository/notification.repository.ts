@@ -40,6 +40,45 @@ export const notificationRepository = {
     return row ?? null;
   },
 
+  async createMany(
+    tx: Executor,
+    inputs: Array<{
+      tenantId: string | null;
+      userId: string;
+      messageId?: string | null;
+      notificationType: NotificationType;
+      title: string;
+      body: string;
+      deepLinkResourceType: string;
+      deepLinkResourceId: string;
+      eventIdempotencyKey?: string | null;
+    }>,
+  ) {
+    if (inputs.length === 0) return [];
+
+    const rows = await tx
+      .insert(notifications)
+      .values(
+        inputs.map((input) => ({
+          tenantId: input.tenantId,
+          userId: input.userId,
+          messageId: input.messageId ?? null,
+          notificationType: input.notificationType,
+          title: input.title,
+          body: input.body,
+          deepLinkResourceType: input.deepLinkResourceType,
+          deepLinkResourceId: input.deepLinkResourceId,
+          eventIdempotencyKey: input.eventIdempotencyKey ?? null,
+          status: 'delivered' as const,
+          deliveryChannels: { in_app: 'sent' as const },
+          deliveredAt: new Date(),
+        })),
+      )
+      .returning();
+
+    return rows;
+  },
+
   async findByIdempotencyKey(tx: Executor, key: string) {
     const [row] = await tx
       .select()

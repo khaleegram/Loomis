@@ -33,17 +33,30 @@ export const automatedNotificationService = {
         payload.studentId,
       );
 
-      for (const userId of parentUserIds) {
-        await deliveryService.createAndDeliver({
-          tenantId: payload.tenantId,
-          userId,
-          notificationType: 'payment_verified',
-          safeCopy: SAFE_NOTIFICATION_COPY.paymentVerified,
-          resourceId: payload.paymentId,
-          eventIdempotencyKey: `payment-verified:${payload.paymentId}:${userId}`,
-          channels: ['push', 'email'],
-        });
-      }
+      if (parentUserIds.length === 0) return;
+
+      const inputs = parentUserIds.map((userId) => ({
+        tenantId: payload.tenantId,
+        userId,
+        notificationType: 'payment_verified' as const,
+        safeCopy: SAFE_NOTIFICATION_COPY.paymentVerified,
+        resourceId: payload.paymentId,
+        eventIdempotencyKey: `payment-verified:${payload.paymentId}:${userId}`,
+      }));
+
+      const created = await deliveryService.createManyInApp(inputs);
+      deliveryService.scheduleExternalDeliveries(
+        created.map((notification, index) => ({
+          notificationId: notification.id,
+          userId: notification.userId,
+          tenantId: notification.tenantId,
+          title: notification.title,
+          body: notification.body,
+          deepLinkResourceType: notification.deepLinkResourceType,
+          deepLinkResourceId: notification.deepLinkResourceId,
+          channels: ['push', 'email'] as const,
+        })),
+      );
     });
   },
 

@@ -24,6 +24,17 @@ export const PARENT_MESSAGE_ROLES = new Set([
   'principal',
   'admin_officer',
   'class_teacher',
+  'exam_officer',
+  'deputy_exam_officer',
+]);
+
+/** Staff roles that may broadcast to an entire class arm without a class-teacher assignment. */
+export const CLASS_PARENT_BROADCAST_ROLES = new Set([
+  'school_owner',
+  'principal',
+  'admin_officer',
+  'exam_officer',
+  'deputy_exam_officer',
 ]);
 export type RegisterPushSubscriptionInput = RegisterPushSubscriptionRequest;
 export type UpsertNotificationTemplateInput = UpsertNotificationTemplateRequest;

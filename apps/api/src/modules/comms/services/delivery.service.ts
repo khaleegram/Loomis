@@ -1,5 +1,4 @@
-import { COMMS_EVENT_TYPES } from '@loomis/contracts';
-import { writeAudit } from '../../../shared/audit.js';
+import type { NotificationType } from '@loomis/contracts';
 import { LoomisError } from '../../../shared/errors.js';
 import { withTenantContext } from '../../../shared/tenant-context.js';
 import {
@@ -20,15 +19,103 @@ import {
 import { isSesConfigured, sendEmail } from '../gateways/ses.gateway.js';
 import { isTermiiConfigured, sendSms } from '../gateways/termii.gateway.js';
 import {
-  commsOutboxRepository,
   notificationRepository,
   pushSubscriptionRepository,
   recipientRepository,
 } from '../repository/index.js';
 import { buildSafeCopy } from '../utils/safe-notification.js';
-import type { NotificationType } from '@loomis/contracts';
+
+const EXTERNAL_DELIVERY_CONCURRENCY = 8;
+
+export type InAppNotificationInput = {
+  tenantId: string | null;
+  userId: string;
+  notificationType: NotificationType;
+  safeCopy: { title: string; body: string; deepLinkResourceType: string };
+  resourceId: string;
+  messageId?: string | null;
+  eventIdempotencyKey?: string | null;
+};
+
+type CreatedInAppNotification = {
+  id: string;
+  userId: string;
+  tenantId: string | null;
+  title: string;
+  body: string;
+  deepLinkResourceType: string;
+  deepLinkResourceId: string;
+};
+
+type ExternalDeliveryJob = {
+  notificationId: string;
+  userId: string;
+  tenantId: string | null;
+  title: string;
+  body: string;
+  deepLinkResourceType: string;
+  deepLinkResourceId: string;
+  channels?: Array<'email' | 'sms' | 'push'>;
+};
 
 export const deliveryService = {
+  /** Fast path: in-app notifications only — one DB transaction for all recipients. */
+  async createManyInApp(inputs: InAppNotificationInput[]): Promise<CreatedInAppNotification[]> {
+    if (inputs.length === 0) return [];
+
+    const tenantId = inputs[0]?.tenantId ?? null;
+    const rows = inputs.map((input) => {
+      const copy = buildSafeCopy(input.safeCopy, input.resourceId);
+      return {
+        tenantId: input.tenantId,
+        userId: input.userId,
+        messageId: input.messageId ?? null,
+        notificationType: input.notificationType,
+        title: copy.title,
+        body: copy.body,
+        deepLinkResourceType: copy.deepLinkResourceType,
+        deepLinkResourceId: copy.deepLinkResourceId,
+        eventIdempotencyKey: input.eventIdempotencyKey ?? null,
+      };
+    });
+
+    const inserted = await withTenantContext(tenantId, async (tx) =>
+      notificationRepository.createMany(tx, rows),
+    );
+
+    return inserted.map((row) => ({
+      id: row.id,
+      userId: row.userId,
+      tenantId: row.tenantId,
+      title: row.title,
+      body: row.body,
+      deepLinkResourceType: row.deepLinkResourceType,
+      deepLinkResourceId: row.deepLinkResourceId,
+    }));
+  },
+
+  /** Email / SMS / push run in the background so send APIs return immediately. */
+  scheduleExternalDeliveries(jobs: ExternalDeliveryJob[]): void {
+    if (jobs.length === 0) return;
+
+    void (async () => {
+      for (let offset = 0; offset < jobs.length; offset += EXTERNAL_DELIVERY_CONCURRENCY) {
+        const chunk = jobs.slice(offset, offset + EXTERNAL_DELIVERY_CONCURRENCY);
+        await Promise.allSettled(
+          chunk.map((job) =>
+            this.deliverExternalChannels(job.notificationId, job.userId, job.tenantId, {
+              title: job.title,
+              body: job.body,
+              deepLinkResourceType: job.deepLinkResourceType,
+              deepLinkResourceId: job.deepLinkResourceId,
+              channels: job.channels ?? ['email', 'sms', 'push'],
+            }),
+          ),
+        );
+      }
+    })();
+  },
+
   async createAndDeliver(input: {
     tenantId: string | null;
     userId: string;
@@ -41,81 +128,57 @@ export const deliveryService = {
     actorUserId?: string | null;
     channels?: Array<'email' | 'sms' | 'push'>;
   }) {
-    const copy = buildSafeCopy(input.safeCopy, input.resourceId);
+    if (input.eventIdempotencyKey) {
+      const existing = await withTenantContext(input.tenantId, async (tx) =>
+        notificationRepository.findByIdempotencyKey(tx, input.eventIdempotencyKey!),
+      );
+      if (existing) return existing;
+    }
 
-    const notification = await withTenantContext(input.tenantId, async (tx) => {
+    const [created] = await this.createManyInApp([
+      {
+        tenantId: input.tenantId,
+        userId: input.userId,
+        notificationType: input.notificationType,
+        safeCopy: input.safeCopy,
+        resourceId: input.resourceId,
+        ...(input.messageId != null ? { messageId: input.messageId } : {}),
+        ...(input.eventIdempotencyKey != null
+          ? { eventIdempotencyKey: input.eventIdempotencyKey }
+          : {}),
+      },
+    ]);
+
+    if (!created) {
       if (input.eventIdempotencyKey) {
-        const existing = await notificationRepository.findByIdempotencyKey(
-          tx,
-          input.eventIdempotencyKey,
+        const existing = await withTenantContext(input.tenantId, async (tx) =>
+          notificationRepository.findByIdempotencyKey(tx, input.eventIdempotencyKey!),
         );
         if (existing) return existing;
       }
+      throw new LoomisError('INTERNAL_ERROR', 500, 'Failed to create notification');
+    }
 
-      const deliveryChannels: Record<string, 'pending' | 'sent' | 'failed' | 'skipped'> = {
-        in_app: 'sent',
-      };
+    this.scheduleExternalDeliveries([
+      {
+        notificationId: created.id,
+        userId: created.userId,
+        tenantId: created.tenantId,
+        title: created.title,
+        body: created.body,
+        deepLinkResourceType: created.deepLinkResourceType,
+        deepLinkResourceId: created.deepLinkResourceId,
+        ...(input.channels != null ? { channels: input.channels } : {}),
+      },
+    ]);
 
-      const row = await notificationRepository.create(tx, {
-        tenantId: input.tenantId,
-        userId: input.userId,
-        messageId: input.messageId ?? null,
-        notificationType: input.notificationType,
-        title: copy.title,
-        body: copy.body,
-        deepLinkResourceType: copy.deepLinkResourceType,
-        deepLinkResourceId: copy.deepLinkResourceId,
-        eventIdempotencyKey: input.eventIdempotencyKey ?? null,
-        deliveryChannels,
-      });
-
-      if (!row) {
-        if (input.eventIdempotencyKey) {
-          return notificationRepository.findByIdempotencyKey(tx, input.eventIdempotencyKey);
-        }
-        throw new LoomisError('INTERNAL_ERROR', 500, 'Failed to create notification');
-      }
-
-      await commsOutboxRepository.append(tx, {
-        tenantId: input.tenantId,
-        aggregateType: 'notification',
-        aggregateId: row.id,
-        eventType: COMMS_EVENT_TYPES.notificationSent,
-        payload: {
-          notificationId: row.id,
-          userId: input.userId,
-          tenantId: input.tenantId,
-          notificationType: input.notificationType,
-        },
-      });
-
-      if (input.requestId && input.actorUserId) {
-        await writeAudit({
-          tenantId: input.tenantId,
-          actorUserId: input.actorUserId,
-          action: 'comms.notification.created',
-          resourceType: 'notification',
-          resourceId: row.id,
-          sensitivity: 'standard',
-          result: 'success',
-          requestId: input.requestId,
-        });
-      }
-
-      return row;
-    });
-
-    if (!notification) return notification;
-
-    await this.deliverExternalChannels(notification.id, input.userId, input.tenantId, {
-      title: copy.title,
-      body: copy.body,
-      deepLinkResourceType: copy.deepLinkResourceType,
-      deepLinkResourceId: copy.deepLinkResourceId,
-      channels: input.channels ?? ['email', 'sms', 'push'],
-    });
-
-    return notification;
+    const row = await withTenantContext(input.tenantId, async (tx) =>
+      notificationRepository.findById(tx, input.tenantId, created.id, input.userId),
+    );
+    if (!row) {
+      throw new LoomisError('INTERNAL_ERROR', 500, 'Failed to load created notification');
+    }
+    return row;
   },
 
   async deliverExternalChannels(
