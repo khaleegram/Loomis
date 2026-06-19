@@ -10,7 +10,7 @@ export function ExamsPageHeader({ pendingCorrections = 0 }: ExamsPageHeaderProps
   return (
     <header>
       <div className="flex flex-wrap items-center gap-2">
-        <h1 className="text-neutral-900" style={ACADEMIC_PAGE_TITLE_STYLE}>
+        <h1 className="text-foreground" style={ACADEMIC_PAGE_TITLE_STYLE}>
           Exams
         </h1>
         {pendingCorrections > 0 ? (

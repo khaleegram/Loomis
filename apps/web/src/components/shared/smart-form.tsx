@@ -55,7 +55,7 @@ export function SmartFormPanelHeader({
   badge?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-brand-50/80 bg-gradient-to-r from-neutral-50 to-brand-50/30 px-5 py-4">
+    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/80 bg-gradient-to-r from-neutral-50 to-brand-50/30 px-5 py-4">
       <div className="flex items-start gap-3">
         {Icon ? (
           <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-white shadow-sm">

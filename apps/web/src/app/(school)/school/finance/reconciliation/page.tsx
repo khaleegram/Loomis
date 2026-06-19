@@ -113,7 +113,7 @@ export default function ReconciliationPage() {
           </div>
         ) : (
           <div className={`${ACADEMIC_UI.dataPanel} overflow-hidden`}>
-            <div className="border-b border-brand-50/80 px-5 py-4">
+            <div className="border-b border-border/80 px-5 py-4">
               <p className={ACADEMIC_UI.sectionLabel}>Exception queue</p>
               <p className="mt-1 text-[14px] font-semibold text-neutral-900">
                 {openCount} unresolved exception{openCount === 1 ? '' : 's'}

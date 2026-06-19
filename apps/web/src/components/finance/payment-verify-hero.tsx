@@ -58,7 +58,7 @@ export function PaymentVerifyHero({
   ];
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-brand-100/40 bg-white shadow-sm">
+    <div className="hero-panel rounded-2xl">
       <div
         className="relative px-4 pb-16 pt-6 sm:px-6 sm:pb-20 sm:pt-8 lg:px-8 lg:pt-10"
         style={{ background: SURFACES.hero }}
@@ -68,7 +68,7 @@ export function PaymentVerifyHero({
         <div className="relative flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <p className={ACADEMIC_UI.sectionLabel}>Accountant · reconciliation</p>
-            <h1 className="text-neutral-900" style={ACADEMIC_PAGE_TITLE_STYLE}>
+            <h1 className="text-foreground" style={ACADEMIC_PAGE_TITLE_STYLE}>
               Verify payments
             </h1>
             <p className={ACADEMIC_UI.pageDesc}>

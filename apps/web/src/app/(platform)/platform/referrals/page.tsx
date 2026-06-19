@@ -109,7 +109,7 @@ export default function ReferralsPage() {
 
         {tab === 'participants' ? (
           <div className={`${PLATFORM_UI.dataPanel} overflow-hidden`}>
-            <div className="border-b border-brand-50/80 px-5 py-4">
+            <div className="border-b border-border/80 px-5 py-4">
               <p className={PLATFORM_UI.sectionLabel}>Network</p>
               <p className="mt-1 text-[14px] font-semibold text-neutral-900">
                 Participants ({participants.length})
@@ -176,7 +176,7 @@ export default function ReferralsPage() {
           </div>
         ) : (
           <div className={`${PLATFORM_UI.dataPanel} overflow-hidden`}>
-            <div className="border-b border-brand-50/80 px-5 py-4">
+            <div className="border-b border-border/80 px-5 py-4">
               <p className={PLATFORM_UI.sectionLabel}>Disbursements</p>
               <p className="mt-1 text-[14px] font-semibold text-neutral-900">Payout cycles</p>
             </div>

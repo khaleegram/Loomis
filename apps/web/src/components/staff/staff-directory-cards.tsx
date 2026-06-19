@@ -102,7 +102,7 @@ export function StaffDirectoryCards({
 
   return (
     <>
-      <div className="overflow-hidden rounded-2xl border border-brand-100/40 bg-white shadow-sm">
+      <div className="overflow-hidden hero-panel rounded-2xl">
         <div className={CARD_GRID}>
           {staff.map((member) => (
             <StaffCard
@@ -140,7 +140,7 @@ export function StaffDirectoryCards({
 
 export function StaffDirectoryCardsSkeleton() {
   return (
-    <div className="overflow-hidden rounded-2xl border border-brand-100/40 bg-white shadow-sm">
+    <div className="overflow-hidden hero-panel rounded-2xl">
       <div className={CARD_GRID}>
         {Array.from({ length: 12 }).map((_, i) => (
           <div key={i} className="card flex min-h-[220px] flex-col overflow-hidden rounded-xl">

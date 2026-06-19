@@ -36,7 +36,7 @@ export function AcademicCommandDeck({
   const currentPhase = focusTerm ? termPhaseIndex(focusTerm.status) : -1;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-brand-100/40 bg-white shadow-sm">
+    <div className="hero-panel rounded-2xl">
       {/* Decorative backdrop */}
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.55]"

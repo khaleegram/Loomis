@@ -1,6 +1,8 @@
 /**
  * Loomis V2 — semantic tokens (light + dark).
  * Raw Umber / Muted Gold-Bronze primary — refined, earthy, sophisticated.
+ *
+ * Light values are canonical — do not change. Dark overrides live under `.dark`.
  */
 :root {
   color-scheme: light;
@@ -37,6 +39,31 @@
   --gold-foreground: hsl(35 20% 8%);
 
   --surface-elevated: hsl(0 0% 100%);
+  --canvas: hsl(220 20% 97%);
+
+  /* App shell surfaces (globals.css .card) */
+  --surface-card: var(--card);
+  --surface-card-border: rgb(15 23 42 / 0.05);
+  --surface-card-shadow:
+    0 1px 2px rgb(15 23 42 / 0.015),
+    0 4px 16px rgb(15 23 42 / 0.025),
+    inset 0 1px 0 rgb(255 255 255 / 0.9);
+  --surface-card-shadow-hover:
+    0 2px 4px rgb(15 23 42 / 0.02),
+    0 8px 24px rgb(15 23 42 / 0.045),
+    inset 0 1px 0 rgb(255 255 255 / 0.9);
+
+  /* Intentional dark panels (dashboard ops strip) — same in both themes */
+  --surface-panel-dark: hsl(35 28% 14%);
+  --surface-panel-dark-border: rgb(255 255 255 / 0.04);
+  --surface-panel-dark-shadow:
+    0 1px 2px rgb(0 0 0 / 0.15),
+    0 12px 32px rgb(0 0 0 / 0.35),
+    inset 0 1px 0 rgb(255 255 255 / 0.05);
+  --surface-panel-dark-shadow-hover:
+    0 1px 3px rgb(0 0 0 / 0.15),
+    0 18px 48px rgb(0 0 0 / 0.45),
+    inset 0 1px 0 rgb(255 255 255 / 0.06);
 
   /* V2: light sidebar */
   --sidebar: hsl(0 0% 100%);
@@ -58,49 +85,111 @@
   --gradient-kpi-3: linear-gradient(135deg, var(--color-brand-400), var(--color-brand-600));
   --gradient-kpi-4: linear-gradient(135deg, var(--color-brand-600), var(--color-brand-800));
   --gradient-kpi-card: linear-gradient(135deg, var(--color-brand-600), var(--color-brand-800));
+
+  /* Optional text hierarchy (light defaults) */
+  --foreground-secondary: hsl(35 10% 38%);
+  --foreground-tertiary: hsl(35 8% 50%);
+  --foreground-disabled: hsl(35 6% 65%);
 }
 
 .dark {
   color-scheme: dark;
 
-  --background: hsl(35 15% 9%);
-  --foreground: hsl(35 20% 96%);
+  /*
+   * Pro dark — Apple grouped surfaces + Material elevation on warm umber base.
+   * Text: primary ~92%, secondary ~72%, tertiary ~56% (HIG-style hierarchy).
+   */
 
-  --card: hsl(35 12% 11%);
-  --card-foreground: hsl(35 20% 96%);
+  /* Layer 0 — canvas */
+  --background: hsl(28 11% 7%);
+  --canvas: hsl(28 11% 7%);
+  --foreground: hsl(30 18% 96%);
 
-  --popover: hsl(35 12% 11%);
-  --popover-foreground: hsl(35 20% 96%);
+  /* Layer 1 — cards / grouped content */
+  --card: hsl(28 10% 11%);
+  --card-foreground: hsl(30 18% 96%);
 
-  --primary: hsl(35 33% 58%);
-  --primary-foreground: hsl(35 20% 8%);
+  /* Layer 2 — popovers, menus, sheets */
+  --popover: hsl(28 9% 14%);
+  --popover-foreground: hsl(30 18% 96%);
 
-  --secondary: hsl(35 12% 17%);
-  --secondary-foreground: hsl(35 20% 96%);
+  --surface-elevated: hsl(28 9% 16%);
 
-  --muted: hsl(35 12% 17%);
-  --muted-foreground: hsl(35 10% 50%);
+  /* Text hierarchy (Apple-style label steps) */
+  --foreground-secondary: hsl(30 10% 74%);
+  --foreground-tertiary: hsl(30 7% 58%);
+  --foreground-disabled: hsl(30 5% 42%);
 
-  --accent: hsl(35 12% 17%);
-  --accent-foreground: hsl(35 33% 65%);
+  --primary: hsl(35 48% 62%);
+  --primary-foreground: hsl(28 12% 8%);
 
-  --destructive: hsl(0 84% 60%);
+  --secondary: hsl(28 9% 16%);
+  --secondary-foreground: hsl(30 18% 96%);
+
+  --muted: hsl(28 9% 16%);
+  --muted-foreground: hsl(30 10% 74%);
+
+  --accent: hsl(28 12% 18%);
+  --accent-foreground: hsl(35 55% 72%);
+
+  --destructive: hsl(0 78% 62%);
   --destructive-foreground: hsl(0 0% 100%);
 
-  --border: hsl(35 12% 17%);
-  --input: hsl(35 12% 17%);
-  --ring: hsl(35 33% 55%);
+  --border: hsl(28 10% 22%);
+  --input: hsl(28 10% 20%);
+  --ring: hsl(35 48% 58%);
 
-  --gold: hsl(35 40% 65%);
-  --gold-foreground: hsl(35 20% 8%);
+  --gold: hsl(35 55% 68%);
+  --gold-foreground: hsl(28 12% 8%);
 
-  --surface-elevated: hsl(35 12% 17%);
+  --surface-card: var(--card);
+  --surface-card-border: hsl(28 10% 24%);
+  --surface-card-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.04),
+    0 1px 2px rgb(0 0 0 / 0.35),
+    0 12px 32px rgb(0 0 0 / 0.35);
+  --surface-card-shadow-hover:
+    0 0 0 1px rgb(255 255 255 / 0.06),
+    0 2px 6px rgb(0 0 0 / 0.4),
+    0 16px 40px rgb(0 0 0 / 0.42);
 
-  --sidebar: hsl(35 12% 11%);
-  --sidebar-foreground: hsl(35 20% 96%);
-  --sidebar-border: hsl(35 12% 17%);
-  --sidebar-accent: hsl(35 12% 17%);
-  --sidebar-accent-foreground: hsl(35 33% 65%);
+  /* Dashboard accent panels — slightly lifted from canvas */
+  --surface-panel-dark: hsl(28 14% 13%);
+  --surface-panel-dark-border: hsl(28 12% 22%);
+  --surface-panel-dark-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.05),
+    0 12px 32px rgb(0 0 0 / 0.45);
+  --surface-panel-dark-shadow-hover:
+    0 0 0 1px rgb(255 255 255 / 0.07),
+    0 18px 48px rgb(0 0 0 / 0.5);
 
-  --shadow-elevated: 0 4px 16px rgb(0 0 0 / 0.25), 0 1px 3px rgb(0 0 0 / 0.15);
+  --sidebar: hsl(28 10% 10%);
+  --sidebar-foreground: hsl(30 18% 96%);
+  --sidebar-border: hsl(28 10% 20%);
+  --sidebar-accent: hsl(28 10% 16%);
+  --sidebar-accent-foreground: hsl(35 55% 72%);
+
+  --shadow-elevated: 0 0 0 1px rgb(255 255 255 / 0.05), 0 8px 28px rgb(0 0 0 / 0.45);
+
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.35);
+  --shadow-sm: 0 1px 3px rgb(0 0 0 / 0.4), 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-md: 0 4px 14px rgb(0 0 0 / 0.45), 0 2px 4px rgb(0 0 0 / 0.35);
+  --shadow-lg: 0 12px 32px rgb(0 0 0 / 0.5), 0 4px 10px rgb(0 0 0 / 0.35);
+  --shadow-card: 0 0 0 1px rgb(255 255 255 / 0.04), 0 6px 24px rgb(0 0 0 / 0.4);
+  --shadow-card-hover: 0 0 0 1px rgb(255 255 255 / 0.06), 0 12px 36px rgb(0 0 0 / 0.48);
+
+  --gradient-hero-surface: linear-gradient(
+    145deg,
+    hsl(28 16% 12%) 0%,
+    hsl(28 12% 10%) 45%,
+    var(--card) 100%
+  );
+  --gradient-profile-surface: linear-gradient(
+    145deg,
+    hsl(28 16% 12%) 0%,
+    var(--background) 52%,
+    var(--card) 100%
+  );
+  --gradient-profile-footer: linear-gradient(145deg, hsl(28 16% 12%) 0%, var(--card) 100%);
+  --gradient-table-header: linear-gradient(135deg, hsl(28 18% 16%) 0%, hsl(28 14% 12%) 100%);
 }

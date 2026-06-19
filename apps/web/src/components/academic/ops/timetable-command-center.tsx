@@ -91,7 +91,7 @@ export function TimetableCommandStrip({
   ];
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-brand-100/40 bg-white shadow-sm">
+    <section className="overflow-hidden hero-panel rounded-2xl">
       <div className="relative px-4 pb-14 pt-6 sm:px-6 sm:pb-16 sm:pt-8 lg:px-8" style={{ background: SURFACES.hero }}>
         <div
           className="pointer-events-none absolute -left-10 top-8 size-40 rounded-full bg-brand-300/15 blur-3xl"
@@ -110,7 +110,7 @@ export function TimetableCommandStrip({
               </span>
               <p className={ACADEMIC_UI.sectionLabel}>Timetable officer</p>
             </div>
-            <h1 className="text-neutral-900" style={ACADEMIC_PAGE_TITLE_STYLE}>
+            <h1 className="text-foreground" style={ACADEMIC_PAGE_TITLE_STYLE}>
               Term command centre
             </h1>
             <p className="max-w-xl text-[14px] leading-relaxed text-neutral-500">

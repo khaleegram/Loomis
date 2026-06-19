@@ -41,7 +41,7 @@ export function WorkflowInboxItemCard({ tenantId, item }: WorkflowInboxItemCardP
 
   return (
     <div className={`${ACADEMIC_UI.dataPanel} overflow-hidden`}>
-      <div className="flex flex-col gap-3 border-b border-brand-50/80 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-5">
+      <div className="flex flex-col gap-3 border-b border-border/80 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-5">
         <div className="min-w-0">
           <p className={ACADEMIC_UI.sectionLabel}>{formatWorkflowTypeLabel(item.instance.workflowType)}</p>
           <p className="mt-1 text-[15px] font-semibold text-neutral-900">

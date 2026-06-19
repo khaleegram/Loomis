@@ -57,13 +57,13 @@ export function AttendanceTermView({
 
   return (
     <div className="space-y-6">
-      <div className="relative overflow-hidden rounded-2xl border border-brand-100/40 bg-white shadow-sm">
+      <div className="hero-panel rounded-2xl">
         <div
           className="relative px-4 pb-14 pt-6 sm:px-6 sm:pb-16 sm:pt-8"
           style={{ background: SURFACES.hero }}
         >
           <p className={ACADEMIC_UI.sectionLabel}>Attendance record</p>
-          <h2 className="text-neutral-900" style={ACADEMIC_PAGE_TITLE_STYLE}>
+          <h2 className="text-foreground" style={ACADEMIC_PAGE_TITLE_STYLE}>
             {title}
           </h2>
           <p className={ACADEMIC_UI.pageDesc}>{subtitle}</p>

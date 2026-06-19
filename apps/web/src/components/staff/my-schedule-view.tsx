@@ -95,14 +95,14 @@ export function MyScheduleView({ tenantId }: MyScheduleViewProps) {
 
   return (
     <div className="space-y-6">
-      <div className="relative overflow-hidden rounded-2xl border border-brand-100/40 bg-white shadow-sm">
+      <div className="hero-panel rounded-2xl">
         <div
           className="relative px-4 pb-14 pt-6 sm:px-6 sm:pb-16 sm:pt-8 lg:px-8"
           style={{ background: SURFACES.hero }}
         >
           <div className="pointer-events-none absolute -right-20 top-0 size-56 rounded-full bg-brand-400/10 blur-3xl" aria-hidden />
           <p className={ACADEMIC_UI.sectionLabel}>Teaching</p>
-          <h1 className="text-neutral-900" style={ACADEMIC_PAGE_TITLE_STYLE}>
+          <h1 className="text-foreground" style={ACADEMIC_PAGE_TITLE_STYLE}>
             My schedule
           </h1>
           <p className={ACADEMIC_UI.pageDesc}>

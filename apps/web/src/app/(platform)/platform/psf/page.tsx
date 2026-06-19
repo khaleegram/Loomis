@@ -90,7 +90,7 @@ export default function PsfPage() {
         </div>
 
         <div className={`${PLATFORM_UI.dataPanel} overflow-hidden`}>
-          <div className="border-b border-brand-50/80 px-5 py-4">
+          <div className="border-b border-border/80 px-5 py-4">
             <p className={PLATFORM_UI.sectionLabel}>Per-school rates</p>
             <p className="mt-1 text-[14px] font-semibold text-neutral-900">Tenant PSF snapshots</p>
           </div>

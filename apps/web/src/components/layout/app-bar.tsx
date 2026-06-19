@@ -117,7 +117,7 @@ export function AppBar({
     <button
       type="button"
       onClick={workspaceMenu ? undefined : workspace.onClick}
-      className="flex max-w-[13rem] shrink-0 items-center gap-2 rounded-xl border border-black/[0.06] bg-white px-3 py-1.5 text-[13.5px] font-semibold text-neutral-800 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-150 hover:bg-neutral-50 hover:border-black/[0.10] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/30 active:scale-[0.98] lg:max-w-[15rem]"
+      className="flex max-w-[13rem] shrink-0 items-center gap-2 rounded-xl border border-border bg-card px-3 py-1.5 text-[13.5px] font-semibold text-foreground shadow-sm transition-all duration-150 hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 active:scale-[0.98] lg:max-w-[15rem]"
     >
       {workspace.icon ?? (
         <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 text-[10px] font-bold text-white shadow-sm shadow-brand-700/25">
@@ -125,13 +125,13 @@ export function AppBar({
         </span>
       )}
       <span className="truncate">{workspace.value}</span>
-      <ChevronDown aria-hidden className="size-3.5 shrink-0 text-neutral-400" />
+      <ChevronDown aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
     </button>
   );
 
   return (
     <>
-      <div className="fixed inset-x-0 top-0 z-50 flex flex-col border-b border-black/[0.06] bg-white">
+      <div className="fixed inset-x-0 top-0 z-50 flex flex-col border-b border-border bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
         {topSlot}
 
         <div className="flex h-14 items-center gap-3 px-4 lg:gap-4 lg:px-6">
@@ -139,7 +139,7 @@ export function AppBar({
           {workspaceMenu ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>{workspaceButton}</DropdownMenuTrigger>
-              <DropdownMenuContent align="start" sideOffset={8} className="max-h-[min(80vh,520px)] w-80 overflow-y-auto rounded-2xl border border-black/[0.07] bg-white p-2 shadow-[0_8px_32px_rgba(15,23,42,0.10),0_2px_8px_rgba(15,23,42,0.06)] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+              <DropdownMenuContent align="start" sideOffset={8} className="max-h-[min(80vh,520px)] w-80 overflow-y-auto rounded-2xl border border-border bg-popover p-2 shadow-lg [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                 {workspaceMenu}
               </DropdownMenuContent>
             </DropdownMenu>
@@ -161,7 +161,7 @@ export function AppBar({
         <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
-            className="relative flex size-9 items-center justify-center rounded-xl border border-black/[0.06] bg-white text-neutral-500 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-150 hover:bg-neutral-50 hover:text-neutral-800 active:scale-[0.97]"
+            className="relative flex size-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground shadow-sm transition-all duration-150 hover:bg-muted/60 hover:text-foreground active:scale-[0.97]"
             aria-label="Notifications"
           >
             <Bell aria-hidden className="size-[18px]" />
@@ -176,45 +176,45 @@ export function AppBar({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="flex items-center gap-2.5 rounded-xl border border-black/[0.06] bg-white px-2.5 py-1 text-sm shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-150 hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/30 active:scale-[0.98]"
+                className="flex items-center gap-2.5 rounded-xl border border-border bg-card px-2.5 py-1 text-sm shadow-sm transition-all duration-150 hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 active:scale-[0.98]"
               >
-                <span className="size-7 shrink-0 overflow-hidden rounded-full shadow-sm shadow-brand-700/25 ring-1 ring-black/[0.06]">
+                <span className="size-7 shrink-0 overflow-hidden rounded-full shadow-sm ring-1 ring-border">
                   <ProfileAvatar
                     photoStorageObjectId={profile?.photoStorageObjectId}
                     alt={displayName}
                   />
                 </span>
-                <span className="hidden max-w-[7rem] truncate text-[13px] font-semibold text-neutral-800 md:block">
+                <span className="hidden max-w-[7rem] truncate text-[13px] font-semibold text-foreground md:block">
                   {displayName}
                 </span>
-                <ChevronDown aria-hidden className="hidden size-3.5 text-neutral-400 md:block" />
+                <ChevronDown aria-hidden className="hidden size-3.5 text-muted-foreground md:block" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-60 rounded-xl border border-neutral-200 bg-white p-2 shadow-md shadow-black/5">
-              <DropdownMenuLabel className="rounded-lg bg-neutral-50 px-3 py-3 font-normal">
+            <DropdownMenuContent align="end" className="w-60 rounded-xl border border-border bg-popover p-2 shadow-lg">
+              <DropdownMenuLabel className="rounded-lg bg-muted/50 px-3 py-3 font-normal">
                 <div className="flex items-center gap-3">
-                  <span className="size-10 shrink-0 overflow-hidden rounded-full ring-1 ring-black/[0.06]">
+                  <span className="size-10 shrink-0 overflow-hidden rounded-full ring-1 ring-border">
                     <ProfileAvatar
                       photoStorageObjectId={profile?.photoStorageObjectId}
                       alt={displayName}
                     />
                   </span>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-neutral-900">{displayName}</p>
-                    <p className="mt-0.5 truncate text-xs text-neutral-500">{roleLabel}</p>
-                    <p className="mt-0.5 truncate text-[11px] text-neutral-400">{scopeLine}</p>
+                    <p className="truncate text-sm font-semibold text-foreground">{displayName}</p>
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">{roleLabel}</p>
+                    <p className="mt-0.5 truncate text-[11px] text-muted-foreground/80">{scopeLine}</p>
                   </div>
                 </div>
               </DropdownMenuLabel>
-              <DropdownMenuSeparator className="my-2 bg-neutral-100" />
-              <DropdownMenuItem className="cursor-pointer rounded-lg focus:bg-brand-50 focus:text-brand-700" asChild>
+              <DropdownMenuSeparator className="my-2 bg-border" />
+              <DropdownMenuItem className="cursor-pointer rounded-lg focus:bg-accent focus:text-accent-foreground" asChild>
                 <Link href="/school/settings/profile">
                   <User aria-hidden className="mr-2 size-4" />
                   Profile
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem
-                className="cursor-pointer rounded-lg text-red-600 focus:bg-red-50 focus:text-red-600"
+                className="cursor-pointer rounded-lg text-destructive focus:bg-destructive/10 focus:text-destructive"
                 onClick={() => void signOut()}
               >
                 <LogOut aria-hidden className="mr-2 size-4" />

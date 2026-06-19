@@ -173,22 +173,22 @@ export function AdminOfficerDashboard({ tenantId, displayName }: AdminOfficerDas
 
   return (
     <div className="space-y-6">
-      <div className="relative overflow-hidden rounded-2xl border border-brand-100/40 bg-white shadow-sm">
+      <div className="hero-panel rounded-2xl">
         <div
           className="relative px-4 pb-16 pt-6 sm:px-6 sm:pb-20 sm:pt-8 lg:px-8"
           style={{ background: SURFACES.hero }}
         >
           <div
-            className="pointer-events-none absolute -right-8 top-6 size-44 rounded-full bg-gold-300/20 blur-3xl"
+            className="pointer-events-none absolute -right-8 top-6 size-44 rounded-full bg-gold-300/20 blur-3xl dark:bg-primary/10"
             aria-hidden
           />
           <p className={ACADEMIC_UI.sectionLabel}>Admin Officer</p>
-          <h1 className="text-neutral-900" style={ACADEMIC_PAGE_TITLE_STYLE}>
+          <h1 className="text-foreground" style={ACADEMIC_PAGE_TITLE_STYLE}>
             {firstName ? `${greeting()}, ${firstName}` : 'Registry desk'}
           </h1>
           <p className={ACADEMIC_UI.pageDesc}>
             Admissions, student registry, and staff onboarding for{' '}
-            <span className="font-semibold text-neutral-700">{termLabel}</span>. You register
+            <span className="font-semibold text-foreground">{termLabel}</span>. You register
             applicants and invite staff — principals approve admissions and confirm promotions.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
@@ -208,9 +208,7 @@ export function AdminOfficerDashboard({ tenantId, displayName }: AdminOfficerDas
               />
               {actionCount > 0 ? `${actionCount} item(s) need attention` : 'Registry up to date'}
             </span>
-            <span className="rounded-full border border-neutral-200/80 bg-white/80 px-3 py-1.5 text-[12px] font-semibold text-neutral-600">
-              {termLabel}
-            </span>
+            <span className="hero-pill">{termLabel}</span>
           </div>
 
           <div className="relative z-10 -mb-24 mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
@@ -224,11 +222,11 @@ export function AdminOfficerDashboard({ tenantId, displayName }: AdminOfficerDas
                   >
                     <Icon aria-hidden className="size-3.5 sm:size-4" />
                   </span>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-400">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
                     {stat.label}
                   </p>
                   <p
-                    className="mt-1 tabular-nums leading-none text-neutral-900"
+                    className="mt-1 tabular-nums leading-none text-foreground"
                     style={{
                       fontSize: 'clamp(1.125rem, 2vw, 1.5rem)',
                       fontWeight: 800,
@@ -237,7 +235,7 @@ export function AdminOfficerDashboard({ tenantId, displayName }: AdminOfficerDas
                   >
                     {stat.value}
                   </p>
-                  <p className="mt-1 text-[11px] font-medium text-neutral-500">{stat.hint}</p>
+                  <p className="mt-1 text-[11px] font-medium text-muted-foreground">{stat.hint}</p>
                 </div>
               );
             })}
@@ -252,13 +250,13 @@ export function AdminOfficerDashboard({ tenantId, displayName }: AdminOfficerDas
             <Link
               key={action.href}
               href={action.href}
-              className="group card flex gap-3 rounded-xl p-4 transition-colors hover:border-brand-200 hover:bg-brand-50/30"
+              className="group card flex gap-3 rounded-xl p-4 transition-colors hover:border-border hover:bg-accent/30"
             >
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700 ring-1 ring-brand-100">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground ring-1 ring-border">
                 <Icon aria-hidden className="size-4" />
               </span>
               <div className="min-w-0">
-                <p className="text-[14px] font-bold text-neutral-900 group-hover:text-brand-900">
+                <p className="text-[14px] font-bold text-foreground group-hover:text-primary">
                   {action.label}
                 </p>
                 <p className="mt-0.5 text-[12px] leading-snug text-neutral-500">{action.description}</p>

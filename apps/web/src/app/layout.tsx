@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter, Playfair_Display } from 'next/font/google';
 
 import { ClientRoot } from '@/components/providers/client-root';
+import { themeInitScript } from '@/lib/theme/theme-script';
 
 import './globals.css';
 
@@ -17,9 +18,6 @@ const playfair = Playfair_Display({
   display: 'swap',
 });
 
-const themeInitScript = `(function(){try{document.documentElement.classList.remove('dark');document.documentElement.style.colorScheme='light';localStorage.setItem('loomis-theme','light');}catch(e){}})();`;
-
-/** Recover from stale dev chunks after a hot reload (common on WSL). */
 const chunkRecoveryScript = `(function(){try{var k='loomis-chunk-reload';window.addEventListener('error',function(e){var m=(e&&e.message)||'';if(m.indexOf('Loading chunk')!==-1&&!sessionStorage.getItem(k)){sessionStorage.setItem(k,'1');window.location.reload();}});window.addEventListener('load',function(){sessionStorage.removeItem(k);});}catch(e){}})();`;
 
 export const metadata: Metadata = {
@@ -33,9 +31,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className="light" style={{ colorScheme: 'light' }}>
+    <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${playfair.variable} font-sans antialiased`}
+        className={`${inter.variable} ${playfair.variable} font-sans antialiased bg-background text-foreground`}
       >
         <script
           id="loomis-theme-init"

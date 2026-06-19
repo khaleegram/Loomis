@@ -88,8 +88,8 @@
   --color-danger: hsl(0 84% 60%);
   --color-danger-foreground: #ffffff;
 
-  /* Canvas & surfaces */
-  --color-canvas: hsl(220 20% 97%);
+  /* Canvas & surfaces — theme-aware via semantic.css */
+  --color-canvas: var(--canvas);
 
   /* Radii — V2 uses softer corners */
   --radius-sm: 6px;

@@ -3,13 +3,16 @@
 @import "@loomis/ui-web/styles";
 
 body {
-  background: #ffffff;
+  background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   line-height: var(--leading-normal);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease;
 }
 
 /* Dashboard canvas */
@@ -17,42 +20,59 @@ body {
   background: var(--background);
 }
 
-/* Modern premium card — subtle shadow stack + inner highlight */
+/* Modern premium card — uses global semantic surface tokens */
 .card {
-  background: #ffffff;
-  border: 1px solid rgba(15, 23, 42, 0.05);
+  background: var(--surface-card);
+  color: var(--card-foreground);
+  border: 1px solid var(--surface-card-border);
   border-radius: 16px;
-  box-shadow:
-    0 1px 2px rgba(15, 23, 42, 0.015),
-    0 4px 16px rgba(15, 23, 42, 0.025),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  transition: box-shadow 250ms cubic-bezier(0.4, 0, 0.2, 1), transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--surface-card-shadow);
+  transition:
+    box-shadow 250ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 250ms cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 0.25s ease,
+    border-color 0.25s ease;
 }
 
 .card:hover {
   transform: translateY(-1px);
-  box-shadow:
-    0 2px 4px rgba(15, 23, 42, 0.02),
-    0 8px 24px rgba(15, 23, 42, 0.045),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  box-shadow: var(--surface-card-shadow-hover);
 }
 
 .card-dark {
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: var(--surface-panel-dark);
+  border: 1px solid var(--surface-panel-dark-border);
   border-radius: 16px;
-  box-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.15),
-    0 12px 32px rgba(0, 0, 0, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  transition: box-shadow 250ms cubic-bezier(0.4, 0, 0.2, 1), transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--surface-panel-dark-shadow);
+  transition:
+    box-shadow 250ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .card-dark:hover {
   transform: translateY(-1.5px);
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.15),
-    0 18px 48px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  box-shadow: var(--surface-panel-dark-shadow-hover);
+}
+
+/* Shared page hero — semantic surfaces for light + dark */
+.hero-panel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  background: var(--card);
+  color: var(--card-foreground);
+  box-shadow: var(--shadow-sm);
+}
+
+.hero-pill {
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--muted) 55%, transparent);
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
 }
 
 h1,
@@ -62,6 +82,154 @@ h4 {
   font-family: var(--font-sans);
   letter-spacing: var(--tracking-tight);
   line-height: var(--leading-tight);
+  color: var(--foreground);
+}
+
+/* Apple/Material-style type roles */
+.text-primary {
+  color: var(--foreground);
+}
+
+.text-secondary {
+  color: var(--foreground-secondary, var(--muted-foreground));
+}
+
+.text-tertiary {
+  color: var(--foreground-tertiary, var(--muted-foreground));
+}
+
+.dark ::selection {
+  background: hsl(35 48% 62% / 0.35);
+  color: var(--foreground);
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: var(--foreground-tertiary, var(--muted-foreground));
+  opacity: 1;
+}
+
+/*
+ * Legacy neutral bridge — maps hardcoded light Tailwind classes to semantic
+ * tokens until each surface is migrated. Scoped to .dark only; light unchanged.
+ */
+.dark .text-neutral-900,
+.dark .text-neutral-800 {
+  color: var(--foreground);
+}
+
+.dark .text-neutral-700,
+.dark .text-neutral-600 {
+  color: var(--foreground-secondary, var(--muted-foreground));
+}
+
+.dark .text-neutral-500,
+.dark .text-neutral-400 {
+  color: var(--foreground-tertiary, var(--muted-foreground));
+}
+
+.dark .bg-white {
+  background-color: var(--card);
+}
+
+.dark .bg-white\/60 {
+  background-color: color-mix(in srgb, var(--card) 60%, transparent);
+}
+
+.dark .bg-white\/75,
+.dark .bg-white\/80,
+.dark .bg-white\/85,
+.dark .bg-white\/90 {
+  background-color: color-mix(in srgb, var(--card) 82%, transparent);
+}
+
+.dark .bg-neutral-50,
+.dark .bg-neutral-50\/60,
+.dark .bg-neutral-50\/80 {
+  background-color: color-mix(in srgb, var(--muted) 70%, transparent);
+}
+
+.dark .bg-\[\#faf8f4\],
+.dark .bg-\[\#faf8f5\],
+.dark .bg-\[\#f3f0ea\],
+.dark .bg-\[\#ebe7df\],
+.dark .bg-\[\#f3efe6\] {
+  background-color: var(--muted);
+}
+
+.dark .border-neutral-100,
+.dark .border-neutral-200,
+.dark .border-neutral-200\/80,
+.dark .border-neutral-300 {
+  border-color: var(--border);
+}
+
+.dark .border-brand-50,
+.dark .border-brand-100,
+.dark .border-brand-100\/40,
+.dark .border-brand-100\/80,
+.dark .border-brand-200,
+.dark .border-brand-200\/60 {
+  border-color: color-mix(in srgb, var(--border) 85%, var(--primary) 15%);
+}
+
+.dark .hover\:bg-neutral-50:hover,
+.dark .hover\:bg-white\/60:hover {
+  background-color: var(--accent);
+}
+
+.dark .hover\:text-neutral-900:hover,
+.dark .hover\:text-neutral-800:hover {
+  color: var(--foreground);
+}
+
+.dark .hover\:border-neutral-300:hover,
+.dark .hover\:border-neutral-400:hover {
+  border-color: color-mix(in srgb, var(--border) 70%, var(--foreground) 30%);
+}
+
+.dark .bg-brand-50,
+.dark .bg-brand-50\/30,
+.dark .bg-brand-50\/40,
+.dark .bg-gold-50,
+.dark .bg-gold-50\/30,
+.dark .bg-gold-50\/90,
+.dark .bg-emerald-50,
+.dark .bg-emerald-50\/90 {
+  background-color: color-mix(in srgb, var(--primary) 12%, var(--card));
+}
+
+.dark .text-brand-700,
+.dark .text-brand-800,
+.dark .text-brand-900,
+.dark .text-gold-700,
+.dark .text-gold-800,
+.dark .text-gold-900 {
+  color: var(--accent-foreground);
+}
+
+.dark .text-emerald-800 {
+  color: hsl(142 55% 62%);
+}
+
+.dark .ring-black\/\[0\.06\] {
+  --tw-ring-color: color-mix(in srgb, var(--border) 80%, transparent);
+}
+
+.dark .divide-neutral-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--border);
+}
+
+.dark .divide-border > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--border);
+}
+
+/* Gradebook notebook chrome */
+.dark {
+  --gradebook-canvas: hsl(28 10% 9%);
+  --gradebook-chrome: hsl(28 9% 13%);
+  --gradebook-grid: hsl(28 10% 11%);
+  --gradebook-header: hsl(28 9% 15%);
 }
 
 @keyframes shimmer {

@@ -155,7 +155,7 @@ export default function SchoolExamsPage() {
               </div>
             ) : defaultScheme ? (
               <>
-                <div className="border-b border-brand-50/80 px-4 py-4 sm:px-5">
+                <div className="border-b border-border/80 px-4 py-4 sm:px-5">
                   <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-brand-800">
                     School grading scheme
                   </p>

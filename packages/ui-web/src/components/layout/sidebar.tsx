@@ -48,8 +48,8 @@ export function SidebarBrand({
         L
       </div>
       <div className="min-w-0">
-        <p className="text-[15px] font-semibold tracking-tight text-neutral-900">{title}</p>
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400">
+        <p className="text-[15px] font-semibold tracking-tight text-sidebar-foreground">{title}</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           {subtitle}
         </p>
       </div>
@@ -68,7 +68,7 @@ export function SidebarSectionLabel({ children, className }: SidebarSectionLabel
   return (
     <p
       className={cn(
-        'mb-1 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400',
+        'mb-1 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground',
         className,
       )}
     >
@@ -106,8 +106,8 @@ export function SidebarNavItem({
         className={cn(
           'flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors',
           active
-            ? 'bg-black text-white'
-            : 'text-neutral-400 group-hover:bg-neutral-100 group-hover:text-neutral-700',
+            ? 'bg-foreground text-background'
+            : 'text-muted-foreground group-hover:bg-sidebar-accent group-hover:text-sidebar-foreground',
         )}
       >
         <Icon aria-hidden className="size-[18px]" />
@@ -123,8 +123,8 @@ export function SidebarNavItem({
     'group flex w-full items-center gap-3 rounded-xl px-2 py-2.5 font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400/40',
     collapsed && 'justify-center px-2',
     active
-      ? 'text-neutral-900'
-      : 'text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900',
+      ? 'text-sidebar-foreground'
+      : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground',
     className,
   );
 
@@ -152,17 +152,17 @@ export function SidebarTrustCard({ className }: SidebarTrustCardProps) {
   return (
     <div
       className={cn(
-        'mx-3 mb-3 rounded-2xl border border-brand-100/80 bg-gradient-to-br from-brand-50 to-indigo-50/60 px-4 py-4',
+        'mx-3 mb-3 rounded-2xl border border-border bg-muted/40 px-4 py-4 dark:bg-sidebar-accent/60',
         className,
       )}
     >
       <div className="mb-2 flex size-8 items-center justify-center rounded-xl bg-brand-600 text-white shadow-sm shadow-brand-200">
         <ShieldCheck aria-hidden className="size-4" />
       </div>
-      <p className="text-[13px] font-semibold leading-snug text-neutral-800">
+      <p className="text-[13px] font-semibold leading-snug text-foreground">
         Secure. Compliant. Trusted.
       </p>
-      <p className="mt-1 text-[11px] leading-relaxed text-neutral-500">
+      <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
         Your data is protected with bank-level security.
       </p>
       <a
@@ -203,7 +203,7 @@ export function SidebarUserProfile({
             {initials}
           </span>
           {online ? (
-            <span className="absolute bottom-0 right-0 size-2.5 rounded-full border-2 border-white bg-accent-green-500" aria-hidden />
+            <span className="absolute bottom-0 right-0 size-2.5 rounded-full border-2 border-sidebar bg-accent-green-500" aria-hidden />
           ) : null}
         </div>
       </div>
@@ -214,7 +214,7 @@ export function SidebarUserProfile({
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-neutral-50"
+      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-sidebar-accent"
     >
       <div className="relative shrink-0">
         <span className="flex size-9 items-center justify-center rounded-full bg-accent-purple-500 text-xs font-bold text-white">
@@ -225,8 +225,8 @@ export function SidebarUserProfile({
         ) : null}
       </div>
       <div className="min-w-0 flex-1 text-left">
-        <p className="truncate text-[13px] font-semibold text-neutral-900">{name}</p>
-        <p className="truncate text-[11px] text-neutral-500">{role}</p>
+        <p className="truncate text-[13px] font-semibold text-sidebar-foreground">{name}</p>
+        <p className="truncate text-[11px] text-muted-foreground">{role}</p>
       </div>
       {online ? (
         <span className="text-[10px] font-semibold text-accent-green-600">Online</span>
@@ -248,14 +248,14 @@ export function SidebarFrame({ children, footer, collapsed, className }: Sidebar
   return (
     <aside
       className={cn(
-        'relative flex shrink-0 flex-col border-r border-black/[0.07] bg-white shadow-[2px_0_16px_rgba(0,0,0,0.05)] transition-[width] duration-200',
+        'relative flex shrink-0 flex-col border-r border-sidebar-border bg-sidebar shadow-[2px_0_16px_rgba(0,0,0,0.05)] transition-[width] duration-200 dark:shadow-[2px_0_24px_rgba(0,0,0,0.35)]',
         collapsed ? 'w-[72px]' : 'w-[240px]',
         className,
       )}
     >
       <div className="flex-1 overflow-y-auto">{children}</div>
       {footer ? (
-        <div className="border-t border-neutral-100 px-2 py-3">{footer}</div>
+        <div className="border-t border-sidebar-border px-2 py-3">{footer}</div>
       ) : null}
     </aside>
   );

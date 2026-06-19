@@ -65,7 +65,7 @@ const KPI_CARDS: {
 
 export function StudentHero({ metrics, isLoading }: StudentHeroProps) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-brand-100/40 bg-white shadow-sm">
+    <div className="hero-panel rounded-2xl">
       {/* Header area — warm brand gradient */}
       <div
         className="relative px-4 pb-16 pt-5 sm:px-6 sm:pb-20 sm:pt-6 lg:px-10 lg:pt-10"
@@ -147,7 +147,7 @@ export function StudentHero({ metrics, isLoading }: StudentHeroProps) {
 
 export function StudentHeroSkeleton() {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-brand-100/40 bg-white shadow-sm">
+    <div className="hero-panel rounded-2xl">
       <div
         className="animate-pulse px-4 pb-16 pt-5 sm:px-6 sm:pb-20 sm:pt-6 lg:px-10 lg:pt-10"
         style={{ background: SURFACES.hero }}

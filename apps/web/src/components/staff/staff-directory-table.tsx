@@ -32,7 +32,7 @@ export function StaffDirectoryTable({
   return (
     <>
       {/* Premium table card */}
-      <div className="overflow-hidden rounded-2xl border border-brand-100/40 bg-white shadow-sm">
+      <div className="overflow-hidden hero-panel rounded-2xl">
         <div className="overflow-x-auto">
         {/* Header — warm brand gradient */}
         <div
@@ -190,7 +190,7 @@ export function StaffDirectoryTable({
 
 export function StaffDirectoryTableSkeleton() {
   return (
-    <div className="overflow-hidden rounded-2xl border border-brand-100/40 bg-white shadow-sm">
+    <div className="overflow-hidden hero-panel rounded-2xl">
       <div
         className="h-11"
         style={{ background: SURFACES.tableHeader }}

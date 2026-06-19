@@ -16,6 +16,7 @@ import { useAuth } from '@/lib/auth/auth-context';
 import { getUserIdFromAccessToken } from '@/lib/auth/user-id';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 import { PhotoUpload } from '@/components/shared/photo-upload';
+import { ThemeToggle } from '@/components/settings/theme-toggle';
 
 export default function ProfileSettingsPage() {
   const { session } = useAuth();
@@ -137,8 +138,8 @@ export default function ProfileSettingsPage() {
           role="alert"
           className={`flex items-center justify-between rounded-xl border px-4 py-3 text-[13px] ${
             flash.type === 'success'
-              ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-              : 'border-red-200 bg-red-50 text-red-700'
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800/50 dark:bg-emerald-950/40 dark:text-emerald-200'
+              : 'border-red-200 bg-red-50 text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-200'
           }`}
         >
           <span>{flash.message}</span>
@@ -159,23 +160,23 @@ export default function ProfileSettingsPage() {
           {initials || '?'}
         </div>
         <div className="min-w-0">
-          <h1 className="truncate text-xl font-bold text-neutral-900">{displayName}</h1>
-          <p className="mt-0.5 text-sm text-neutral-500">{roleLabel}</p>
+          <h1 className="truncate text-xl font-bold text-foreground">{displayName}</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">{roleLabel}</p>
           {tenantId ? (
-            <p className="mt-0.5 font-mono text-[11px] text-neutral-400">
+            <p className="mt-0.5 font-mono text-[11px] text-muted-foreground/80">
               Tenant &middot; {tenantId.slice(0, 8)}&hellip;{tenantId.slice(-4)}
             </p>
           ) : (
-            <p className="mt-0.5 text-[11px] text-neutral-400">Platform account</p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground/80">Platform account</p>
           )}
         </div>
       </div>
 
       {/* Photo card */}
-      <div className="rounded-2xl border border-brand-100/40 bg-white shadow-sm">
-        <div className="border-b border-brand-50 px-5 py-4">
-          <h2 className="text-sm font-semibold text-neutral-900">Profile photo</h2>
-          <p className="mt-0.5 text-[12px] text-neutral-400">
+      <div className="hero-panel rounded-2xl">
+        <div className="border-b border-border px-5 py-4">
+          <h2 className="text-sm font-semibold text-foreground">Profile photo</h2>
+          <p className="mt-0.5 text-[12px] text-muted-foreground">
             Upload a portrait-style passport photo. JPG, PNG, or WebP.
           </p>
         </div>
@@ -194,17 +195,17 @@ export default function ProfileSettingsPage() {
       </div>
 
       {/* Display name */}
-      <div className="rounded-2xl border border-brand-100/40 bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b border-brand-50 px-5 py-4">
+      <div className="hero-panel rounded-2xl">
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div>
-            <h2 className="text-sm font-semibold text-neutral-900">Display name</h2>
-            <p className="mt-0.5 text-[12px] text-neutral-400">How you appear across the platform.</p>
+            <h2 className="text-sm font-semibold text-foreground">Display name</h2>
+            <p className="mt-0.5 text-[12px] text-muted-foreground">How you appear across the platform.</p>
           </div>
           {!editingName ? (
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 gap-1.5 text-[12px] text-neutral-500 hover:text-brand-700"
+              className="h-8 gap-1.5 text-[12px] text-muted-foreground hover:text-primary"
               onClick={() => { setDraftName(displayName); setEditingName(true); }}
               disabled={saving}
             >
@@ -220,7 +221,7 @@ export default function ProfileSettingsPage() {
                 type="text"
                 value={draftName}
                 onChange={(e) => setDraftName(e.target.value)}
-                className="h-9 flex-1 rounded-lg border border-neutral-200 px-3 text-[13px] text-neutral-900 outline-none focus:border-brand-400 focus:ring-1 focus:ring-brand-400/30"
+                className="h-9 flex-1 rounded-lg border border-input bg-background px-3 text-[13px] text-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring/30"
                 placeholder="Your display name"
                 disabled={saving}
               />
@@ -237,29 +238,29 @@ export default function ProfileSettingsPage() {
                 type="button"
                 onClick={() => setEditingName(false)}
                 disabled={saving}
-                className="h-9 rounded-lg px-2 text-[12px] text-neutral-400 hover:text-neutral-600"
+                className="h-9 rounded-lg px-2 text-[12px] text-muted-foreground hover:text-foreground"
               >
                 Cancel
               </button>
             </div>
           ) : (
-            <p className="text-[14px] font-medium text-neutral-900">{displayName || '—'}</p>
+            <p className="text-[14px] font-medium text-foreground">{displayName || '—'}</p>
           )}
         </div>
       </div>
 
       {/* Email */}
-      <div className="rounded-2xl border border-brand-100/40 bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b border-brand-50 px-5 py-4">
+      <div className="hero-panel rounded-2xl">
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div>
-            <h2 className="text-sm font-semibold text-neutral-900">Email address</h2>
-            <p className="mt-0.5 text-[12px] text-neutral-400">Used for login and notifications.</p>
+            <h2 className="text-sm font-semibold text-foreground">Email address</h2>
+            <p className="mt-0.5 text-[12px] text-muted-foreground">Used for login and notifications.</p>
           </div>
           {!editingEmail ? (
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 gap-1.5 text-[12px] text-neutral-500 hover:text-brand-700"
+              className="h-8 gap-1.5 text-[12px] text-muted-foreground hover:text-primary"
               onClick={() => { setDraftEmail(userEmail); setEditingEmail(true); }}
               disabled={saving}
             >
@@ -275,7 +276,7 @@ export default function ProfileSettingsPage() {
                 type="email"
                 value={draftEmail}
                 onChange={(e) => setDraftEmail(e.target.value)}
-                className="h-9 flex-1 rounded-lg border border-neutral-200 px-3 text-[13px] text-neutral-900 outline-none focus:border-brand-400 focus:ring-1 focus:ring-brand-400/30"
+                className="h-9 flex-1 rounded-lg border border-input bg-background px-3 text-[13px] text-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring/30"
                 placeholder="you@school.edu.ng"
                 disabled={saving}
               />
@@ -292,29 +293,29 @@ export default function ProfileSettingsPage() {
                 type="button"
                 onClick={() => setEditingEmail(false)}
                 disabled={saving}
-                className="h-9 rounded-lg px-2 text-[12px] text-neutral-400 hover:text-neutral-600"
+                className="h-9 rounded-lg px-2 text-[12px] text-muted-foreground hover:text-foreground"
               >
                 Cancel
               </button>
             </div>
           ) : (
-            <p className="text-[14px] font-medium text-neutral-900">{userEmail || '—'}</p>
+            <p className="text-[14px] font-medium text-foreground">{userEmail || '—'}</p>
           )}
         </div>
       </div>
 
       {/* Password */}
-      <div className="rounded-2xl border border-brand-100/40 bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b border-brand-50 px-5 py-4">
+      <div className="hero-panel rounded-2xl">
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div>
-            <h2 className="text-sm font-semibold text-neutral-900">Password</h2>
-            <p className="mt-0.5 text-[12px] text-neutral-400">Change your account password.</p>
+            <h2 className="text-sm font-semibold text-foreground">Password</h2>
+            <p className="mt-0.5 text-[12px] text-muted-foreground">Change your account password.</p>
           </div>
           {!showPasswordForm ? (
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 gap-1.5 text-[12px] text-neutral-500 hover:text-brand-700"
+              className="h-8 gap-1.5 text-[12px] text-muted-foreground hover:text-primary"
               onClick={() => setShowPasswordForm(true)}
             >
               <Key aria-hidden className="size-3" />
@@ -326,42 +327,42 @@ export default function ProfileSettingsPage() {
           {showPasswordForm ? (
             <form onSubmit={handlePasswordSubmit} className="space-y-3">
               <div>
-                <label className="mb-1 block text-[12px] font-medium text-neutral-600">Current password</label>
+                <label className="mb-1 block text-[12px] font-medium text-muted-foreground">Current password</label>
                 <input
                   type="password"
                   value={currentPw}
                   onChange={(e) => setCurrentPw(e.target.value)}
                   required
-                  className="h-9 w-full rounded-lg border border-neutral-200 px-3 text-[13px] text-neutral-900 outline-none focus:border-brand-400 focus:ring-1 focus:ring-brand-400/30"
+                  className="h-9 w-full rounded-lg border border-input bg-background px-3 text-[13px] text-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring/30"
                   placeholder="Enter current password"
                   disabled={changePassword.isPending}
                 />
               </div>
               <div>
-                <label className="mb-1 block text-[12px] font-medium text-neutral-600">New password</label>
+                <label className="mb-1 block text-[12px] font-medium text-muted-foreground">New password</label>
                 <input
                   type="password"
                   value={newPw}
                   onChange={(e) => setNewPw(e.target.value)}
                   required
                   minLength={8}
-                  className="h-9 w-full rounded-lg border border-neutral-200 px-3 text-[13px] text-neutral-900 outline-none focus:border-brand-400 focus:ring-1 focus:ring-brand-400/30"
+                  className="h-9 w-full rounded-lg border border-input bg-background px-3 text-[13px] text-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring/30"
                   placeholder="At least 8 characters"
                   disabled={changePassword.isPending}
                 />
-                <p className="mt-1 text-[11px] text-neutral-400">
+                <p className="mt-1 text-[11px] text-muted-foreground">
                   Must include uppercase, lowercase, digit, and special character.
                 </p>
               </div>
               <div>
-                <label className="mb-1 block text-[12px] font-medium text-neutral-600">Confirm new password</label>
+                <label className="mb-1 block text-[12px] font-medium text-muted-foreground">Confirm new password</label>
                 <input
                   type="password"
                   value={confirmPw}
                   onChange={(e) => setConfirmPw(e.target.value)}
                   required
                   minLength={8}
-                  className="h-9 w-full rounded-lg border border-neutral-200 px-3 text-[13px] text-neutral-900 outline-none focus:border-brand-400 focus:ring-1 focus:ring-brand-400/30"
+                  className="h-9 w-full rounded-lg border border-input bg-background px-3 text-[13px] text-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring/30"
                   placeholder="Re-enter new password"
                   disabled={changePassword.isPending}
                 />
@@ -384,36 +385,49 @@ export default function ProfileSettingsPage() {
                   type="button"
                   onClick={() => { setShowPasswordForm(false); setCurrentPw(''); setNewPw(''); setConfirmPw(''); }}
                   disabled={changePassword.isPending}
-                  className="h-9 rounded-lg px-3 text-[12px] text-neutral-400 hover:text-neutral-600"
+                  className="h-9 rounded-lg px-3 text-[12px] text-muted-foreground hover:text-foreground"
                 >
                   Cancel
                 </button>
               </div>
             </form>
           ) : (
-            <p className="text-[14px] font-medium text-neutral-400">&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</p>
+            <p className="text-[14px] font-medium text-muted-foreground">&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</p>
           )}
         </div>
       </div>
 
+      {/* Interface theme */}
+      <div className="rounded-2xl border border-border bg-card shadow-sm">
+        <div className="border-b border-border px-5 py-4">
+          <h2 className="text-sm font-semibold text-foreground">Interface theme</h2>
+          <p className="mt-0.5 text-[12px] text-muted-foreground">
+            Personal preference — applies across school, parent, and platform consoles on this device.
+          </p>
+        </div>
+        <div className="px-5 py-4">
+          <ThemeToggle />
+        </div>
+      </div>
+
       {/* Quick links */}
-      <div className="rounded-2xl border border-brand-100/40 bg-white shadow-sm">
-        <div className="border-b border-brand-50 px-5 py-4">
-          <h2 className="text-sm font-semibold text-neutral-900">Quick links</h2>
+      <div className="hero-panel rounded-2xl">
+        <div className="border-b border-border px-5 py-4">
+          <h2 className="text-sm font-semibold text-foreground">Quick links</h2>
         </div>
         <div className="space-y-1 px-5 py-3">
           <Link
             href="/school/settings/security"
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] text-neutral-600 transition-colors hover:bg-neutral-50 hover:text-neutral-900"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
           >
-            <Settings aria-hidden className="size-4 text-neutral-400" />
+            <Settings aria-hidden className="size-4 text-muted-foreground/70" />
             Security &amp; Sessions
           </Link>
           <Link
             href="/school/settings/appearance"
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] text-neutral-600 transition-colors hover:bg-neutral-50 hover:text-neutral-900"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
           >
-            <Settings aria-hidden className="size-4 text-neutral-400" />
+            <Settings aria-hidden className="size-4 text-muted-foreground/70" />
             Appearance
           </Link>
         </div>

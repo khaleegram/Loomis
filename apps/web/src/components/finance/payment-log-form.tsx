@@ -147,7 +147,7 @@ export function PaymentLogForm({ tenantId, termId }: PaymentLogFormProps) {
   return (
     <div className="grid gap-6 lg:grid-cols-12">
       <div className={`${ACADEMIC_UI.dataPanel} lg:col-span-5`}>
-        <div className="border-b border-brand-50 bg-gradient-to-r from-neutral-50 to-brand-50/30 px-4 py-4 sm:px-5">
+        <div className="border-b border-border bg-gradient-to-r from-neutral-50 to-brand-50/30 px-4 py-4 sm:px-5">
           <p className="text-[14px] font-bold text-neutral-900">Find student</p>
           <p className="mt-0.5 text-[12px] text-neutral-500">Search by name or admission number.</p>
         </div>
@@ -188,7 +188,7 @@ export function PaymentLogForm({ tenantId, termId }: PaymentLogFormProps) {
       </div>
 
       <div className={`${ACADEMIC_UI.dataPanel} lg:col-span-7`}>
-        <div className="border-b border-brand-50 bg-gradient-to-r from-neutral-50 to-brand-50/30 px-4 py-4 sm:px-5">
+        <div className="border-b border-border bg-gradient-to-r from-neutral-50 to-brand-50/30 px-4 py-4 sm:px-5">
           <p className="text-[14px] font-bold text-neutral-900">Log offline payment</p>
           <p className="mt-0.5 text-[12px] text-neutral-500">
             Provisional receipt issued — verification by another staff member required.

@@ -33,7 +33,7 @@ export function PlatformConsoleHero({
   isLoading,
 }: PlatformConsoleHeroProps) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-brand-100/40 bg-white shadow-sm">
+    <div className="hero-panel rounded-2xl">
       <div
         className={`relative px-4 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pt-10 ${stats?.length ? 'pb-16 sm:pb-20' : 'pb-6 sm:pb-8'}`}
         style={{ background: SURFACES.hero }}

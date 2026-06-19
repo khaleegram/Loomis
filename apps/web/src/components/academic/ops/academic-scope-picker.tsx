@@ -70,7 +70,7 @@ export function AcademicScopePicker({
   return (
     <div className={`mb-6 overflow-hidden ${ACADEMIC_UI.dataPanel}`}>
       {showWorkflow ? (
-        <div className="flex flex-wrap items-center gap-2 border-b border-brand-50 bg-brand-50/20 px-4 py-3 sm:px-5">
+        <div className="flex flex-wrap items-center gap-2 border-b border-border bg-brand-50/20 px-4 py-3 sm:px-5">
           {WORKFLOW.map((step, index) => {
             const isActive = index === workflowIndex;
             const isDone = index < workflowIndex;

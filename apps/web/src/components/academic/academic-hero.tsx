@@ -71,7 +71,7 @@ export function AcademicHero({ metrics, isLoading }: AcademicHeroProps) {
     : 'No open term';
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-brand-100/40 bg-white shadow-sm">
+    <div className="hero-panel rounded-2xl">
       <div
         className="relative px-6 pb-16 pt-6 sm:px-8 sm:pb-20 sm:pt-8 lg:px-10 lg:pt-10"
         style={{ background: SURFACES.hero }}
@@ -163,7 +163,7 @@ export function AcademicHero({ metrics, isLoading }: AcademicHeroProps) {
 
 export function AcademicHeroSkeleton() {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-brand-100/40 bg-white shadow-sm">
+    <div className="hero-panel rounded-2xl">
       <div
         className="animate-pulse px-6 pb-16 pt-6 sm:px-8 sm:pb-20 sm:pt-8 lg:px-10 lg:pt-10"
         style={{ background: SURFACES.hero }}

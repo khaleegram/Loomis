@@ -111,18 +111,18 @@ export function SmartSearchPalette({ items, placeholder, ariaLabel }: SmartSearc
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex w-full items-center gap-2.5 rounded-xl border border-black/[0.06] bg-neutral-50 px-3.5 py-1.5 text-left transition-all duration-150 hover:border-black/[0.10] hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/30"
+        className="flex w-full items-center gap-2.5 rounded-xl border border-border bg-muted/50 px-3.5 py-1.5 text-left transition-all duration-150 hover:border-border hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
         aria-label={ariaLabel}
       >
-        <Search aria-hidden className="size-4 shrink-0 text-neutral-400" />
-        <span className="flex-1 truncate text-[13.5px] text-neutral-400">{placeholder}</span>
-        <kbd className="hidden shrink-0 rounded-md border border-black/[0.08] bg-white px-1.5 py-0.5 font-mono text-[10px] text-neutral-400 shadow-[0_1px_1px_rgba(0,0,0,0.04)] lg:block">
+        <Search aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+        <span className="flex-1 truncate text-[13.5px] text-muted-foreground">{placeholder}</span>
+        <kbd className="hidden shrink-0 rounded-md border border-border bg-card px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground shadow-sm lg:block">
           ⌘K
         </kbd>
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="gap-0 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-0 shadow-[0_20px_60px_rgba(15,23,42,0.16)] sm:max-w-lg">
+        <DialogContent className="gap-0 overflow-hidden rounded-2xl border border-border bg-popover p-0 shadow-lg sm:max-w-lg">
           <DialogHeader className="sr-only">
             <DialogTitle>Search console</DialogTitle>
             <DialogDescription>{placeholder}</DialogDescription>
@@ -132,7 +132,7 @@ export function SmartSearchPalette({ items, placeholder, ariaLabel }: SmartSearc
             <div className="relative">
               <Search
                 aria-hidden
-                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400"
+                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
               />
               <input
                 ref={inputRef}
@@ -142,7 +142,7 @@ export function SmartSearchPalette({ items, placeholder, ariaLabel }: SmartSearc
                 onKeyDown={onInputKeyDown}
                 placeholder={placeholder}
                 aria-label={ariaLabel}
-                className="h-10 w-full rounded-xl border border-neutral-200 bg-white pl-10 pr-3 text-sm text-neutral-900 outline-none placeholder:text-neutral-400 focus:border-brand-500/40 focus:ring-2 focus:ring-brand-500/15"
+                className="h-10 w-full rounded-xl border border-input bg-background pl-10 pr-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/20"
               />
             </div>
           </div>

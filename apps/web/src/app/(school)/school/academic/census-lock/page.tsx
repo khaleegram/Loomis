@@ -247,7 +247,7 @@ export default function CensusLockPage() {
               <form onSubmit={onSubmit} className="space-y-6">
                 {step === 0 ? (
                   <div className={`${ACADEMIC_UI.dataPanel} overflow-hidden`}>
-                    <div className="border-b border-brand-50/80 px-5 py-4 sm:px-6">
+                    <div className="border-b border-border/80 px-5 py-4 sm:px-6">
                       <p className={ACADEMIC_UI.sectionLabel}>Step 1</p>
                       <p className="mt-1 text-[14px] font-semibold text-neutral-900">
                         Billable enrollment breakdown

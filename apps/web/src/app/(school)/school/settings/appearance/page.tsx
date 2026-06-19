@@ -52,13 +52,14 @@ export default function AppearanceSettingsPage() {
       </div>
 
       <div className="mt-4 rounded-xl border border-border bg-card p-5 shadow-card">
-        <h3 className="text-sm font-medium text-foreground">Colour theme</h3>
+        <h3 className="text-sm font-medium text-foreground">School branding</h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          Loomis uses a fixed premium light interface — your logo carries the brand.
+          Your logo carries the school identity on reports and the app bar. Interface light/dark mode is
+          a personal setting under Settings → Profile.
         </p>
-        <div className="mt-4 flex items-center gap-3 rounded-xl border border-brand-100 bg-brand-50/60 px-4 py-3">
-          <span className="size-3 rounded-full bg-brand-500 ring-2 ring-brand-200" aria-hidden />
-          <p className="text-sm font-medium text-brand-700">Light mode (always on)</p>
+        <div className="mt-4 flex items-center gap-3 rounded-xl border border-brand-100 bg-brand-50/60 px-4 py-3 dark:border-brand-800/40 dark:bg-brand-900/20">
+          <span className="size-3 rounded-full bg-brand-500 ring-2 ring-brand-200 dark:ring-brand-700/50" aria-hidden />
+          <p className="text-sm font-medium text-brand-700 dark:text-brand-300">Loomis umber palette (fixed)</p>
         </div>
       </div>
     </section>

@@ -47,7 +47,7 @@ function CorrectionCard({
 
   return (
     <div className={`${ACADEMIC_UI.dataPanel} overflow-hidden`}>
-      <div className="border-b border-brand-50/80 px-4 py-3 sm:px-5">
+      <div className="border-b border-border/80 px-4 py-3 sm:px-5">
         <p className="text-[15px] font-bold text-neutral-900">Score change request</p>
         {payload.reason ? (
           <p className="mt-1 text-[13px] text-neutral-600">{payload.reason}</p>

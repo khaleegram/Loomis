@@ -1,18 +1,19 @@
 /**
- * Platform-agnostic design tokens — Loomis V2 Electric Blue.
+ * Platform-agnostic design tokens — Loomis V2 Raw Umber / Muted Gold-Bronze.
+ * Must stay aligned with tailwind.css + semantic.css (canonical source).
  */
 export const colors = {
   brand: {
-    50: 'hsl(214 100% 97%)',
-    100: 'hsl(214 95% 93%)',
-    200: 'hsl(213 97% 87%)',
-    300: 'hsl(212 96% 78%)',
-    400: 'hsl(213 94% 68%)',
-    500: 'hsl(217 91% 60%)',
-    600: 'hsl(221 83% 53%)',
-    700: 'hsl(224 76% 48%)',
-    800: 'hsl(226 71% 40%)',
-    900: 'hsl(224 64% 33%)',
+    50: 'hsl(35 40% 97%)',
+    100: 'hsl(35 38% 93%)',
+    200: 'hsl(35 35% 85%)',
+    300: 'hsl(35 34% 73%)',
+    400: 'hsl(35 33% 62%)',
+    500: 'hsl(35 33% 55%)',
+    600: 'hsl(35 33% 45%)',
+    700: 'hsl(35 32% 37%)',
+    800: 'hsl(35 30% 30%)',
+    900: 'hsl(35 28% 22%)',
   },
   accent: {
     green: { 50: 'hsl(138 76% 97%)', 500: 'hsl(142 76% 36%)', 600: 'hsl(142 72% 29%)' },
@@ -34,9 +35,9 @@ export const colors = {
     900: 'hsl(15 75% 28%)',
   },
   mint: {
-    400: 'hsl(213 94% 68%)',
-    500: 'hsl(217 91% 60%)',
-    600: 'hsl(221 83% 53%)',
+    400: 'hsl(35 33% 62%)',
+    500: 'hsl(35 33% 55%)',
+    600: 'hsl(35 33% 45%)',
   },
   success: 'hsl(142 76% 36%)',
   warning: 'hsl(38 92% 50%)',
@@ -87,5 +88,5 @@ export const shadows = {
   sm: '0 1px 3px rgb(15 23 42 / 0.06), 0 1px 2px rgb(15 23 42 / 0.04)',
   md: '0 4px 12px rgb(15 23 42 / 0.06), 0 2px 4px rgb(15 23 42 / 0.04)',
   card: '0 1px 3px rgb(15 23 42 / 0.04), 0 6px 24px rgb(15 23 42 / 0.06)',
-  cardHover: '0 8px 32px rgb(37 99 235 / 0.08)',
+  cardHover: '0 8px 32px rgb(180 140 90 / 0.12)',
 } as const;

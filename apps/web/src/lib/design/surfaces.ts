@@ -56,7 +56,8 @@ export const SEMANTIC = {
     badge: 'border-accent-green-100 bg-accent-green-50 text-accent-green-700',
   },
   cta: {
-    primary: 'bg-brand-500 text-neutral-900 hover:bg-brand-600',
-    iconCircle: 'bg-brand-50 text-brand-700',
+    primary:
+      'bg-brand-500 text-neutral-900 hover:bg-brand-600 dark:bg-primary dark:text-primary-foreground dark:hover:opacity-90',
+    iconCircle: 'bg-brand-50 text-brand-700 dark:bg-accent dark:text-accent-foreground',
   },
 } as const;

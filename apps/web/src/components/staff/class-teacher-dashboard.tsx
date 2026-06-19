@@ -173,14 +173,14 @@ export function ClassTeacherDashboard({ tenantId, displayName }: ClassTeacherDas
 
   return (
     <div className="space-y-6">
-      <div className="relative overflow-hidden rounded-2xl border border-brand-100/40 bg-white shadow-sm">
+      <div className="hero-panel rounded-2xl">
         <div
           className="relative px-4 pb-16 pt-6 sm:px-6 sm:pb-20 sm:pt-8 lg:px-8"
           style={{ background: SURFACES.hero }}
         >
           <div className="pointer-events-none absolute -left-10 top-8 size-40 rounded-full bg-brand-300/15 blur-3xl" aria-hidden />
           <p className={ACADEMIC_UI.sectionLabel}>Class teacher</p>
-          <h1 className="text-neutral-900" style={ACADEMIC_PAGE_TITLE_STYLE}>
+          <h1 className="text-foreground" style={ACADEMIC_PAGE_TITLE_STYLE}>
             {firstName ? `${greeting()}, ${firstName}` : 'My class'}
           </h1>
           <p className={ACADEMIC_UI.pageDesc}>

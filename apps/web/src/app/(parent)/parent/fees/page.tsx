@@ -197,7 +197,7 @@ function ParentFeesView() {
       ) : (
         <div className="grid gap-6 lg:grid-cols-2">
           <div className={ACADEMIC_UI.dataPanel}>
-            <div className="border-b border-brand-50 bg-gradient-to-r from-neutral-50 to-brand-50/30 px-4 py-4 sm:px-5">
+            <div className="border-b border-border bg-gradient-to-r from-neutral-50 to-brand-50/30 px-4 py-4 sm:px-5">
               <p className="flex items-center gap-2 text-[14px] font-bold text-neutral-900">
                 <Banknote className="size-4 text-brand-600" aria-hidden />
                 Fee breakdown
@@ -234,7 +234,7 @@ function ParentFeesView() {
           </div>
 
           <div className={ACADEMIC_UI.dataPanel}>
-            <div className="border-b border-brand-50 bg-gradient-to-r from-neutral-50 to-brand-50/30 px-4 py-4 sm:px-5">
+            <div className="border-b border-border bg-gradient-to-r from-neutral-50 to-brand-50/30 px-4 py-4 sm:px-5">
               <p className="flex items-center gap-2 text-[14px] font-bold text-neutral-900">
                 <CreditCard className="size-4 text-brand-600" aria-hidden />
                 Pay online

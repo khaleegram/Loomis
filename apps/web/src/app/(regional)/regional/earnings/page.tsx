@@ -145,7 +145,7 @@ export default function ReferralEarningsPage() {
         ) : null}
 
         <div className={`${REGIONAL_UI.dataPanel} overflow-hidden`}>
-          <div className="border-b border-brand-50/80 px-5 py-4">
+          <div className="border-b border-border/80 px-5 py-4">
             <p className={REGIONAL_UI.sectionLabel}>Statement</p>
             <p className="mt-1 text-[14px] font-semibold text-neutral-900">Earnings by payout cycle</p>
           </div>
@@ -162,7 +162,7 @@ export default function ReferralEarningsPage() {
             </p>
           ) : (
             grouped.map(({ cycle, entries }) => (
-              <div key={cycle?.id ?? 'unassigned'} className="border-b border-brand-50/80 last:border-0">
+              <div key={cycle?.id ?? 'unassigned'} className="border-b border-border/80 last:border-0">
                 <div className="bg-gradient-to-r from-neutral-50 to-brand-50/30 px-5 py-3">
                   <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-neutral-500">
                     {cycle

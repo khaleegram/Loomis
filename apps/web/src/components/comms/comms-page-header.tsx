@@ -13,7 +13,7 @@ export function CommsPageHeader({ unreadCount, subtitle }: CommsPageHeaderProps)
       <div>
         <p className={ACADEMIC_UI.sectionLabel}>School communications</p>
         <div className="mt-1 flex flex-wrap items-center gap-2">
-          <h1 className="text-neutral-900" style={ACADEMIC_PAGE_TITLE_STYLE}>
+          <h1 className="text-foreground" style={ACADEMIC_PAGE_TITLE_STYLE}>
             Messages
           </h1>
           {unreadCount > 0 ? (

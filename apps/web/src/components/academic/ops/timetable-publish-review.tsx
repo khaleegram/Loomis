@@ -88,7 +88,7 @@ export function TimetablePublishReview({
         Back to timetable
       </Link>
 
-      <section className="overflow-hidden rounded-2xl border border-brand-100/40 bg-white shadow-sm">
+      <section className="overflow-hidden hero-panel rounded-2xl">
         <div className="px-5 py-6 sm:px-8" style={{ background: SURFACES.hero }}>
           <div className="flex items-center gap-2">
             <span className="flex size-9 items-center justify-center rounded-xl bg-brand-600 text-white">
@@ -96,7 +96,7 @@ export function TimetablePublishReview({
             </span>
             <div>
               <p className={ACADEMIC_UI.sectionLabel}>Pending changes</p>
-              <h1 className="text-neutral-900" style={ACADEMIC_PAGE_TITLE_STYLE}>
+              <h1 className="text-foreground" style={ACADEMIC_PAGE_TITLE_STYLE}>
                 Review before publish
               </h1>
             </div>
