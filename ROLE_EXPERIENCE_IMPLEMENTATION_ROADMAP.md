@@ -158,14 +158,14 @@
 
 ### Deliverables
 
-- [ ] SMS OTP on first login (Owner, Principal, Finance Officer) via Termii — **BLOCKED** comment if env missing
-- [ ] Trusted device registry: 30-day persistent token (SRS SEC-AUTH-014 pattern)
-- [ ] Census lock: SMS OTP step-up (Owner)
-- [ ] Refund approve: SMS OTP when amount ≥ ₦100,000 (configurable)
-- [ ] Parents: OTP on payment, password reset, new device only
-- [ ] Teachers: password only
-- [ ] Document in tenant-facing copy: Core MFA policy (tier plan §4)
-- [ ] Rate limit + lockout unchanged
+- [x] SMS OTP on first login (Owner, Principal, Finance Officer) via Termii — **BLOCKED** comment if env missing
+- [x] Trusted device registry: 30-day persistent token (SRS SEC-AUTH-014 pattern)
+- [x] Census lock: SMS OTP step-up (Owner)
+- [x] Refund approve: SMS OTP when amount ≥ ₦100,000 (configurable)
+- [x] Parents: OTP on payment, password reset, new device only
+- [x] Teachers: password only
+- [x] Document in tenant-facing copy: Core MFA policy (tier plan §4)
+- [x] Rate limit + lockout unchanged
 
 ### Exit criteria
 

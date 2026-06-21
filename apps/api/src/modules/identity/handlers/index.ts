@@ -11,3 +11,4 @@ export { updateProfileHandler, getProfileHandler } from './profile.handler.js';
 export { refreshHandler } from './refresh.handler.js';
 export { listSessionsHandler, revokeSessionHandler } from './sessions.handler.js';
 export { stepUpHandler } from './stepup.handler.js';
+export { stepUpSendSmsHandler } from './stepup-send-sms.handler.js';

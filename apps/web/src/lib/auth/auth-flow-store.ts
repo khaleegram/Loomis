@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { MfaChannel } from '@loomis/core';
 
 /**
  * Transient, in-memory state for the multi-step login flow (loomis-frontend:
@@ -8,16 +9,35 @@ import { create } from 'zustand';
  */
 interface AuthFlowState {
   mfaChallengeId: string | null;
+  mfaChannel: MfaChannel | null;
+  maskedPhone: string | null;
+  devBypass: boolean;
   enrollmentToken: string | null;
-  setMfaChallenge: (id: string) => void;
+  setMfaChallenge: (id: string, meta?: { channel?: MfaChannel; maskedPhone?: string; devBypass?: boolean }) => void;
   setEnrollmentToken: (token: string) => void;
   reset: () => void;
 }
 
 export const useAuthFlow = create<AuthFlowState>((set) => ({
   mfaChallengeId: null,
+  mfaChannel: null,
+  maskedPhone: null,
+  devBypass: false,
   enrollmentToken: null,
-  setMfaChallenge: (id) => set({ mfaChallengeId: id }),
+  setMfaChallenge: (id, meta) =>
+    set({
+      mfaChallengeId: id,
+      mfaChannel: meta?.channel ?? 'totp',
+      maskedPhone: meta?.maskedPhone ?? null,
+      devBypass: meta?.devBypass ?? false,
+    }),
   setEnrollmentToken: (token) => set({ enrollmentToken: token }),
-  reset: () => set({ mfaChallengeId: null, enrollmentToken: null }),
+  reset: () =>
+    set({
+      mfaChallengeId: null,
+      mfaChannel: null,
+      maskedPhone: null,
+      devBypass: false,
+      enrollmentToken: null,
+    }),
 }));

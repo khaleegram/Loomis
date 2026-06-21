@@ -16,6 +16,8 @@ import {
   type Role,
 } from '@loomis/contracts';
 
+import { deviceTrustHeaders, storeDeviceTrustToken } from '@/lib/auth/device-trust';
+
 /**
  * Browser-side client for the BFF auth routes (Frontend Architecture §7.3).
  * Talks ONLY to same-origin `/api/auth/*`. Never receives or stores the refresh
@@ -55,13 +57,23 @@ function toAuthError(status: number, json: unknown): AuthError {
   );
 }
 
-async function postJson(path: string, body: unknown): Promise<Response> {
+async function postJson(path: string, body: unknown, extraHeaders?: Record<string, string>): Promise<Response> {
   return fetch(path, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...extraHeaders,
+    },
     credentials: 'same-origin',
     body: JSON.stringify(body),
   });
+}
+
+function capturePersistentToken(json: unknown): void {
+  const token = (json as { persistentToken?: unknown } | null)?.persistentToken;
+  if (typeof token === 'string' && token.length > 0) {
+    storeDeviceTrustToken(token);
+  }
 }
 
 function toAuthenticatedSession(data: {
@@ -84,19 +96,21 @@ function toAuthenticatedSession(data: {
 
 /** Step 1 of login: password. May resolve to an authenticated session or an MFA step. */
 export async function login(input: LoginRequest): Promise<LoginResponse> {
-  const res = await postJson('/api/auth/login', input);
+  const res = await postJson('/api/auth/login', input, deviceTrustHeaders());
   const json = await readJson(res);
   if (!res.ok) throw toAuthError(res.status, json);
+  capturePersistentToken(json);
   const parsed = loginResponse.safeParse(json);
   if (!parsed.success) throw new AuthError('INTERNAL_ERROR', 'Malformed login response', 500);
   return parsed.data;
 }
 
-/** Step 2 of login: TOTP. Resolves to an authenticated session. */
+/** Step 2 of login: SMS or TOTP. Resolves to an authenticated session. */
 export async function verifyMfa(input: MfaVerifyRequest): Promise<AuthenticatedSession> {
-  const res = await postJson('/api/auth/mfa/verify', input);
+  const res = await postJson('/api/auth/mfa/verify', input, deviceTrustHeaders());
   const json = await readJson(res);
   if (!res.ok) throw toAuthError(res.status, json);
+  capturePersistentToken(json);
   const parsed = loginResponse.safeParse(json);
   if (!parsed.success || parsed.data.outcome !== 'authenticated') {
     throw new AuthError('INTERNAL_ERROR', 'Malformed MFA verification response', 500);

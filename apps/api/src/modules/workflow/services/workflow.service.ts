@@ -5,9 +5,14 @@ import {
   type Role,
   type WorkflowType,
 } from '@loomis/contracts';
-import { shouldSkipLeadershipStep } from '@loomis/core';
+import {
+  mergeExperienceFlags,
+  refundApproveRequiresStepUp,
+  shouldSkipLeadershipStep,
+} from '@loomis/core';
 import { LoomisError } from '../../../shared/errors.js';
 import { dispatchEvent } from '../../../shared/events/registry.js';
+import { loadTenantMfaContext } from '../../identity/services/tenant-mfa-context.js';
 import { tokenService } from '../../identity/services/token.service.js';
 import {
   WORKFLOW_EVENT_TYPES,
@@ -162,10 +167,23 @@ export const workflowService = {
     }
 
     if (instance.workflowType === 'refund_request' && input.decision === 'approve') {
-      if (!opts?.mfaToken) {
-        throw new LoomisError('IDENTITY_STEPUP_REQUIRED', 401, 'Step-up MFA required for refund approval');
+      const payload = instance.payload as { amountMinor?: number } | null;
+      const amountMinor = typeof payload?.amountMinor === 'number' ? payload.amountMinor : 0;
+      const tenantCtx = await loadTenantMfaContext(tenantId);
+      const tier = tenantCtx?.experienceTier ?? 'core';
+      const flags = mergeExperienceFlags(tenantCtx?.experienceFlags);
+      const stepUpRequired = refundApproveRequiresStepUp(tier, flags, amountMinor);
+
+      if (stepUpRequired) {
+        if (!opts?.mfaToken) {
+          throw new LoomisError(
+            'IDENTITY_STEPUP_REQUIRED',
+            401,
+            'Step-up MFA required for refund approval',
+          );
+        }
+        await tokenService.verifyStepUpToken(opts.mfaToken, 'refund_approve', actor.userId);
       }
-      await tokenService.verifyStepUpToken(opts.mfaToken, 'refund_approve', actor.userId);
     }
 
     if (instance.workflowType === 'psf_reversal_on_refund' && input.decision === 'approve') {

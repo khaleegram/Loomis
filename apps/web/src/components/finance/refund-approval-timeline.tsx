@@ -4,7 +4,6 @@ import {
   useCreateRefund,
   useDecideRefundWorkflow,
   usePayments,
-  useStepUpMfa,
   useWorkflowInstance,
 } from '@loomis/api-client';
 import {
@@ -50,12 +49,13 @@ import {
 } from '@loomis/ui-web';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Check, Circle, Clock } from 'lucide-react';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
-import { StepUpMfaFields } from '@/components/academic/step-up-mfa-fields';
+import { StepUpVerificationFields } from '@/components/academic/step-up-verification-fields';
 import { financeErrorMessage } from '@/lib/finance/finance-errors';
+import { useStepUpVerification } from '@/lib/auth/use-step-up-verification';
 import { refundApproverChainForTenant } from '@/lib/workflow/core-refund-chain';
 import { useTenantExperience } from '@/lib/tenant/use-tenant-experience';
 import {
@@ -81,21 +81,11 @@ const createRefundFormSchema = z.object({
   reasonNotes: z.string().min(10).max(1000),
 });
 
-const approveFormSchema = z
-  .object({
-    decision: z.enum(['approve', 'reject']),
-    comment: z.string().max(1000).optional(),
-    mfaCode: z.string().optional(),
-  })
-  .superRefine((values, ctx) => {
-    if (values.decision === 'approve' && (!values.mfaCode || values.mfaCode.length !== 6)) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'Enter your 6-digit authenticator code',
-        path: ['mfaCode'],
-      });
-    }
-  });
+const approveFormSchema = z.object({
+  decision: z.enum(['approve', 'reject']),
+  comment: z.string().max(1000).optional(),
+  mfaCode: z.string().optional(),
+});
 
 type CreateRefundFormValues = z.infer<typeof createRefundFormSchema>;
 type ApproveFormValues = z.infer<typeof approveFormSchema>;
@@ -215,8 +205,14 @@ export function RefundApprovalTimeline({
   const verifiedPayments = verifiedPaymentsQuery.data?.payments ?? [];
 
   const createRefund = useCreateRefund(tenantId, termId);
-  const stepUp = useStepUpMfa();
-  const mfaCodeRef = useRef('');
+
+  const selectedAmountMinor = selected?.amountMinor ?? 0;
+  const stepUpVerification = useStepUpVerification({
+    action: 'refund_approve',
+    refundAmountMinor: selectedAmountMinor,
+  });
+  const { channel, codeRef, ensureStepUpToken, sendStepUpSms, smsMeta, smsSent } =
+    stepUpVerification;
 
   const activeStep = workflow?.steps?.find((s) => s.status === 'active');
   const decideRefund = useDecideRefundWorkflow({
@@ -224,16 +220,7 @@ export function RefundApprovalTimeline({
     instanceId: selected?.workflowInstanceId ?? '',
     stepId: activeStep?.id ?? '',
     termId,
-    ensureStepUpToken: useCallback(
-      async (action) => {
-        const code = mfaCodeRef.current;
-        if (!code || code.length !== 6) {
-          throw new Error('Enter your 6-digit authenticator code.');
-        }
-        return stepUp.mutateAsync({ action, code });
-      },
-      [stepUp],
-    ),
+    ensureStepUpToken,
   });
 
   const approverChain = useMemo(
@@ -300,7 +287,21 @@ export function RefundApprovalTimeline({
 
   async function onApprove(values: ApproveFormValues) {
     if (!selected || !activeStep) return;
-    mfaCodeRef.current = values.mfaCode ?? '';
+    if (values.decision === 'approve' && channel !== 'none') {
+      const code = values.mfaCode ?? '';
+      if (code.length !== 6) {
+        approveForm.setError('mfaCode', {
+          message:
+            channel === 'sms'
+              ? 'Enter the 6-digit SMS code sent to your phone.'
+              : 'Enter your 6-digit authenticator code.',
+        });
+        return;
+      }
+      codeRef.current = code;
+    } else {
+      codeRef.current = '';
+    }
     try {
       await decideRefund.mutateFinancialAsync({
         decision: values.decision,
@@ -438,7 +439,15 @@ export function RefundApprovalTimeline({
                               )}
                             />
 
-                            <StepUpMfaFields control={approveForm.control} name="mfaCode" />
+                            <StepUpVerificationFields
+                              control={approveForm.control}
+                              name="mfaCode"
+                              channel={channel}
+                              maskedPhone={smsMeta.maskedPhone}
+                              devBypass={smsMeta.devBypass}
+                              onSendSms={sendStepUpSms}
+                              smsSent={smsSent}
+                            />
 
                             {approveForm.formState.errors.root ? (
                               <Alert variant="destructive">

@@ -6,7 +6,6 @@ import {
   useAcademicYears,
   useCensusPreview,
   useLockCensus,
-  useStepUpMfa,
 } from '@loomis/api-client';
 import { censusLockRequest, type CensusLockRequest } from '@loomis/contracts';
 import { formatKobo } from '@loomis/core';
@@ -26,16 +25,17 @@ import {
   cn,
 } from '@loomis/ui-web';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import { CensusLockHero } from '@/components/academic/census-lock-hero';
 import { CensusLockStepper } from '@/components/academic/census-lock-stepper';
-import { StepUpMfaFields } from '@/components/academic/step-up-mfa-fields';
+import { StepUpVerificationFields } from '@/components/academic/step-up-verification-fields';
 import { PageBody } from '@/components/school/school-shell';
 import { academicErrorMessage } from '@/lib/academic/academic-errors';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
+import { useStepUpVerification } from '@/lib/auth/use-step-up-verification';
 import { SEMANTIC } from '@/lib/design/surfaces';
 import { useCan } from '@/lib/auth/use-capability';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
@@ -87,8 +87,9 @@ export default function CensusLockPage() {
   const yearLabel = yearsQuery.data?.academicYears.find((year) => year.id === yearId)?.label ?? null;
 
   const preview = useCensusPreview(tenantId ?? '', termId);
-  const stepUp = useStepUpMfa();
-  const mfaCodeRef = useRef('');
+  const stepUpVerification = useStepUpVerification({ action: 'census_lock' });
+  const { channel, codeRef, ensureStepUpToken, sendStepUpSms, smsMeta, smsSent } =
+    stepUpVerification;
 
   const form = useForm<CensusLockFormValues>({
     resolver: zodResolver(censusLockFormSchema),
@@ -101,14 +102,6 @@ export default function CensusLockPage() {
       psfAcknowledged: false,
     },
   });
-
-  const ensureStepUpToken = useCallback(async () => {
-    const code = mfaCodeRef.current;
-    if (!code || code.length !== 6) {
-      throw new Error('Enter your authenticator code on the final step.');
-    }
-    return stepUp.mutateAsync({ action: 'census_lock', code });
-  }, [stepUp]);
 
   const lockCensus = useLockCensus({
     tenantId: tenantId ?? '',
@@ -143,8 +136,8 @@ export default function CensusLockPage() {
 
   const mfaCode = form.watch('mfaCode');
   useEffect(() => {
-    mfaCodeRef.current = mfaCode;
-  }, [mfaCode]);
+    codeRef.current = mfaCode;
+  }, [mfaCode, codeRef]);
 
   if (!canLock) {
     return (
@@ -490,7 +483,15 @@ export default function CensusLockPage() {
                         )}
                       />
 
-                      <StepUpMfaFields control={form.control} name="mfaCode" />
+                      <StepUpVerificationFields
+                        control={form.control}
+                        name="mfaCode"
+                        channel={channel}
+                        maskedPhone={smsMeta.maskedPhone}
+                        devBypass={smsMeta.devBypass}
+                        onSendSms={sendStepUpSms}
+                        smsSent={smsSent}
+                      />
                     </div>
                   </div>
                 ) : null}

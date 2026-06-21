@@ -44,6 +44,9 @@ export function respondAuthenticated(bundle: AuthenticatedBundle): NextResponse 
     tenantId: bundle.tenantId,
     mustChangePassword: bundle.mustChangePassword ?? false,
     displayName: bundle.displayName ?? undefined,
+    ...((bundle as { persistentToken?: string }).persistentToken
+      ? { persistentToken: (bundle as { persistentToken?: string }).persistentToken }
+      : {}),
   });
   setAuthCookies(
     res,
@@ -80,6 +83,7 @@ interface BackendAuthData {
   refreshToken?: string;
   mustChangePassword?: boolean;
   displayName?: string;
+  persistentToken?: string;
   [key: string]: unknown;
 }
 
@@ -117,6 +121,9 @@ export async function handleAuthBackendResponse(response: Response): Promise<Nex
       accessToken: data.accessToken,
       expiresAt: data.expiresAt,
       refreshToken: data.refreshToken,
+      ...(typeof data.persistentToken === 'string'
+        ? { persistentToken: data.persistentToken }
+        : {}),
     });
   }
 

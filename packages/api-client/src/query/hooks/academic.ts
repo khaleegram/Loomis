@@ -24,6 +24,8 @@ import type {
   StepUpAction,
   StepUpRequest,
   StepUpResponse,
+  StepUpSendSmsRequest,
+  StepUpSendSmsResponse,
   UpsertProgressionRequest,
 } from '@loomis/contracts';
 import type { ApiClient } from '../../http/client.js';
@@ -209,6 +211,15 @@ export function useStepUpMfa() {
   return useMutation({
     mutationFn: (body: StepUpRequest) =>
       client.post<StepUpResponse>('/auth/stepup', body),
+  });
+}
+
+/** Dispatches an SMS OTP for Core tier step-up actions. */
+export function useSendStepUpSms() {
+  const client = useApiClient();
+  return useMutation({
+    mutationFn: (body: StepUpSendSmsRequest) =>
+      client.post<StepUpSendSmsResponse>('/auth/stepup/sms/send', body),
   });
 }
 

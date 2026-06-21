@@ -5,6 +5,43 @@ import { Button, Skeleton } from '@loomis/ui-web';
 import { MonitorSmartphone, Shield } from 'lucide-react';
 
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
+import { useTenantExperience } from '@/lib/tenant/use-tenant-experience';
+
+function CoreMfaPolicyNotice() {
+  const { isCore, isAdvanced } = useTenantExperience();
+
+  if (!isCore && !isAdvanced) return null;
+
+  return (
+    <section className={`${ACADEMIC_UI.dataPanel} space-y-3 p-5`}>
+      <h2 className="text-[14px] font-semibold text-neutral-900">Sign-in &amp; verification policy</h2>
+      {isCore ? (
+        <ul className="list-disc space-y-2 pl-5 text-[13px] text-neutral-600">
+          <li>
+            School Owner, Principal, and Finance staff sign in with password plus SMS on a new device.
+            Trusted devices skip SMS for 30 days.
+          </li>
+          <li>Census lock always requires an SMS code (Owner).</li>
+          <li>
+            Refund approvals at or above ₦100,000 require SMS verification; smaller refunds do not.
+          </li>
+          <li>Teachers sign in with password only.</li>
+          <li>
+            Parents use password on trusted devices; new devices and online fee payments require SMS.
+          </li>
+          <li className="text-neutral-500">
+            Local development without Termii: SMS codes use <span className="font-mono">000000</span>.
+          </li>
+        </ul>
+      ) : (
+        <p className="text-[13px] text-neutral-600">
+          Advanced tier: authenticator (TOTP) step-up applies to high-risk actions such as census
+          lock, large refunds, and data export. Optional SMS login may be enabled via tenant flags.
+        </p>
+      )}
+    </section>
+  );
+}
 
 export default function SecuritySettingsPage() {
   const sessions = useSessions();
@@ -17,6 +54,8 @@ export default function SecuritySettingsPage() {
       <p className="text-[13px] text-neutral-500">
         Manage your active sessions and registered devices (US-HRM-008).
       </p>
+
+      <CoreMfaPolicyNotice />
 
       <section>
         <div className="mb-3 flex items-center gap-2">

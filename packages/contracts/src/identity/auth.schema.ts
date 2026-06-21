@@ -21,6 +21,9 @@ export const loginResponse = z.discriminatedUnion('outcome', [
   z.object({
     outcome: z.literal('mfa_required'),
     mfaChallengeId: z.string().uuid(),
+    channel: z.enum(['sms', 'totp']).default('totp'),
+    maskedPhone: z.string().optional(),
+    devBypass: z.boolean().optional(),
   }),
   z.object({
     outcome: z.literal('mfa_enrollment_required'),
@@ -49,9 +52,23 @@ export const stepUpAction = z.enum([
 ]);
 export type StepUpAction = z.infer<typeof stepUpAction>;
 
+export const stepUpSendSmsRequest = z.object({
+  action: stepUpAction,
+  refundAmountMinor: z.number().int().nonnegative().optional(),
+});
+export type StepUpSendSmsRequest = z.infer<typeof stepUpSendSmsRequest>;
+
+export const stepUpSendSmsResponse = z.object({
+  channel: z.enum(['sms', 'totp']),
+  maskedPhone: z.string().optional(),
+  devBypass: z.boolean().optional(),
+});
+export type StepUpSendSmsResponse = z.infer<typeof stepUpSendSmsResponse>;
+
 export const stepUpRequest = z.object({
   action: stepUpAction,
   code: z.string().length(6),
+  refundAmountMinor: z.number().int().nonnegative().optional(),
 });
 export type StepUpRequest = z.infer<typeof stepUpRequest>;
 

@@ -31,7 +31,7 @@ type CodeForm = Pick<MfaVerifyRequest, 'code'>;
 export default function MfaVerifyPage() {
   const router = useRouter();
   const { completeAuthentication } = useAuth();
-  const { mfaChallengeId, reset } = useAuthFlow();
+  const { mfaChallengeId, mfaChannel, maskedPhone, devBypass, reset } = useAuthFlow();
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -60,10 +60,18 @@ export default function MfaVerifyPage() {
     }
   });
 
+  const isSms = mfaChannel === 'sms';
+
   return (
     <AuthFormCard
       title="Two-step verification"
-      subtitle="Enter the 6-digit code from your authenticator app"
+      subtitle={
+        isSms
+          ? maskedPhone
+            ? `Enter the 6-digit code sent to ${maskedPhone}`
+            : 'Enter the 6-digit code sent to your phone'
+          : 'Enter the 6-digit code from your authenticator app'
+      }
     >
       <div className="mb-5 flex justify-center">
         <div className="flex size-14 items-center justify-center rounded-2xl bg-gold-400/10 ring-1 ring-gold-400/20">
@@ -85,7 +93,7 @@ export default function MfaVerifyPage() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-neutral-300 text-xs uppercase tracking-wider font-semibold">
-                  Authentication code
+                  {isSms ? 'SMS code' : 'Authentication code'}
                 </FormLabel>
                 <FormControl>
                   <Input
@@ -119,7 +127,14 @@ export default function MfaVerifyPage() {
           </Button>
 
           <p className="text-center text-xs text-neutral-500">
-            Open your authenticator app to find your 6-digit code.
+            {isSms ? (
+              <>
+                Check your phone for the verification text.
+                {devBypass ? ' In development without Termii, use 000000.' : null}
+              </>
+            ) : (
+              'Open your authenticator app to find your 6-digit code.'
+            )}
           </p>
         </form>
       </Form>

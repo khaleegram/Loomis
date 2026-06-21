@@ -12,6 +12,8 @@ import {
   type RefreshTokenRequest,
   stepUpRequest,
   type StepUpRequest,
+  stepUpSendSmsRequest,
+  type StepUpSendSmsRequest,
 } from '@loomis/contracts';
 import { authenticate } from '../../../middleware/authenticate.js';
 import { loginRateLimiter } from '../../../middleware/login-rate-limiter.js';
@@ -25,6 +27,7 @@ import {
   mfaVerifyHandler,
   refreshHandler,
   stepUpHandler,
+  stepUpSendSmsHandler,
 } from '../handlers/index.js';
 
 /**
@@ -62,6 +65,12 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     '/auth/stepup',
     { preHandler: [authenticate], preValidation: [validateBody(stepUpRequest)] },
     stepUpHandler,
+  );
+
+  app.post<{ Body: StepUpSendSmsRequest }>(
+    '/auth/stepup/sms/send',
+    { preHandler: [authenticate], preValidation: [validateBody(stepUpSendSmsRequest)] },
+    stepUpSendSmsHandler,
   );
 
   app.post<{ Body: ChangePasswordRequest }>(

@@ -18,6 +18,9 @@ export async function loginHandler(
     return sendSuccess(reply, {
       outcome: 'mfa_required' as const,
       mfaChallengeId: result.mfaChallengeId,
+      channel: result.channel,
+      ...(result.maskedPhone ? { maskedPhone: result.maskedPhone } : {}),
+      ...(result.devBypass ? { devBypass: result.devBypass } : {}),
     });
   }
   return sendSuccess(reply, {

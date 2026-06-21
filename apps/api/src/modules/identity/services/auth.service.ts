@@ -1,5 +1,10 @@
 import type { Role, StepUpAction } from '@loomis/contracts';
 import { uuidv7 } from 'uuidv7';
+import {
+  coreLoginRequiresSms,
+  mergeExperienceFlags,
+  stepUpUsesSms,
+} from '@loomis/core';
 import { db } from '../../../shared/db.js';
 import { LoomisError } from '../../../shared/errors.js';
 import { getRedis } from '../../../shared/redis.js';
@@ -13,6 +18,8 @@ import { deviceService } from './device.service.js';
 import { mfaService } from './mfa.service.js';
 import { passwordService } from './password.service.js';
 import { sessionService } from './session.service.js';
+import { smsOtpService } from './sms-otp.service.js';
+import { loadTenantMfaContext } from './tenant-mfa-context.js';
 import { tokenService } from './token.service.js';
 
 const LOCKOUT_WINDOW_MS = 10 * 60 * 1000;
@@ -29,6 +36,7 @@ interface MfaChallengePayload {
   platform: DevicePlatform;
   deviceFingerprint: string | null;
   attempts: number;
+  channel: 'sms' | 'totp';
 }
 
 export interface LoginContext {
@@ -63,7 +71,13 @@ export interface AuthenticatedBundle {
 
 export type LoginResult =
   | { kind: 'authenticated'; bundle: AuthenticatedBundle }
-  | { kind: 'mfa_required'; mfaChallengeId: string }
+  | {
+      kind: 'mfa_required';
+      mfaChallengeId: string;
+      channel: 'sms' | 'totp';
+      maskedPhone?: string;
+      devBypass?: boolean;
+    }
   | { kind: 'mfa_enrollment_required'; enrollmentToken: string };
 
 type UserRow = NonNullable<Awaited<ReturnType<typeof userRepository.findByEmail>>>;
@@ -149,13 +163,93 @@ export const authService = {
             return { kind: 'authenticated', bundle };
           }
         }
-        const mfaChallengeId = await this.createMfaChallenge(user.id, ctx);
-        return { kind: 'mfa_required', mfaChallengeId };
+        const mfaChallengeId = await this.createMfaChallenge(user.id, ctx, 'totp');
+        return { kind: 'mfa_required', mfaChallengeId, channel: 'totp' as const };
       }
 
       if (mfaMandatory) {
         const { token } = await tokenService.signEnrollmentToken(user.id);
         return { kind: 'mfa_enrollment_required', enrollmentToken: token };
+      }
+    }
+
+    const tenantCtx = await loadTenantMfaContext(user.tenantId);
+    if (
+      tenantCtx &&
+      coreLoginRequiresSms(
+        role,
+        tenantCtx.experienceTier,
+        mergeExperienceFlags(tenantCtx.experienceFlags),
+      )
+    ) {
+      if (ctx.persistentToken && ctx.deviceFingerprint) {
+        const deviceId = await deviceService.verifyPersistentToken(
+          user.id,
+          ctx.deviceFingerprint,
+          ctx.persistentToken,
+        );
+        if (deviceId) {
+          const bundle = await this.issueAuthenticatedSession(user, ctx, {
+            mfaCompleted: true,
+            deviceId,
+          });
+          return { kind: 'authenticated', bundle };
+        }
+      }
+
+      if (!user.phone) {
+        throw new LoomisError(
+          'IDENTITY_SMS_PHONE_REQUIRED',
+          422,
+          'Your account needs a phone number on file before you can sign in with SMS verification',
+        );
+      }
+
+      const mfaChallengeId = await this.createMfaChallenge(user.id, ctx, 'sms');
+      const delivery = await smsOtpService.sendOtp({
+        userId: user.id,
+        phoneE164: user.phone,
+        purpose: 'login',
+      });
+      return {
+        kind: 'mfa_required',
+        mfaChallengeId,
+        channel: 'sms',
+        maskedPhone: delivery.maskedPhone,
+        devBypass: delivery.devBypass,
+      };
+    }
+
+    if (role === 'parent') {
+      if (ctx.persistentToken && ctx.deviceFingerprint) {
+        const deviceId = await deviceService.verifyPersistentToken(
+          user.id,
+          ctx.deviceFingerprint,
+          ctx.persistentToken,
+        );
+        if (deviceId) {
+          const bundle = await this.issueAuthenticatedSession(user, ctx, {
+            mfaCompleted: true,
+            deviceId,
+          });
+          return { kind: 'authenticated', bundle };
+        }
+      }
+
+      if (user.phone) {
+        const mfaChallengeId = await this.createMfaChallenge(user.id, ctx, 'sms');
+        const delivery = await smsOtpService.sendOtp({
+          userId: user.id,
+          phoneE164: user.phone,
+          purpose: 'parent_new_device',
+        });
+        return {
+          kind: 'mfa_required',
+          mfaChallengeId,
+          channel: 'sms',
+          maskedPhone: delivery.maskedPhone,
+          devBypass: delivery.devBypass,
+        };
       }
     }
 
@@ -192,21 +286,44 @@ export const authService = {
     const challenge = JSON.parse(raw) as MfaChallengePayload;
 
     const user = await userRepository.findById(challenge.userId);
-    const mfaConfig = await mfaRepository.findByUserId(challenge.userId);
-    if (!user || !mfaConfig || mfaConfig.status !== 'active') {
+    if (!user) {
       await redis.del(key);
-      throw new LoomisError('IDENTITY_MFA_INVALID', 401, 'MFA is not available for this account');
+      throw new LoomisError('IDENTITY_MFA_INVALID', 401, 'MFA challenge expired or not found');
     }
 
-    const valid = mfaService.verifyTotp(mfaConfig.encryptedSecret, code);
-    if (!valid) {
-      challenge.attempts += 1;
-      if (challenge.attempts >= MFA_CHALLENGE_MAX_ATTEMPTS) {
-        await redis.del(key);
-      } else {
-        await redis.setex(key, MFA_CHALLENGE_TTL_SECONDS, JSON.stringify(challenge));
+    if (challenge.channel === 'sms') {
+      try {
+        await smsOtpService.verifyOtp({
+          userId: challenge.userId,
+          purpose: user.role === 'parent' ? 'parent_new_device' : 'login',
+          code,
+        });
+      } catch (error) {
+        challenge.attempts += 1;
+        if (challenge.attempts >= MFA_CHALLENGE_MAX_ATTEMPTS) {
+          await redis.del(key);
+        } else {
+          await redis.setex(key, MFA_CHALLENGE_TTL_SECONDS, JSON.stringify(challenge));
+        }
+        throw error;
       }
-      throw new LoomisError('IDENTITY_MFA_INVALID', 401, 'Invalid MFA code');
+    } else {
+      const mfaConfig = await mfaRepository.findByUserId(challenge.userId);
+      if (!mfaConfig || mfaConfig.status !== 'active') {
+        await redis.del(key);
+        throw new LoomisError('IDENTITY_MFA_INVALID', 401, 'MFA is not available for this account');
+      }
+
+      const valid = mfaService.verifyTotp(mfaConfig.encryptedSecret, code);
+      if (!valid) {
+        challenge.attempts += 1;
+        if (challenge.attempts >= MFA_CHALLENGE_MAX_ATTEMPTS) {
+          await redis.del(key);
+        } else {
+          await redis.setex(key, MFA_CHALLENGE_TTL_SECONDS, JSON.stringify(challenge));
+        }
+        throw new LoomisError('IDENTITY_MFA_INVALID', 401, 'Invalid MFA code');
+      }
     }
 
     await redis.del(key);
@@ -235,16 +352,62 @@ export const authService = {
     );
   },
 
-  async createMfaChallenge(userId: string, ctx: LoginContext): Promise<string> {
+  async createMfaChallenge(
+    userId: string,
+    ctx: LoginContext,
+    channel: 'sms' | 'totp',
+  ): Promise<string> {
     const challengeId = uuidv7();
     const payload: MfaChallengePayload = {
       userId,
       platform: ctx.platform,
       deviceFingerprint: ctx.deviceFingerprint ?? null,
       attempts: 0,
+      channel,
     };
     await getRedis().setex(mfaChallengeKey(challengeId), MFA_CHALLENGE_TTL_SECONDS, JSON.stringify(payload));
     return challengeId;
+  },
+
+  /** Sends an SMS OTP for a high-risk step-up action (Core tier). */
+  async sendStepUpSms(
+    userId: string,
+    action: StepUpAction,
+    opts?: { refundAmountMinor?: number },
+  ): Promise<{ maskedPhone: string; devBypass: boolean; channel: 'sms' | 'totp' }> {
+    const user = await userRepository.findById(userId);
+    if (!user) {
+      throw new LoomisError('IDENTITY_SESSION_INVALIDATED', 401, 'User not found');
+    }
+
+    const tenantCtx = await loadTenantMfaContext(user.tenantId);
+    const flags = mergeExperienceFlags(tenantCtx?.experienceFlags);
+    const tier = tenantCtx?.experienceTier ?? 'core';
+    const usesSms = stepUpUsesSms(action, tier, flags, {
+      ...(opts?.refundAmountMinor !== undefined
+        ? { refundAmountMinor: opts.refundAmountMinor }
+        : {}),
+    });
+
+    if (!usesSms) {
+      return { maskedPhone: '', devBypass: false, channel: 'totp' };
+    }
+
+    if (!user.phone) {
+      throw new LoomisError(
+        'IDENTITY_SMS_PHONE_REQUIRED',
+        422,
+        'A phone number is required for SMS verification',
+      );
+    }
+
+    const delivery = await smsOtpService.sendOtp({
+      userId,
+      phoneE164: user.phone,
+      purpose: 'step_up',
+      action,
+    });
+    return { ...delivery, channel: 'sms' };
   },
 
   /** Creates the session + access token + first refresh token (single shared issuer). */
@@ -423,19 +586,44 @@ export const authService = {
     await tokenService.blacklistJti(params.accessJti, params.accessExpiresAt);
   },
 
-  /** Issues a step-up proof token for a high-risk action after a fresh TOTP (SEC-AUTH-008). */
+  /** Issues a step-up proof token after SMS or TOTP verification (SEC-AUTH-008). */
   async stepUp(
     userId: string,
     action: StepUpAction,
     code: string,
+    opts?: { refundAmountMinor?: number },
   ): Promise<{ mfaToken: string; expiresAt: Date }> {
-    const mfaConfig = await mfaRepository.findByUserId(userId);
-    if (!mfaConfig || mfaConfig.status !== 'active') {
-      throw new LoomisError('IDENTITY_MFA_NOT_ENROLLED', 403, 'MFA must be enrolled for step-up');
+    const user = await userRepository.findById(userId);
+    if (!user) {
+      throw new LoomisError('IDENTITY_SESSION_INVALIDATED', 401, 'User not found');
     }
-    if (!mfaService.verifyTotp(mfaConfig.encryptedSecret, code)) {
-      throw new LoomisError('IDENTITY_MFA_INVALID', 401, 'Invalid MFA code');
+
+    const tenantCtx = await loadTenantMfaContext(user.tenantId);
+    const flags = mergeExperienceFlags(tenantCtx?.experienceFlags);
+    const tier = tenantCtx?.experienceTier ?? 'core';
+    const usesSms = stepUpUsesSms(action, tier, flags, {
+      ...(opts?.refundAmountMinor !== undefined
+        ? { refundAmountMinor: opts.refundAmountMinor }
+        : {}),
+    });
+
+    if (usesSms) {
+      await smsOtpService.verifyOtp({
+        userId,
+        purpose: 'step_up',
+        action,
+        code,
+      });
+    } else {
+      const mfaConfig = await mfaRepository.findByUserId(userId);
+      if (!mfaConfig || mfaConfig.status !== 'active') {
+        throw new LoomisError('IDENTITY_MFA_NOT_ENROLLED', 403, 'MFA must be enrolled for step-up');
+      }
+      if (!mfaService.verifyTotp(mfaConfig.encryptedSecret, code)) {
+        throw new LoomisError('IDENTITY_MFA_INVALID', 401, 'Invalid MFA code');
+      }
     }
+
     const { token, expiresAt } = await tokenService.signStepUpToken(userId, action);
     return { mfaToken: token, expiresAt };
   },

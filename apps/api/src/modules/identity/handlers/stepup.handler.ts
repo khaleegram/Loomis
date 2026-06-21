@@ -14,8 +14,10 @@ export async function stepUpHandler(
     throw new LoomisError('IDENTITY_SESSION_INVALIDATED', 401, 'Not authenticated');
   }
 
-  const { action, code } = req.body;
-  const { mfaToken, expiresAt } = await authService.stepUp(user.sub, action, code);
+  const { action, code, refundAmountMinor } = req.body;
+  const { mfaToken, expiresAt } = await authService.stepUp(user.sub, action, code, {
+    ...(refundAmountMinor !== undefined ? { refundAmountMinor } : {}),
+  });
 
   return sendSuccess(reply, { mfaToken, expiresAt: expiresAt.toISOString() });
 }

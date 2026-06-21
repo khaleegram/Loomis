@@ -22,6 +22,7 @@ import {
   initializeOnlinePaymentHandler,
   listPaymentsHandler,
   logOfflinePaymentHandler,
+  sendParentPaymentOtpHandler,
   verifyOfflinePaymentHandler,
 } from '../handlers/index.js';
 
@@ -74,6 +75,14 @@ export async function paymentsRoutes(app: FastifyInstance): Promise<void> {
       preValidation: [validateBody(initializeOnlinePaymentRequest)],
     },
     initializeOnlinePaymentHandler,
+  );
+
+  app.post<{ Params: { tenantId: string } }>(
+    '/tenants/:tenantId/payments/online/send-otp',
+    {
+      preHandler: [authenticate, requireTenantMatch, requireRole('parent')],
+    },
+    sendParentPaymentOtpHandler,
   );
 
   app.get<{ Params: { tenantId: string }; Querystring: PaymentsQuery }>(

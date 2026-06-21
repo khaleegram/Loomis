@@ -288,8 +288,16 @@ export const initializeOnlinePaymentRequest = z.object({
   payerEmail: z.string().email(),
   /** Selects redirect URL after Paystack checkout (web vs mobile deep link). */
   clientPlatform: paymentClientPlatform.default('web'),
+  /** SMS OTP from POST …/payments/online/send-otp (parent fee payment, tier plan §4). */
+  smsOtpCode: z.string().length(6).optional(),
 });
 export type InitializeOnlinePaymentRequest = z.infer<typeof initializeOnlinePaymentRequest>;
+
+export const parentPaymentSendOtpResponse = z.object({
+  maskedPhone: z.string(),
+  devBypass: z.boolean().optional(),
+});
+export type ParentPaymentSendOtpResponse = z.infer<typeof parentPaymentSendOtpResponse>;
 
 export const paymentGatewayConfigResponse = z.object({
   provider: paymentGatewayProvider,

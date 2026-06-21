@@ -62,7 +62,11 @@ export function LoginScreen() {
           router.replace(homePathForRole(result.role));
           return;
         case 'mfa_required':
-          setMfaChallenge(result.mfaChallengeId);
+          setMfaChallenge(result.mfaChallengeId, {
+            channel: result.channel,
+            maskedPhone: result.maskedPhone,
+            devBypass: result.devBypass,
+          });
           router.push('/mfa');
           return;
         case 'mfa_enrollment_required':
