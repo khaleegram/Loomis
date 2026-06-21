@@ -18,7 +18,8 @@ import {
 } from '../handlers/index.js';
 
 const admissionsStaff = ['school_owner', 'principal', 'admin_officer'] as const;
-const admissionsApprovers = ['school_owner', 'principal'] as const;
+/** Route gate; service enforces admissionsRequirePrincipalApproval for admin_officer. */
+const admissionsDecisionRoles = ['school_owner', 'principal', 'admin_officer'] as const;
 
 export async function admissionsRoutes(app: FastifyInstance): Promise<void> {
   app.post<{ Params: { tenantId: string }; Body: CreateAdmissionRequest }>(
@@ -55,7 +56,7 @@ export async function admissionsRoutes(app: FastifyInstance): Promise<void> {
       preHandler: [
         authenticate,
         requireTenantMatch,
-        requireRole(...admissionsApprovers),
+        requireRole(...admissionsDecisionRoles),
         requireIdempotencyKey,
       ],
       preValidation: [validateBody(admissionDecisionRequest)],

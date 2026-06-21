@@ -20,18 +20,17 @@ body {
   background: var(--background);
 }
 
-/* Modern premium card — uses global semantic surface tokens */
+/* Modern premium card — elevation over outlines (Step 4b quality bar) */
 .card {
   background: var(--surface-card);
   color: var(--card-foreground);
-  border: 1px solid var(--surface-card-border);
+  border: none;
   border-radius: 16px;
   box-shadow: var(--surface-card-shadow);
   transition:
     box-shadow 250ms cubic-bezier(0.4, 0, 0.2, 1),
     transform 250ms cubic-bezier(0.4, 0, 0.2, 1),
-    background-color 0.25s ease,
-    border-color 0.25s ease;
+    background-color 0.25s ease;
 }
 
 .card:hover {
@@ -59,20 +58,21 @@ body {
   position: relative;
   overflow: hidden;
   border-radius: 1rem;
-  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  border: none;
   background: var(--card);
   color: var(--card-foreground);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--surface-card-shadow);
 }
 
 .hero-pill {
   border-radius: 9999px;
-  border: 1px solid var(--border);
+  border: none;
   background: color-mix(in srgb, var(--muted) 55%, transparent);
   padding: 0.375rem 0.75rem;
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--muted-foreground);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 h1,

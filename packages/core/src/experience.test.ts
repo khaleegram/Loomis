@@ -8,6 +8,7 @@ describe('mergeExperienceFlags', () => {
       timetableDedicatedOfficer: false,
       deputyExamEnabled: false,
       totpOptional: false,
+      admissionsRequirePrincipalApproval: false,
     });
   });
 

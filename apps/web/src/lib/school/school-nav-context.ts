@@ -16,5 +16,6 @@ export const DEFAULT_SCHOOL_NAV_CONTEXT: SchoolNavContext = {
     timetableDedicatedOfficer: false,
     deputyExamEnabled: false,
     totpOptional: false,
+    admissionsRequirePrincipalApproval: false,
   },
 };

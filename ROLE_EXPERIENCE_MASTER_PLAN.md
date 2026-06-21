@@ -79,7 +79,7 @@ Full alignment PR must update `packages/core/src/capabilities.ts` to match this 
 | `subject.assign` | | ✓ | ✓ | | | | | | | |
 | `classteacher.assign` | | ✓ | ✓ | | | | | | | |
 | `admissions.manage` | | | ✓ | | | | | | | |
-| `admissions.approve` | ✓ | ✓ | | | | | | | | |
+| `admissions.approve` | ✓ | ✓ | ✓* | | | | | | | |
 | `academic_year.manage` | ✓ | ✓ | | | | | | | | |
 | `term.manage` | ✓ | ✓ | | | | | | | | |
 | `census.lock` | ✓ | ✓ | | | | | | | | |

@@ -10,6 +10,8 @@
 
 **Sprint size assumption:** ~1 week focused dev per sprint (adjust to team capacity). Do not start sprint N+1 until sprint N exit criteria pass.
 
+**UI quality gate (every sprint):** No sprint is done until touched surfaces pass **Step 4b** (`.cursor/rules/loomis-ui-delivery.mdc`). Cards and panels use **elevation + soft tint** — never hard black/neutral outlines, dashed borders, or `Button variant="outline"` as primary chrome. Reuse `ACADEMIC_UI` tokens (`dataPanel`, `chipBar`, `subNavShell`, `btnGhost`, gold `btnPrimary`). Compare side-by-side with `/school/staff` or `/school/timetable` at 375px + desktop before marking exit criteria ✅.
+
 ---
 
 ## Sprint map (overview)
@@ -180,17 +182,19 @@
 
 ### Deliverables
 
-- [ ] **Simple tenant audit log** page `/school/settings/audit` — read-only list, last 90 days, Core filters (actor, date, action type)
-- [ ] API hook `useTenantAuditLogSearch` → existing `GET /tenants/:tenantId/audit/events`
-- [ ] Onboarding question: one finance officer vs split (UI only stores `financeMode`; split flow Sprint 8)
-- [ ] Settings: tier display read-only Core; Advanced upgrade CTA placeholder
-- [ ] Update `docs/loomis-roles-and-logins.md`: Core paths, test logins, tier column
-- [ ] **Core QA matrix:** 375px + desktop × Owner, Principal, Admin, Finance Officer, Exam, Teacher, CT, Parent
-- [ ] Maestro/smoke: parent smoke + one Core principal path
+- [x] **Simple tenant audit log** page `/school/settings/audit` — read-only list, last 90 days, Core filters (actor, date, action type)
+- [x] API hook `useTenantAuditLogSearch` → existing `GET /tenants/:tenantId/audit/events`
+- [x] Onboarding question: one finance officer vs split (UI only stores `financeMode`; split flow Sprint 8)
+- [x] Settings: tier display read-only Core; Advanced upgrade CTA placeholder
+- [x] Update `docs/loomis-roles-and-logins.md`: Core paths, test logins, tier column
+- [x] **Core QA matrix:** 375px + desktop × Owner, Principal, Admin, Finance Officer, Exam, Teacher, CT, Parent — `docs/CORE_QA_MATRIX.md`
+- [x] **UI polish pass:** Students/admissions, settings, audit — no outline-primary cards; all toolbars use `ACADEMIC_UI` chip/sub-nav tokens
+- [x] Maestro/smoke: parent smoke + one Core principal path — parent: `apps/mobile/.maestro/parent-smoke.yaml`; principal: QA matrix § Core paths
 
 ### Exit criteria
 
 - **Core MVP definition of done** (tier plan §10 checklist complete)
+- **Visual quality:** Core surfaces pass Step 4b — shadow/tint panels, gold CTAs, no outline-card shells
 - `pnpm --filter @loomis/web build` clean
 - Product sign-off: Core tenant usable at a 10-staff school
 

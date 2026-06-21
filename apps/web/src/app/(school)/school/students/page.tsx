@@ -6,12 +6,14 @@ import { useStudents } from '@loomis/api-client';
 import { UserPlus, Users } from 'lucide-react';
 import type { StudentStatus } from '@loomis/contracts';
 
+import { CreateAdmissionSheet } from '@/components/student/create-admission-sheet';
 import { StudentHero, StudentHeroSkeleton } from '@/components/student/student-hero';
 import { StudentToolbar, type StudentStatusFilter } from '@/components/student/student-toolbar';
 import { StudentDirectoryCards, StudentDirectoryCardsSkeleton } from '@/components/student/student-directory-cards';
 import { StudentDirectoryTable, StudentDirectoryTableSkeleton } from '@/components/student/student-directory-table';
 import { PageBody } from '@/components/school/school-shell';
 import { useCan, useCanAny } from '@/lib/auth/use-capability';
+import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { computeStudentMetrics } from '@/lib/student/student-labels';
 import { SEMANTIC } from '@/lib/design/surfaces';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
@@ -34,8 +36,10 @@ function saveViewMode(mode: ViewMode) {
 export default function StudentRegistryPage() {
   const tenantId = useTenantId();
   const canView = useCanAny(['student.promote', 'admissions.manage', 'admissions.approve']);
-  const canManageAdmissions = useCanAny(['admissions.manage', 'admissions.approve']);
+  const canManageAdmissions = useCan('admissions.manage');
+  const canReviewAdmissions = useCan('admissions.approve');
 
+  const [createOpen, setCreateOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StudentStatusFilter>('all');
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>(getSavedViewMode);
@@ -76,23 +80,34 @@ export default function StudentRegistryPage() {
   }
 
   return (
-    <PageBody className="max-w-[1400px] px-4 py-5 sm:px-6 sm:py-6 lg:px-12 lg:py-8">
-      <div className="space-y-8">
-        {/* 1. Hero */}
-        {isLoading ? <StudentHeroSkeleton /> : <StudentHero metrics={metrics} />}
+    <>
+      <PageBody className="max-w-[1400px] px-4 py-5 sm:px-6 sm:py-6 lg:px-12 lg:py-8">
+        <div className="space-y-8">
+          {isLoading ? <StudentHeroSkeleton /> : <StudentHero metrics={metrics} />}
 
-        {/* 2. Admissions CTA — right under the hero */}
-        {canManageAdmissions && !isLoading && students.length > 0 ? (
-          <div className="mb-6">
-            <Link
-              href="/school/students/admissions"
-              className={`inline-flex h-10 items-center gap-2 rounded-lg px-5 text-[14px] font-medium transition-colors duration-150 ${SEMANTIC.cta.primary}`}
-            >
-              <UserPlus size={16} />
-              Admissions Pipeline
+          <div className="flex flex-wrap items-center gap-3">
+            {canManageAdmissions ? (
+              <button
+                type="button"
+                onClick={() => setCreateOpen(true)}
+                className={`inline-flex h-10 items-center gap-2 rounded-lg px-5 text-[14px] font-medium transition-colors duration-150 ${SEMANTIC.cta.primary}`}
+              >
+                <UserPlus size={16} />
+                New Application
+              </button>
+            ) : canReviewAdmissions ? (
+              <Link
+                href="/school/students/admissions"
+                className={`inline-flex h-10 items-center gap-2 rounded-lg px-5 text-[14px] font-medium transition-colors duration-150 ${SEMANTIC.cta.primary}`}
+              >
+                <UserPlus size={16} />
+                Review Admissions
+              </Link>
+            ) : null}
+            <Link href="/school/students/admissions" className={ACADEMIC_UI.btnGhost}>
+              Admissions pipeline
             </Link>
           </div>
-        ) : null}
 
         {/* 3. Error */}
         {isError ? (
@@ -112,13 +127,19 @@ export default function StudentRegistryPage() {
               Start by registering applicants in the admissions pipeline.
             </p>
             {canManageAdmissions ? (
-              <Link
-                href="/school/students/admissions"
+              <button
+                type="button"
+                onClick={() => setCreateOpen(true)}
                 className={`inline-flex h-10 items-center gap-2 rounded-lg px-5 text-sm font-medium transition-colors ${SEMANTIC.cta.primary}`}
               >
                 <UserPlus size={16} />
-                Go to Admissions
-              </Link>
+                Register first applicant
+              </button>
+            ) : canReviewAdmissions ? (
+              <p className="max-w-md text-center text-xs text-neutral-500">
+                New applicants are registered by the Admin Officer. You can review and approve
+                applications on the admissions pipeline.
+              </p>
             ) : null}
           </div>
         ) : null}
@@ -149,7 +170,7 @@ export default function StudentRegistryPage() {
                 </p>
                 <button
                   onClick={() => { setSearch(''); setStatusFilter('all'); }}
-                  className="h-9 rounded-lg border border-neutral-200 px-4 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
+                  className={ACADEMIC_UI.btnSecondarySm}
                 >
                   Clear filters
                 </button>
@@ -175,5 +196,14 @@ export default function StudentRegistryPage() {
         ) : null}
       </div>
     </PageBody>
+
+      {canManageAdmissions && tenantId ? (
+        <CreateAdmissionSheet
+          tenantId={tenantId}
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+        />
+      ) : null}
+    </>
   );
 }

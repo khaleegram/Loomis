@@ -33,7 +33,7 @@ interface AdminOfficerDashboardProps {
 
 const QUICK_ACTIONS = [
   {
-    href: '/school/students/admissions',
+    href: '/school/students/admissions?new=1',
     icon: UserPlus,
     label: 'New application',
     description: 'Register a new applicant.',

@@ -2,9 +2,10 @@
 
 import { useAdmissions, useClassLevels } from '@loomis/api-client';
 import type { AdmissionResponse } from '@loomis/contracts';
-import { Button } from '@loomis/ui-web';
+import { Alert, AlertDescription } from '@loomis/ui-web';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useMemo, useState, useEffect } from 'react';
 
 import { AdmissionDecisionDialog } from '@/components/student/admission-decision-dialog';
 import { AdmissionsHero, AdmissionsHeroSkeleton } from '@/components/student/admissions-hero';
@@ -12,19 +13,28 @@ import { computeAdmissionsKpis } from '@/components/student/admissions-kpi-cards
 import { AdmissionsTable, AdmissionsTableSkeleton } from '@/components/student/admissions-table';
 import { CreateAdmissionSheet } from '@/components/student/create-admission-sheet';
 import { PageBody } from '@/components/school/school-shell';
-import { useCan, useCanAny } from '@/lib/auth/use-capability';
+import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
+import { useCan, useCanAny, useAdmissionsRequirePrincipalApproval } from '@/lib/auth/use-capability';
 import { SEMANTIC } from '@/lib/design/surfaces';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 import { UserPlus, Users } from 'lucide-react';
 
 export default function AdmissionsPipelinePage() {
   const tenantId = useTenantId();
+  const searchParams = useSearchParams();
   const canManage = useCan('admissions.manage');
   const canDecide = useCan('admissions.approve');
   const canView = useCanAny(['admissions.manage', 'admissions.approve']);
+  const requirePrincipalApproval = useAdmissionsRequirePrincipalApproval();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [decisionAdmission, setDecisionAdmission] = useState<AdmissionResponse | null>(null);
+
+  useEffect(() => {
+    if (searchParams.get('new') === '1' && canManage) {
+      setCreateOpen(true);
+    }
+  }, [searchParams, canManage]);
 
   const admissionsQuery = useAdmissions(tenantId ?? '');
   const classLevelsQuery = useClassLevels(tenantId ?? '');
@@ -60,14 +70,31 @@ export default function AdmissionsPipelinePage() {
           {/* 1. Hero */}
           {isLoading ? <AdmissionsHeroSkeleton /> : <AdmissionsHero metrics={metrics} />}
 
+          {canManage && !canDecide && requirePrincipalApproval ? (
+            <Alert>
+              <AlertDescription>
+                You can register applicants here. Approvals are sent to the Principal or School
+                Owner — enable or disable this under Settings → Experience.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          {canDecide && !canManage ? (
+            <Alert>
+              <AlertDescription>
+                You can approve or decline applications here. To register a new applicant, sign in as
+                the Admin Officer (<span className="font-mono text-xs">admin@your-school.loomis.com</span>)
+                or ask registry staff to submit the application.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
           {/* 2. CTA Buttons — right under the hero */}
           <div className="flex flex-wrap items-center gap-3">
-            <Button variant="outline" size="sm" className="gap-1.5 border-neutral-200 hover:border-brand-200" asChild>
-              <Link href="/school/students">
-                <Users aria-hidden className="size-3.5" />
-                Student Registry
-              </Link>
-            </Button>
+            <Link href="/school/students" className={ACADEMIC_UI.btnGhost}>
+              <Users aria-hidden className="size-3.5" />
+              Student Registry
+            </Link>
             {canManage ? (
               <button
                 onClick={() => setCreateOpen(true)}
@@ -104,6 +131,11 @@ export default function AdmissionsPipelinePage() {
                   <UserPlus size={16} />
                   Register first applicant
                 </button>
+              ) : canDecide ? (
+                <p className="max-w-md text-center text-xs text-neutral-500">
+                  Applications appear here once the Admin Officer registers them. Check back after
+                  registry submits a new applicant.
+                </p>
               ) : null}
             </div>
           ) : null}

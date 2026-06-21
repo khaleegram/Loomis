@@ -105,10 +105,7 @@ export function AcademicSubNav() {
   const pathname = usePathname();
 
   return (
-    <nav
-      className="mb-8 flex w-full items-center gap-1.5 overflow-x-auto rounded-2xl border border-neutral-200/80 bg-white/90 p-1.5 shadow-sm backdrop-blur-sm [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      aria-label="Academic sections"
-    >
+    <nav className={ACADEMIC_UI.subNavShell} aria-label="Academic sections">
       {ACADEMIC_LINKS.map((link) => (
         <NavLink key={link.href} link={link} pathname={pathname} />
       ))}

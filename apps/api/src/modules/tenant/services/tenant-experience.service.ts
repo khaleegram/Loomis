@@ -101,6 +101,9 @@ export const tenantExperienceService = {
               input.flags.timetableDedicatedOfficer ?? baseFlags.timetableDedicatedOfficer,
             deputyExamEnabled: input.flags.deputyExamEnabled ?? baseFlags.deputyExamEnabled,
             totpOptional: input.flags.totpOptional ?? baseFlags.totpOptional,
+            admissionsRequirePrincipalApproval:
+              input.flags.admissionsRequirePrincipalApproval ??
+              baseFlags.admissionsRequirePrincipalApproval,
           }
         : undefined;
 

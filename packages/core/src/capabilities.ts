@@ -115,6 +115,7 @@ export const roleCapabilities: Record<Role, ReadonlySet<Capability>> = {
     'student.graduate',
     'class_structure.manage',
     'admissions.manage',
+    'admissions.approve',
     'timetable.view',
     'attendance.view',
     'finance.balances.view',

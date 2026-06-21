@@ -13,6 +13,8 @@ export type ResolvedExperienceFlags = {
   timetableDedicatedOfficer: boolean;
   deputyExamEnabled: boolean;
   totpOptional: boolean;
+  /** When true, Principal/Owner must approve; Admin cannot decide. */
+  admissionsRequirePrincipalApproval: boolean;
 };
 
 export const DEFAULT_EXPERIENCE_FLAGS: ResolvedExperienceFlags = {
@@ -20,6 +22,7 @@ export const DEFAULT_EXPERIENCE_FLAGS: ResolvedExperienceFlags = {
   timetableDedicatedOfficer: false,
   deputyExamEnabled: false,
   totpOptional: false,
+  admissionsRequirePrincipalApproval: false,
 };
 
 export function mergeExperienceFlags(
@@ -31,6 +34,9 @@ export function mergeExperienceFlags(
       partial?.timetableDedicatedOfficer ?? DEFAULT_EXPERIENCE_FLAGS.timetableDedicatedOfficer,
     deputyExamEnabled: partial?.deputyExamEnabled ?? DEFAULT_EXPERIENCE_FLAGS.deputyExamEnabled,
     totpOptional: partial?.totpOptional ?? DEFAULT_EXPERIENCE_FLAGS.totpOptional,
+    admissionsRequirePrincipalApproval:
+      partial?.admissionsRequirePrincipalApproval ??
+      DEFAULT_EXPERIENCE_FLAGS.admissionsRequirePrincipalApproval,
   };
 }
 

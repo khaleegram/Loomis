@@ -13,6 +13,7 @@ const advancedWithFlags = {
     timetableDedicatedOfficer: true,
     deputyExamEnabled: true,
     totpOptional: true,
+    admissionsRequirePrincipalApproval: false,
   },
 };
 
@@ -47,6 +48,11 @@ describe('school nav Sprint 3', () => {
     expect(
       resolveSchoolNav('school_owner', advancedWithFlags).some((i) => i.id === 'psf-obligations'),
     ).toBe(true);
+  });
+
+  it('shows Admissions nav for principal and admin officer on Core', () => {
+    expect(resolveSchoolNav('principal', coreCombined).some((i) => i.id === 'admissions')).toBe(true);
+    expect(resolveSchoolNav('admin_officer', coreCombined).some((i) => i.id === 'admissions')).toBe(true);
   });
 
   it('hides timetable nav for owner and principal', () => {

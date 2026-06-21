@@ -24,4 +24,9 @@ describe('capabilities Sprint 2 alignment', () => {
   it('accountant has ledger.view for PSF read', () => {
     expect(can('accountant', 'ledger.view')).toBe(true);
   });
+
+  it('admin officer may manage and approve admissions', () => {
+    expect(can('admin_officer', 'admissions.manage')).toBe(true);
+    expect(can('admin_officer', 'admissions.approve')).toBe(true);
+  });
 });

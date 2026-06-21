@@ -187,7 +187,8 @@ Avoid workflow-engine ceremony in Core. Use **notifications + one-tap approve** 
 
 | Action | Core approver | Notes |
 |--------|---------------|-------|
-| Admission | **Principal alone** | |
+| Admission | **Admin Officer** (auto on register) | One submit creates the student record |
+| Admission (when toggle on) | **Principal** (Owner may also decide) | Admin submits; application stays pending until approved |
 | Publish results | **Exam Officer** | |
 | Promotions confirm | **Principal** | Held-back override: inline on promotion screen (checkbox + reason), not separate workflow type |
 | Staff deactivation | **Principal** | Singleton-role warning kept |
@@ -291,28 +292,28 @@ Apply the **10-staff / WhatsApp test** (§0). Default new friction to Advanced o
 
 **Tenant config**
 
-- [ ] `tenant.experienceTier` default `core`
-- [ ] `tenant.financeMode`: `combined` \| `split`
-- [ ] Feature flags for Advanced toggles
+- [x] `tenant.experienceTier` default `core`
+- [x] `tenant.financeMode`: `combined` \| `split`
+- [x] Feature flags for Advanced toggles
 
 **Onboarding**
 
-- [ ] Finance one-officer vs split question
-- [ ] Apply finance capability preset
+- [x] Finance one-officer vs split question
+- [x] Apply finance capability preset
 
 **Auth**
 
-- [ ] SMS OTP + 30-day trusted device (Owner/Principal/Finance)
-- [ ] Census lock SMS OTP
-- [ ] Refund threshold SMS OTP
+- [x] SMS OTP + 30-day trusted device (Owner/Principal/Finance)
+- [x] Census lock SMS OTP
+- [x] Refund threshold SMS OTP
 
 **UX**
 
-- [ ] Finance Officer label (combined mode)
+- [x] Finance Officer label (combined mode)
 - [x] Home attention badges (no Workflows nav)
-- [ ] Owner one-tap role-change approval
-- [ ] PSF as section under finance/balances
-- [ ] Simple audit log view
+- [x] Owner one-tap role-change approval
+- [x] PSF as section under finance/balances
+- [x] Simple audit log view
 
 **API (always on, all tiers)**
 

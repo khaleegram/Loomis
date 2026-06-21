@@ -1,12 +1,12 @@
 'use client';
 
 import type { AdmissionResponse, ClassLevelResponse } from '@loomis/contracts';
-import { Button, Skeleton } from '@loomis/ui-web';
+import { Button, Skeleton, cn } from '@loomis/ui-web';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
 import { ProfileAvatar } from '@/components/shared/profile-avatar';
-import { SURFACES } from '@/lib/design/surfaces';
+import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { AdmissionStatusBadge } from '@/components/student/admission-status-badge';
 import type { KpiFilter } from '@/components/student/admissions-kpi-cards';
 import {
@@ -91,7 +91,7 @@ function AdmissionsToolbar({
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Search by name, ref #, or guardian…"
           aria-label="Search admissions"
-          className="h-10 w-full rounded-xl border border-neutral-200 bg-white px-4 text-[13px] placeholder:text-neutral-400 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-100 lg:w-64"
+          className={cn(ACADEMIC_UI.searchField, 'w-full px-4 lg:w-64')}
         />
         {hasActiveFilter ? (
           <span className="hidden text-[11px] tabular-nums text-neutral-400 sm:inline">
@@ -102,7 +102,7 @@ function AdmissionsToolbar({
         ) : null}
       </div>
 
-      <div className="flex max-w-full items-center gap-1.5 overflow-x-auto rounded-xl border border-neutral-200 bg-white p-1">
+      <div className={ACADEMIC_UI.chipBar}>
         {FILTER_CHIPS.map((chip) => {
           const isActive = statusFilter === chip.key;
           return (
@@ -110,11 +110,10 @@ function AdmissionsToolbar({
               key={chip.key}
               type="button"
               onClick={() => onStatusFilterChange(chip.key)}
-              className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-[12px] font-semibold transition-all duration-200 sm:py-1.5 ${
-                isActive
-                  ? 'bg-brand-600 text-white shadow-sm'
-                  : 'text-neutral-500 hover:bg-brand-50 hover:text-brand-700'
-              }`}
+              className={cn(
+                'shrink-0 whitespace-nowrap rounded-xl px-3 py-2 text-[12px] font-semibold transition-all duration-200 sm:py-1.5 min-h-[44px] sm:min-h-0',
+                isActive ? ACADEMIC_UI.chipActive : ACADEMIC_UI.chipInactive,
+              )}
             >
               {chip.label}
             </button>
@@ -163,13 +162,10 @@ export function AdmissionsTable({
         totalCount={admissions.length}
       />
 
-      <div className="overflow-hidden hero-panel rounded-2xl">
+      <div className={ACADEMIC_UI.dataPanel}>
         <div className="overflow-x-auto">
         {/* Header — warm brand gradient */}
-        <div
-          className="flex min-w-[720px] items-center gap-3 px-5 py-3"
-          style={{ background: SURFACES.tableHeader }}
-        >
+        <div className={`flex min-w-[720px] items-center gap-3 px-5 py-3 ${ACADEMIC_UI.tableHeader}`}>
           <div className="flex w-8 shrink-0" aria-hidden />
           <div className="min-w-0 flex-1 text-[10px] font-bold uppercase tracking-[0.15em] text-brand-100/80">
             Applicant
@@ -313,11 +309,8 @@ export function AdmissionsTableSkeleton() {
   return (
     <div className="space-y-4">
       <div className="h-10 w-64 animate-pulse rounded-xl bg-neutral-100" />
-      <div className="overflow-hidden hero-panel rounded-2xl">
-        <div
-          className="h-11"
-          style={{ background: SURFACES.tableHeader }}
-        />
+      <div className={ACADEMIC_UI.dataPanel}>
+        <div className={cn('h-11 animate-pulse', ACADEMIC_UI.tableHeader)} />
         {Array.from({ length: 5 }).map((_, i) => (
           <div
             key={i}

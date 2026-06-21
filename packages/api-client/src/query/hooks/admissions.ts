@@ -5,6 +5,7 @@ import type {
   AdmissionListResponse,
   AdmissionResponse,
   CreateAdmissionRequest,
+  CreateAdmissionResponse,
 } from '@loomis/contracts';
 import type { ApiClient } from '../../http/client.js';
 import { useIdempotentMutation } from '../../mutations/useIdempotentMutation.js';
@@ -76,14 +77,19 @@ function invalidateAdmissionQueries(
   }
 }
 
-/** US-SIS-001. Register a new applicant (Admin Officer). */
+/** US-SIS-001. Register applicant; auto-admits on Core default when submitter may decide. */
 export function useCreateAdmission(tenantId: string) {
   const client = useApiClient();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body: CreateAdmissionRequest) =>
-      client.post<AdmissionResponse>(`/tenants/${tenantId}/admissions`, body),
-    onSuccess: () => invalidateAdmissionQueries(queryClient, tenantId),
+      client.post<CreateAdmissionResponse>(`/tenants/${tenantId}/admissions`, body),
+    onSuccess: (result) => {
+      invalidateAdmissionQueries(queryClient, tenantId);
+      if (result.autoApproved) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.students.all(tenantId) });
+      }
+    },
   });
 }
 

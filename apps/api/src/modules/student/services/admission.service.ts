@@ -1,14 +1,19 @@
 import type {
   AdmissionDecisionRequest,
+  AdmissionDecisionResponse,
   AdmissionResponse,
   CreateAdmissionRequest,
+  CreateAdmissionResponse,
+  TenantExperienceFlags,
 } from '@loomis/contracts';
+import { canDecideAdmissions, mergeExperienceFlags, shouldAutoApproveAdmissionOnCreate } from '@loomis/core';
 import { academicRepository } from '../../academic/repository/academic.repository.js';
 import { DEFAULT_STUDENT_PROVISIONED_PASSWORD } from '../../identity/services/provisioned-password.service.js';
 import { studentAccountService } from '../../identity/services/student-account.service.js';
 import { transactionalEmailService } from '../../comms/services/transactional-email.service.js';
 import { LoomisError } from '../../../shared/errors.js';
 import { studentRepository } from '../repository/student.repository.js';
+import { tenantRepository } from '../../tenant/repository/tenant.repository.js';
 import type { ActorContext } from '../types.js';
 import { requireTenant } from './_shared.js';
 
@@ -38,7 +43,7 @@ function serializeAdmission(
 }
 
 export const admissionService = {
-  /** US-SIS-001. Admin Officer submits a new admission application. */
+  /** US-SIS-001. Register applicant; auto-admits when policy allows (Core default). */
   async createAdmission(tenantId: string, input: CreateAdmissionRequest, actor: ActorContext) {
     requireTenant(actor, tenantId);
 
@@ -51,8 +56,38 @@ export const admissionService = {
       );
     }
 
+    const tenant = await tenantRepository.findById(tenantId);
+    if (!tenant) {
+      throw new LoomisError('TENANT_NOT_FOUND', 404, 'Tenant not found');
+    }
+    const flags = mergeExperienceFlags(tenant.experienceFlags as TenantExperienceFlags);
+
     const row = await studentRepository.createAdmission(tenantId, input, actor.userId);
-    return serializeAdmission(row);
+
+    if (
+      shouldAutoApproveAdmissionOnCreate(flags) &&
+      canDecideAdmissions(actor.role, flags)
+    ) {
+      const decided = await admissionService.decideAdmission(
+        tenantId,
+        row.id,
+        { decision: 'approve' },
+        actor,
+      );
+      return {
+        admission: decided.admission,
+        student: decided.student,
+        autoApproved: true,
+        portalCredentials: decided.portalCredentials ?? null,
+        credentialsEmail: decided.credentialsEmail,
+      };
+    }
+
+    return {
+      admission: serializeAdmission(row),
+      student: null,
+      autoApproved: false,
+    };
   },
 
   async listAdmissions(tenantId: string, actor: ActorContext) {
@@ -71,16 +106,29 @@ export const admissionService = {
   },
 
   /**
-   * US-SIS-002. Principal approves or declines. Approval creates the student
-   * record; enrollment is a separate step (US-SIS-003).
+   * US-SIS-002. Approve or decline. Core default: Admin Officer decides.
+   * When `admissionsRequirePrincipalApproval` is enabled, only Principal/Owner may decide.
    */
   async decideAdmission(
     tenantId: string,
     admissionId: string,
     input: AdmissionDecisionRequest,
     actor: ActorContext,
-  ) {
+  ): Promise<AdmissionDecisionResponse> {
     requireTenant(actor, tenantId);
+
+    const tenant = await tenantRepository.findById(tenantId);
+    if (!tenant) {
+      throw new LoomisError('TENANT_NOT_FOUND', 404, 'Tenant not found');
+    }
+    const flags = mergeExperienceFlags(tenant.experienceFlags as TenantExperienceFlags);
+    if (!canDecideAdmissions(actor.role, flags)) {
+      throw new LoomisError(
+        'FORBIDDEN',
+        403,
+        'Your role cannot approve admissions under the current school policy',
+      );
+    }
 
     const admission = await studentRepository.findAdmissionById(tenantId, admissionId);
     if (!admission) {

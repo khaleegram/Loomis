@@ -14,6 +14,8 @@ export const tenantExperienceFlags = z.object({
   timetableDedicatedOfficer: z.boolean().optional(),
   deputyExamEnabled: z.boolean().optional(),
   totpOptional: z.boolean().optional(),
+  /** When true, only Principal/Owner may approve admissions; Admin registers only. Default false (Core). */
+  admissionsRequirePrincipalApproval: z.boolean().optional(),
   /** Core refund: force single approver regardless of amount (tier plan §5). */
   coreRefundSingleApprover: z.enum(['principal', 'owner']).optional(),
 });

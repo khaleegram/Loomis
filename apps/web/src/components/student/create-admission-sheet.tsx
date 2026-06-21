@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useCreateAdmission, useClassLevels } from '@loomis/api-client';
-import { createAdmissionRequest, type AdmissionResponse, type CreateAdmissionRequest } from '@loomis/contracts';
+import { createAdmissionRequest, type CreateAdmissionResponse, type CreateAdmissionRequest } from '@loomis/contracts';
 import {
   Form,
   FormControl,
@@ -30,12 +30,13 @@ import {
 } from '@/components/shared/smart-form';
 import { genderLabel, relationshipLabel } from '@/lib/student/student-labels';
 import { studentErrorMessage } from '@/lib/student/student-errors';
+import { useAdmissionsRequirePrincipalApproval } from '@/lib/auth/use-capability';
 
 interface CreateAdmissionSheetProps {
   tenantId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreated?: (admission: AdmissionResponse) => void;
+  onCreated?: (result: CreateAdmissionResponse) => void;
 }
 
 const GENDER_OPTIONS = (['male', 'female', 'other', 'unknown'] as const).map((g) => ({
@@ -54,6 +55,7 @@ export function CreateAdmissionSheet({
   onCreated,
 }: CreateAdmissionSheetProps) {
   const createAdmission = useCreateAdmission(tenantId);
+  const requirePrincipalApproval = useAdmissionsRequirePrincipalApproval();
   const classLevelsQuery = useClassLevels(tenantId);
   const levels = classLevelsQuery.data?.levels ?? [];
 
@@ -80,14 +82,16 @@ export function CreateAdmissionSheet({
 
   const onSubmit = form.handleSubmit(async (values) => {
     try {
-      const admission = await createAdmission.mutateAsync(values);
+      const result = await createAdmission.mutateAsync(values);
       form.reset();
       onOpenChange(false);
-      onCreated?.(admission);
+      onCreated?.(result);
     } catch (err) {
       form.setError('root', { message: studentErrorMessage(err) });
     }
   });
+
+  const isDirectRegister = !requirePrincipalApproval;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -95,15 +99,23 @@ export function CreateAdmissionSheet({
         <SmartFormHeader
           surface="sheet"
           eyebrow="Admissions"
-          title="Register new applicant"
-          description="Capture the student and a guardian contact. A reference number is generated when you submit."
+          title={isDirectRegister ? 'Register new student' : 'Register new applicant'}
+          description={
+            isDirectRegister
+              ? 'Capture student and guardian details. The student record is created as soon as you submit.'
+              : 'Capture the student and a guardian contact. The application stays pending until leadership approves.'
+          }
         />
 
         <div className="flex-1 overflow-y-auto px-6 py-5">
           <FormContextCard
-            badge="Step 1 of 2"
+            badge={isDirectRegister ? 'One step' : 'Step 1 of 2'}
             title="Who is applying?"
-            subtitle="Basic details for the admissions register"
+            subtitle={
+              isDirectRegister
+                ? 'Details go straight into the student registry'
+                : 'Basic details for the admissions register'
+            }
           />
 
           <Form {...form}>
@@ -331,7 +343,7 @@ export function CreateAdmissionSheet({
 
         <SmartFormFooter
           formId="create-admission-form"
-          submitLabel="Submit application"
+          submitLabel={isDirectRegister ? 'Register student' : 'Submit application'}
           pending={createAdmission.isPending}
           disabled={levels.length === 0}
           onCancel={() => onOpenChange(false)}

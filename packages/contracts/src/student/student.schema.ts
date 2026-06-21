@@ -137,6 +137,16 @@ export const admissionDecisionResponse = z.object({
 });
 export type AdmissionDecisionResponse = z.infer<typeof admissionDecisionResponse>;
 
+/** US-SIS-001 create — pending application or auto-approved student when policy allows. */
+export const createAdmissionResponse = z.object({
+  admission: admissionResponse,
+  student: studentResponse.nullable(),
+  autoApproved: z.boolean(),
+  portalCredentials: portalCredentialsResponse.nullable().optional(),
+  credentialsEmail: emailDeliveryResult.optional(),
+});
+export type CreateAdmissionResponse = z.infer<typeof createAdmissionResponse>;
+
 export const studentListResponse = z.object({
   students: z.array(studentResponse),
 });

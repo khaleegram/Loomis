@@ -34,6 +34,25 @@ export function useAuditLogSearch(filters: AuditLogFilters, enabled = true) {
   });
 }
 
+/** Tenant-scoped audit trail (Core — Owner/Principal, last 90 days default). */
+export function useTenantAuditLogSearch(
+  tenantId: string,
+  filters: Omit<AuditLogFilters, 'tenantId'> = {},
+  enabled = true,
+) {
+  const client = useApiClient();
+  const scoped: AuditLogFilters = { ...filters, tenantId };
+  return useQuery({
+    queryKey: queryKeys.tenant.auditLog(tenantId, scoped),
+    queryFn: () =>
+      client.get<AuditLogSearchResponse>(
+        `/tenants/${tenantId}/audit/events${buildAuditQuery(scoped)}`,
+      ),
+    staleTime: AUDIT_STALE_MS,
+    enabled: enabled && Boolean(tenantId),
+  });
+}
+
 export interface UseExportAuditLogConfig {
   ensureStepUpToken: (action: StepUpAction) => Promise<StepUpTokenResult>;
 }

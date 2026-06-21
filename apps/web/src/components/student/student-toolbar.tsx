@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import { Search, X } from 'lucide-react';
-import { Input } from '@loomis/ui-web';
+import { Input, cn } from '@loomis/ui-web';
 import type { StudentStatus } from '@loomis/contracts';
+
+import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 
 export type StudentStatusFilter = 'all' | StudentStatus;
 
@@ -49,14 +51,14 @@ export function StudentToolbar({
 
   return (
     <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-      {/* Search */}
       <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center lg:w-auto">
         <div className="relative w-full lg:max-w-md lg:w-64">
           <Search
             aria-hidden
-            className={`pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 transition-colors duration-200 ${
-              isSearchFocused ? 'text-brand-600' : 'text-neutral-400'
-            }`}
+            className={cn(
+              'pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 transition-colors duration-200',
+              isSearchFocused ? 'text-brand-600' : 'text-neutral-400',
+            )}
           />
           <Input
             value={search}
@@ -65,10 +67,11 @@ export function StudentToolbar({
             onBlur={() => setIsSearchFocused(false)}
             placeholder="Search by name or file number…"
             aria-label="Search students"
-            className="h-10 border-neutral-200 pl-10 pr-8 text-[13px] transition-all duration-200 focus:border-brand-300 focus:ring-brand-200"
+            className={ACADEMIC_UI.searchField}
           />
           {search ? (
             <button
+              type="button"
               onClick={() => onSearchChange('')}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-neutral-400 transition-colors hover:text-neutral-600"
               aria-label="Clear search"
@@ -78,7 +81,6 @@ export function StudentToolbar({
           ) : null}
         </div>
 
-        {/* Result count — subtle inline */}
         {filteredCount !== undefined && totalCount !== undefined && hasActiveFilter ? (
           <span className="hidden text-[11px] tabular-nums text-neutral-400 sm:inline">
             <span className="font-semibold text-neutral-600">{filteredCount}</span>
@@ -88,10 +90,8 @@ export function StudentToolbar({
         ) : null}
       </div>
 
-      {/* Filter Chips + View Toggle */}
       <div className="flex w-full flex-wrap items-center gap-3 lg:w-auto lg:flex-nowrap">
-        {/* Filter chips */}
-        <div className="flex max-w-full items-center gap-1.5 overflow-x-auto rounded-xl border border-neutral-200 bg-white p-1">
+        <div className={ACADEMIC_UI.chipBar}>
           {FILTER_CHIPS.map((chip) => {
             const isActive = statusFilter === chip.statusKey;
             return (
@@ -99,11 +99,10 @@ export function StudentToolbar({
                 key={chip.key}
                 type="button"
                 onClick={() => onStatusFilterChange(chip.statusKey)}
-                className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-[12px] font-semibold transition-all duration-200 sm:py-1.5 ${
-                  isActive
-                    ? 'bg-brand-600 text-white shadow-sm'
-                    : 'text-neutral-500 hover:bg-brand-50 hover:text-brand-700'
-                }`}
+                className={cn(
+                  'shrink-0 whitespace-nowrap rounded-xl px-3 py-2 text-[12px] font-semibold transition-all duration-200 min-h-[44px] sm:min-h-0 sm:py-1.5',
+                  isActive ? ACADEMIC_UI.chipActive : ACADEMIC_UI.chipInactive,
+                )}
               >
                 {chip.label}
               </button>
@@ -111,16 +110,14 @@ export function StudentToolbar({
           })}
         </div>
 
-        {/* View toggle */}
-        <div className="flex shrink-0 items-center rounded-xl border border-neutral-200 bg-white p-0.5">
+        <div className={ACADEMIC_UI.segmentedControl}>
           <button
             type="button"
             onClick={() => onViewModeChange('cards')}
-            className={`inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-all duration-200 sm:min-h-0 sm:min-w-0 ${
-              viewMode === 'cards'
-                ? 'bg-brand-600 text-white shadow-sm'
-                : 'text-neutral-400 hover:text-neutral-700'
-            }`}
+            className={cn(
+              'inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl px-2.5 py-1.5 text-[11px] font-semibold transition-all duration-200 sm:min-h-0 sm:min-w-0',
+              viewMode === 'cards' ? ACADEMIC_UI.chipActive : ACADEMIC_UI.chipInactive,
+            )}
             aria-label="Card view"
             title="Directory view"
           >
@@ -134,11 +131,10 @@ export function StudentToolbar({
           <button
             type="button"
             onClick={() => onViewModeChange('table')}
-            className={`inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-all duration-200 sm:min-h-0 sm:min-w-0 ${
-              viewMode === 'table'
-                ? 'bg-brand-600 text-white shadow-sm'
-                : 'text-neutral-400 hover:text-neutral-700'
-            }`}
+            className={cn(
+              'inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl px-2.5 py-1.5 text-[11px] font-semibold transition-all duration-200 sm:min-h-0 sm:min-w-0',
+              viewMode === 'table' ? ACADEMIC_UI.chipActive : ACADEMIC_UI.chipInactive,
+            )}
             aria-label="Table view"
             title="Table view"
           >

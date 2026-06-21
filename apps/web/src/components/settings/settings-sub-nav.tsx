@@ -4,21 +4,33 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@loomis/ui-web';
 
+import { useCan } from '@/lib/auth/use-capability';
+
 const SETTINGS_LINKS = [
   { label: 'Profile', href: '/school/settings/profile' },
   { label: 'Appearance', href: '/school/settings/appearance' },
   { label: 'Security', href: '/school/settings/security' },
+  { label: 'Audit log', href: '/school/settings/audit', capability: 'audit.view' as const },
+  { label: 'Experience', href: '/school/settings/experience', ownerOnly: true },
 ] as const;
 
 export function SettingsSubNav() {
   const pathname = usePathname();
+  const isOwner = useCan('census.lock');
+  const canAudit = useCan('audit.view');
 
   return (
     <nav
-      className="mb-6 flex gap-1 border-b border-border"
+      className={cn(
+        'mb-6 flex w-full gap-1 overflow-x-auto border-b border-border [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+      )}
       aria-label="Settings sections"
     >
-      {SETTINGS_LINKS.map((link) => {
+      {SETTINGS_LINKS.filter((link) => {
+        if ('ownerOnly' in link && link.ownerOnly && !isOwner) return false;
+        if ('capability' in link && link.capability && !canAudit) return false;
+        return true;
+      }).map((link) => {
         const active = pathname === link.href;
         return (
           <Link

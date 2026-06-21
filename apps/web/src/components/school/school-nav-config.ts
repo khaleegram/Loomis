@@ -67,6 +67,14 @@ export const SCHOOL_NAV: SchoolNavItem[] = [
     hideForRoles: TEACHING_STAFF_ROLES,
   },
   {
+    id: 'admissions',
+    label: 'Admissions',
+    href: '/school/students/admissions',
+    icon: ClipboardList,
+    capabilities: ['admissions.manage', 'admissions.approve'],
+    hideForRoles: TEACHING_STAFF_ROLES,
+  },
+  {
     id: 'academic',
     label: 'Academic',
     href: '/school/academic',
