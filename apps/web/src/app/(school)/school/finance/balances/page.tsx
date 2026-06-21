@@ -5,18 +5,20 @@ import { Alert, AlertDescription } from '@loomis/ui-web';
 
 import { FinanceBalancesHero } from '@/components/finance/finance-balances-hero';
 import { OutstandingBalancesPanel } from '@/components/finance/outstanding-balances-panel';
+import { PsfObligationsSection } from '@/components/finance/psf-obligations-section';
 import { PageBody } from '@/components/school/school-shell';
 import { useSchoolAcademic } from '@/lib/academic/school-academic-context';
-import { useCan, useRole } from '@/lib/auth/use-capability';
+import { useCan } from '@/lib/auth/use-capability';
+import { useTenantExperience } from '@/lib/tenant/use-tenant-experience';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 
 const pageClass = 'max-w-[1400px] px-4 py-5 sm:px-6 lg:px-12 lg:py-8';
 
 export default function OutstandingBalancesPage() {
   const tenantId = useTenantId();
-  const role = useRole();
-  const canConfigure = useCan('fee.configure');
-  const canView = canConfigure || role === 'principal' || role === 'school_owner';
+  const canView = useCan('finance.balances.view');
+  const canViewPsf = useCan('ledger.view');
+  const { isCore } = useTenantExperience();
   const { termId, activeYear, activeTerm } = useSchoolAcademic();
 
   const balancesQuery = useOutstandingBalances(tenantId ?? '', termId ?? '', {});
@@ -36,9 +38,7 @@ export default function OutstandingBalancesPage() {
     return (
       <PageBody className={pageClass}>
         <Alert>
-          <AlertDescription>
-            Outstanding balances are restricted to accountants and principals.
-          </AlertDescription>
+          <AlertDescription>You do not have permission to view outstanding balances.</AlertDescription>
         </Alert>
       </PageBody>
     );
@@ -65,6 +65,8 @@ export default function OutstandingBalancesPage() {
             </AlertDescription>
           </Alert>
         )}
+
+        {isCore && canViewPsf ? <PsfObligationsSection tenantId={tenantId} /> : null}
       </div>
     </PageBody>
   );

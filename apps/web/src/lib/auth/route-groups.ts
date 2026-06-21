@@ -43,14 +43,7 @@ export const ROLE_GROUP: Record<Role, RouteGroup> = {
   student: 'parent',
 };
 
-/** The landing path a role should be sent to after login / on a group mismatch. */
-export function homePathForRole(role: Role): string {
-  if (role === 'dpo') return '/platform/compliance';
-  if (role === 'timetable_officer') return '/school/timetable';
-  if (role === 'teacher') return '/school/timetable';
-  if (role === 'class_teacher') return '/school/dashboard';
-  return GROUP_PREFIX[ROLE_GROUP[role]];
-}
+export { homePathForRole, type HomePathContext } from '@/lib/auth/home-path';
 
 /** Resolves which protected group a pathname belongs to, or null if public. */
 export function groupForPath(pathname: string): RouteGroup | null {
@@ -65,6 +58,6 @@ export function groupForPath(pathname: string): RouteGroup | null {
 /** True when `role` is permitted to view the console at `pathname`. */
 export function roleCanAccessPath(role: Role, pathname: string): boolean {
   const group = groupForPath(pathname);
-  if (group === null) return true; // not a protected console path
+  if (group === null) return true;
   return ROLE_GROUP[role] === group;
 }

@@ -1,27 +1,48 @@
 'use client';
 
 import Link from 'next/link';
-import { useClassLevels, useFeeStructures } from '@loomis/api-client';
+import { useRouter } from 'next/navigation';
+import { useClassLevels, useFeeStructures, useWorkflowInbox } from '@loomis/api-client';
 import { Alert, AlertDescription, Skeleton } from '@loomis/ui-web';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { FeeStructureEditor } from '@/components/finance/fee-structure-editor';
 import { FinanceFeeStructuresHero } from '@/components/finance/finance-fee-structures-hero';
+import { CorePendingApprovals } from '@/components/workflow/core-inline-workflow-decision';
 import { PageBody } from '@/components/school/school-shell';
+import { financeHomePath } from '@/components/school/school-nav-config';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { useSchoolAcademic } from '@/lib/academic/school-academic-context';
-import { useCan, useCanAny } from '@/lib/auth/use-capability';
+import { useCan, useCanAny, useRole } from '@/lib/auth/use-capability';
+import { filterInboxByTypes } from '@/lib/leadership/leadership-attention';
+import { useTenantExperience } from '@/lib/tenant/use-tenant-experience';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 
 const pageClass = 'max-w-[1400px] px-4 py-5 sm:px-6 lg:px-12 lg:py-8';
 
 export default function FinanceFeeStructuresPage() {
   const tenantId = useTenantId();
+  const role = useRole();
+  const router = useRouter();
+  const { financeMode } = useTenantExperience();
   const canConfigure = useCan('fee.configure');
   const canViewFinance = useCanAny(['fee.configure', 'payment.verify', 'payment.log']);
+  const inboxQuery = useWorkflowInbox(tenantId ?? '');
+  const feeAmendmentInbox = useMemo(
+    () =>
+      filterInboxByTypes(inboxQuery.data?.items ?? [], ['fee_structure_change']).filter(
+        (item) => item.activeStep.approverRole === 'principal',
+      ),
+    [inboxQuery.data?.items],
+  );
   const { yearId, termId, activeYear, activeTerm, isLoading: sessionLoading } = useSchoolAcademic();
 
   const [classLevelId, setClassLevelId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!role || canConfigure) return;
+    router.replace(financeHomePath(role, financeMode));
+  }, [role, canConfigure, financeMode, router]);
 
   const classLevelsQuery = useClassLevels(tenantId ?? '');
   const classLevels = classLevelsQuery.data?.levels ?? [];
@@ -66,6 +87,21 @@ export default function FinanceFeeStructuresPage() {
           canConfigure={canConfigure}
           isLoading={isLoading}
         />
+
+        {role === 'principal' && feeAmendmentInbox.length > 0 ? (
+          <section className="space-y-3">
+            <div>
+              <p className={ACADEMIC_UI.sectionLabel}>Pending approval</p>
+              <h2 className="text-lg font-extrabold tracking-tight text-neutral-900">
+                Fee structure amendments
+              </h2>
+              <p className="mt-1 text-sm text-neutral-500">
+                Finance proposed changes after the term opened — approve inline.
+              </p>
+            </div>
+            <CorePendingApprovals tenantId={tenantId} items={feeAmendmentInbox} />
+          </section>
+        ) : null}
 
         {!termId ? (
           <Alert>

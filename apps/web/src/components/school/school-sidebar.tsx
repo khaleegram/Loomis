@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { can, type Capability } from '@loomis/core';
+import { workflowsInboxEnabled } from '@loomis/core';
 import type { Role } from '@loomis/contracts';
 
 import { useSchoolBranding, useWorkflowInbox } from '@loomis/api-client';
@@ -13,20 +13,18 @@ import { SchoolLogo } from '@/components/shared/school-logo';
 import { WorkspaceMenu, type WorkspaceNavItem } from '@/components/layout/workspace-menu';
 import { useAuth } from '@/lib/auth/auth-context';
 import { useSchoolAcademic } from '@/lib/academic/school-academic-context';
+import { useTenantExperience } from '@/lib/tenant/use-tenant-experience';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 import {
-  SCHOOL_NAV,
-  STAFF_PRIMARY_ROLE_LABELS,
+  formatRoleLabel,
+  resolveSchoolNav,
   schoolNavLabel,
   type SchoolNavItem,
 } from '@/components/school/school-nav-config';
-
-function isNavVisible(role: Role, item: SchoolNavItem): boolean {
-  if (item.hideForRoles?.includes(role)) return false;
-  if (item.always) return true;
-  if (!item.capabilities?.length) return false;
-  return item.capabilities.some((cap: Capability) => can(role, cap));
-}
+import {
+  DEFAULT_SCHOOL_NAV_CONTEXT,
+  type SchoolNavContext,
+} from '@/lib/school/school-nav-context';
 
 function isSchoolNavActive(pathname: string, href: string): boolean {
   if (pathname === href) return true;
@@ -35,9 +33,13 @@ function isSchoolNavActive(pathname: string, href: string): boolean {
   return pathname.startsWith(`${href}/`);
 }
 
-function toWorkspaceNavItem(item: SchoolNavItem, role: Role): WorkspaceNavItem {
+function toWorkspaceNavItem(
+  item: SchoolNavItem,
+  role: Role,
+  financeMode: SchoolNavContext['financeMode'],
+): WorkspaceNavItem {
   return {
-    label: schoolNavLabel(item, role),
+    label: schoolNavLabel(item, role, financeMode),
     href: item.href,
     icon: item.icon,
   };
@@ -51,10 +53,17 @@ export function SchoolTopBar() {
   const pathname = usePathname();
   const tenantId = useTenantId();
   const { session, signOut } = useAuth();
-  const { data: inboxData } = useWorkflowInbox(tenantId ?? '');
+  const experience = useTenantExperience();
+  const navContext: SchoolNavContext = {
+    experienceTier: experience.experienceTier,
+    financeMode: experience.financeMode,
+    flags: experience.flags,
+  };
+  const inboxEnabled = workflowsInboxEnabled(navContext.experienceTier, navContext.flags);
+  const { data: inboxData } = useWorkflowInbox(inboxEnabled ? (tenantId ?? '') : '');
   const { data: branding } = useSchoolBranding(tenantId ?? '');
   const { activeYear, activeTerm } = useSchoolAcademic();
-  const inboxCount = inboxData?.items.length ?? 0;
+  const inboxCount = inboxEnabled ? (inboxData?.items.length ?? 0) : 0;
   const schoolName = branding?.tenantName ?? 'School';
   const sessionScope =
     activeYear && activeTerm
@@ -63,14 +72,14 @@ export function SchoolTopBar() {
 
   if (!session) return null;
 
-  const roleLabel = STAFF_PRIMARY_ROLE_LABELS[session.role] ?? session.role.replace(/_/g, ' ');
-  const visibleNav = SCHOOL_NAV.filter((item) => isNavVisible(session.role, item));
+  const roleLabel = formatRoleLabel(session.role, navContext.financeMode);
+  const visibleNav = resolveSchoolNav(session.role, navContext);
   const workspaceItems: WorkspaceNavItem[] = visibleNav
     .filter((item) => item.section !== 'ledger' && item.href !== '/school/settings')
-    .map((item) => toWorkspaceNavItem(item, session.role));
+    .map((item) => toWorkspaceNavItem(item, session.role, navContext.financeMode));
   const ledgerItems: WorkspaceNavItem[] = visibleNav
     .filter((item) => item.section === 'ledger')
-    .map((item) => toWorkspaceNavItem(item, session.role));
+    .map((item) => toWorkspaceNavItem(item, session.role, navContext.financeMode));
 
   const sections: { title: string; items: WorkspaceNavItem[] }[] = [
     { title: 'Workspace', items: workspaceItems },
@@ -109,3 +118,5 @@ export function SchoolTopBar() {
     />
   );
 }
+
+export { DEFAULT_SCHOOL_NAV_CONTEXT };

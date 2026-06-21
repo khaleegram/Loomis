@@ -1,10 +1,13 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import { usePsfObligations } from '@loomis/api-client';
 import { Badge, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@loomis/ui-web';
 import { formatKobo } from '@loomis/core';
 
 import { PageBody, PageHeader } from '@/components/school/school-shell';
+import { useTenantExperience } from '@/lib/tenant/use-tenant-experience';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 
 const STATUS_BADGE: Record<string, 'default' | 'warning' | 'success' | 'neutral'> = {
@@ -33,7 +36,13 @@ interface PsfObligationsResponse {
 
 export default function PsfObligationsPage() {
   const tenantId = useTenantId();
+  const router = useRouter();
+  const { isCore } = useTenantExperience();
   const { data, isLoading, isError, error } = usePsfObligations(tenantId ?? '');
+
+  useEffect(() => {
+    if (isCore) router.replace('/school/finance/balances');
+  }, [isCore, router]);
 
   const obligations = (data as PsfObligationsResponse | undefined)?.obligations ?? [];
 
