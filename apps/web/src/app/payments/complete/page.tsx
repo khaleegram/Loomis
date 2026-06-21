@@ -14,7 +14,7 @@ export default function PaymentCompletePage() {
   const searchParams = useSearchParams();
   const paymentId = searchParams.get('paymentId');
   const tenantFromQuery = searchParams.get('tenantId');
-  const storeTenantId = useActiveTenantStore((s) => s.tenantId);
+  const storeTenantId = useActiveTenantStore((s) => s.activeTenantId);
   const tenantId = tenantFromQuery ?? storeTenantId ?? '';
 
   const paymentQuery = usePaymentStatusPoll(tenantId, paymentId);

@@ -189,7 +189,7 @@ function StudentInboxView({ tenantId }: { tenantId: string }) {
 
 export default function ParentMessagesPage() {
   const { session } = useAuth();
-  const tenantId = useActiveTenantStore((s) => s.tenantId);
+  const tenantId = useActiveTenantStore((s) => s.activeTenantId);
   const isStudent = session?.role === 'student';
 
   if (isStudent) {

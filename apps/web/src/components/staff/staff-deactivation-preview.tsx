@@ -50,7 +50,7 @@ export function DeactivationImpactPreview({
               <Shield aria-hidden className="size-3.5" />
             </span>
             <div>
-              <p className={`text-[12px] font-semibold ${SEMANTIC.danger.title}`}>
+              <p className={`text-[12px] font-semibold ${SEMANTIC.danger.textStrong}`}>
                 Only active {singletonRoleLabel}
               </p>
               <p className={`text-[11px] ${SEMANTIC.danger.text}`}>

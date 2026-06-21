@@ -94,6 +94,8 @@ function ParentFeesView() {
         invoiceId: fees.invoiceId,
         amountMinor: fees.balanceMinor,
         payerEmail,
+        provider: 'paystack',
+        method: 'card',
         clientPlatform: 'web',
       });
       window.location.assign(result.authorizationUrl);

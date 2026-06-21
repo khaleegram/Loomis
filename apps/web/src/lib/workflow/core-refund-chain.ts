@@ -1,6 +1,7 @@
 import type { ExperienceTier, TenantExperienceFlags } from '@loomis/contracts';
 import {
   CORE_OWNER_REFUND_THRESHOLD_MINOR,
+  mergeExperienceFlags,
   refundApproverRolesFromChain,
   resolveCoreRefundChain,
   resolveEffectiveWorkflowChain,
@@ -36,12 +37,7 @@ export function usesAdvancedWorkflowInbox(
   experienceTier: ExperienceTier,
   flags: TenantExperienceFlags | null | undefined,
 ): boolean {
-  return workflowsInboxEnabled(experienceTier, {
-    workflowsInbox: flags?.workflowsInbox ?? false,
-    timetableDedicatedOfficer: flags?.timetableDedicatedOfficer ?? false,
-    deputyExamEnabled: flags?.deputyExamEnabled ?? false,
-    totpOptional: flags?.totpOptional ?? false,
-  });
+  return workflowsInboxEnabled(experienceTier, mergeExperienceFlags(flags));
 }
 
 export { CORE_OWNER_REFUND_THRESHOLD_MINOR, resolveCoreRefundChain };

@@ -36,7 +36,7 @@ import {
 
 } from '@/components/academic/ops/timetable-add-period-sheet';
 
-import { TimetableCommandCenter } from '@/components/academic/ops/timetable-command-center';
+import { TimetableCommandStrip } from '@/components/academic/ops/timetable-command-center';
 
 import { TimetableHero } from '@/components/academic/ops/timetable-hero';
 
@@ -240,7 +240,7 @@ export default function TimetablePage() {
 
         {canManage ? (
 
-          <TimetableCommandCenter
+          <TimetableCommandStrip
             classArmId={ctx.classArmId}
 
             classLabel={classLabel}

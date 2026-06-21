@@ -324,7 +324,7 @@ function ParentResultsView() {
 
 export default function ResultsPage() {
   const { session } = useAuth();
-  const tenantId = useActiveTenantStore((s) => s.tenantId);
+  const tenantId = useActiveTenantStore((s) => s.activeTenantId);
   const isStudent = session?.role === 'student';
 
   return (
