@@ -13,7 +13,7 @@ import {
 import { ArrowLeft, Check, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 
 import { formatRoleLabel } from '@/components/school/school-nav-config';
-import { useCan } from '@/lib/auth/use-capability';
+import { useCanAny } from '@/lib/auth/use-capability';
 import { formatStaffDisplayRole, isSingletonPrimaryRole } from '@/lib/staff/staff-labels';
 import { SEMANTIC } from '@/lib/design/surfaces';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
@@ -91,7 +91,7 @@ export function StaffRoleHoverSelect({
   className = '',
 }: StaffRoleHoverSelectProps) {
   const tenantId = useTenantId();
-  const canChangeRole = useCan('staff.role.assign');
+  const canChangeRole = useCanAny(['staff.role.assign', 'staff.role.request']);
   const changeRole = useChangeStaffRole(tenantId ?? '', staffProfileId);
   const { data: directoryData } = useStaffDirectory(tenantId ?? '');
 

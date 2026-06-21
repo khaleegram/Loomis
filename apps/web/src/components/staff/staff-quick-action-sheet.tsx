@@ -63,7 +63,7 @@ import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { CardOptionPicker, SmartFieldLabel } from '@/components/shared/smart-form';
 import { formatRoleLabel } from '@/components/school/school-nav-config';
 import { formatStaffDisplayRole } from '@/lib/staff/staff-labels';
-import { useCan } from '@/lib/auth/use-capability';
+import { useCan, useCanAny } from '@/lib/auth/use-capability';
 import { appErrorMessage } from '@/lib/errors/app-error-message';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 import { DeactivationImpactPreview } from '@/components/staff/staff-deactivation-preview';
@@ -89,7 +89,7 @@ export function StaffQuickActionSheet({
   const canOnboard = useCan('staff.onboard');
   const canAssignSubject = useCan('subject.assign');
   const canAssignClassTeacher = useCan('classteacher.assign');
-  const canChangeRole = useCan('staff.role.assign');
+  const canChangeRole = useCanAny(['staff.role.assign', 'staff.role.request']);
   const canDeactivate = useCan('staff.deactivate');
 
   const { data: staff, isLoading, isError, refetch } = useStaffMember(

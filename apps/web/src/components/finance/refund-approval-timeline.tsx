@@ -56,6 +56,8 @@ import { z } from 'zod';
 
 import { StepUpMfaFields } from '@/components/academic/step-up-mfa-fields';
 import { financeErrorMessage } from '@/lib/finance/finance-errors';
+import { refundApproverChainForTenant } from '@/lib/workflow/core-refund-chain';
+import { useTenantExperience } from '@/lib/tenant/use-tenant-experience';
 import {
   buildRefundProvisionalLegs,
   buildRefundReversalLegs,
@@ -63,8 +65,6 @@ import {
   formatRefundStatus,
   formatStudentRef,
 } from '@/lib/finance/finance-labels';
-
-const REFUND_APPROVER_CHAIN: Role[] = ['accountant', 'principal', 'school_owner'];
 
 interface TimelineNode {
   id: string;
@@ -103,6 +103,7 @@ type ApproveFormValues = z.infer<typeof approveFormSchema>;
 function buildTimelineNodes(
   refund: RefundRequestResponse,
   workflow: WorkflowInstanceResponse | undefined,
+  approverChain: Role[],
 ): TimelineNode[] {
   const nodes: TimelineNode[] = [
     {
@@ -113,7 +114,7 @@ function buildTimelineNodes(
     },
   ];
 
-  for (const role of REFUND_APPROVER_CHAIN) {
+  for (const role of approverChain) {
     const step = workflow?.steps?.find((s) => s.approverRole === role);
     let status: TimelineNode['status'] = 'pending';
     if (step) {
@@ -200,6 +201,7 @@ export function RefundApprovalTimeline({
 }: RefundApprovalTimelineProps) {
   const [createOpen, setCreateOpen] = useState(false);
   const [showLedgerDrillDown, setShowLedgerDrillDown] = useState(false);
+  const { experienceTier, financeMode, flags } = useTenantExperience();
 
   const selected = refunds.find((r) => r.id === selectedId) ?? refunds[0] ?? null;
   const workflowQuery = useWorkflowInstance(tenantId, selected?.workflowInstanceId ?? '');
@@ -234,9 +236,20 @@ export function RefundApprovalTimeline({
     ),
   });
 
+  const approverChain = useMemo(
+    () =>
+      refundApproverChainForTenant({
+        experienceTier,
+        financeMode,
+        flags,
+        amountMinor: selected?.amountMinor ?? 0,
+      }),
+    [experienceTier, financeMode, flags, selected?.amountMinor],
+  );
+
   const timelineNodes = useMemo(
-    () => (selected ? buildTimelineNodes(selected, workflow) : []),
-    [selected, workflow],
+    () => (selected ? buildTimelineNodes(selected, workflow, approverChain) : []),
+    [selected, workflow, approverChain],
   );
 
   const createForm = useForm<CreateRefundFormValues>({

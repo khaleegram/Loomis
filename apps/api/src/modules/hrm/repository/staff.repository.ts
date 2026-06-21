@@ -166,6 +166,57 @@ export const staffRepository = {
     );
   },
 
+  async findActivePrimaryUserIdForRole(tenantId: string, role: string): Promise<string | null> {
+    return withTenantContext(tenantId, async (tx) => {
+      const [row] = await tx
+        .select({ userId: staffProfiles.userId })
+        .from(staffProfiles)
+        .innerJoin(
+          roleAssignments,
+          and(
+            eq(roleAssignments.staffProfileId, staffProfiles.id),
+            eq(roleAssignments.tenantId, staffProfiles.tenantId),
+          ),
+        )
+        .where(
+          and(
+            eq(staffProfiles.tenantId, tenantId),
+            eq(staffProfiles.status, 'active'),
+            eq(roleAssignments.assignmentType, 'primary'),
+            eq(roleAssignments.role, role),
+            eq(roleAssignments.active, true),
+          ),
+        )
+        .limit(1);
+      return row?.userId ?? null;
+    });
+  },
+
+  async countActivePrimaryRoleHolders(tenantId: string, role: string): Promise<number> {
+    return withTenantContext(tenantId, async (tx) => {
+      const rows = await tx
+        .select({ userId: staffProfiles.userId })
+        .from(staffProfiles)
+        .innerJoin(
+          roleAssignments,
+          and(
+            eq(roleAssignments.staffProfileId, staffProfiles.id),
+            eq(roleAssignments.tenantId, staffProfiles.tenantId),
+          ),
+        )
+        .where(
+          and(
+            eq(staffProfiles.tenantId, tenantId),
+            eq(staffProfiles.status, 'active'),
+            eq(roleAssignments.assignmentType, 'primary'),
+            eq(roleAssignments.role, role),
+            eq(roleAssignments.active, true),
+          ),
+        );
+      return rows.length;
+    });
+  },
+
   async replacePrimaryRole(input: {
     tenantId: string;
     staffProfileId: string;

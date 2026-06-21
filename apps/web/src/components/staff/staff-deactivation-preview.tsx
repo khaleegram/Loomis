@@ -11,9 +11,15 @@ import { SEMANTIC } from '@/lib/design/surfaces';
 interface DeactivationImpactPreviewProps {
   staff: StaffDetailResponse;
   className?: string;
+  /** When set, warn that this staff member is the only active holder of a critical role. */
+  singletonRoleLabel?: string | null;
 }
 
-export function DeactivationImpactPreview({ staff, className }: DeactivationImpactPreviewProps) {
+export function DeactivationImpactPreview({
+  staff,
+  className,
+  singletonRoleLabel,
+}: DeactivationImpactPreviewProps) {
   const subjectCount = staff.subjectAssignments.length;
   const classTeacherCount = staff.classTeacherAssignments.length;
   const roleCount = staff.roleExtensions.length + (staff.primaryRole ? 1 : 0);
@@ -38,6 +44,23 @@ export function DeactivationImpactPreview({ staff, className }: DeactivationImpa
 
       {/* Impact items */}
       <div className="p-5 space-y-3">
+        {singletonRoleLabel ? (
+          <div className={`flex items-start gap-3 rounded-xl border p-3 ${SEMANTIC.danger.surface}`}>
+            <span className={`flex size-7 shrink-0 items-center justify-center rounded-lg ${SEMANTIC.danger.icon}`}>
+              <Shield aria-hidden className="size-3.5" />
+            </span>
+            <div>
+              <p className={`text-[12px] font-semibold ${SEMANTIC.danger.title}`}>
+                Only active {singletonRoleLabel}
+              </p>
+              <p className={`text-[11px] ${SEMANTIC.danger.text}`}>
+                Deactivating leaves this critical role vacant. Assign a replacement or confirm you
+                accept the vacancy before proceeding.
+              </p>
+            </div>
+          </div>
+        ) : null}
+
         {subjectCount > 0 ? (
           <div className="flex items-start gap-3 rounded-xl border border-brand-50 bg-brand-50/10 p-3">
             <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-brand-700">

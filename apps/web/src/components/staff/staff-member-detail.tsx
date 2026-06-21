@@ -18,6 +18,7 @@ import {
   useResendStaffInvitation,
   useStaffDirectory,
   useStaffMember,
+  useWorkflowInbox,
 } from '@loomis/api-client';
 import {
   assignClassTeacherRequest,
@@ -66,9 +67,10 @@ import {
   formatStaffDisplayRole,
   formatStaffExtensionLabels,
 } from '@/lib/staff/staff-labels';
-import { useCan } from '@/lib/auth/use-capability';
+import { useCan, useCanAny, useRole } from '@/lib/auth/use-capability';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 import { DeactivationImpactPreview } from '@/components/staff/staff-deactivation-preview';
+import { CoreInlineWorkflowDecision } from '@/components/workflow/core-inline-workflow-decision';
 import { WorkloadOverview } from '@/components/staff/staff-workload-overview';
 
 const PRIMARY_ROLES = staffPrimaryRole.options;
@@ -100,11 +102,12 @@ interface StaffMemberDetailProps {
 
 export function StaffMemberDetail({ staffProfileId, staff: staffProp }: StaffMemberDetailProps) {
   const tenantId = useTenantId();
+  const role = useRole();
 
   const canOnboard = useCan('staff.onboard');
   const canAssignSubject = useCan('subject.assign');
   const canAssignClassTeacher = useCan('classteacher.assign');
-  const canChangeRole = useCan('staff.role.assign');
+  const canChangeRole = useCanAny(['staff.role.assign', 'staff.role.request']);
   const canDeactivate = useCan('staff.deactivate');
 
   const { data: fetchedStaff, isLoading, isError, refetch } = useStaffMember(
@@ -113,6 +116,28 @@ export function StaffMemberDetail({ staffProfileId, staff: staffProp }: StaffMem
   );
   const staff = fetchedStaff ?? staffProp;
   const { data: directoryData } = useStaffDirectory(tenantId ?? '');
+  const inboxQuery = useWorkflowInbox(tenantId ?? '');
+  const [roleChangeSubmitted, setRoleChangeSubmitted] = useState(false);
+
+  const pendingRoleChange = useMemo(
+    () =>
+      inboxQuery.data?.items.find(
+        (item) =>
+          item.instance.workflowType === 'staff_role_change' &&
+          item.instance.subjectId === staffProfileId,
+      ) ?? null,
+    [inboxQuery.data?.items, staffProfileId],
+  );
+
+  const singletonRoleLabel = useMemo(() => {
+    if (!staff?.primaryRole || !directoryData?.staff) return null;
+    const critical = ['school_owner', 'principal', 'accountant', 'exam_officer'] as const;
+    if (!critical.includes(staff.primaryRole as (typeof critical)[number])) return null;
+    const activeSameRole = directoryData.staff.filter(
+      (member) => member.status === 'active' && member.primaryRole === staff.primaryRole,
+    ).length;
+    return activeSameRole <= 1 ? formatRoleLabel(staff.primaryRole) : null;
+  }, [directoryData?.staff, staff?.primaryRole]);
 
   const changeRole = useChangeStaffRole(tenantId ?? '', staffProfileId);
   const createSubject = useCreateSubjectAssignment(tenantId ?? '');
@@ -348,15 +373,59 @@ export function StaffMemberDetail({ staffProfileId, staff: staffProp }: StaffMem
           </SectionCard>
         ) : null}
 
+        {/* Owner one-tap role change approval (Core Sprint 5) */}
+        {role === 'school_owner' && pendingRoleChange && tenantId ? (
+          <SectionCard
+            title="Role change awaiting your approval"
+            description="Principal submitted this change — approve or reject inline."
+          >
+            <CoreInlineWorkflowDecision
+              tenantId={tenantId}
+              item={pendingRoleChange}
+              onDecided={() => {
+                void inboxQuery.refetch();
+                void refetch();
+              }}
+            />
+          </SectionCard>
+        ) : null}
+
         {/* Change role */}
         {canChangeRole && staff.status === 'active' ? (
-          <SectionCard title="Change primary role" description="Role changes will invalidate active sessions.">
+          <SectionCard
+            title="Change primary role"
+            description={
+              role === 'principal'
+                ? 'Submits to the school owner for one-tap approval in Core.'
+                : 'Role changes will invalidate active sessions.'
+            }
+          >
+            {role === 'principal' && (roleChangeSubmitted || pendingRoleChange) ? (
+              <Alert>
+                <AlertDescription>
+                  Role change submitted — waiting for the school owner to approve.
+                </AlertDescription>
+              </Alert>
+            ) : null}
             <Form {...roleForm}>
               <form
                 onSubmit={roleForm.handleSubmit(async (values) => {
                   try {
-                    await changeRole.mutateAsync(changeStaffRoleRequest.parse(values));
-                    roleForm.reset(values);
+                    const result = await changeRole.mutateAsync(
+                      changeStaffRoleRequest.parse(values),
+                    );
+                    if (
+                      result &&
+                      typeof result === 'object' &&
+                      'status' in result &&
+                      result.status === 'pending'
+                    ) {
+                      setRoleChangeSubmitted(true);
+                      await inboxQuery.refetch();
+                    } else {
+                      setRoleChangeSubmitted(false);
+                      roleForm.reset(values);
+                    }
                     await refetch();
                   } catch (err) {
                     roleForm.setError('root', {
@@ -392,7 +461,11 @@ export function StaffMemberDetail({ staffProfileId, staff: staffProp }: StaffMem
                   )}
                 />
                 <Button type="submit" disabled={changeRole.isPending} size="sm" variant="gradient">
-                  {changeRole.isPending ? 'Saving…' : 'Change role'}
+                  {changeRole.isPending
+                    ? 'Saving…'
+                    : role === 'principal'
+                      ? 'Submit for owner approval'
+                      : 'Change role'}
                 </Button>
               </form>
             </Form>
@@ -494,7 +567,7 @@ export function StaffMemberDetail({ staffProfileId, staff: staffProp }: StaffMem
             {/* Impact Preview */}
             {showDeactivationPreview ? (
               <div className="mb-4">
-                <DeactivationImpactPreview staff={staff} />
+                <DeactivationImpactPreview staff={staff} singletonRoleLabel={singletonRoleLabel} />
               </div>
             ) : null}
 

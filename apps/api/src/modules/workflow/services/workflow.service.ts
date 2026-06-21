@@ -2,8 +2,10 @@ import { uuidv7 } from 'uuidv7';
 import {
   DEFAULT_WORKFLOW_CHAINS,
   type ApproverChainStep,
+  type Role,
   type WorkflowType,
 } from '@loomis/contracts';
+import { shouldSkipLeadershipStep } from '@loomis/core';
 import { LoomisError } from '../../../shared/errors.js';
 import { dispatchEvent } from '../../../shared/events/registry.js';
 import { tokenService } from '../../identity/services/token.service.js';
@@ -13,6 +15,8 @@ import {
   type WorkflowEscalatedEvent,
 } from '../events/types.js';
 import { workflowRepository } from '../repository/workflow.repository.js';
+import { loadTenantLeadershipUserIds } from './leadership-users.js';
+import { resolveWorkflowTemplate } from './workflow-chain-resolver.js';
 import type {
   ActorContext,
   DecideInput,
@@ -28,38 +32,16 @@ function tenantContextFor(tenantId: string | null): string | null {
 async function resolveTemplate(
   workflowType: WorkflowType,
   tenantId: string | null,
+  payload?: Record<string, unknown>,
 ): Promise<ResolvedTemplate> {
-  const defaults = DEFAULT_WORKFLOW_CHAINS[workflowType];
-  if (!defaults) {
-    throw new LoomisError('VALIDATION_ERROR', 422, `Unknown workflow type: ${workflowType}`);
-  }
-
-  if (tenantId) {
-    const tenantTemplate = await workflowRepository.findTemplate(tenantId, workflowType);
-    if (tenantTemplate?.isActive) {
-      return {
-        workflowType,
-        approverChain: tenantTemplate.approverChain as ApproverChainStep[],
-        isMandatory: tenantTemplate.isMandatory,
-      };
+  try {
+    return await resolveWorkflowTemplate(workflowType, tenantId, payload);
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('Unknown workflow type')) {
+      throw new LoomisError('VALIDATION_ERROR', 422, error.message);
     }
+    throw error;
   }
-
-  const scopeTenantId = defaults.scope === 'platform' ? null : tenantId;
-  const platformTemplate = await workflowRepository.findTemplate(scopeTenantId, workflowType);
-  if (platformTemplate?.isActive) {
-    return {
-      workflowType,
-      approverChain: platformTemplate.approverChain as ApproverChainStep[],
-      isMandatory: platformTemplate.isMandatory,
-    };
-  }
-
-  return {
-    workflowType,
-    approverChain: defaults.chain,
-    isMandatory: defaults.isMandatory,
-  };
 }
 
 function assertCanView(instance: { requestedById: string }, actor: ActorContext, steps: { approverRole: string }[], decisions: { actorUserId: string }[]) {
@@ -111,7 +93,7 @@ export const workflowService = {
    * Returns the instance id and pending status for the caller to store.
    */
   async startWorkflow(input: StartWorkflowInput) {
-    const template = await resolveTemplate(input.workflowType, input.tenantId);
+    const template = await resolveTemplate(input.workflowType, input.tenantId, input.payload);
     const bundle = await workflowRepository.createInstanceWithSteps(
       tenantContextFor(input.tenantId),
       template,
@@ -251,7 +233,53 @@ export const workflowService = {
       await dispatchEvent(WORKFLOW_EVENT_TYPES.completed, completedEvent);
     }
 
-    return result.instance;
+    let current = result;
+    if (input.decision === 'approve' && tenantId) {
+      const leadership = await loadTenantLeadershipUserIds(tenantId);
+      while (current.instance.status === 'pending') {
+        const nextActive = await workflowRepository.findActiveStep(ctx, instanceId);
+        if (!nextActive) break;
+        if (
+          !shouldSkipLeadershipStep({
+            actorUserId: actor.userId,
+            actorRole: actor.role as Role,
+            stepApproverRole: nextActive.approverRole as Role,
+            ownerUserId: leadership.ownerUserId,
+            principalUserId: leadership.principalUserId,
+          })
+        ) {
+          break;
+        }
+
+        const allSteps = await workflowRepository.listStepsForInstance(ctx, instanceId);
+        const willComplete = nextActive.sequence === allSteps.length;
+        const collapseCompletedEvent = willComplete
+          ? buildCompletedEvent(
+              {
+                ...current.instance,
+                status: 'approved',
+              },
+              actor.userId,
+            )
+          : undefined;
+
+        current = await workflowRepository.recordDecisionAndAdvance(ctx, {
+          instance: current.instance,
+          step: nextActive,
+          actorUserId: actor.userId,
+          actorRole: nextActive.approverRole,
+          decision: 'approve',
+          comment: 'Auto-approved — owner and principal share this account',
+          ...(collapseCompletedEvent ? { completedEvent: collapseCompletedEvent } : {}),
+        });
+
+        if (collapseCompletedEvent) {
+          await dispatchEvent(WORKFLOW_EVENT_TYPES.completed, collapseCompletedEvent);
+        }
+      }
+    }
+
+    return current.instance;
   },
 
   async getInstance(tenantId: string | null, instanceId: string, actor: ActorContext) {
