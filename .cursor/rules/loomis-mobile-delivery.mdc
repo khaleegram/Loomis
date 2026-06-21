@@ -1,0 +1,52 @@
+---
+description: Mobile layout-first delivery — archetypes, anti-patterns, and definition of done.
+globs:
+  - apps/mobile/**
+  - packages/ui-mobile/**
+alwaysApply: false
+---
+
+# Loomis — Mobile Delivery
+
+## Mobile-native layout archetypes (pick one — do not invent per screen)
+
+| Archetype | Routes |
+|---|---|
+| **HomeHub** | Parent/student/teacher home |
+| **ChildContextHub** | Parent per-child views |
+| **TimelineList** | Attendance history |
+| **SummaryDetail** | Results, fees |
+| **DaySchedule** | Timetable |
+| **SubmissionFlow** | Assignments |
+| **SettingsForm** | Contact/settings |
+| **AuthShell** | Login/MFA/reset |
+| **QuickMarkGrid** | Class teacher attendance |
+| **GradeEntrySheet** | Teacher score entry |
+| **OfflineBanner** | Global pending sync |
+
+Reference: `apps/mobile/src/app/(dev)/showcase.tsx` in `__DEV__`.
+
+## Forbidden (causes rework)
+
+- Porting web `PageHeader`, sidebar, or overlapping KPI hero cards
+- Stock Expo tab styling with no brand tokens
+- Outline-only primary CTAs
+- ScrollView for long lists (use FlashList)
+- Arbitrary hex colors — use `@loomis/design-tokens` / `MOBILE_THEME`
+- Inline one-off styled controls in `apps/mobile` — extend `@loomis/ui-mobile` first
+
+## Required
+
+- Touch targets ≥ 44pt
+- Loading skeleton matches final layout shape
+- Light + dark mode
+- `can(role, capability)` for UI gating
+- Money via `formatKobo` / `CurrencyText`
+- Offline writes → SQLite queue first, then sync engine
+- Notification bodies: opaque deep-link IDs only (no PII/grades)
+
+## Role stacks
+
+- `(parent)`, `(student)` — online-first MVP
+- `(class-teacher)`, `(teacher)` — offline queue for attendance/grade drafts
+- School admin / platform — web only → `(auth)/unsupported`

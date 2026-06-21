@@ -1,0 +1,12 @@
+appId: com.loomis.app
+---
+- launchApp
+- assertVisible: "Sign in"
+- tapOn: "Email"
+- inputText: "parent.jss3b@loomis.com"
+- tapOn: "Password"
+- inputText: "LoomisDev2026!"
+- tapOn: "Continue"
+- assertVisible:
+    text: "Family Portal"
+    optional: true

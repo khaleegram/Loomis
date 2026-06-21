@@ -1,3 +1,31 @@
-// Mobile design system (NativeWind) built on @loomis/design-tokens.
-// Components are added here as the mobile app is built (Frontend Architecture §8.7).
-export {};
+export * from './theme.js';
+export { LOOMIS } from './theme.js';
+export * from './utils/cn.js';
+
+export * from './primitives/Button.js';
+export * from './primitives/Input.js';
+export * from './primitives/Label.js';
+export * from './primitives/Card.js';
+export * from './primitives/Badge.js';
+export * from './primitives/Skeleton.js';
+export * from './primitives/EmptyState.js';
+export * from './primitives/CurrencyText.js';
+export * from './primitives/Sheet.js';
+export * from './primitives/Alert.js';
+export * from './primitives/Separator.js';
+
+export * from './layouts/MobileScreenShell.js';
+export * from './layouts/SafeScreen.js';
+export * from './layouts/SegmentedTabs.js';
+export * from './layouts/HomeHub.js';
+export * from './layouts/ChildContextHub.js';
+export * from './layouts/TimelineList.js';
+export * from './layouts/SummaryDetail.js';
+export * from './layouts/DaySchedule.js';
+export * from './layouts/AuthShell.js';
+export * from './layouts/OfflineBanner.js';
+export * from './layouts/QuickMarkGrid.js';
+export * from './layouts/GradeEntrySheet.js';
+export * from './layouts/SubmissionFlow.js';
+export * from './layouts/TermPicker.js';
+export * from './layouts/AttendanceSummaryStrip.js';
