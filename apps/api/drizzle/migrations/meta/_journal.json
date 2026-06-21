@@ -323,6 +323,13 @@
       "when": 1780837900000,
       "tag": "0045_web_push",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1780838000000,
+      "tag": "0046_tenant_experience_tier",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,5 @@
 import type { TenantListResponse, TenantResponse, TierSummary } from '@loomis/contracts';
+import { mergeExperienceFlags } from '@loomis/core';
 import { LoomisError } from '../../../shared/errors.js';
 import { tenantEvents } from '../events/index.js';
 import { psfRateSnapshotRepository } from '../repository/psf-rate.repository.js';
@@ -180,6 +181,11 @@ export const tenantService = {
       tierCode: tier?.code ?? '',
       referralCode: tenant.referralCode ?? null,
       currentPsfRateMinor,
+      experienceTier: tenant.experienceTier as TenantResponse['experienceTier'],
+      financeMode: tenant.financeMode as TenantResponse['financeMode'],
+      experienceFlags: mergeExperienceFlags(
+        tenant.experienceFlags as TenantResponse['experienceFlags'],
+      ),
       suspendedReason: tenant.suspendedReason ?? null,
       suspendedAt: tenant.suspendedAt ? tenant.suspendedAt.toISOString() : null,
       createdAt: tenant.createdAt.toISOString(),

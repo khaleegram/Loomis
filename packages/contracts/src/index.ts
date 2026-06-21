@@ -12,6 +12,7 @@ export * from './identity/session.schema.js';
 
 // Tenant
 export * from './tenant/tenant.schema.js';
+export * from './tenant/experience.schema.js';
 
 // HRM
 export * from './hrm/hrm.schema.js';

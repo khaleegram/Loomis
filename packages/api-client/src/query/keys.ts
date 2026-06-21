@@ -186,6 +186,7 @@ export const queryKeys = {
   },
   tenant: {
     branding: (tenantId: string) => ['tenant', tenantId, 'branding'] as const,
+    experience: (tenantId: string) => ['tenant', tenantId, 'experience'] as const,
   },
   /** Platform-level keys — no tenant context (platform actors have null tenant_id). */
   platform: {

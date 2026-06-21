@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { experienceTier, financeMode, tenantExperienceFlags } from './experience.schema.js';
 
 /**
  * Tenant module contracts (System Design §3.2; SRS FR-PLT-001..003; US-PLT-001..003).
@@ -62,6 +63,9 @@ export const tenantResponse = z.object({
   tierCode: z.string(),
   referralCode: z.string().nullable(),
   currentPsfRateMinor: z.number().int().nullable(),
+  experienceTier: experienceTier,
+  financeMode: financeMode,
+  experienceFlags: tenantExperienceFlags,
   suspendedReason: z.string().nullable(),
   suspendedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),

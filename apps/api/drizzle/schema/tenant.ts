@@ -71,12 +71,29 @@ export const tenants = tenantSchema.table(
     suspendedById: uuid('suspended_by_id'),
     reinstatedAt: timestamp('reinstated_at', { withTimezone: true }),
     reinstatedById: uuid('reinstated_by_id'),
+    /** Role UX tier — Core default (ROLE_EXPERIENCE_TIER_PLAN.md). */
+    experienceTier: varchar('experience_tier', { length: 20 }).notNull().default('core'),
+    /** Combined finance officer vs split cashier/accountant. */
+    financeMode: varchar('finance_mode', { length: 20 }).notNull().default('combined'),
+    /** Advanced feature toggles (workflows inbox, deputy exam, etc.). */
+    experienceFlags: jsonb('experience_flags')
+      .$type<Record<string, boolean>>()
+      .notNull()
+      .default({}),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({
     statusIdx: index('tenants_status_idx').on(table.status),
     regionIdx: index('tenants_region_idx').on(table.region),
+    experienceTierValid: check(
+      'tenants_experience_tier_valid',
+      sql`${table.experienceTier} IN ('core', 'advanced', 'enterprise')`,
+    ),
+    financeModeValid: check(
+      'tenants_finance_mode_valid',
+      sql`${table.financeMode} IN ('combined', 'split')`,
+    ),
   }),
 );
 

@@ -100,4 +100,33 @@ export const tenantRepository = {
       .returning();
     return tenant ?? null;
   },
+
+  async updateExperience(
+    id: string,
+    patch: {
+      experienceTier?: string;
+      financeMode?: string;
+      experienceFlags?: Record<string, boolean>;
+    },
+    tx?: Executor,
+  ) {
+    const executor = tx ?? db;
+    const updates: {
+      experienceTier?: string;
+      financeMode?: string;
+      experienceFlags?: Record<string, boolean>;
+      updatedAt: Date;
+    } = { updatedAt: new Date() };
+
+    if (patch.experienceTier !== undefined) updates.experienceTier = patch.experienceTier;
+    if (patch.financeMode !== undefined) updates.financeMode = patch.financeMode;
+    if (patch.experienceFlags !== undefined) updates.experienceFlags = patch.experienceFlags;
+
+    const [tenant] = await executor
+      .update(tenants)
+      .set(updates)
+      .where(eq(tenants.id, id))
+      .returning();
+    return tenant ?? null;
+  },
 };

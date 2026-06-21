@@ -1,4 +1,8 @@
 export {
+  getTenantExperienceHandler,
+  updateTenantExperienceHandler,
+} from './experience.handler.js';
+export {
   listConfigurationsHandler,
   upsertConfigurationHandler,
 } from './configuration.handler.js';
