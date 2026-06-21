@@ -40,9 +40,12 @@ import { PageBody } from '@/components/school/school-shell';
 import { ClassTeacherDashboard } from '@/components/staff/class-teacher-dashboard';
 import { AdminOfficerDashboard } from '@/components/staff/admin-officer-dashboard';
 import { TeacherLanding } from '@/components/staff/teacher-landing';
+import { CoreOwnerHome } from '@/components/dashboard/core-owner-home';
+import { CorePrincipalHome } from '@/components/dashboard/core-principal-home';
 import { useAuth } from '@/lib/auth/auth-context';
 import { isExamOfficerRole } from '@/lib/auth/is-exam-officer';
 import { isClassTeacherRole, isTeacherRole } from '@/lib/timetable/is-teaching-staff';
+import { useTenantExperience } from '@/lib/tenant/use-tenant-experience';
 
 const ROLE_LABELS: Record<string, string> = {
   school_owner: 'School Owner',
@@ -68,6 +71,7 @@ export default function SchoolDashboardPage() {
   const router = useRouter();
   const tenantId = session?.tenantId ?? '';
   const role = session?.role;
+  const { isCore } = useTenantExperience();
 
   useEffect(() => {
     if (role && isExamOfficerRole(role)) {
@@ -163,6 +167,22 @@ export default function SchoolDashboardPage() {
     return (
       <PageBody className="max-w-[1200px] px-4 py-5 sm:px-6 sm:py-6 lg:px-7 lg:py-7">
         <TeacherLanding displayName={session?.displayName} />
+      </PageBody>
+    );
+  }
+
+  if (isCore && role === 'school_owner') {
+    return (
+      <PageBody className="max-w-[1200px] px-4 py-5 sm:px-6 sm:py-6 lg:px-7 lg:py-7">
+        <CoreOwnerHome tenantId={tenantId} displayName={session?.displayName} />
+      </PageBody>
+    );
+  }
+
+  if (isCore && role === 'principal') {
+    return (
+      <PageBody className="max-w-[1200px] px-4 py-5 sm:px-6 sm:py-6 lg:px-7 lg:py-7">
+        <CorePrincipalHome tenantId={tenantId} displayName={session?.displayName} />
       </PageBody>
     );
   }

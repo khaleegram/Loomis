@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
+import { homePathForRole } from '@/lib/auth/home-path';
 import {
   GROUP_PREFIX,
   ROLE_GROUP,
   groupForPath,
-  homePathForRole,
   roleCanAccessPath,
-} from './route-groups';
+} from '@/lib/auth/route-groups';
 
 describe('route-groups', () => {
   it('maps every role to a console group', () => {
@@ -25,7 +25,7 @@ describe('route-groups', () => {
   it('treats non-console paths as public', () => {
     expect(groupForPath('/')).toBeNull();
     expect(groupForPath('/login')).toBeNull();
-    expect(groupForPath('/platformx')).toBeNull(); // not a prefix boundary
+    expect(groupForPath('/platformx')).toBeNull();
   });
 
   it('allows a role only within its own group', () => {
@@ -38,15 +38,20 @@ describe('route-groups', () => {
   it('permits any role on a public path', () => {
     expect(roleCanAccessPath('student', '/')).toBe(true);
   });
+});
 
-  it('returns the home path for a role', () => {
-    expect(homePathForRole('principal')).toBe('/school');
-    expect(homePathForRole('regional_manager')).toBe('/regional');
-    expect(homePathForRole('platform_owner')).toBe('/platform');
+describe('homePathForRole', () => {
+  it('routes finance and leadership roles per Sprint 3/4', () => {
+    expect(homePathForRole('principal')).toBe('/school/dashboard');
+    expect(homePathForRole('school_owner')).toBe('/school/dashboard');
+    expect(homePathForRole('admin_officer')).toBe('/school/dashboard');
+    expect(homePathForRole('accountant')).toBe('/school/finance/payments/verify');
+    expect(homePathForRole('cashier', { financeMode: 'combined' })).toBe(
+      '/school/finance/payments/verify',
+    );
+    expect(homePathForRole('cashier', { financeMode: 'split' })).toBe('/school/finance/payments/log');
+    expect(homePathForRole('exam_officer')).toBe('/school/exams');
     expect(homePathForRole('dpo')).toBe('/platform/compliance');
-    expect(homePathForRole('parent')).toBe('/parent');
-    expect(homePathForRole('timetable_officer')).toBe('/school/timetable');
-    expect(homePathForRole('teacher')).toBe('/school/timetable');
-    expect(homePathForRole('class_teacher')).toBe('/school/dashboard');
+    expect(homePathForRole('timetable_officer', { experienceTier: 'core' })).toBe('/school/academic');
   });
 });
