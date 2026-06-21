@@ -584,6 +584,17 @@ export const studentRepository = {
     });
   },
 
+  async findParentIdentityByPhone(phoneE164: string) {
+    return withTenantContext(null, async (tx) => {
+      const [row] = await tx
+        .select()
+        .from(parentIdentities)
+        .where(eq(parentIdentities.phoneE164, phoneE164))
+        .limit(1);
+      return row ?? null;
+    });
+  },
+
   async upsertParentIdentity(input: {
     emailNormalized: string;
     phoneE164: string;
@@ -591,24 +602,46 @@ export const studentRepository = {
     userId?: string | null;
   }) {
     return withTenantContext(null, async (tx) => {
-      const existing = await tx
+      const now = new Date();
+
+      const [byEmail] = await tx
         .select()
         .from(parentIdentities)
         .where(eq(parentIdentities.emailNormalized, input.emailNormalized))
         .limit(1);
-      if (existing[0]) {
-        const now = new Date();
+      if (byEmail) {
         const [updated] = await tx
           .update(parentIdentities)
           .set({
             fullName: input.fullName,
             phoneE164: input.phoneE164,
-            userId: input.userId ?? existing[0].userId,
+            userId: input.userId ?? byEmail.userId,
             updatedAt: now,
           })
-          .where(eq(parentIdentities.id, existing[0].id))
+          .where(eq(parentIdentities.id, byEmail.id))
           .returning();
-        return updated ?? existing[0];
+        return updated ?? byEmail;
+      }
+
+      if (input.phoneE164) {
+        const [byPhone] = await tx
+          .select()
+          .from(parentIdentities)
+          .where(eq(parentIdentities.phoneE164, input.phoneE164))
+          .limit(1);
+        if (byPhone) {
+          const [updated] = await tx
+            .update(parentIdentities)
+            .set({
+              emailNormalized: input.emailNormalized,
+              fullName: input.fullName,
+              userId: input.userId ?? byPhone.userId,
+              updatedAt: now,
+            })
+            .where(eq(parentIdentities.id, byPhone.id))
+            .returning();
+          return updated ?? byPhone;
+        }
       }
 
       const [created] = await tx

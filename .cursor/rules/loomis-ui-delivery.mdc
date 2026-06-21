@@ -7,6 +7,8 @@ alwaysApply: true
 
 When the user asks to **build**, **fix**, **redesign**, or **migrate** a feature, follow this workflow **before writing code**. The user names the **feature** (e.g. “build timetable”) — not file paths, not scope blocks.
 
+**Role experience:** Check tenant tier first. **Core:** follow **`ROLE_EXPERIENCE_TIER_PLAN.md`**. **Advanced/Enterprise:** follow **`ROLE_EXPERIENCE_MASTER_PLAN.md`**. Do not re-audit roles covered by these docs unless the user introduces new business requirements.
+
 **Single source of truth:** `Loomis_User_Stories_v1.md` at the repo root. Capabilities: `packages/core/src/capabilities.ts`. Hard role rules: `loomis-roles.mdc`.
 
 Do not ask “should it look like staff or dashboard?” — decide from the page purpose and user stories.

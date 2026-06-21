@@ -1,11 +1,11 @@
 /**
  * Rich demo school — 12 classes, 467 students, 20 staff, timetables, 3 terms.
  *
- * Usage (after db:up + migrate; platform seed optional but tier/PSF must exist):
- *   pnpm db:seed:rich
+ * Usage (after db:up + migrate; run pnpm db:seed for platform + tier + PSF):
+ *   pnpm db:seed:rich   — or included automatically in root pnpm db:seed
  *
- * Idempotent: skips if principal@loomis.com already exists.
- * Does not replace the small demo school from db:seed.
+ * Idempotent: skips if principal@greenfield.loomis.com already exists.
+ * Greenfield is the canonical local school demo (Core tier).
  */
 import { eq, and } from 'drizzle-orm';
 import type { Role, StaffPrimaryRole } from '@loomis/contracts';
@@ -24,6 +24,7 @@ import { mfaRepository } from '../src/modules/identity/repository/mfa.repository
 import { userRepository } from '../src/modules/identity/repository/user.repository.js';
 import { mfaService } from '../src/modules/identity/services/mfa.service.js';
 import { passwordService } from '../src/modules/identity/services/password.service.js';
+import { buildStudentPortalEmail } from '../src/modules/identity/services/provisioned-password.service.js';
 import { MFA_MANDATORY_ROLES } from '../src/modules/identity/types.js';
 import { staffRepository } from '../src/modules/hrm/repository/staff.repository.js';
 import { studentRepository } from '../src/modules/student/repository/student.repository.js';
@@ -37,14 +38,24 @@ import { parentDashboardRepository } from '../src/modules/read-models/repository
 import { psfRateService } from '../src/modules/tenant/services/psf-rate.service.js';
 import { tenantService } from '../src/modules/tenant/services/tenant.service.js';
 import { withTenantContext } from '../src/shared/tenant-context.js';
+import {
+  GREENFIELD_SCHOOL_SLUG,
+  platformDevEmail,
+  schoolContactEmail,
+  schoolDevEmail,
+} from './seed-email.js';
 
-const PLATFORM_OWNER_EMAIL = 'owner@demo.loomis.local';
-const SEED_EMAIL_DOMAIN = 'loomis.com';
+const PLATFORM_OWNER_EMAIL = platformDevEmail('owner');
 const DEV_PASSWORD = 'LoomisDev2026!';
 const DEV_TOTP_BASE32 = 'JBSWY3DPEHPK3PXP';
 const TIER_CODE = 'demo';
 const PSF_RATE_MINOR = 500_000;
-const MARKER_EMAIL = `principal@${SEED_EMAIL_DOMAIN}`;
+const MARKER_EMAIL = schoolDevEmail('principal', GREENFIELD_SCHOOL_SLUG);
+
+function seedEmail(local: string): string {
+  return schoolDevEmail(local, GREENFIELD_SCHOOL_SLUG);
+}
+
 const PARENT_JSS3B_EMAIL = seedEmail('parent.jss3b');
 const PARENT_JSS3B_PHONE = '+2348015550196';
 /** Audit `request_id` column is UUID — not an arbitrary string. */
@@ -54,10 +65,6 @@ const SEED_AUDIT = {
   ipAddress: '127.0.0.1',
   userAgent: 'seed-rich-school',
 };
-
-function seedEmail(local: string): string {
-  return `${local}@${SEED_EMAIL_DOMAIN}`;
-}
 
 const SUBJECTS = [
   { id: '019c0000-0000-7000-8000-000000000001', code: 'MTH' },
@@ -99,10 +106,42 @@ interface StaffSpec {
   email: string;
   role: Role;
   fullName: string;
-  primaryRole: StaffPrimaryRole;
+  primaryRole: StaffPrimaryRole | 'school_owner';
   phone: string;
   classTeacher?: boolean;
 }
+
+/** Additional school roles not in the original rich seed — idempotent via ensureRichExtendedRoleAccounts. */
+const RICH_EXTENDED_ROLE_SPECS: StaffSpec[] = [
+  {
+    email: seedEmail('owner'),
+    role: 'school_owner',
+    fullName: 'Ngozi Eze',
+    primaryRole: 'school_owner',
+    phone: '+2348011000005',
+  },
+  {
+    email: seedEmail('accountant'),
+    role: 'accountant',
+    fullName: 'Kemi Adebayo',
+    primaryRole: 'accountant',
+    phone: '+2348011000006',
+  },
+  {
+    email: seedEmail('cashier'),
+    role: 'cashier',
+    fullName: 'Tunde Okafor',
+    primaryRole: 'cashier',
+    phone: '+2348011000007',
+  },
+  {
+    email: seedEmail('deputy'),
+    role: 'deputy_exam_officer',
+    fullName: 'Yemi Bakare',
+    primaryRole: 'deputy_exam_officer',
+    phone: '+2348011000008',
+  },
+];
 
 function buildStaffSpecs(): StaffSpec[] {
   const specs: StaffSpec[] = [
@@ -134,6 +173,7 @@ function buildStaffSpecs(): StaffSpec[] {
       primaryRole: 'admin_officer',
       phone: '+2348011000004',
     },
+    ...RICH_EXTENDED_ROLE_SPECS,
   ];
 
   for (let i = 1; i <= 16; i++) {
@@ -288,7 +328,68 @@ async function seedStudentsForClass(
   }
 }
 
-function printRichCredentials(tenantId: string) {
+async function ensureRichExtendedRoleAccounts(
+  tenantId: string,
+  createdById: string,
+): Promise<string[]> {
+  const added: string[] = [];
+  for (const spec of RICH_EXTENDED_ROLE_SPECS) {
+    const existing = await userRepository.findByEmail(spec.email);
+    if (!existing) {
+      await createStaffUser(spec, tenantId, createdById);
+      added.push(spec.email);
+    }
+  }
+  return added;
+}
+
+/** Student portal demo — JSS3 B child linked to parent.jss3b@greenfield.loomis.com. Idempotent. */
+async function ensureJss3BStudentPortal(tenantId: string): Promise<{
+  ensured: boolean;
+  loginEmail?: string;
+  admissionNo?: string;
+  studentName?: string;
+}> {
+  const years = await academicRepository.listYears(tenantId);
+  const year = years.find((y) => y.status === 'active') ?? years[0];
+  if (!year) return { ensured: false };
+
+  const terms = await academicRepository.listTermsByYear(tenantId, year.id);
+  const openTerm = terms.find((t) => t.status === 'open');
+  if (!openTerm) return { ensured: false };
+
+  const jss3bArm = await findClassArmByLevelAndName(tenantId, year.id, 'JSS3', 'B');
+  if (!jss3bArm) return { ensured: false };
+
+  const roster = await studentRepository.listTermEnrollmentRoster(tenantId, openTerm.id);
+  const jss3bStudent = roster.find((row) => row.classArmId === jss3bArm.id);
+  if (!jss3bStudent) return { ensured: false };
+
+  const loginEmail = buildStudentPortalEmail(tenantId, jss3bStudent.admissionNo);
+  let studentUser = await userRepository.findByEmail(loginEmail);
+  if (!studentUser) {
+    const passwordHash = await passwordService.hash(DEV_PASSWORD);
+    studentUser = await userRepository.create({
+      email: loginEmail,
+      passwordHash,
+      role: 'student',
+      tenantId,
+      mfaRequired: false,
+      status: 'active',
+      displayName: `${jss3bStudent.firstName} ${jss3bStudent.lastName}`,
+    });
+    await studentRepository.linkStudentUserId(tenantId, jss3bStudent.studentId, studentUser.id);
+  }
+
+  return {
+    ensured: true,
+    loginEmail,
+    admissionNo: jss3bStudent.admissionNo,
+    studentName: `${jss3bStudent.firstName} ${jss3bStudent.lastName}`,
+  };
+}
+
+function printRichCredentials(tenantId: string, studentLoginEmail?: string) {
   console.log('');
   console.log('══════════════════════════════════════════════════════════════');
   console.log('  Loomis RICH demo school — Greenfield Academy Lagos');
@@ -297,14 +398,22 @@ function printRichCredentials(tenantId: string) {
   console.log(`  Password:    ${DEV_PASSWORD}`);
   console.log('');
   console.log('  Key logins:');
+  console.log(`    • ${seedEmail('owner')}  (school owner)`);
   console.log(`    • ${seedEmail('principal')}  (principal)`);
+  console.log(`    • ${seedEmail('admin')}  (admin officer)`);
+  console.log(`    • ${seedEmail('accountant')}  (accountant → /school/finance)`);
+  console.log(`    • ${seedEmail('cashier')}  (cashier → log payments)`);
   console.log(`    • ${seedEmail('timetable')}  (timetable officer → /school/timetable)`);
   console.log(`    • ${seedEmail('exam')}  (exam officer → /school/exams)`);
+  console.log(`    • ${seedEmail('deputy')}  (deputy exam officer)`);
   console.log(`    • ${seedEmail('teacher01')}  (subject teacher — My Schedule / assignments)`);
   console.log(`    • ${seedEmail('teacher03')}  (class teacher JSS1 B — attendance)`);
   console.log(`    • ${PARENT_JSS3B_EMAIL}  (parent — linked child in JSS3 B → /parent/fees)`);
+  if (studentLoginEmail) {
+    console.log(`    • ${studentLoginEmail}  (student — JSS3 B portal)`);
+  }
   console.log('');
-  console.log('  Data: 12 classes · 467 students · 20 staff · published timetables');
+  console.log('  Data: 12 classes · 467 students · 24 staff · published timetables');
   console.log('  Try: /school/timetable · /school/students · /parent/fees');
   console.log('══════════════════════════════════════════════════════════════');
   console.log('');
@@ -1013,80 +1122,31 @@ async function ensureJss3BParentDemo(tenantId: string): Promise<{
   };
 }
 
-async function main() {
-  const existing = await userRepository.findByEmail(MARKER_EMAIL);
-  if (existing?.tenantId) {
-    const reassigned = await ensureTeacher01SubjectTeacherOnly(existing.tenantId);
-    const gradesSeeded = await seedJss1BGradebookEntries(existing.tenantId);
-    const resumed = await resumeRichSeedTimetables(existing.tenantId);
-    const parentDemo = await ensureJss3BParentDemo(existing.tenantId);
-    printRichCredentials(existing.tenantId);
-    if (reassigned) {
-      console.log('teacher01 corrected to subject teacher — log out and back in to refresh JWT.');
-      console.log('Use teacher03@loomis.com for class teacher / attendance on JSS1 B.');
-    }
-    if (gradesSeeded) {
-      console.log('JSS1 B report card grades seeded — open Report cards → JSS1 B.');
-    }
-    if (parentDemo.ensured) {
-      console.log(
-        `Parent demo ready — ${PARENT_JSS3B_EMAIL} linked to ${parentDemo.studentAdmissionNo} (${parentDemo.studentName}, JSS3 B).`,
-      );
-    }
-    console.log(
-      resumed ? 'Rich seed timetables completed (resumed).' : 'Rich seed already applied.',
-    );
-    return;
-  }
+interface RichStaffRef {
+  email: string;
+  staffProfileId: string;
+  userId: string;
+}
 
-  console.log('Seeding rich demo school (this may take several minutes)…');
+async function loadRichStaffRefs(tenantId: string): Promise<RichStaffRef[]> {
+  const rows = await staffRepository.listProfiles(tenantId);
+  return rows.map((row) => ({
+    email: row.profile.email,
+    staffProfileId: row.profile.id,
+    userId: row.profile.userId,
+  }));
+}
 
-  const platformOwner = await userRepository.findByEmail(PLATFORM_OWNER_EMAIL);
-  if (!platformOwner) {
-    throw new Error('Run pnpm db:seed first to create platform owner.');
-  }
-
-  await ensureTier(TIER_CODE);
-  try {
-    await psfRateService.setGlobalPsfRate(
-      {
-        rateMinor: PSF_RATE_MINOR,
-        effectiveFrom: new Date('2026-01-01'),
-        reason: 'Rich dev seed',
-      },
-      { userId: platformOwner.id, role: 'platform_owner' },
-    );
-  } catch {
-    /* global rate may already exist */
-  }
-
-  const tenant = await tenantService.provisionTenant(
-    {
-      name: 'Greenfield Academy Lagos',
-      region: 'Lagos',
-      contactEmail: seedEmail('contact'),
-      address: '12 Greenfield Avenue, Lekki, Lagos',
-      tierCode: TIER_CODE,
-      initialPsfRateMinor: PSF_RATE_MINOR,
-    },
-    { userId: platformOwner.id, role: 'platform_owner' },
-  );
-
-  const staffSpecs = buildStaffSpecs();
-  const staffProfiles: { email: string; staffProfileId: string; userId: string }[] = [];
-
-  for (const spec of staffSpecs) {
-    const { user, profile } = await createStaffUser(spec, tenant.id, platformOwner.id);
-    staffProfiles.push({ email: spec.email, staffProfileId: profile.id, userId: user.id });
-  }
-
-  const principal = staffProfiles.find((s) => s.email === MARKER_EMAIL);
-  if (!principal) throw new Error('Principal missing');
-
-  const actor = { userId: principal.id, role: 'principal' as Role, tenantId: tenant.id };
+/** Academic calendar, enrollment, assignments, gradebook configs, and timetables. */
+async function seedRichSchoolCalendar(
+  tenantId: string,
+  principal: RichStaffRef,
+  staffProfiles: RichStaffRef[],
+): Promise<void> {
+  const actor = { userId: principal.userId, role: 'principal' as Role, tenantId };
 
   const year = await academicYearService.createYear(
-    tenant.id,
+    tenantId,
     {
       label: '2025/2026',
       startDate: '2025-09-01',
@@ -1095,9 +1155,9 @@ async function main() {
     },
     actor,
   );
-  await academicYearService.activateYear(tenant.id, year.id, actor);
+  await academicYearService.activateYear(tenantId, year.id, actor);
 
-  const draftTerms = await academicRepository.listTermsByYear(tenant.id, year.id);
+  const draftTerms = await academicRepository.listTermsByYear(tenantId, year.id);
   const termConfigs = [
     {
       name: 'First Term',
@@ -1135,13 +1195,13 @@ async function main() {
     const term = draftTerms[i];
     const cfg = termConfigs[i];
     if (!term || !cfg) continue;
-    await termService.configureTerm(tenant.id, term.id, cfg, actor);
+    await termService.configureTerm(tenantId, term.id, cfg, actor);
     if (i === 0) {
-      await termService.openTerm(tenant.id, term.id, actor);
+      await termService.openTerm(tenantId, term.id, actor);
     }
   }
 
-  const openTerm = (await academicRepository.listTermsByYear(tenant.id, year.id)).find(
+  const openTerm = (await academicRepository.listTermsByYear(tenantId, year.id)).find(
     (t) => t.status === 'open',
   );
   if (!openTerm) throw new Error('Open term missing');
@@ -1149,7 +1209,7 @@ async function main() {
   const levelRows = [];
   for (const level of CLASS_LEVELS) {
     const row = await classStructureService.createClassLevel(
-      tenant.id,
+      tenantId,
       { code: level.code, name: level.name, rank: level.rank, isTerminal: level.rank === 6 },
       actor,
     );
@@ -1160,7 +1220,7 @@ async function main() {
   for (const level of levelRows) {
     for (const armName of ARMS) {
       const arm = await classStructureService.createClassArm(
-        tenant.id,
+        tenantId,
         { academicYearId: year.id, classLevelId: level.id, name: armName },
         actor,
       );
@@ -1185,7 +1245,7 @@ async function main() {
 
     console.log(`  Enrolling ${count} students in ${arm.label}…`);
     await seedStudentsForClass(
-      tenant.id,
+      tenantId,
       actor,
       openTerm.id,
       arm.id,
@@ -1198,11 +1258,11 @@ async function main() {
     const classTeacher = resolveClassTeacherForArm(teachers, arm.label, armIndex);
     if (classTeacher) {
       await staffRepository.assignClassTeacher({
-        tenantId: tenant.id,
+        tenantId,
         staffProfileId: classTeacher.staffProfileId,
         termId: openTerm.id,
         classArmId: arm.id,
-        actorUserId: principal.id,
+        actorUserId: principal.userId,
       });
     }
 
@@ -1210,19 +1270,19 @@ async function main() {
       const subject = SUBJECTS[s]!;
       const teacher = teachers[(armIndex + s) % teachers.length]!;
       await staffRepository.createSubjectAssignment({
-        tenantId: tenant.id,
+        tenantId,
         staffProfileId: teacher.staffProfileId,
         termId: openTerm.id,
         classArmId: arm.id,
         subjectId: subject.id,
-        actorUserId: principal.id,
-        approvedById: principal.id,
+        actorUserId: principal.userId,
+        approvedById: principal.userId,
       });
     }
   }
 
   const scheme = await gradebookService.createGradingScheme(
-    tenant.id,
+    tenantId,
     {
       name: 'Greenfield Standard 40/60',
       continuousAssessmentWeight: 40,
@@ -1240,24 +1300,28 @@ async function main() {
     actor,
   );
 
-  await gradebookService.createExamConfig(
-    tenant.id,
-    {
-      termId: openTerm.id,
-      classArmId: classArms[0]!.id,
-      subjectId: SUBJECTS[0]!.id,
-      gradingSchemeId: scheme.id,
-      title: 'First Term Mathematics',
-    },
-    actor,
-  );
+  try {
+    await gradebookService.createExamConfig(
+      tenantId,
+      {
+        termId: openTerm.id,
+        classArmId: classArms[0]!.id,
+        subjectId: SUBJECTS[0]!.id,
+        gradingSchemeId: scheme.id,
+        title: 'First Term Mathematics',
+      },
+      actor,
+    );
+  } catch {
+    // Idempotent — skip duplicates on resume
+  }
 
   for (const arm of classArms) {
     for (const subject of SUBJECTS) {
       if (arm.id === classArms[0]!.id && subject.id === SUBJECTS[0]!.id) continue;
       try {
         await gradebookService.createExamConfig(
-          tenant.id,
+          tenantId,
           {
             termId: openTerm.id,
             classArmId: arm.id,
@@ -1274,20 +1338,140 @@ async function main() {
   }
 
   await seedTimetables(
-    tenant.id,
+    tenantId,
     openTerm.id,
     classArms,
     teachers.map((t) => ({ staffProfileId: t.staffProfileId })),
   );
+}
+
+async function main() {
+  const existing = await userRepository.findByEmail(MARKER_EMAIL);
+  if (existing?.tenantId) {
+    const calendarYears = await academicRepository.listYears(existing.tenantId);
+    if (calendarYears.length === 0) {
+      console.log('Rich seed was interrupted — completing academic calendar…');
+      const staffProfiles = await loadRichStaffRefs(existing.tenantId);
+      const principal = staffProfiles.find((s) => s.email === MARKER_EMAIL);
+      if (!principal) throw new Error('Principal missing on interrupted rich seed');
+
+      await seedRichSchoolCalendar(existing.tenantId, principal, staffProfiles);
+      await seedJss1BGradebookEntries(existing.tenantId);
+      const parentDemo = await ensureJss3BParentDemo(existing.tenantId);
+      const studentPortal = await ensureJss3BStudentPortal(existing.tenantId);
+
+      printRichCredentials(existing.tenantId, studentPortal.loginEmail);
+      if (parentDemo.ensured) {
+        console.log(
+          `Parent demo ready — ${PARENT_JSS3B_EMAIL} linked to ${parentDemo.studentAdmissionNo} (${parentDemo.studentName}, JSS3 B).`,
+        );
+      }
+      if (studentPortal.ensured && studentPortal.loginEmail) {
+        console.log(
+          `Student portal ready — ${studentPortal.loginEmail} (${studentPortal.admissionNo}, ${studentPortal.studentName}).`,
+        );
+      }
+      console.log('Rich seed completed (resumed after interruption).');
+      return;
+    }
+
+    const platformOwner = await userRepository.findByEmail(PLATFORM_OWNER_EMAIL);
+    const createdById = platformOwner?.id ?? existing.id;
+
+    const reassigned = await ensureTeacher01SubjectTeacherOnly(existing.tenantId);
+    const gradesSeeded = await seedJss1BGradebookEntries(existing.tenantId);
+    const resumed = await resumeRichSeedTimetables(existing.tenantId);
+    const parentDemo = await ensureJss3BParentDemo(existing.tenantId);
+    const addedRoles = await ensureRichExtendedRoleAccounts(existing.tenantId, createdById);
+    const studentPortal = await ensureJss3BStudentPortal(existing.tenantId);
+
+    printRichCredentials(existing.tenantId, studentPortal.loginEmail);
+    if (reassigned) {
+      console.log('teacher01 corrected to subject teacher — log out and back in to refresh JWT.');
+      console.log(`Use ${seedEmail('teacher03')} for class teacher / attendance on JSS1 B.`);
+    }
+    if (gradesSeeded) {
+      console.log('JSS1 B report card grades seeded — open Report cards → JSS1 B.');
+    }
+    if (parentDemo.ensured) {
+      console.log(
+        `Parent demo ready — ${PARENT_JSS3B_EMAIL} linked to ${parentDemo.studentAdmissionNo} (${parentDemo.studentName}, JSS3 B).`,
+      );
+    }
+    if (addedRoles.length > 0) {
+      console.log(`Added role demo accounts: ${addedRoles.join(', ')}`);
+    }
+    if (studentPortal.ensured && studentPortal.loginEmail) {
+      console.log(
+        `Student portal ready — ${studentPortal.loginEmail} (${studentPortal.admissionNo}, ${studentPortal.studentName}).`,
+      );
+    }
+    console.log(
+      resumed ? 'Rich seed timetables completed (resumed).' : 'Rich seed already applied.',
+    );
+    return;
+  }
+
+  console.log('Seeding rich demo school (this may take several minutes)…');
+
+  const platformOwner = await userRepository.findByEmail(PLATFORM_OWNER_EMAIL);
+  if (!platformOwner) {
+    throw new Error('Run pnpm db:seed first to create platform owner.');
+  }
+
+  await ensureTier(TIER_CODE);
+  try {
+    await psfRateService.setGlobalPsfRate(
+      {
+        rateMinor: PSF_RATE_MINOR,
+        effectiveFrom: new Date('2026-01-01'),
+        reason: 'Rich dev seed',
+      },
+      { userId: platformOwner.id, role: 'platform_owner' },
+    );
+  } catch {
+    /* global rate may already exist */
+  }
+
+  const tenant = await tenantService.provisionTenant(
+    {
+      name: 'Greenfield Academy Lagos',
+      region: 'Lagos',
+      contactEmail: schoolContactEmail(GREENFIELD_SCHOOL_SLUG),
+      address: '12 Greenfield Avenue, Lekki, Lagos',
+      tierCode: TIER_CODE,
+      initialPsfRateMinor: PSF_RATE_MINOR,
+    },
+    { userId: platformOwner.id, role: 'platform_owner' },
+  );
+
+  const staffSpecs = buildStaffSpecs();
+  const staffProfiles: { email: string; staffProfileId: string; userId: string }[] = [];
+
+  for (const spec of staffSpecs) {
+    const { user, profile } = await createStaffUser(spec, tenant.id, platformOwner.id);
+    staffProfiles.push({ email: spec.email, staffProfileId: profile.id, userId: user.id });
+  }
+
+  const principal = staffProfiles.find((s) => s.email === MARKER_EMAIL);
+  if (!principal) throw new Error('Principal missing');
+
+  await seedRichSchoolCalendar(tenant.id, principal, staffProfiles);
 
   await seedJss1BGradebookEntries(tenant.id);
 
   const parentDemo = await ensureJss3BParentDemo(tenant.id);
+  const studentPortal = await ensureJss3BStudentPortal(tenant.id);
 
-  printRichCredentials(tenant.id);
+  printRichCredentials(tenant.id, studentPortal.loginEmail);
   if (parentDemo.ensured) {
     console.log(
       `Parent demo ready — ${PARENT_JSS3B_EMAIL} linked to ${parentDemo.studentAdmissionNo} (${parentDemo.studentName}, JSS3 B).`,
+    );
+  }
+  if (studentPortal.ensured && studentPortal.loginEmail) {
+    console.log(
+      `Student portal ready — ${studentPortal.loginEmail} (${studentPortal.admissionNo}, ${studentPortal.studentName}).`,
     );
   }
   console.log('Rich seed completed.');

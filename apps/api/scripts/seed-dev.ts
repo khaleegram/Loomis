@@ -1,56 +1,41 @@
 /**
- * Local dev seed — platform accounts (with MFA), demo school, staff, academic fixtures.
+ * Local dev seed — platform accounts (with MFA), regional accounts, PSF tier, Advanced QA fixture.
  *
  * Usage (from repo root, after db:up + migrate):
- *   pnpm db:seed
+ *   pnpm db:seed          # this script + Greenfield rich school (see root package.json)
  *
- * Idempotent: re-runs platform user creation if missing; school seed is one-shot.
+ * Idempotent: re-runs missing platform/regional users; Advanced QA is one-shot.
+ *
+ * Emails: `{role}@{schoolSlug}.loomis.com` — see scripts/seed-email.ts
  */
 import { eq } from 'drizzle-orm';
 import type { Role, StaffPrimaryRole } from '@loomis/contracts';
 import speakeasy from 'speakeasy';
 import { tiers } from '../drizzle/schema/tenant.js';
 import { roleAssignments, staffProfiles } from '../drizzle/schema/hrm.js';
-import { academicRepository } from '../src/modules/academic/repository/academic.repository.js';
-import { academicYearService } from '../src/modules/academic/services/academic-year.service.js';
-import { classStructureService } from '../src/modules/academic/services/class-structure.service.js';
-import { gradebookService } from '../src/modules/academic/services/gradebook.service.js';
-import { termService } from '../src/modules/academic/services/term.service.js';
 import { mfaRepository } from '../src/modules/identity/repository/mfa.repository.js';
 import { userRepository } from '../src/modules/identity/repository/user.repository.js';
 import { mfaService } from '../src/modules/identity/services/mfa.service.js';
 import { passwordService } from '../src/modules/identity/services/password.service.js';
 import { MFA_MANDATORY_ROLES } from '../src/modules/identity/types.js';
-import { staffRepository } from '../src/modules/hrm/repository/staff.repository.js';
-import { admissionService } from '../src/modules/student/services/admission.service.js';
-import { enrollmentService } from '../src/modules/student/services/enrollment.service.js';
-import { studentService } from '../src/modules/student/services/student.service.js';
-import { timetableService } from '../src/modules/academic/services/timetable.service.js';
-import { assignmentService } from '../src/modules/academic/services/assignment.service.js';
-import { assignmentRepository } from '../src/modules/academic/repository/assignment.repository.js';
+import { participantRepository } from '../src/modules/referral/repository/participant.repository.js';
 import { psfRateService } from '../src/modules/tenant/services/psf-rate.service.js';
 import { tenantService } from '../src/modules/tenant/services/tenant.service.js';
+import { tenantRepository } from '../src/modules/tenant/repository/tenant.repository.js';
 import { withTenantContext } from '../src/shared/tenant-context.js';
-import { uuidv7 } from 'uuidv7';
+import {
+  ADVANCED_SCHOOL_SLUG,
+  GREENFIELD_SCHOOL_SLUG,
+  platformDevEmail,
+  schoolContactEmail,
+  schoolDevEmail,
+} from './seed-email.js';
 
-const DEMO_DOMAIN = 'demo.loomis.local';
 const DEV_PASSWORD = 'LoomisDev2026!';
 /** Fixed dev TOTP secret — add to any authenticator app as "Loomis Dev" (base32). */
 const DEV_TOTP_BASE32 = 'JBSWY3DPEHPK3PXP';
 const TIER_CODE = 'demo';
 const PSF_RATE_MINOR = 500_000;
-const SUBJECT_MATH_ID = '019c0000-0000-7000-8000-000000000001';
-const SUBJECT_ENG_ID = '019c0000-0000-7000-8000-000000000002';
-const MARKER_EMAIL = `principal@${DEMO_DOMAIN}`;
-
-const DEMO_TIMETABLE_SLOTS = [
-  { dayOfWeek: 1, startMinute: 480, endMinute: 520 },
-  { dayOfWeek: 1, startMinute: 520, endMinute: 560 },
-  { dayOfWeek: 2, startMinute: 480, endMinute: 520 },
-  { dayOfWeek: 3, startMinute: 480, endMinute: 520 },
-  { dayOfWeek: 4, startMinute: 480, endMinute: 520 },
-  { dayOfWeek: 5, startMinute: 480, endMinute: 520 },
-] as const;
 
 interface PlatformDemoAccountSpec {
   email: string;
@@ -62,22 +47,37 @@ interface PlatformDemoAccountSpec {
 /** Platform console logins — MFA enrolled; password + TOTP at login. */
 const PLATFORM_DEMO_ACCOUNTS: PlatformDemoAccountSpec[] = [
   {
-    email: `owner@${DEMO_DOMAIN}`,
+    email: platformDevEmail('owner'),
     role: 'platform_owner',
     fullName: 'Demo Platform Owner',
     phone: '+2348020000001',
   },
   {
-    email: `admin@${DEMO_DOMAIN}`,
+    email: platformDevEmail('admin'),
     role: 'platform_admin',
     fullName: 'Demo Platform Admin',
     phone: '+2348020000002',
   },
   {
-    email: `dpo@${DEMO_DOMAIN}`,
+    email: platformDevEmail('dpo'),
     role: 'dpo',
     fullName: 'Demo DPO',
     phone: '+2348020000003',
+  },
+];
+
+const REGIONAL_DEMO_ACCOUNTS: PlatformDemoAccountSpec[] = [
+  {
+    email: platformDevEmail('regional.manager'),
+    role: 'regional_manager',
+    fullName: 'Demo Regional Manager',
+    phone: '+2348020000010',
+  },
+  {
+    email: platformDevEmail('regional.sub'),
+    role: 'regional_subordinate',
+    fullName: 'Demo Regional Subordinate',
+    phone: '+2348020000011',
   },
 ];
 
@@ -89,38 +89,6 @@ interface DemoAccountSpec {
   phone: string;
   classTeacher?: boolean;
 }
-
-const DEMO_ACCOUNTS: DemoAccountSpec[] = [
-  {
-    email: `principal@${DEMO_DOMAIN}`,
-    role: 'principal',
-    fullName: 'Demo Principal',
-    primaryRole: 'principal',
-    phone: '+2348010000001',
-  },
-  {
-    email: `exam@${DEMO_DOMAIN}`,
-    role: 'exam_officer',
-    fullName: 'Demo Exam Officer',
-    primaryRole: 'exam_officer',
-    phone: '+2348010000002',
-  },
-  {
-    email: `teacher@${DEMO_DOMAIN}`,
-    role: 'teacher',
-    fullName: 'Demo Teacher',
-    primaryRole: 'teacher',
-    phone: '+2348010000003',
-  },
-  {
-    email: `classteacher@${DEMO_DOMAIN}`,
-    role: 'class_teacher',
-    fullName: 'Demo Class Teacher',
-    primaryRole: 'teacher',
-    phone: '+2348010000004',
-    classTeacher: true,
-  },
-];
 
 async function ensureTier(code: string) {
   return withTenantContext(null, async (tx) => {
@@ -170,6 +138,38 @@ async function ensurePlatformDemoUsers() {
   for (const spec of PLATFORM_DEMO_ACCOUNTS) {
     await createPlatformDemoUser(spec);
   }
+}
+
+async function ensureRegionalDemoUsers() {
+  const managerUser = await createPlatformDemoUser(REGIONAL_DEMO_ACCOUNTS[0]!);
+  const subUser = await createPlatformDemoUser(REGIONAL_DEMO_ACCOUNTS[1]!);
+
+  await withTenantContext(null, async (tx) => {
+    let managerParticipant = await participantRepository.findByUserId(tx, managerUser.id);
+    if (!managerParticipant) {
+      managerParticipant = await participantRepository.create(tx, {
+        userId: managerUser.id,
+        participantType: 'regional_manager',
+        region: 'South-West',
+        status: 'active',
+      });
+    } else if (managerParticipant.status !== 'active') {
+      await participantRepository.activate(tx, managerParticipant.id);
+    }
+
+    let subParticipant = await participantRepository.findByUserId(tx, subUser.id);
+    if (!subParticipant) {
+      subParticipant = await participantRepository.create(tx, {
+        userId: subUser.id,
+        participantType: 'regional_subordinate',
+        managerParticipantId: managerParticipant.id,
+        region: 'South-West',
+        status: 'active',
+      });
+    } else if (subParticipant.status !== 'active') {
+      await participantRepository.activate(tx, subParticipant.id);
+    }
+  });
 }
 
 async function enrollDevMfa(userId: string) {
@@ -249,15 +249,84 @@ function currentTotpCode(): string {
   return speakeasy.totp({ secret: DEV_TOTP_BASE32, encoding: 'base32' });
 }
 
-function printCredentials(tenantId: string) {
+async function ensureDevPsfRate(actorId: string): Promise<void> {
+  await psfRateService.setGlobalPsfRate(
+    {
+      rateMinor: PSF_RATE_MINOR,
+      effectiveFrom: new Date('2026-01-01'),
+      reason: 'Local dev seed',
+    },
+    { userId: actorId, role: 'platform_owner' },
+  );
+}
+
+/** Advanced-tier fixture for QA (ROLE_EXPERIENCE_IMPLEMENTATION_ROADMAP Sprint 1). */
+async function ensureAdvancedFixtureTenant(platformOwnerId: string): Promise<void> {
+  const markerEmail = schoolDevEmail('principal', ADVANCED_SCHOOL_SLUG);
+  const existing = await userRepository.findByEmail(markerEmail);
+  if (existing?.tenantId) {
+    return;
+  }
+
+  console.log('Seeding Advanced QA fixture school…');
+
+  const tenant = await tenantService.provisionTenant(
+    {
+      name: 'Advanced QA School Lagos',
+      region: 'Lagos',
+      contactEmail: schoolContactEmail(ADVANCED_SCHOOL_SLUG),
+      address: '2 Advanced Close, Ikeja, Lagos',
+      tierCode: TIER_CODE,
+      initialPsfRateMinor: PSF_RATE_MINOR,
+    },
+    { userId: platformOwnerId, role: 'platform_owner' },
+  );
+
+  await tenantRepository.updateExperience(tenant.id, {
+    experienceTier: 'advanced',
+    financeMode: 'combined',
+    experienceFlags: {
+      workflowsInbox: true,
+      timetableDedicatedOfficer: true,
+      deputyExamEnabled: true,
+      totpOptional: true,
+    },
+  });
+
+  const ownerSpec: DemoAccountSpec = {
+    email: schoolDevEmail('owner', ADVANCED_SCHOOL_SLUG),
+    role: 'school_owner',
+    fullName: 'Advanced QA Owner',
+    primaryRole: 'principal',
+    phone: '+2348010000100',
+  };
+  const principalSpec: DemoAccountSpec = {
+    email: markerEmail,
+    role: 'principal',
+    fullName: 'Advanced QA Principal',
+    primaryRole: 'principal',
+    phone: '+2348010000101',
+  };
+
+  const { user: ownerUser } = await createDemoUser(ownerSpec, tenant.id, platformOwnerId);
+  await createDemoUser(principalSpec, tenant.id, ownerUser.id);
+
+  console.log('');
+  console.log('  Advanced QA school (experience_tier=advanced):');
+  console.log(`    Tenant ID: ${tenant.id}`);
+  console.log(`    • ${ownerSpec.email}  (school_owner)`);
+  console.log(`    • ${principalSpec.email}  (principal)`);
+  console.log('');
+}
+
+function printCredentials() {
   const mfaCode = currentTotpCode();
   console.log('');
   console.log('══════════════════════════════════════════════════════════════');
-  console.log('  Loomis local dev seed — demo credentials');
+  console.log('  Loomis local dev seed — credentials');
   console.log('══════════════════════════════════════════════════════════════');
   console.log('');
   console.log(`  Web app:     http://localhost:3000/login`);
-  console.log(`  Tenant ID:   ${tenantId}  (school accounts only)`);
   console.log(`  Password:    ${DEV_PASSWORD}  (all accounts)`);
   console.log('');
   console.log('  Platform accounts (login requires MFA):');
@@ -265,312 +334,41 @@ function printCredentials(tenantId: string) {
     console.log(`    • ${spec.email}  (${spec.role})`);
   }
   console.log('');
-  console.log('  School accounts (password-only login):');
-  for (const spec of DEMO_ACCOUNTS) {
+  console.log('  Regional accounts (login requires MFA → /regional):');
+  for (const spec of REGIONAL_DEMO_ACCOUNTS) {
     console.log(`    • ${spec.email}  (${spec.role})`);
   }
+  console.log('');
+  console.log('  School demo — Greenfield Academy (Core tier):');
+  console.log(`    • ${schoolDevEmail('principal', GREENFIELD_SCHOOL_SLUG)}  (principal)`);
+  console.log('    Full role list printed by db:seed:rich (also runs via pnpm db:seed).');
+  console.log('');
+  console.log('  Advanced QA school (experience_tier=advanced):');
+  console.log(`    • ${schoolDevEmail('principal', ADVANCED_SCHOOL_SLUG)}  (principal)`);
+  console.log(`    • ${schoolDevEmail('owner', ADVANCED_SCHOOL_SLUG)}  (school_owner)`);
   console.log('');
   console.log('  MFA (platform logins + step-up on sensitive school actions):');
   console.log(`    Secret (base32): ${DEV_TOTP_BASE32}`);
   console.log(`    Current 6-digit code: ${mfaCode}  (rotates every 30s)`);
-  console.log('');
-  console.log('  Screens to try after login:');
-  console.log('    /platform              — platform owner / admin / DPO');
-  console.log('    /platform/psf          — PSF rate management');
-  console.log('    /platform/approvals    — privileged change approvals');
-  console.log('    /school/exams          — exam officer (grading schemes, corrections)');
-  console.log('    /school/exams/publish  — exam officer (result publish + step-up MFA)');
-  console.log('    /school/gradebook      — teacher (entry) / class teacher (read-only)');
-  console.log('    /school/attendance     — class teacher');
-  console.log('    /school/timetable      — teacher / class teacher (My Schedule)');
   console.log('');
   console.log('  Start stack:  pnpm db:up && pnpm --filter @loomis/api db:migrate && pnpm dev');
   console.log('══════════════════════════════════════════════════════════════');
   console.log('');
 }
 
-async function seedStudents(
-  tenantId: string,
-  actor: { userId: string; role: Role; tenantId: string },
-  termId: string,
-  classArmId: string,
-  classLevelId: string,
-  count: number,
-) {
-  const ids: string[] = [];
-  for (let i = 1; i <= count; i++) {
-    const admission = await admissionService.createAdmission(
-      tenantId,
-      {
-        firstName: `Student${i}`,
-        lastName: 'Demo',
-        dateOfBirth: '2012-05-01',
-        gender: 'male',
-        intendedClassLevelId: classLevelId,
-        guardianName: 'Guardian Demo',
-        guardianEmail: `guardian${i}@${DEMO_DOMAIN}`,
-        guardianPhone: '+2348012345678',
-        guardianRelationship: 'father',
-      },
-      actor,
-    );
-
-    const decided = await admissionService.decideAdmission(
-      tenantId,
-      admission.id,
-      { decision: 'approve', admissionNo: `DEMO-${String(i).padStart(3, '0')}` },
-      actor,
-    );
-    const studentId = decided.student?.id;
-    if (!studentId) throw new Error('Student not created from admission');
-
-    await studentService.recordIdentityAttestation(
-      tenantId,
-      studentId,
-      { attestationType: 'birth_certificate' },
-      actor,
-    );
-
-    await enrollmentService.enrollStudent(
-      tenantId,
-      studentId,
-      { termId, classArmId },
-      actor,
-    );
-
-    ids.push(studentId);
-  }
-  return ids;
-}
-
-async function seedDemoTimetable(
-  tenantId: string,
-  termId: string,
-  classArmId: string,
-  teacherStaffProfileId: string,
-  actor: { userId: string; role: Role; tenantId: string },
-) {
-  const seedKey = uuidv7();
-  for (let i = 0; i < DEMO_TIMETABLE_SLOTS.length; i++) {
-    const slot = DEMO_TIMETABLE_SLOTS[i]!;
-    await timetableService.createEntry(
-      tenantId,
-      {
-        termId,
-        classArmId,
-        subjectId: i % 2 === 0 ? SUBJECT_MATH_ID : SUBJECT_ENG_ID,
-        teacherStaffProfileId,
-        dayOfWeek: slot.dayOfWeek,
-        startMinute: slot.startMinute,
-        endMinute: slot.endMinute,
-      },
-      actor,
-      `${seedKey}-${i}`,
-    );
-  }
-
-  await timetableService.publishTimetable(tenantId, { termId }, actor, `${seedKey}-publish`);
-}
-
 async function main() {
   await ensurePlatformDemoUsers();
+  await ensureRegionalDemoUsers();
 
   const platformOwner = await userRepository.findByEmail(PLATFORM_DEMO_ACCOUNTS[0]!.email);
   if (!platformOwner) throw new Error('Platform owner seed failed');
 
-  const existing = await userRepository.findByEmail(MARKER_EMAIL);
-  if (existing?.tenantId) {
-    printCredentials(existing.tenantId);
-    console.log('Demo seed already applied — platform users ensured. Drop DB to re-seed school data.');
-    return;
-  }
-
-  console.log('Seeding Loomis demo school…');
-
   await ensureTier(TIER_CODE);
-  const bootstrapActorId = platformOwner.id;
-  await psfRateService.setGlobalPsfRate(
-    {
-      rateMinor: PSF_RATE_MINOR,
-      effectiveFrom: new Date('2026-01-01'),
-      reason: 'Local dev seed',
-    },
-    { userId: bootstrapActorId, role: 'platform_owner' },
-  );
+  await ensureDevPsfRate(platformOwner.id);
+  await ensureAdvancedFixtureTenant(platformOwner.id);
 
-  const tenant = await tenantService.provisionTenant(
-    {
-      name: 'Demo Private School Lagos',
-      region: 'Lagos',
-      contactEmail: `contact@${DEMO_DOMAIN}`,
-      address: '1 Demo Close, Victoria Island, Lagos',
-      tierCode: TIER_CODE,
-      initialPsfRateMinor: PSF_RATE_MINOR,
-    },
-    { userId: bootstrapActorId, role: 'platform_owner' },
-  );
-
-  const principalSpec = DEMO_ACCOUNTS[0]!;
-  const { user: principalUser, profile: principalProfile } = await createDemoUser(
-    principalSpec,
-    tenant.id,
-    bootstrapActorId,
-  );
-
-  const actor = { userId: principalUser.id, role: 'principal' as Role, tenantId: tenant.id };
-
-  const otherAccounts: typeof DEMO_ACCOUNTS = [];
-  for (const spec of DEMO_ACCOUNTS.slice(1)) {
-    otherAccounts.push(spec);
-  }
-
-  const staffByEmail = new Map<string, { userId: string; staffProfileId: string }>();
-  staffByEmail.set(principalSpec.email, {
-    userId: principalUser.id,
-    staffProfileId: principalProfile.id,
-  });
-
-  for (const spec of otherAccounts) {
-    const { user, profile } = await createDemoUser(spec, tenant.id, principalUser.id);
-    staffByEmail.set(spec.email, { userId: user.id, staffProfileId: profile.id });
-  }
-
-  const year = await academicYearService.createYear(
-    tenant.id,
-    {
-      label: '2025/2026',
-      startDate: '2025-09-01',
-      endDate: '2026-07-31',
-      termCount: 1,
-    },
-    actor,
-  );
-  await academicYearService.activateYear(tenant.id, year.id, actor);
-
-  const terms = await academicRepository.listTermsByYear(tenant.id, year.id);
-  const term = terms[0];
-  if (!term) throw new Error('No term after year activation');
-
-  await termService.configureTerm(
-    tenant.id,
-    term.id,
-    {
-      name: 'First Term',
-      startDate: '2025-09-01',
-      endDate: '2025-12-15',
-      enrollmentWindowOpenDate: '2025-09-01',
-      enrollmentWindowCloseDate: '2025-10-31',
-      censusLockDate: '2025-11-01',
-      examStartDate: '2025-11-15',
-      examEndDate: '2025-12-10',
-    },
-    actor,
-  );
-  await termService.openTerm(tenant.id, term.id, actor);
-
-  const level = await classStructureService.createClassLevel(
-    tenant.id,
-    { code: 'JSS1', name: 'Junior Secondary 1', rank: 1, isTerminal: false },
-    actor,
-  );
-  const arm = await classStructureService.createClassArm(
-    tenant.id,
-    { academicYearId: year.id, classLevelId: level.id, name: 'A' },
-    actor,
-  );
-
-  await seedStudents(tenant.id, actor, term.id, arm.id, level.id, 8);
-
-  const teacher = staffByEmail.get(`teacher@${DEMO_DOMAIN}`);
-  const classTeacher = staffByEmail.get(`classteacher@${DEMO_DOMAIN}`);
-  if (!teacher || !classTeacher) throw new Error('Teacher staff profiles missing');
-
-  await staffRepository.createSubjectAssignment({
-    tenantId: tenant.id,
-    staffProfileId: teacher.staffProfileId,
-    termId: term.id,
-    classArmId: arm.id,
-    subjectId: SUBJECT_MATH_ID,
-    actorUserId: principalUser.id,
-    approvedById: principalUser.id,
-  });
-
-  await staffRepository.assignClassTeacher({
-    tenantId: tenant.id,
-    staffProfileId: classTeacher.staffProfileId,
-    termId: term.id,
-    classArmId: arm.id,
-    actorUserId: principalUser.id,
-  });
-
-  const scheme = await gradebookService.createGradingScheme(
-    tenant.id,
-    {
-      name: 'JSS Standard 40/60',
-      continuousAssessmentWeight: 40,
-      examWeight: 60,
-      passMark: 40,
-      gradeBands: [
-        { minScore: 70, maxScore: 100, grade: 'A', remark: 'Excellent' },
-        { minScore: 60, maxScore: 69, grade: 'B', remark: 'Very Good' },
-        { minScore: 50, maxScore: 59, grade: 'C', remark: 'Good' },
-        { minScore: 45, maxScore: 49, grade: 'D', remark: 'Pass' },
-        { minScore: 0, maxScore: 44, grade: 'F', remark: 'Fail' },
-      ],
-      isDefault: true,
-    },
-    actor,
-  );
-
-  await gradebookService.createExamConfig(
-    tenant.id,
-    {
-      termId: term.id,
-      classArmId: arm.id,
-      subjectId: SUBJECT_MATH_ID,
-      gradingSchemeId: scheme.id,
-      title: 'First Term Mathematics',
-    },
-    actor,
-  );
-
-  console.log('  Publishing demo timetable for teachers…');
-  await seedDemoTimetable(tenant.id, term.id, arm.id, teacher.staffProfileId, actor);
-
-  console.log('  Creating demo homework assignment…');
-  const teacherUser = await userRepository.findByEmail(`teacher@${DEMO_DOMAIN}`);
-  if (!teacherUser) throw new Error('Demo teacher user missing');
-  const teacherActor = { userId: teacherUser.id, role: 'teacher' as Role, tenantId: tenant.id };
-  await assignmentService.createAssignment(
-    tenant.id,
-    {
-      termId: term.id,
-      classArmId: arm.id,
-      subjectId: SUBJECT_MATH_ID,
-      title: 'Algebra practice — Week 1',
-      instructions: 'Complete exercises 1–10 from the textbook chapter on linear equations.',
-      dueAt: new Date('2025-11-30T23:59:00.000Z').toISOString(),
-      maxScore: 20,
-    },
-    teacherActor,
-    `${uuidv7()}-assignment-create`,
-  );
-  const demoAssignments = await assignmentRepository.listAssignments(tenant.id, {
-    termId: term.id,
-    classArmId: arm.id,
-  });
-  const draftAssignment = demoAssignments.find((item) => item.status === 'draft');
-  if (draftAssignment) {
-    await assignmentService.publishAssignment(
-      tenant.id,
-      draftAssignment.id,
-      teacherActor,
-      `${uuidv7()}-assignment-publish`,
-    );
-  }
-
-  printCredentials(tenant.id);
-  console.log('Demo seed completed successfully.');
+  printCredentials();
+  console.log('Dev seed completed (platform + regional + Advanced QA). Greenfield runs via db:seed:rich.');
 }
 
 main()
