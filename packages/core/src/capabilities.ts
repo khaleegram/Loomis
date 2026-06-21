@@ -8,6 +8,7 @@ import type { Role } from '@loomis/contracts';
 export type Capability =
   | 'tenant.onboard'
   | 'staff.onboard'
+  | 'staff.role.request'
   | 'staff.role.assign'
   | 'staff.deactivate'
   | 'subject.assign'
@@ -29,6 +30,7 @@ export type Capability =
   | 'grading_scheme.configure'
   | 'result.publish'
   | 'fee.configure'
+  | 'finance.balances.view'
   | 'payment.log'
   | 'payment.verify'
   | 'refund.initiate'
@@ -76,21 +78,22 @@ export const roleCapabilities: Record<Role, ReadonlySet<Capability>> = {
     'student.graduate',
     'class_structure.manage',
     'timetable.manage',
+    'admissions.approve',
     'attendance.view',
     'refund.approve',
+    'finance.balances.view',
     'ledger.view',
     'audit.view',
     'parent.message',
   ),
   principal: C(
     'staff.onboard',
-    'staff.role.assign',
+    'staff.role.request',
     'staff.deactivate',
     'subject.assign',
     'classteacher.assign',
     'academic_year.manage',
     'term.manage',
-    'census.lock',
     'student.promote',
     'student.graduate',
     'class_structure.manage',
@@ -100,6 +103,7 @@ export const roleCapabilities: Record<Role, ReadonlySet<Capability>> = {
     'gradebook.read',
     'gradebook.write',
     'refund.approve',
+    'finance.balances.view',
     'audit.view',
     'parent.message',
   ),
@@ -113,9 +117,10 @@ export const roleCapabilities: Record<Role, ReadonlySet<Capability>> = {
     'admissions.manage',
     'timetable.view',
     'attendance.view',
+    'finance.balances.view',
     'parent.message',
   ),
-  accountant: C('fee.configure', 'payment.verify', 'refund.approve'),
+  accountant: C('fee.configure', 'payment.verify', 'refund.approve', 'finance.balances.view', 'ledger.view'),
   cashier: C('payment.log', 'refund.initiate'),
   exam_officer: C(
     'grading_scheme.configure',

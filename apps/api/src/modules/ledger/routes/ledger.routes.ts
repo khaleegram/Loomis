@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { desc, eq } from 'drizzle-orm';
 import { authenticate } from '../../../middleware/authenticate.js';
+import { requireCapability } from '../../../middleware/require-capability.js';
 import { requireIdempotencyKey } from '../../../middleware/require-idempotency-key.js';
 import { requireRole } from '../../../middleware/require-role.js';
 import { requireStepUp } from '../../../middleware/require-step-up.js';
@@ -12,7 +13,9 @@ import { platformRevenueReadService } from '../services/platform-revenue.read-se
 export async function ledgerRoutes(app: FastifyInstance): Promise<void> {
   app.get<{ Params: { tenantId: string } }>(
     '/tenants/:tenantId/psf-obligations',
-    { preHandler: [authenticate, requireTenantMatch, requireRole('school_owner', 'principal', 'accountant')] },
+    {
+      preHandler: [authenticate, requireTenantMatch, requireCapability('ledger.view')],
+    },
     async (req, reply) => {
       const rows = await db
         .select()

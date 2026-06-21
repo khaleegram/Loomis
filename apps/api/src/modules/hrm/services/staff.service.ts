@@ -1,22 +1,25 @@
 import { createHash, randomBytes } from 'node:crypto';
   import type {
-   AssignClassTeacherRequest,
-   ChangeStaffRoleRequest,
-   ClassTeacherAssignmentResponse,
-   DesignateBackupRequest,
-   EmailDeliveryResult,
-   SetPhotoRequest,
-   StaffDetailResponse,
-   StaffDirectoryEntryResponse,
-   StaffInvitationResponse,
-   StaffPendingInvitationSummary,
-   StaffPrimaryRole,
-   StaffProfileResponse,
-   SubjectAssignmentResponse,
+  AssignClassTeacherRequest,
+  ChangeStaffRoleRequest,
+  ClassTeacherAssignmentResponse,
+  DesignateBackupRequest,
+  EmailDeliveryResult,
+  FinanceMode,
+  SetPhotoRequest,
+  StaffDetailResponse,
+  StaffDirectoryEntryResponse,
+  StaffInvitationResponse,
+  StaffPendingInvitationSummary,
+  StaffPrimaryRole,
+  StaffProfileResponse,
+  SubjectAssignmentResponse,
 } from '@loomis/contracts';
 import { staffAccountService } from '../../identity/services/staff-account.service.js';
 import { DEFAULT_STAFF_PROVISIONED_PASSWORD } from '../../identity/services/provisioned-password.service.js';
 import { transactionalEmailService } from '../../comms/services/transactional-email.service.js';
+import { workflowService } from '../../workflow/services/workflow.service.js';
+import { tenantRepository } from '../../tenant/repository/tenant.repository.js';
 import { LoomisError } from '../../../shared/errors.js';
 import { hrmEvents } from '../events/index.js';
 import { staffRepository } from '../repository/staff.repository.js';
@@ -30,6 +33,47 @@ import type {
 
 const INVITATION_TTL_MS = 48 * 60 * 60 * 1000;
 const SINGLETON_ROLES = new Set<StaffPrimaryRole>(['accountant', 'exam_officer']);
+const FINANCE_PRIMARY_ROLES = new Set<StaffPrimaryRole>(['accountant', 'cashier']);
+
+export type ChangeStaffRoleResult =
+  | { kind: 'applied'; profile: StaffProfileResponse }
+  | { kind: 'pending'; workflowInstanceId: string; workflowType: 'staff_role_change' };
+
+function parseFinanceMode(value: string | undefined): FinanceMode {
+  return value === 'split' ? 'split' : 'combined';
+}
+
+async function loadTenantFinanceMode(tenantId: string): Promise<FinanceMode> {
+  const tenant = await tenantRepository.findById(tenantId);
+  if (!tenant) {
+    throw new LoomisError('TENANT_NOT_FOUND', 404, 'Tenant not found');
+  }
+  return parseFinanceMode(tenant.financeMode);
+}
+
+async function assertSplitFinanceSoDForUser(
+  tenantId: string,
+  userId: string,
+  newRole: StaffPrimaryRole,
+  financeMode: FinanceMode,
+): Promise<void> {
+  if (financeMode !== 'split') return;
+  if (!FINANCE_PRIMARY_ROLES.has(newRole)) return;
+
+  const opposing = newRole === 'cashier' ? 'accountant' : 'cashier';
+  const profile = await staffRepository.findProfileByUserId(tenantId, userId);
+  if (!profile || profile.status !== 'active') return;
+
+  const roles = await staffRepository.listActiveRoles(tenantId, profile.id);
+  const primary = roles.find((assignment) => assignment.assignmentType === 'primary');
+  if (primary?.role === opposing) {
+    throw new LoomisError(
+      'HRM_ROLE_CONFLICT',
+      409,
+      'Split finance mode requires separate cashier and accountant accounts; one person cannot hold both roles',
+    );
+  }
+}
 
 function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
@@ -143,6 +187,8 @@ export const staffService = {
       displayName: input.fullName,
     });
 
+    await assertSplitFinanceSoDForUser(tenantId, user.id, input.primaryRole, await loadTenantFinanceMode(tenantId));
+
     const now = new Date();
     const created = await staffRepository.createStaffProfile({
       profile: {
@@ -194,6 +240,13 @@ export const staffService = {
       role: input.primaryRole,
       displayName: input.fullName,
     });
+
+    await assertSplitFinanceSoDForUser(
+      tenantId,
+      user.id,
+      input.primaryRole,
+      await loadTenantFinanceMode(tenantId),
+    );
 
     const rawToken = randomBytes(32).toString('base64url');
     const expiresAt = new Date(Date.now() + INVITATION_TTL_MS);
@@ -350,12 +403,86 @@ export const staffService = {
     staffProfileId: string,
     input: ChangeStaffRoleRequest,
     actor: ActorContext,
-  ): Promise<StaffProfileResponse> {
+  ): Promise<ChangeStaffRoleResult> {
+    requireTenant(actor, tenantId);
+
+    if (actor.role === 'principal') {
+      const pending = await this.requestStaffRoleChange(tenantId, staffProfileId, input, actor);
+      return { kind: 'pending', ...pending };
+    }
+
+    if (actor.role !== 'school_owner') {
+      throw new LoomisError('FORBIDDEN', 403, 'Only the school owner may finalize role changes');
+    }
+
+    const profile = await this.finalizePrimaryRoleChange(
+      tenantId,
+      staffProfileId,
+      input,
+      actor.userId,
+    );
+    return { kind: 'applied', profile };
+  },
+
+  async requestStaffRoleChange(
+    tenantId: string,
+    staffProfileId: string,
+    input: ChangeStaffRoleRequest,
+    actor: ActorContext,
+  ): Promise<{ workflowInstanceId: string; workflowType: 'staff_role_change' }> {
     requireTenant(actor, tenantId);
     const profile = await this.requireActiveProfile(tenantId, staffProfileId);
     if (profile.userId === actor.userId) {
+      throw new LoomisError('HRM_ROLE_CONFLICT', 409, 'Staff cannot request a role change for themselves');
+    }
+
+    const financeMode = await loadTenantFinanceMode(tenantId);
+    await assertSplitFinanceSoDForUser(tenantId, profile.userId, input.primaryRole, financeMode);
+
+    const started = await workflowService.startWorkflow({
+      workflowType: 'staff_role_change',
+      tenantId,
+      requestedById: actor.userId,
+      requestedByRole: actor.role,
+      subjectType: 'staff_profile',
+      subjectId: staffProfileId,
+      title: `Role change request for staff ${staffProfileId}`,
+      payload: {
+        staffProfileId,
+        primaryRole: input.primaryRole,
+        replacementStaffProfileId: input.replacementStaffProfileId ?? null,
+        singletonOverrideConfirmed: input.singletonOverrideConfirmed ?? false,
+      },
+    });
+
+    return {
+      workflowInstanceId: started.workflowInstanceId,
+      workflowType: 'staff_role_change',
+    };
+  },
+
+  async applyApprovedStaffRoleChange(
+    tenantId: string,
+    staffProfileId: string,
+    input: ChangeStaffRoleRequest,
+    approvedById: string,
+  ): Promise<StaffProfileResponse> {
+    return this.finalizePrimaryRoleChange(tenantId, staffProfileId, input, approvedById);
+  },
+
+  async finalizePrimaryRoleChange(
+    tenantId: string,
+    staffProfileId: string,
+    input: ChangeStaffRoleRequest,
+    approvedById: string,
+  ): Promise<StaffProfileResponse> {
+    const profile = await this.requireActiveProfile(tenantId, staffProfileId);
+    if (profile.userId === approvedById) {
       throw new LoomisError('HRM_ROLE_CONFLICT', 409, 'Staff cannot approve their own role change');
     }
+
+    const financeMode = await loadTenantFinanceMode(tenantId);
+    await assertSplitFinanceSoDForUser(tenantId, profile.userId, input.primaryRole, financeMode);
 
     const activeRoles = await staffRepository.listActiveRoles(tenantId, staffProfileId);
     const currentPrimary = activeRoles.find((assignment) => assignment.assignmentType === 'primary');
@@ -390,11 +517,17 @@ export const staffService = {
           tenantId,
           input.replacementStaffProfileId,
         );
+        await assertSplitFinanceSoDForUser(
+          tenantId,
+          replacementProfile.userId,
+          vacatedRole,
+          financeMode,
+        );
         const replacementChange = await staffRepository.replacePrimaryRole({
           tenantId,
           staffProfileId: input.replacementStaffProfileId,
           newRole: vacatedRole,
-          approvedById: actor.userId,
+          approvedById,
         });
         await staffAccountService.updateStaffRole(replacementProfile.userId, vacatedRole);
         await hrmEvents.publishStaffRoleChanged({
@@ -411,7 +544,7 @@ export const staffService = {
       tenantId,
       staffProfileId,
       newRole: input.primaryRole,
-      approvedById: actor.userId,
+      approvedById,
     });
 
     await staffAccountService.updateStaffRole(profile.userId, input.primaryRole);

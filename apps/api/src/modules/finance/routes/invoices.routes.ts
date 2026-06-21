@@ -9,6 +9,7 @@ import {
 } from '@loomis/contracts';
 import { authenticate } from '../../../middleware/authenticate.js';
 import { requireAuditAvailable } from '../../../middleware/require-audit-available.js';
+import { requireCapability } from '../../../middleware/require-capability.js';
 import { requireIdempotencyKey } from '../../../middleware/require-idempotency-key.js';
 import { requireRole } from '../../../middleware/require-role.js';
 import { requireTenantMatch } from '../../../middleware/require-tenant-match.js';
@@ -79,7 +80,11 @@ export async function invoicesRoutes(app: FastifyInstance): Promise<void> {
   }>(
     '/tenants/:tenantId/terms/:termId/outstanding-balances',
     {
-      preHandler: [authenticate, requireTenantMatch, requireRole('accountant', 'principal')],
+      preHandler: [
+        authenticate,
+        requireTenantMatch,
+        requireCapability('finance.balances.view'),
+      ],
       preValidation: [validateQuery(outstandingBalancesQuery)],
     },
     outstandingBalancesHandler,

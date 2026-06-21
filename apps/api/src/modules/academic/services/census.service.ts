@@ -96,6 +96,15 @@ export const censusService = {
    */
   async lockCensus(tenantId: string, termId: string, input: CensusLockInput, actor: ActorContext) {
     requireTenant(actor, tenantId);
+
+    if (actor.role !== 'school_owner') {
+      throw new LoomisError(
+        'FORBIDDEN',
+        403,
+        'Only the school owner may lock census (ROLE_EXPERIENCE_TIER_PLAN §5)',
+      );
+    }
+
     const term = await requireTerm(tenantId, termId);
 
     if (term.status === 'census_locked' || term.status === 'closed') {

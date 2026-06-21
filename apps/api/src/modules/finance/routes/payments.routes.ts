@@ -11,6 +11,7 @@ import {
 } from '@loomis/contracts';
 import { authenticate } from '../../../middleware/authenticate.js';
 import { requireAuditAvailable } from '../../../middleware/require-audit-available.js';
+import { requireCapability } from '../../../middleware/require-capability.js';
 import { requireIdempotencyKey } from '../../../middleware/require-idempotency-key.js';
 import { requireRole } from '../../../middleware/require-role.js';
 import { requireTenantMatch } from '../../../middleware/require-tenant-match.js';
@@ -42,7 +43,7 @@ export async function paymentsRoutes(app: FastifyInstance): Promise<void> {
       preHandler: [
         authenticate,
         requireTenantMatch,
-        requireRole('cashier'),
+        requireCapability('payment.log'),
         requireAuditAvailable,
         requireIdempotencyKey,
       ],
@@ -57,7 +58,7 @@ export async function paymentsRoutes(app: FastifyInstance): Promise<void> {
       preHandler: [
         authenticate,
         requireTenantMatch,
-        requireRole('accountant'),
+        requireCapability('payment.verify'),
         requireAuditAvailable,
         requireIdempotencyKey,
       ],

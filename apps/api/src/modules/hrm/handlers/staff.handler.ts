@@ -76,13 +76,26 @@ export async function changeStaffRoleHandler(
   req: FastifyRequest<{ Params: StaffParams; Body: ChangeStaffRoleRequest }>,
   reply: FastifyReply,
 ): Promise<FastifyReply> {
-  const staff = await staffService.changePrimaryRole(
+  const result = await staffService.changePrimaryRole(
     req.params.tenantId,
     req.params.staffProfileId,
     req.body,
     requireActor(req),
   );
-  return sendSuccess(reply, staff);
+
+  if (result.kind === 'pending') {
+    return sendSuccess(
+      reply,
+      {
+        status: 'pending',
+        workflowInstanceId: result.workflowInstanceId,
+        workflowType: result.workflowType,
+      },
+      202,
+    );
+  }
+
+  return sendSuccess(reply, result.profile);
 }
 
 export async function createSubjectAssignmentHandler(

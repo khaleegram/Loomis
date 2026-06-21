@@ -24,6 +24,7 @@ import {
   type SetPhotoRequest,
 } from '@loomis/contracts';
 import { authenticate } from '../../../middleware/authenticate.js';
+import { requireCapability } from '../../../middleware/require-capability.js';
 import { requireRole } from '../../../middleware/require-role.js';
 import { requireTenantMatch } from '../../../middleware/require-tenant-match.js';
 import { validateBody } from '../../../shared/validation.js';
@@ -92,7 +93,11 @@ export async function staffRoutes(app: FastifyInstance): Promise<void> {
   app.post<{ Params: { tenantId: string; staffProfileId: string }; Body: ChangeStaffRoleRequest }>(
     '/tenants/:tenantId/staff/:staffProfileId/role',
     {
-      preHandler: [authenticate, requireTenantMatch, requireRole(...principalOwners)],
+      preHandler: [
+        authenticate,
+        requireTenantMatch,
+        requireCapability('staff.role.assign', 'staff.role.request'),
+      ],
       preValidation: [validateBody(changeStaffRoleRequest)],
     },
     changeStaffRoleHandler,

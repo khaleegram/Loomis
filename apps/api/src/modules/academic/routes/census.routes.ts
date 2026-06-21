@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { censusLockRequest, type CensusLockRequest } from '@loomis/contracts';
 import { authenticate } from '../../../middleware/authenticate.js';
+import { requireCapability } from '../../../middleware/require-capability.js';
 import { requireIdempotencyKey } from '../../../middleware/require-idempotency-key.js';
 import { requireRole } from '../../../middleware/require-role.js';
 import { requireStepUp } from '../../../middleware/require-step-up.js';
@@ -37,7 +38,7 @@ export async function censusRoutes(app: FastifyInstance): Promise<void> {
       preHandler: [
         authenticate,
         requireTenantMatch,
-        requireRole('school_owner', 'principal'),
+        requireCapability('census.lock'),
         requireStepUp('census_lock'),
         requireIdempotencyKey,
       ],
