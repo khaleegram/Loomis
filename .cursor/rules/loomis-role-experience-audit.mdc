@@ -1,0 +1,234 @@
+---
+description: Role Experience Audit workflow — screen inventory, pattern reuse, plain-English UX, strategy options before implementation
+alwaysApply: false
+---
+
+# Loomis — Role Experience Audit
+
+Use when the user asks to **audit**, **evaluate**, or **evolve** a **single role's** workspace (e.g. "Analyze the Principal experience"). Do **not** redesign the whole application.
+
+**Trigger phrases:** "audit role", "analyze [role] experience", "role experience audit", "PHASE 3.5".
+
+**Overrides for audit sessions:** Override `loomis-ui-delivery` Step 0 item 5 ("code immediately"). **No production code** until the user confirms after Phase 6.5.
+
+**When tier/master plan applies:** If tier or master plan covers the role, **do not re-audit for implementation** — implement per tier plan (Core) or master plan §11 (Advanced/Enterprise). Re-audit only for gaps or new business requirements.
+
+## Sources of truth (priority order)
+
+1. **`ROLE_EXPERIENCE_TIER_PLAN.md`** (repo root) — Core defaults, MFA policy, approval matrix, tier toggles
+2. **`ROLE_EXPERIENCE_MASTER_PLAN.md`** (repo root) — Advanced + Enterprise role architecture, nav, workflows
+3. Existing implemented screens and components in the repo
+4. Current design system (`surfaces.ts`, `ACADEMIC_UI`, `packages/design-tokens`, gold reference pages)
+5. `@loomis/ui-web` / `@loomis/ui-mobile` component library
+6. `Loomis_SRS_v3.md`
+7. `Loomis_User_Stories_v1.md`
+8. `packages/core/src/capabilities.ts` + `loomis-roles.mdc`
+
+## Critical rules
+
+- Do not rebuild screens unnecessarily
+- Do not create new design patterns if an equivalent exists — **search the codebase first**
+- Preserve visual language, spacing, typography, tokens, navigation architecture
+- Extend completed modules; evolution not replacement
+- **Classify every screen before recommending changes**
+- **Explain experience in plain English before implementation**
+- **Present Option A and Option B before implementation planning**
+
+---
+
+## PHASE 1 — Role analysis
+
+For the role under review:
+
+1. Mission of the role
+2. Daily / weekly / approval / operational / reporting responsibilities
+3. Data that matters most to this role
+
+Map to user story IDs and capability matrix from `capabilities.ts`.
+
+---
+
+## PHASE 2 — Current screen audit
+
+For each existing screen: working well, generic, duplicated, unnecessary info, missing info, keep vs improve.
+
+---
+
+## PHASE 3 — Experience differentiation
+
+Compare against all other platform roles. Every role needs unique homepage priorities, nav priorities, quick actions, KPIs, and information hierarchy — not copy-paste dashboards.
+
+---
+
+## PHASE 3.5 — Screen inventory & experience architecture (mandatory)
+
+For **every screen accessible to the role**, define:
+
+| Field | Description |
+|-------|-------------|
+| Screen purpose | One sentence |
+| Primary user goal | Main job-to-be-done on this screen |
+| Secondary user goal | Optional follow-up |
+| Why it exists | Business/story rationale |
+| Direct access needed? | Yes / No / Via link only |
+| Usage frequency | Hourly / Daily / Weekly / Monthly / Rare |
+| Classification | See types below |
+
+**Screen classifications:**
+
+- **Core Workspace** — where the role starts their day
+- **Operational Screen** — frequent task execution
+- **Review Screen** — approve, verify, sign off
+- **Administrative Screen** — manage records (staff, students)
+- **Configuration Screen** — term setup, templates, appearance
+- **Analytics Screen** — summaries, balances, trends
+- **Emergency Screen** — census lock, term close, break-glass paths
+
+Then identify:
+
+- Overloaded screens
+- Unused screens (for this role)
+- Duplicate screens
+- Missing screens (stories without UI)
+- Misplaced screens (wrong role emphasis)
+
+Determine before any recommendations:
+
+- Critical vs secondary screens
+- Remove from navigation
+- Merge candidates
+- Promote candidates
+
+**Goal:** Surface navigation bloat, duplicate workflows, misplaced responsibilities, poor hierarchy, low-value screens.
+
+---
+
+## PHASE 3.75 — User story coverage validation (mandatory)
+
+**Do not proceed to Phase 4 until every user story assigned to the role is mapped.**
+
+### For every screen accessible to the role
+
+List all related user story IDs and classify screen-level coverage:
+
+- **Fully Covered** — primary actions completable in UI against real API
+- **Partially Covered** — UI exists but missing AC items, wrong actor emphasis, or broken nav/permissions
+- **Not Covered** — no UI or API reachable by role
+
+### For every user story assigned to the role
+
+Include stories where the role is:
+
+- Primary actor (`As a Principal…`)
+- Co-actor (`School Owner or Principal…`)
+- Derived approver (acceptance criteria names the role)
+- Capability-implied (role has capability in `capabilities.ts` but story names another actor)
+
+For each story document:
+
+| Field | Content |
+|-------|---------|
+| Responsible screen(s) | Route(s) |
+| Missing UI | What AC element has no surface |
+| Missing workflow | Inbox, step-up, escalation not wired |
+| Missing permissions | Capability vs API vs UI gate mismatch |
+| Missing navigation | Story reachable only by URL / blocked nav |
+
+### Deliverable: coverage matrix
+
+Produce two tables:
+
+1. **Screen × Stories** — each screen with story list + coverage status
+2. **Story × Implementation** — each role story with screen, status (✅ / ⚠️ / ❌), gaps
+
+Phase 4 recommendations must reference coverage gaps — not intuition.
+
+---
+
+## Existing pattern discovery (mandatory before proposing anything new)
+
+Before proposing a new screen, route, component, widget, card, chart, KPI, panel, hero, nav item, workflow, or dashboard section:
+
+1. **Search** `apps/web`, `apps/mobile`, `packages/ui-web` for equivalents
+2. Document: existing pages, components, layouts, workflows
+3. **Prefer extend** over create
+
+**Reuse targets (web school console):**
+
+| Need | Search first |
+|------|----------------|
+| Role homepage | `admin-officer-dashboard.tsx`, `class-teacher-dashboard.tsx`, `teacher-landing.tsx`, `dashboard/page.tsx`, `dashboard-primitives.tsx` |
+| Hero / KPI strip | `staff-hero.tsx`, `workflow-inbox-hero.tsx`, `admissions-hero.tsx`, `finance-*-hero.tsx`, `AcademicCommandDeck` |
+| Quick actions grid | `QUICK_ACTIONS` in role dashboard components |
+| Nav role tuning | `school-nav-config.ts` (`hideForRoles`, `schoolNavLabel`) |
+| Approval inbox | `workflows/page.tsx`, `WorkflowInboxHero`, `WorkflowInboxItemCard` |
+| Academic lifecycle | `academic-command-deck.tsx`, census/promotions pages |
+| Audit log UI | `platform/compliance/audit/page.tsx` |
+| Finance oversight | `finance/balances`, `finance/refunds`, `refund-approval-timeline.tsx` |
+
+Do **not** invent parallel naming (`DashboardHeroV2`, `PrincipalDashboardCard`, `ExecutiveDashboardWidget`) when an existing pattern can be forked or parameterized.
+
+---
+
+## PHASE 4 — Recommended improvements
+
+Only **after** Phase 3.5 classification. For each screen: KEEP / REMOVE / ADD / REARRANGE.
+
+---
+
+## PHASE 4.5 — Non-technical experience explanation (mandatory)
+
+Before implementation, explain the role experience in **plain English** for a founder, product owner, or school administrator.
+
+For every **major** screen (Core Workspace + promoted screens):
+
+1. Why this screen exists
+2. What problem it solves
+3. What the user sees first
+4. Most important actions
+5. Why information is arranged this way
+6. What should draw attention immediately
+7. How it supports the role's responsibilities
+8. How it differs from similar screens for other roles
+
+**No code, components, or file paths in this section.**
+
+---
+
+## PHASE 5 — Implementation plan
+
+Only after user confirms strategy (Phase 6.5). Specify files to modify/create, routes, nav — minimal diff, reuse-first.
+
+---
+
+## PHASE 6.5 — Alternative experience strategies (mandatory)
+
+Present two approaches before Phase 5:
+
+### Option A — Conservative
+
+- Reuse existing screens and components
+- Minimal changes, lowest effort, lowest risk
+- Advantages / disadvantages / expected outcome
+
+### Option B — Optimized
+
+- Improved role experience, workflow organization, information hierarchy
+- Higher effort
+- Advantages / disadvantages / expected outcome
+
+**Recommend one option with rationale. Wait for user confirmation before Phase 5.**
+
+---
+
+## Definition of done (audit chat)
+
+- [ ] Phase 1–3.5 complete for one role
+- [ ] Phase 3.75 coverage matrix — every assigned story mapped (✅ / ⚠️ / ❌)
+- [ ] Pattern discovery documented (what exists vs what would be new)
+- [ ] Phase 4 improvements derived from classification (not intuition)
+- [ ] Phase 4.5 plain-English explanations for major screens
+- [ ] Phase 6.5 Option A / B with recommendation
+- [ ] User confirmed → then Phase 5 implementation in a **separate** chat or after explicit "Proceed"
+
+One role per audit conversation.
