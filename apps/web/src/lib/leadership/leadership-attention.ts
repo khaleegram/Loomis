@@ -185,8 +185,14 @@ export function buildOwnerAttentionTasks(input: {
   ownerApprovalCount: number;
   thresholdRefundCount: number;
   pendingAdmissionCount: number;
+  /** When true, owner approvals link to workflow inbox (Advanced Sprint 10). */
+  workflowInboxModule?: boolean;
 }): AttentionTask[] {
   const tasks: AttentionTask[] = [];
+  const inboxHref = '/school/workflows';
+  const refundHref = input.workflowInboxModule ? inboxHref : '/school/finance/refunds';
+  const approvalHref = input.workflowInboxModule ? inboxHref : '/school/staff';
+  const approvalCta = input.workflowInboxModule ? 'Open inbox' : 'Review items';
 
   if (input.census.label === 'Census lock due') {
     tasks.push({
@@ -203,9 +209,11 @@ export function buildOwnerAttentionTasks(input: {
     tasks.push({
       id: 'refunds-threshold',
       title: `${input.thresholdRefundCount} high-value refund${input.thresholdRefundCount === 1 ? '' : 's'}`,
-      description: 'Refunds at or above ₦50,000 need your approval.',
-      href: '/school/finance/refunds',
-      cta: 'Review refunds',
+      description: input.workflowInboxModule
+        ? 'Refunds at or above ₦50,000 are in your workflow inbox.'
+        : 'Refunds at or above ₦50,000 need your approval.',
+      href: refundHref,
+      cta: input.workflowInboxModule ? 'Open inbox' : 'Review refunds',
       urgency: 'attention',
     });
   }
@@ -214,9 +222,11 @@ export function buildOwnerAttentionTasks(input: {
     tasks.push({
       id: 'owner-approvals',
       title: `${input.ownerApprovalCount} item${input.ownerApprovalCount === 1 ? '' : 's'} need your sign-off`,
-      description: 'Role changes, refunds, and other owner approvals awaiting action.',
-      href: '/school/staff',
-      cta: 'Review items',
+      description: input.workflowInboxModule
+        ? 'Role changes, refunds, and fee amendments awaiting owner approval in the inbox.'
+        : 'Role changes, refunds, and other owner approvals awaiting action.',
+      href: approvalHref,
+      cta: approvalCta,
       urgency: 'attention',
     });
   }
@@ -239,9 +249,13 @@ export function buildPrincipalAttentionTasks(input: {
   pendingAdmissionCount: number;
   principalRefundCount: number;
   feeAmendmentCount: number;
+  gradeCorrectionCount?: number;
   roleChangesPendingOwner: number;
+  /** When true, workflow approvals link to inbox only (Advanced Sprint 9). */
+  workflowInboxModule?: boolean;
 }): AttentionTask[] {
   const tasks: AttentionTask[] = [];
+  const inboxHref = '/school/workflows';
 
   if (input.pendingAdmissionCount > 0) {
     tasks.push({
@@ -258,9 +272,11 @@ export function buildPrincipalAttentionTasks(input: {
     tasks.push({
       id: 'refunds',
       title: `${input.principalRefundCount} refund${input.principalRefundCount === 1 ? '' : 's'} awaiting you`,
-      description: 'Refund requests in your approval queue.',
-      href: '/school/finance/refunds',
-      cta: 'Review refunds',
+      description: input.workflowInboxModule
+        ? 'Open your workflow inbox to approve refunds.'
+        : 'Refund requests in your approval queue.',
+      href: input.workflowInboxModule ? inboxHref : '/school/finance/refunds',
+      cta: input.workflowInboxModule ? 'Open inbox' : 'Review refunds',
       urgency: 'attention',
     });
   }
@@ -269,9 +285,23 @@ export function buildPrincipalAttentionTasks(input: {
     tasks.push({
       id: 'fee-amendments',
       title: `${input.feeAmendmentCount} fee amendment${input.feeAmendmentCount === 1 ? '' : 's'}`,
-      description: 'Fee structure changes proposed by finance need your approval.',
-      href: '/school/finance',
-      cta: 'Review fees',
+      description: input.workflowInboxModule
+        ? 'Fee structure changes are in your workflow inbox.'
+        : 'Fee structure changes proposed by finance need your approval.',
+      href: input.workflowInboxModule ? inboxHref : '/school/finance',
+      cta: input.workflowInboxModule ? 'Open inbox' : 'Review fees',
+      urgency: 'attention',
+    });
+  }
+
+  if ((input.gradeCorrectionCount ?? 0) > 0) {
+    const count = input.gradeCorrectionCount ?? 0;
+    tasks.push({
+      id: 'grade-corrections',
+      title: `${count} grade correction${count === 1 ? '' : 's'}`,
+      description: 'Exam officer escalations waiting for your decision in the workflow inbox.',
+      href: inboxHref,
+      cta: 'Open inbox',
       urgency: 'attention',
     });
   }
@@ -288,4 +318,40 @@ export function buildPrincipalAttentionTasks(input: {
   }
 
   return tasks;
+}
+
+export interface PrincipalInboxBreakdown {
+  refunds: number;
+  feeAmendments: number;
+  gradeCorrections: number;
+  transfers: number;
+  ownerRoleChanges: number;
+  totalForPrincipal: number;
+}
+
+/** Counts workflow inbox items relevant to the Principal operations dashboard (§6.2). */
+export function computePrincipalInboxBreakdown(
+  items: WorkflowInboxItemResponse[],
+): PrincipalInboxBreakdown {
+  const forPrincipal = (type: WorkflowType) =>
+    filterInboxByTypes(items, [type]).filter(
+      (item) => item.activeStep.approverRole === 'principal',
+    ).length;
+
+  const refunds = forPrincipal('refund_request');
+  const feeAmendments = forPrincipal('fee_structure_change');
+  const gradeCorrections = forPrincipal('grade_correction');
+  const transfers = forPrincipal('student_transfer_out');
+  const ownerRoleChanges = filterInboxByTypes(items, ['staff_role_change']).filter(
+    (item) => item.activeStep.approverRole === 'school_owner',
+  ).length;
+
+  return {
+    refunds,
+    feeAmendments,
+    gradeCorrections,
+    transfers,
+    ownerRoleChanges,
+    totalForPrincipal: refunds + feeAmendments + gradeCorrections + transfers,
+  };
 }

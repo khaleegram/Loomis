@@ -9,11 +9,13 @@ import {
   useWorkflowInbox,
   useWorkflowMine,
 } from '@loomis/api-client';
+import { formatKobo } from '@loomis/core';
 import { useMemo } from 'react';
 
 import {
   buildOwnerAttentionTasks,
   buildPrincipalAttentionTasks,
+  computePrincipalInboxBreakdown,
   countInboxForRole,
   countOwnerThresholdRefunds,
   countRoleChangesPendingOwner,
@@ -23,6 +25,7 @@ import {
   type AttentionStripStat,
   type AttentionTask,
   type CensusAttention,
+  type PrincipalInboxBreakdown,
   type PsfSummary,
 } from '@/lib/leadership/leadership-attention';
 
@@ -31,7 +34,11 @@ interface PsfObligationRow {
   amountMinor?: number;
 }
 
-export function useLeadershipAttention(tenantId: string, role: 'school_owner' | 'principal') {
+export function useLeadershipAttention(
+  tenantId: string,
+  role: 'school_owner' | 'principal',
+  options?: { workflowInboxModule?: boolean },
+) {
   const admissionsQuery = useAdmissions(tenantId);
   const inboxQuery = useWorkflowInbox(tenantId);
   const mineQuery = useWorkflowMine(tenantId);
@@ -81,9 +88,19 @@ export function useLeadershipAttention(tenantId: string, role: 'school_owner' | 
   const principalRefundCount = filterInboxByTypes(inboxItems, ['refund_request']).filter(
     (item) => item.activeStep.approverRole === 'principal',
   ).length;
-  const feeAmendmentCount = filterInboxByTypes(inboxItems, ['fee_structure_change']).length;
+  const feeAmendmentCount = filterInboxByTypes(inboxItems, ['fee_structure_change']).filter(
+    (item) => item.activeStep.approverRole === 'principal',
+  ).length;
+  const gradeCorrectionCount = filterInboxByTypes(inboxItems, ['grade_correction']).filter(
+    (item) => item.activeStep.approverRole === 'principal',
+  ).length;
   const thresholdRefundCount = countOwnerThresholdRefunds(inboxItems);
   const roleChangesPendingOwner = countRoleChangesPendingOwner(initiated);
+  const inboxBreakdown: PrincipalInboxBreakdown = useMemo(
+    () => computePrincipalInboxBreakdown(inboxItems),
+    [inboxItems],
+  );
+  const workflowInboxModule = options?.workflowInboxModule ?? false;
 
   const isLoading =
     admissionsQuery.isLoading ||
@@ -94,8 +111,41 @@ export function useLeadershipAttention(tenantId: string, role: 'school_owner' | 
     psfQuery.isLoading ||
     (focusTerm?.status === 'open' && censusPreviewQuery.isLoading);
 
-  const ownerStats: AttentionStripStat[] = useMemo(
-    () => [
+  const ownerStats: AttentionStripStat[] = useMemo(() => {
+    if (workflowInboxModule) {
+      return [
+        {
+          label: 'Census',
+          value: isLoading ? '—' : census.label,
+          hint: census.hint,
+          tone:
+            census.urgency === 'attention' ? 'warn' : census.urgency === 'ready' ? 'ok' : 'neutral',
+        },
+        {
+          label: 'PSF settled',
+          value: isLoading ? '—' : String(psfSummary.settled),
+          hint:
+            psfSummary.total > 0
+              ? `${psfSummary.pending} still pending`
+              : 'Created at census lock',
+          tone: psfSummary.pending > 0 ? 'warn' : 'ok',
+        },
+        {
+          label: 'Workflow inbox',
+          value: isLoading ? '—' : String(ownerApprovalCount),
+          hint: ownerApprovalCount > 0 ? 'Awaiting owner sign-off' : 'Queue clear',
+          tone: ownerApprovalCount > 0 ? 'warn' : 'ok',
+        },
+        {
+          label: 'PSF outstanding',
+          value: isLoading ? '—' : formatKobo(psfSummary.outstandingMinor),
+          hint: psfSummary.outstandingMinor > 0 ? 'Unsettled obligations' : 'All settled',
+          tone: psfSummary.outstandingMinor > 0 ? 'warn' : 'ok',
+        },
+      ];
+    }
+
+    return [
       {
         label: 'Census',
         value: isLoading ? '—' : census.label,
@@ -125,12 +175,47 @@ export function useLeadershipAttention(tenantId: string, role: 'school_owner' | 
         hint: thresholdRefundCount > 0 ? 'At or above ₦50,000' : 'None pending',
         tone: thresholdRefundCount > 0 ? 'warn' : 'ok',
       },
-    ],
-    [census, isLoading, ownerApprovalCount, psfSummary, thresholdRefundCount],
-  );
+    ];
+  }, [
+    census,
+    isLoading,
+    ownerApprovalCount,
+    psfSummary,
+    thresholdRefundCount,
+    workflowInboxModule,
+  ]);
 
-  const principalStats: AttentionStripStat[] = useMemo(
-    () => [
+  const principalStats: AttentionStripStat[] = useMemo(() => {
+    if (workflowInboxModule) {
+      return [
+        {
+          label: 'Inbox total',
+          value: isLoading ? '—' : String(inboxBreakdown.totalForPrincipal),
+          hint: inboxBreakdown.totalForPrincipal > 0 ? 'Needs your decision' : 'Queue clear',
+          tone: inboxBreakdown.totalForPrincipal > 0 ? 'warn' : 'ok',
+        },
+        {
+          label: 'Refunds',
+          value: isLoading ? '—' : String(inboxBreakdown.refunds),
+          hint: inboxBreakdown.refunds > 0 ? 'Awaiting principal' : 'None pending',
+          tone: inboxBreakdown.refunds > 0 ? 'warn' : 'ok',
+        },
+        {
+          label: 'Fee amendments',
+          value: isLoading ? '—' : String(inboxBreakdown.feeAmendments),
+          hint: inboxBreakdown.feeAmendments > 0 ? 'Finance proposals' : 'None pending',
+          tone: inboxBreakdown.feeAmendments > 0 ? 'warn' : 'ok',
+        },
+        {
+          label: 'Grade fixes',
+          value: isLoading ? '—' : String(inboxBreakdown.gradeCorrections),
+          hint: inboxBreakdown.gradeCorrections > 0 ? 'Exam escalations' : 'None pending',
+          tone: inboxBreakdown.gradeCorrections > 0 ? 'warn' : 'ok',
+        },
+      ];
+    }
+
+    return [
       {
         label: 'Admissions',
         value: isLoading ? '—' : String(pendingAdmissionCount),
@@ -158,15 +243,19 @@ export function useLeadershipAttention(tenantId: string, role: 'school_owner' | 
             : 'No requests in flight',
         tone: roleChangesPendingOwner > 0 ? 'neutral' : 'ok',
       },
-    ],
-    [
-      feeAmendmentCount,
-      isLoading,
-      pendingAdmissionCount,
-      principalRefundCount,
-      roleChangesPendingOwner,
-    ],
-  );
+    ];
+  }, [
+    feeAmendmentCount,
+    inboxBreakdown.feeAmendments,
+    inboxBreakdown.gradeCorrections,
+    inboxBreakdown.refunds,
+    inboxBreakdown.totalForPrincipal,
+    isLoading,
+    pendingAdmissionCount,
+    principalRefundCount,
+    roleChangesPendingOwner,
+    workflowInboxModule,
+  ]);
 
   const tasks: AttentionTask[] = useMemo(() => {
     if (role === 'school_owner') {
@@ -175,23 +264,29 @@ export function useLeadershipAttention(tenantId: string, role: 'school_owner' | 
         ownerApprovalCount,
         thresholdRefundCount,
         pendingAdmissionCount,
+        workflowInboxModule,
       });
     }
     return buildPrincipalAttentionTasks({
       pendingAdmissionCount,
       principalRefundCount,
       feeAmendmentCount,
+      gradeCorrectionCount,
       roleChangesPendingOwner,
+      workflowInboxModule: options?.workflowInboxModule,
     });
   }, [
     census,
     feeAmendmentCount,
+    gradeCorrectionCount,
+    options?.workflowInboxModule,
     ownerApprovalCount,
     pendingAdmissionCount,
     principalRefundCount,
     role,
     roleChangesPendingOwner,
     thresholdRefundCount,
+    workflowInboxModule,
   ]);
 
   const actionCount = tasks.filter((task) => task.urgency !== 'normal').length;
@@ -205,5 +300,6 @@ export function useLeadershipAttention(tenantId: string, role: 'school_owner' | 
     tasks,
     stats: role === 'school_owner' ? ownerStats : principalStats,
     actionCount,
+    inboxBreakdown,
   };
 }

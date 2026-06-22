@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildOwnerAttentionTasks,
   buildPrincipalAttentionTasks,
+  computePrincipalInboxBreakdown,
   countOwnerThresholdRefunds,
   CORE_OWNER_REFUND_THRESHOLD_MINOR,
   refundAmountFromPayload,
@@ -107,6 +108,51 @@ describe('leadership attention Sprint 4', () => {
       'role-changes',
     ]);
     expect(tasks.every((task) => !task.href.includes('/school/workflows'))).toBe(true);
+  });
+
+  it('routes principal workflow tasks to inbox when Advanced module is on', () => {
+    const tasks = buildPrincipalAttentionTasks({
+      pendingAdmissionCount: 0,
+      principalRefundCount: 1,
+      feeAmendmentCount: 1,
+      gradeCorrectionCount: 2,
+      roleChangesPendingOwner: 0,
+      workflowInboxModule: true,
+    });
+
+    expect(tasks.map((task) => task.id)).toEqual(['refunds', 'fee-amendments', 'grade-corrections']);
+    expect(tasks.every((task) => task.href === '/school/workflows')).toBe(true);
+  });
+
+  it('routes owner workflow tasks to inbox when Advanced module is on', () => {
+    const tasks = buildOwnerAttentionTasks({
+      census: resolveCensusAttention(null, null, null),
+      ownerApprovalCount: 2,
+      thresholdRefundCount: 1,
+      pendingAdmissionCount: 0,
+      workflowInboxModule: true,
+    });
+
+    expect(tasks.map((task) => task.id)).toEqual(['refunds-threshold', 'owner-approvals']);
+    expect(tasks.every((task) => task.href === '/school/workflows')).toBe(true);
+  });
+
+  it('computes principal inbox breakdown by workflow type', () => {
+    const items = [
+      inboxItem('refund_request', 'principal'),
+      inboxItem('fee_structure_change', 'principal'),
+      inboxItem('grade_correction', 'principal'),
+      inboxItem('student_transfer_out', 'principal'),
+      inboxItem('staff_role_change', 'school_owner'),
+    ];
+    expect(computePrincipalInboxBreakdown(items)).toEqual({
+      refunds: 1,
+      feeAmendments: 1,
+      gradeCorrections: 1,
+      transfers: 1,
+      ownerRoleChanges: 1,
+      totalForPrincipal: 4,
+    });
   });
 
   it('summarizes PSF obligations', () => {
