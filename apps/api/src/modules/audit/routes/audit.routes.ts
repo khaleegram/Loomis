@@ -4,6 +4,7 @@ import {
   type AuditLogExportRequest,
 } from '@loomis/contracts';
 import { authenticate } from '../../../middleware/authenticate.js';
+import { requireCapability } from '../../../middleware/require-capability.js';
 import { requireIdempotencyKey } from '../../../middleware/require-idempotency-key.js';
 import { requireRole } from '../../../middleware/require-role.js';
 import { requireStepUp } from '../../../middleware/require-step-up.js';
@@ -18,7 +19,7 @@ const schoolAuditReaders = [authenticate, requireTenantMatch, requireRole('schoo
 const schoolAuditExporters = [
   authenticate,
   requireTenantMatch,
-  requireRole('school_owner'),
+  requireCapability('audit.export'),
   requireStepUp('data_export'),
   requireIdempotencyKey,
 ] as const;

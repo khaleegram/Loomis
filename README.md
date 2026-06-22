@@ -13,6 +13,12 @@ Revenue model: **Per-Student Fee (PSF)** — charged once per billable student p
 | `Loomis_Revenue_Integrity_Architecture_FINAL.md` | Revenue integrity & fraud countermeasures |
 | `Loomis_User_Stories_v1.md` | User stories across all modules |
 | `Loomis_Adversarial_Analysis.md` | Threat / vulnerability analysis |
+| `ROLE_EXPERIENCE_TIER_PLAN.md` | Core tier UX, MFA, approval matrix |
+| `ROLE_EXPERIENCE_MASTER_PLAN.md` | Advanced + Enterprise role architecture |
+| `ROLE_EXPERIENCE_IMPLEMENTATION_ROADMAP.md` | Sprint execution guide (Sprints 1–14) |
+| `docs/loomis-roles-and-logins.md` | Demo logins, tier homes, MFA |
+| `docs/ROLE_EXPERIENCE_v1_RELEASE.md` | Role experience v1 release notes |
+| `docs/KNOWN_BLOCKERS.md` | Integrations not yet wired (`// BLOCKED:`) |
 
 AI implementation guidance lives in `.cursor/rules/`.
 

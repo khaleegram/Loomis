@@ -3,22 +3,12 @@ import { censusLockRequest, type CensusLockRequest } from '@loomis/contracts';
 import { authenticate } from '../../../middleware/authenticate.js';
 import { requireCapability } from '../../../middleware/require-capability.js';
 import { requireIdempotencyKey } from '../../../middleware/require-idempotency-key.js';
-import { requireRole } from '../../../middleware/require-role.js';
 import { requireStepUp } from '../../../middleware/require-step-up.js';
 import { requireTenantMatch } from '../../../middleware/require-tenant-match.js';
 import { validateBody } from '../../../shared/validation.js';
 import { censusLockHandler, censusPreviewHandler } from '../handlers/index.js';
 
-/**
- * Census lock route (FR-SIS-006 / FR-ASM-005 / US-ASM-003; System Design §8.1).
- *
- * This is the PSF revenue trigger and a financial write, so it carries the full
- * middleware stack in the loomis-api order: authenticate → requireTenantMatch →
- * requireRole → requireStepUp('census_lock') → requireIdempotencyKey. Only the
- * School Owner or Principal may attest.
- */
-const censusReaders = ['school_owner', 'principal'] as const;
-
+/** Census lock route (FR-SIS-006 / FR-ASM-005 / US-ASM-003; System Design §8.1). */
 export async function censusRoutes(app: FastifyInstance): Promise<void> {
   app.get<{ Params: { tenantId: string; termId: string } }>(
     '/tenants/:tenantId/terms/:termId/census/preview',
@@ -26,7 +16,7 @@ export async function censusRoutes(app: FastifyInstance): Promise<void> {
       preHandler: [
         authenticate,
         requireTenantMatch,
-        requireRole(...censusReaders),
+        requireCapability('census.lock'),
       ],
     },
     censusPreviewHandler,

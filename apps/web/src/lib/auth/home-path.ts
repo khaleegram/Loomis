@@ -47,7 +47,7 @@ export function homePathForRole(role: Role, ctx?: HomePathContext): string {
     }
     return '/school/timetable';
   }
-  if (role === 'teacher') return '/school/timetable';
+  if (role === 'teacher') return '/school/dashboard';
   if (role === 'class_teacher') return '/school/dashboard';
 
   // School roles without a dedicated module home (owner, principal, admin) → dashboard.

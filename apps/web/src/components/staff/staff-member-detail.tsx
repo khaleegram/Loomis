@@ -59,7 +59,7 @@ import {
 } from '@loomis/ui-web';
 import type { z } from 'zod';
 
-import { BookOpen, Briefcase, Shield, UserCog } from 'lucide-react';
+import { BookOpen, Briefcase, Shield } from 'lucide-react';
 
 import { SEMANTIC, SURFACES } from '@/lib/design/surfaces';
 import { formatRoleLabel } from '@/components/school/school-nav-config';
@@ -68,7 +68,12 @@ import {
   formatStaffDisplayRole,
   formatStaffExtensionLabels,
 } from '@/lib/staff/staff-labels';
-import { useCan, useCanAny, useRole } from '@/lib/auth/use-capability';
+import {
+  useCan,
+  useCanAny,
+  useCanAssignStaffRole,
+  useCanRequestStaffRole,
+} from '@/lib/auth/use-capability';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 import { DeactivationImpactPreview } from '@/components/staff/staff-deactivation-preview';
 import { CoreInlineWorkflowDecision } from '@/components/workflow/core-inline-workflow-decision';
@@ -103,7 +108,8 @@ interface StaffMemberDetailProps {
 
 export function StaffMemberDetail({ staffProfileId, staff: staffProp }: StaffMemberDetailProps) {
   const tenantId = useTenantId();
-  const role = useRole();
+  const canRequestStaffRole = useCanRequestStaffRole();
+  const canAssignStaffRole = useCanAssignStaffRole();
 
   const canOnboard = useCan('staff.onboard');
   const canAssignSubject = useCan('subject.assign');
@@ -375,7 +381,7 @@ export function StaffMemberDetail({ staffProfileId, staff: staffProp }: StaffMem
         ) : null}
 
         {/* Owner one-tap role change approval (Core Sprint 5) */}
-        {role === 'school_owner' && pendingRoleChange && tenantId ? (
+        {canAssignStaffRole && pendingRoleChange && tenantId ? (
           <SectionCard
             title="Role change awaiting your approval"
             description="Principal submitted this change — approve or reject inline."
@@ -397,19 +403,19 @@ export function StaffMemberDetail({ staffProfileId, staff: staffProp }: StaffMem
           <SectionCard
             title="Change primary role"
             description={
-              role === 'principal'
+              canRequestStaffRole
                 ? 'Submits to the school owner for one-tap approval in Core.'
                 : 'Role changes will invalidate active sessions.'
             }
           >
-            {role === 'principal' && (roleChangeSubmitted || pendingRoleChange) ? (
+            {canRequestStaffRole && (roleChangeSubmitted || pendingRoleChange) ? (
               <Alert>
                 <AlertDescription>
                   Role change submitted — waiting for the school owner to approve.
                 </AlertDescription>
               </Alert>
             ) : null}
-            {role === 'principal' ? (
+            {canRequestStaffRole ? (
               <SodNotice compact highlight="Initiate staff role change" />
             ) : null}
             <Form {...roleForm}>
@@ -468,7 +474,7 @@ export function StaffMemberDetail({ staffProfileId, staff: staffProp }: StaffMem
                 <Button type="submit" disabled={changeRole.isPending} size="sm" variant="gradient">
                   {changeRole.isPending
                     ? 'Saving…'
-                    : role === 'principal'
+                    : canRequestStaffRole
                       ? 'Submit for owner approval'
                       : 'Change role'}
                 </Button>

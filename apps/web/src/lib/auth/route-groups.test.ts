@@ -51,6 +51,7 @@ describe('homePathForRole', () => {
     );
     expect(homePathForRole('cashier', { financeMode: 'split' })).toBe('/school/finance/payments/log');
     expect(homePathForRole('exam_officer')).toBe('/school/exams');
+    expect(homePathForRole('teacher')).toBe('/school/dashboard');
     expect(homePathForRole('dpo')).toBe('/platform/compliance');
     expect(homePathForRole('timetable_officer', { experienceTier: 'core' })).toBe('/school/academic');
   });

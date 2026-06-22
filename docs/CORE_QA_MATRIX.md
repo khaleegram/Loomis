@@ -1,9 +1,12 @@
-# Loomis Core — QA Matrix (Sprint 7)
+# Loomis Core — QA Matrix (Sprint 14)
 
 Manual sign-off checklist for **Greenfield Academy** (`greenfield` slug, **Core** tier).  
+Aligned with `ROLE_EXPERIENCE_TIER_PLAN.md` §3 (Core roles) and Sprint 14 pilot exit criteria.  
 Password: `LoomisDev2026!` · Core SMS dev code: `000000`
 
 Test each role at **375px** and **desktop** unless noted.
+
+**Advanced / Enterprise:** see [`ADVANCED_QA_MATRIX.md`](./ADVANCED_QA_MATRIX.md)
 
 ---
 
@@ -43,6 +46,39 @@ Test each role at **375px** and **desktop** unless noted.
 
 ---
 
+## Core pilot exit criteria (Sprint 14)
+
+Complete end-to-end on Greenfield before production pilot sign-off:
+
+| # | Flow | Role | Pass |
+|---|------|------|------|
+| 1 | Register student (one-step admissions) | Admin Officer | ☐ |
+| 2 | Log offline payment | Accountant / Cashier (combined desk) | ☐ |
+| 3 | Verify payment (different user than logger) | Accountant | ☐ |
+| 4 | Census lock with SMS step-up | School Owner | ☐ |
+| 5 | Publish results | Exam Officer | ☐ |
+| 6 | Parent pay fees (web or mobile) | Parent | ☐ |
+
+**Nav rule:** Core tenants must **not** see Workflows, PSF top-level nav, Attestations, or Deputy Exam surfaces.
+
+---
+
+## Tier plan §3 — Core personas
+
+| Persona | Role | Core surface |
+|---------|------|--------------|
+| Owner | `school_owner` | Census, audit, role-change approver, refund ≥ threshold |
+| Principal | `principal` | Attention badges (not inbox), routine ops |
+| Admin Officer | `admin_officer` | Registry, admissions |
+| Finance Officer | `accountant` (+ cashier preset) | Combined log + verify |
+| Exam Officer | `exam_officer` | Exams home, publish |
+| Teacher / Class Teacher | `teacher`, `class_teacher` | Teaching desk / My Class |
+| Parent / Student | `parent`, `student` | Mobile-first portal |
+
+**Core must NOT ship:** Workflow Inbox module, Deputy Exam UI, 4-step refund chain, PSF top-level nav, mandatory TOTP, Timetable Officer UI, Attestation history page.
+
+---
+
 ## Visual quality (Step 4b)
 
 - [ ] No hard black outline cards on students, admissions, settings, audit
@@ -55,9 +91,10 @@ Test each role at **375px** and **desktop** unless noted.
 
 ```bash
 pnpm --filter @loomis/web build
+pnpm --filter @loomis/web test -- school-nav-config
 pnpm --filter @loomis/core test
 ```
 
 ---
 
-*Sprint 7 exit — Core MVP sign-off.*
+*Sprint 14 exit — Core pilot sign-off.*

@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useCreateStaff, useStaffDirectory } from '@loomis/api-client';
 import { createStaffRequest, type CreateStaffRequest } from '@loomis/contracts';
-import { Alert, AlertDescription, Button, Form, FormField, FormItem, FormMessage, Input } from '@loomis/ui-web';
+import { Alert, AlertDescription, Button, Form, FormControl, FormField, FormItem, FormMessage, Input } from '@loomis/ui-web';
 import { Check, ClipboardList, ShieldCheck } from 'lucide-react';
 import { useMemo, useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';

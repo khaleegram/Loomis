@@ -15,7 +15,7 @@ import { createHash, randomBytes } from 'node:crypto';
   StaffProfileResponse,
   SubjectAssignmentResponse,
 } from '@loomis/contracts';
-import { isOptionalStaffRoleEnabled } from '@loomis/core';
+import { can, isOptionalStaffRoleEnabled } from '@loomis/core';
 import { staffAccountService } from '../../identity/services/staff-account.service.js';
 import { DEFAULT_STAFF_PROVISIONED_PASSWORD } from '../../identity/services/provisioned-password.service.js';
 import { transactionalEmailService } from '../../comms/services/transactional-email.service.js';
@@ -439,12 +439,12 @@ export const staffService = {
   ): Promise<ChangeStaffRoleResult> {
     requireTenant(actor, tenantId);
 
-    if (actor.role === 'principal') {
+    if (can(actor.role, 'staff.role.request') && !can(actor.role, 'staff.role.assign')) {
       const pending = await this.requestStaffRoleChange(tenantId, staffProfileId, input, actor);
       return { kind: 'pending', ...pending };
     }
 
-    if (actor.role !== 'school_owner') {
+    if (!can(actor.role, 'staff.role.assign')) {
       throw new LoomisError('FORBIDDEN', 403, 'Only the school owner may finalize role changes');
     }
 

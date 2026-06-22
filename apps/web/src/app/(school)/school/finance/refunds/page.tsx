@@ -9,7 +9,7 @@ import { RefundApprovalTimeline } from '@/components/finance/refund-approval-tim
 import { PageBody, PageHeader } from '@/components/school/school-shell';
 import { SodNotice } from '@/components/school/sod-notice';
 import { useSchoolAcademic } from '@/lib/academic/school-academic-context';
-import { useCan, useRole } from '@/lib/auth/use-capability';
+import { useCan, useCanViewRefunds, useRole } from '@/lib/auth/use-capability';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 
 export default function RefundsPage() {
@@ -17,7 +17,7 @@ export default function RefundsPage() {
   const role = useRole();
   const canInitiate = useCan('refund.initiate');
   const canApprove = useCan('refund.approve');
-  const canView = canInitiate || canApprove || role === 'principal' || role === 'school_owner';
+  const canView = useCanViewRefunds();
   const { termId } = useSchoolAcademic();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);

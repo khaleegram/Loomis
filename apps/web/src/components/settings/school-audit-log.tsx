@@ -10,7 +10,7 @@ import { uuidv7 } from 'uuidv7';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import type { AuditLogFilters } from '@loomis/api-client';
 import { useTenantExperience } from '@/lib/tenant/use-tenant-experience';
-import { useAuth } from '@/lib/auth/auth-context';
+import { useCanExportAudit } from '@/lib/auth/use-capability';
 
 const CORE_RETENTION_DAYS = 90;
 
@@ -48,9 +48,8 @@ interface SchoolAuditLogProps {
 }
 
 export function SchoolAuditLog({ tenantId }: SchoolAuditLogProps) {
-  const { isAdvanced, isCore } = useTenantExperience();
-  const { session } = useAuth();
-  const canExport = isAdvanced && session?.role === 'school_owner';
+  const { isAdvanced } = useTenantExperience();
+  const canExport = useCanExportAudit();
   const [actionQuery, setActionQuery] = useState('');
   const [sensitivity, setSensitivity] = useState<AuditSensitivity | ''>('');
   const [fromDate, setFromDate] = useState(() => defaultFromIso().slice(0, 10));

@@ -28,6 +28,7 @@ export default function FinanceFeeStructuresPage() {
   const { financeMode } = useTenantExperience();
   const workflowInboxModule = useWorkflowInboxModule();
   const canConfigure = useCan('fee.configure');
+  const canApproveRefunds = useCan('refund.approve');
   const canViewFinance = useCanAny(['fee.configure', 'payment.verify', 'payment.log']);
   const inboxQuery = useWorkflowInbox(tenantId ?? '');
   const feeAmendmentInbox = useMemo(
@@ -90,7 +91,7 @@ export default function FinanceFeeStructuresPage() {
           isLoading={isLoading}
         />
 
-        {role === 'principal' && !workflowInboxModule && feeAmendmentInbox.length > 0 ? (
+        {canApproveRefunds && !canConfigure && !workflowInboxModule && feeAmendmentInbox.length > 0 ? (
           <section className="space-y-3">
             <div>
               <p className={ACADEMIC_UI.sectionLabel}>Pending approval</p>

@@ -2,7 +2,11 @@
 
 All **17 roles** in the system, which app they use, where they land after login, and demo credentials where seeds exist.
 
-**Last updated:** Sprint 13 (Enterprise activation, attestations, emergency publish).
+**Last updated:** Audit closure (Phases A–D) — June 2026.
+
+**Coverage matrix:** [`ROLE_EXPERIENCE_COVERAGE_MATRIX.md`](./ROLE_EXPERIENCE_COVERAGE_MATRIX.md)
+
+**QA matrices:** [Core](./CORE_QA_MATRIX.md) · [Advanced / Enterprise](./ADVANCED_QA_MATRIX.md) · [Pilot checklist](./PILOT_CHECKLIST.md)
 
 ---
 
@@ -136,15 +140,15 @@ Password for all: **`LoomisDev2026!`**
 
 | Role | Login email | Seeded phone | Login MFA (Core) | Default landing | Primary demo use |
 |------|-------------|--------------|------------------|-----------------|------------------|
-| **school_owner** | `owner@greenfield.loomis.com` | +2348011000005 | SMS → `000000` | `/school/dashboard` | Census lock, Experience settings, audit |
-| **principal** | `principal@greenfield.loomis.com` | +2348011000001 | SMS → `000000` | `/school/dashboard` | Operations home; admit if toggle on |
+| **school_owner** | `owner@greenfield.loomis.com` | +2348011000005 | SMS → `000000` | `/school/dashboard` | Census lock, Experience settings, audit export (Advanced+) |
+| **principal** | `principal@greenfield.loomis.com` | +2348011000001 | SMS → `000000` | `/school/dashboard` | Operations home; **census lock** (all tiers); admit if toggle on |
 | **admin_officer** | `admin@greenfield.loomis.com` | +2348011000004 | SMS → `000000` | `/school/dashboard` | **Register students (one step)**, registry |
 | **accountant** | `accountant@greenfield.loomis.com` | +2348011000006 | SMS → `000000` | Finance desk | Verify payments |
 | **cashier** | `cashier@greenfield.loomis.com` | +2348011000007 | SMS → `000000` | Finance desk | Log payments |
 | **exam_officer** | `exam@greenfield.loomis.com` | +2348011000002 | Password only | `/school/exams` | Exams & publish |
 | **deputy_exam_officer** | `deputy@greenfield.loomis.com` | +2348011000008 | Password only | `/school/exams` | Deputy exams |
 | **timetable_officer** | `timetable@greenfield.loomis.com` | +2348011000003 | Password only | `/school/timetable` | Timetable builder |
-| **teacher** | `teacher01@greenfield.loomis.com` | +2348011000101 | Password only | `/school/timetable` | Subject teacher / schedule |
+| **teacher** | `teacher01@greenfield.loomis.com` | +2348011000101 | Password only | `/school/dashboard` | Teacher Desk (My Schedule, gradebook, assignments) |
 | **class_teacher** | `teacher03@greenfield.loomis.com` | +2348011000103 | Password only | `/school/dashboard` | JSS1 B — attendance |
 
 Also `teacher02`–`teacher13@greenfield.loomis.com` (class teachers on other arms).
@@ -164,6 +168,20 @@ Also `teacher02`–`teacher13@greenfield.loomis.com` (class teachers on other ar
 | **timetable_officer** | `timetable@advanced.loomis.com` | `LoomisDev2026!` | Password only | `/school/timetable` (requires dedicated officer flag) |
 
 Seed sets `finance_mode=split` on the Advanced QA tenant. Re-run `pnpm db:seed` if these accounts are missing.
+
+---
+
+### School console — Enterprise QA (Enterprise tier)
+
+Platform must set `experienceTier=enterprise` (Platform → Tenants → Experience card).
+
+| Role | Login email | Password | Login MFA | Default landing | Notes |
+|------|-------------|----------|-----------|-----------------|--------|
+| **school_owner** | `owner@enterprise.loomis.com` | `LoomisDev2026!` | Password + TOTP step-up on census | `/school/dashboard` | Attestations nav; mandatory authenticator on high-risk actions |
+| **principal** | `principal@enterprise.loomis.com` | `LoomisDev2026!` | Password + TOTP on emergency publish | `/school/dashboard` | **Attestations** nav; census lock; emergency publish after 120h EO idle only |
+| **exam_officer** | `exam@enterprise.loomis.com` | `LoomisDev2026!` | Password only | `/school/exams` | Normal publish path |
+
+Enterprise adds **Attestations** (`/school/academic/attestations`) for **Owner and Principal** and **SoD notices** on verify, refunds, and role change flows.
 
 ---
 
@@ -197,7 +215,7 @@ Separate from login MFA — required before specific actions:
 
 | Action | Core tier | Dev code |
 |--------|-----------|----------|
-| Census lock (Owner) | SMS | `000000` |
+| Census lock (Owner **or Principal**) | SMS | `000000` |
 | Refund approve ≥ ₦100,000 | SMS | `000000` |
 | Refund approve &lt; ₦100,000 (Core) | None | — |
 | Refund approve (Enterprise) | TOTP | Authenticator |

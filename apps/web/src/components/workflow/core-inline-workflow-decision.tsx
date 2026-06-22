@@ -51,7 +51,7 @@ function hrefForWorkflowItem(item: WorkflowInboxItemResponse): string | null {
     case 'refund_request':
       return '/school/finance/refunds';
     case 'fee_structure_change':
-      return '/school/finance';
+      return '/school/workflows';
     default:
       return null;
   }

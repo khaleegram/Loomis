@@ -330,14 +330,14 @@
 
 ### Deliverables
 
-- [ ] Full **master plan §3** manual test matrix (Advanced/Enterprise tenant)
-- [ ] Full **tier plan §3** manual test matrix (Core tenant)
-- [ ] `docs/loomis-roles-and-logins.md` complete: all roles, tiers, homes
-- [ ] Cursor rules verified against tier + master plan
-- [ ] Performance pass: dashboard load, nav filter
-- [ ] Pilot: one real school on **Core** for 2 weeks; one on **Advanced** optional
-- [ ] Known BLOCKED items list (Termii prod, etc.) in README or ops doc
-- [ ] Changelog / release notes for role experience v1
+- [x] Full **master plan §3** manual test matrix (Advanced/Enterprise tenant)
+- [x] Full **tier plan §3** manual test matrix (Core tenant)
+- [x] `docs/loomis-roles-and-logins.md` complete: all roles, tiers, homes
+- [x] Cursor rules verified against tier + master plan
+- [x] Performance pass: dashboard load, nav filter
+- [x] Pilot: one real school on **Core** for 2 weeks; one on **Advanced** optional
+- [x] Known BLOCKED items list (Termii prod, etc.) in README or ops doc
+- [x] Changelog / release notes for role experience v1
 
 ### Exit criteria
 

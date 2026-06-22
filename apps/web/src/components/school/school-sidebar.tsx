@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import { workflowsInboxEnabled } from '@loomis/core';
 import type { Role } from '@loomis/contracts';
@@ -54,11 +55,14 @@ export function SchoolTopBar() {
   const tenantId = useTenantId();
   const { session, signOut } = useAuth();
   const experience = useTenantExperience();
-  const navContext: SchoolNavContext = {
-    experienceTier: experience.experienceTier,
-    financeMode: experience.financeMode,
-    flags: experience.flags,
-  };
+  const navContext: SchoolNavContext = useMemo(
+    () => ({
+      experienceTier: experience.experienceTier,
+      financeMode: experience.financeMode,
+      flags: experience.flags,
+    }),
+    [experience.experienceTier, experience.financeMode, experience.flags],
+  );
   const inboxEnabled = workflowsInboxEnabled(navContext.experienceTier, navContext.flags);
   const { data: inboxData } = useWorkflowInbox(inboxEnabled ? (tenantId ?? '') : '');
   const { data: branding } = useSchoolBranding(tenantId ?? '');
@@ -70,21 +74,41 @@ export function SchoolTopBar() {
       ? `${schoolName} · ${activeYear.label} · ${activeTerm.name}`
       : schoolName;
 
+  const role = session?.role;
+  const visibleNav = useMemo(
+    () => (role ? resolveSchoolNav(role, navContext) : []),
+    [role, navContext],
+  );
+  const workspaceItems: WorkspaceNavItem[] = useMemo(
+    () =>
+      role
+        ? visibleNav
+            .filter((item) => item.section !== 'ledger' && item.href !== '/school/settings')
+            .map((item) => toWorkspaceNavItem(item, role, navContext.financeMode))
+        : [],
+    [visibleNav, role, navContext.financeMode],
+  );
+  const ledgerItems: WorkspaceNavItem[] = useMemo(
+    () =>
+      role
+        ? visibleNav
+            .filter((item) => item.section === 'ledger')
+            .map((item) => toWorkspaceNavItem(item, role, navContext.financeMode))
+        : [],
+    [visibleNav, role, navContext.financeMode],
+  );
+  const sections: { title: string; items: WorkspaceNavItem[] }[] = useMemo(
+    () =>
+      [
+        { title: 'Workspace', items: workspaceItems },
+        { title: 'Ledger Flows', items: ledgerItems },
+      ].filter((section) => section.items.length > 0),
+    [workspaceItems, ledgerItems],
+  );
+
   if (!session) return null;
 
   const roleLabel = formatRoleLabel(session.role, navContext.financeMode);
-  const visibleNav = resolveSchoolNav(session.role, navContext);
-  const workspaceItems: WorkspaceNavItem[] = visibleNav
-    .filter((item) => item.section !== 'ledger' && item.href !== '/school/settings')
-    .map((item) => toWorkspaceNavItem(item, session.role, navContext.financeMode));
-  const ledgerItems: WorkspaceNavItem[] = visibleNav
-    .filter((item) => item.section === 'ledger')
-    .map((item) => toWorkspaceNavItem(item, session.role, navContext.financeMode));
-
-  const sections: { title: string; items: WorkspaceNavItem[] }[] = [
-    { title: 'Workspace', items: workspaceItems },
-    { title: 'Ledger Flows', items: ledgerItems },
-  ].filter((section) => section.items.length > 0);
 
   return (
     <AppBar

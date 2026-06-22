@@ -45,3 +45,28 @@ export function useAdmissionsRequirePrincipalApproval(): boolean {
   const { flags } = useTenantExperience();
   return flags.admissionsRequirePrincipalApproval;
 }
+
+/** Principal and Owner confirm promotion batches — not Admin Officer (US-ASM-005). */
+export function useCanConfirmPromotions(): boolean {
+  return useCan('student.promote.confirm');
+}
+
+/** Advanced tenant audit CSV export (Owner only). */
+export function useCanExportAudit(): boolean {
+  const { isAdvanced } = useTenantExperience();
+  const canExport = useCan('audit.export');
+  return isAdvanced && canExport;
+}
+
+export function useCanRequestStaffRole(): boolean {
+  return useCan('staff.role.request');
+}
+
+export function useCanAssignStaffRole(): boolean {
+  return useCan('staff.role.assign');
+}
+
+/** View refund timeline (initiate, approve, or leadership oversight). */
+export function useCanViewRefunds(): boolean {
+  return useCanAny(['refund.initiate', 'refund.approve', 'finance.balances.view']);
+}

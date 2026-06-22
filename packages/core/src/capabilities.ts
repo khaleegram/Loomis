@@ -17,6 +17,7 @@ export type Capability =
   | 'term.manage'
   | 'census.lock'
   | 'student.promote'
+  | 'student.promote.confirm'
   | 'student.graduate'
   | 'class_structure.manage'
   | 'timetable.manage'
@@ -42,7 +43,8 @@ export type Capability =
   | 'regional.analytics.view'
   | 'parent.message'
   | 'dsar.manage'
-  | 'audit.view';
+  | 'audit.view'
+  | 'audit.export';
 
 const C = <T extends Capability[]>(...caps: T): ReadonlySet<Capability> => new Set(caps);
 
@@ -75,6 +77,7 @@ export const roleCapabilities: Record<Role, ReadonlySet<Capability>> = {
     'term.manage',
     'census.lock',
     'student.promote',
+    'student.promote.confirm',
     'student.graduate',
     'class_structure.manage',
     'timetable.manage',
@@ -84,6 +87,7 @@ export const roleCapabilities: Record<Role, ReadonlySet<Capability>> = {
     'finance.balances.view',
     'ledger.view',
     'audit.view',
+    'audit.export',
     'parent.message',
   ),
   principal: C(
@@ -94,7 +98,9 @@ export const roleCapabilities: Record<Role, ReadonlySet<Capability>> = {
     'classteacher.assign',
     'academic_year.manage',
     'term.manage',
+    'census.lock',
     'student.promote',
+    'student.promote.confirm',
     'student.graduate',
     'class_structure.manage',
     'timetable.manage',
@@ -112,13 +118,11 @@ export const roleCapabilities: Record<Role, ReadonlySet<Capability>> = {
     'subject.assign',
     'classteacher.assign',
     'student.promote',
-    'student.graduate',
     'class_structure.manage',
     'admissions.manage',
     'admissions.approve',
     'timetable.view',
     'attendance.view',
-    'finance.balances.view',
     'parent.message',
   ),
   accountant: C('fee.configure', 'payment.verify', 'refund.approve', 'finance.balances.view', 'ledger.view'),

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { usePaymentStatusPoll } from '@loomis/api-client';
 import { formatKobo } from '@loomis/core';
@@ -10,7 +11,7 @@ import { CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { useActiveTenantStore } from '@/lib/tenant/active-tenant-store';
 
-export default function PaymentCompletePage() {
+function PaymentCompleteContent() {
   const searchParams = useSearchParams();
   const paymentId = searchParams.get('paymentId');
   const tenantFromQuery = searchParams.get('tenantId');
@@ -80,5 +81,19 @@ export default function PaymentCompletePage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function PaymentCompletePage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-4 py-12">
+          <Skeleton className="mx-auto h-32 w-full max-w-lg rounded-xl" />
+        </main>
+      }
+    >
+      <PaymentCompleteContent />
+    </Suspense>
   );
 }

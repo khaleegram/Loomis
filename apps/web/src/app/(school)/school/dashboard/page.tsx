@@ -13,8 +13,8 @@ import { AdminOfficerDashboard } from '@/components/staff/admin-officer-dashboar
 import { TeacherLanding } from '@/components/staff/teacher-landing';
 import { useAuth } from '@/lib/auth/auth-context';
 import { homePathForRole } from '@/lib/auth/home-path';
+import { resolveSchoolDashboardVariant } from '@/lib/auth/school-dashboard-resolver';
 import { isExamOfficerRole } from '@/lib/auth/is-exam-officer';
-import { isClassTeacherRole, isTeacherRole } from '@/lib/timetable/is-teaching-staff';
 import { useTenantExperience } from '@/lib/tenant/use-tenant-experience';
 
 const PAGE_BODY_CLASS = 'max-w-[1200px] px-4 py-5 sm:px-6 sm:py-6 lg:px-7 lg:py-7';
@@ -25,6 +25,7 @@ export default function SchoolDashboardPage() {
   const tenantId = session?.tenantId ?? '';
   const role = session?.role;
   const { isCore, financeMode, experienceTier, flags, isLoading: experienceLoading } = useTenantExperience();
+  const variant = resolveSchoolDashboardVariant(role, isCore);
 
   useEffect(() => {
     if (!role) return;
@@ -51,7 +52,7 @@ export default function SchoolDashboardPage() {
     }
   }
 
-  if (role && isClassTeacherRole(role)) {
+  if (variant === 'class_teacher') {
     return (
       <PageBody className={PAGE_BODY_CLASS}>
         <ClassTeacherDashboard tenantId={tenantId} displayName={session?.displayName} />
@@ -59,7 +60,7 @@ export default function SchoolDashboardPage() {
     );
   }
 
-  if (role === 'admin_officer') {
+  if (variant === 'admin_officer') {
     return (
       <PageBody className={PAGE_BODY_CLASS}>
         <AdminOfficerDashboard tenantId={tenantId} displayName={session?.displayName} />
@@ -67,7 +68,7 @@ export default function SchoolDashboardPage() {
     );
   }
 
-  if (role && isTeacherRole(role)) {
+  if (variant === 'teacher') {
     return (
       <PageBody className={PAGE_BODY_CLASS}>
         <TeacherLanding displayName={session?.displayName} />
@@ -75,7 +76,7 @@ export default function SchoolDashboardPage() {
     );
   }
 
-  if (isCore && role === 'school_owner') {
+  if (variant === 'core_owner') {
     return (
       <PageBody className={PAGE_BODY_CLASS}>
         <CoreOwnerHome tenantId={tenantId} displayName={session?.displayName} />
@@ -83,7 +84,7 @@ export default function SchoolDashboardPage() {
     );
   }
 
-  if (isCore && role === 'principal') {
+  if (variant === 'core_principal') {
     return (
       <PageBody className={PAGE_BODY_CLASS}>
         <CorePrincipalHome tenantId={tenantId} displayName={session?.displayName} />
@@ -91,7 +92,7 @@ export default function SchoolDashboardPage() {
     );
   }
 
-  if (!isCore && role === 'school_owner') {
+  if (variant === 'advanced_owner') {
     return (
       <PageBody className={PAGE_BODY_CLASS}>
         <SchoolOwnerDashboard tenantId={tenantId} displayName={session?.displayName} />
@@ -99,7 +100,7 @@ export default function SchoolDashboardPage() {
     );
   }
 
-  if (!isCore && role === 'principal') {
+  if (variant === 'advanced_principal') {
     return (
       <PageBody className={PAGE_BODY_CLASS}>
         <PrincipalOperationsDashboard tenantId={tenantId} displayName={session?.displayName} />
