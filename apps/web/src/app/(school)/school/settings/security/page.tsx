@@ -29,7 +29,7 @@ function CoreMfaPolicyNotice() {
           </li>
           <li>Teachers sign in with password only.</li>
           <li>
-            Parents use password on trusted devices; new devices and online fee payments require SMS.
+            Parents use password on trusted devices; SMS is required on a new device login only.
           </li>
           <li className="text-neutral-500">
             Local development without Termii: SMS codes use <span className="font-mono">000000</span>.

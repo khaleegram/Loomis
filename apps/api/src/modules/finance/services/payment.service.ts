@@ -4,8 +4,6 @@ import { getEnv } from '../../../config/env.js';
 import { idempotencyService } from '../../../shared/idempotency.service.js';
 import { LoomisError } from '../../../shared/errors.js';
 import { studentRepository } from '../../student/repository/student.repository.js';
-import { userRepository } from '../../identity/repository/user.repository.js';
-import { smsOtpService } from '../../identity/services/sms-otp.service.js';
 import { FINANCE_EVENT_TYPES } from '../events/types.js';
 import { gatewayAbstractionLayer } from '../gateway/index.js';
 import { financeRepository, paymentRepository, type PaymentWithReceipt } from '../repository/index.js';
@@ -254,28 +252,6 @@ export const paymentService = {
   },
 
   /**
-   * Sends an SMS OTP before a parent initiates an online fee payment (tier plan §4).
-   */
-  async sendParentPaymentOtp(actor: ActorContext): Promise<{ maskedPhone: string; devBypass: boolean }> {
-    if (actor.role !== 'parent') {
-      throw new LoomisError('FORBIDDEN', 403, 'Only parents may request payment verification codes');
-    }
-    const user = await userRepository.findById(actor.userId);
-    if (!user?.phone) {
-      throw new LoomisError(
-        'IDENTITY_SMS_PHONE_REQUIRED',
-        422,
-        'A phone number is required on your account before paying online',
-      );
-    }
-    return smsOtpService.sendOtp({
-      userId: actor.userId,
-      phoneE164: user.phone,
-      purpose: 'parent_payment',
-    });
-  },
-
-  /**
    * US-FIN-004. Parent initiates an online payment through the GAL. Returns the
    * gateway authorization URL; settlement happens on verified webhook.
    */
@@ -290,19 +266,6 @@ export const paymentService = {
       throw new LoomisError('FORBIDDEN', 403, 'Only parents may initiate online fee payments');
     }
     await assertAuditAvailable();
-
-    if (!input.smsOtpCode) {
-      throw new LoomisError(
-        'IDENTITY_STEPUP_REQUIRED',
-        401,
-        'SMS verification is required before initiating a fee payment',
-      );
-    }
-    await smsOtpService.verifyOtp({
-      userId: actor.userId,
-      purpose: 'parent_payment',
-      code: input.smsOtpCode,
-    });
 
     const { result } = await idempotencyService.wrap(
       idempotencyKey,

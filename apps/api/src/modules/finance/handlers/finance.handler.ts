@@ -235,16 +235,6 @@ export async function initializeOnlinePaymentHandler(
   }, 201);
 }
 
-export async function sendParentPaymentOtpHandler(
-  req: FastifyRequest<{ Params: TenantParams }>,
-  reply: FastifyReply,
-): Promise<FastifyReply> {
-  const result = await paymentService.sendParentPaymentOtp(
-    requireParentActor(req, req.params.tenantId),
-  );
-  return sendSuccess(reply, result);
-}
-
 export async function listPaymentsHandler(
   req: FastifyRequest<{ Params: TenantParams; Querystring: PaymentsQuery }>,
   reply: FastifyReply,

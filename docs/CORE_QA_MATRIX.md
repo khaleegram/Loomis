@@ -28,7 +28,7 @@ Test each role at **375px** and **desktop** unless noted.
 
 | Role | Surface | Login | Must verify |
 |------|---------|-------|-------------|
-| **Parent** | Web `/parent/*` + mobile | `parent.jss3b@greenfield.loomis.com` | Child switcher; fees; SMS on new device / pay |
+| **Parent** | Web `/parent/*` + mobile | `parent.jss3b@greenfield.loomis.com` | Child switcher; fees; SMS on new device only |
 | **Student** | Web `/parent/*` (student route group) | (seed student portal email from `pnpm db:seed`) | Read-only academics shell |
 
 **Mobile smoke:** `apps/mobile/.maestro/parent-smoke.yaml`

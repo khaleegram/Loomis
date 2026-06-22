@@ -1,4 +1,4 @@
-import { useMutation, useQuery, type QueryKey } from '@tanstack/react-query';
+import { useQuery, type QueryKey } from '@tanstack/react-query';
 import type {
   AmendFeeStructureRequest,
   CreateFeeStructureRequest,
@@ -16,7 +16,6 @@ import type {
   PaymentListResponse,
   PaymentGatewayConfigResponse,
   PaymentResponse,
-  ParentPaymentSendOtpResponse,
   ReconciliationExceptionListResponse,
   ReconciliationExceptionResponse,
   ResolveReconciliationExceptionRequest,
@@ -363,18 +362,6 @@ export function useVerifyOfflinePayment(tenantId: string, termId: string, paymen
       ...financeInvalidation(tenantId, termId),
       queryKeys.finance.payment(tenantId, paymentId),
     ],
-  });
-}
-
-/** Sends SMS OTP before parent online fee payment (tier plan §4). */
-export function useSendParentPaymentOtp(tenantId: string) {
-  const client = useApiClient();
-  return useMutation({
-    mutationFn: () =>
-      client.post<ParentPaymentSendOtpResponse>(
-        `/tenants/${tenantId}/payments/online/send-otp`,
-        {},
-      ),
   });
 }
 

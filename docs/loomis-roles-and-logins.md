@@ -189,7 +189,7 @@ Enterprise adds **Attestations** (`/school/academic/attestations`) for **Owner a
 
 | Role | Login email | Password | Login MFA | Notes |
 |------|-------------|----------|-----------|--------|
-| **parent** | `parent.jss3b@greenfield.loomis.com` | `LoomisDev2026!` | SMS on **new device** → `000000` | Linked child JSS3 B; SMS before **Pay fees** online |
+| **parent** | `parent.jss3b@greenfield.loomis.com` | `LoomisDev2026!` | SMS on **new device** → `000000` | Linked child JSS3 B; fees; attendance |
 | **student** | *Printed by `pnpm db:seed`* | `LoomisDev2026!` | Password only | Opaque portal email in seed output |
 
 Parent seeded phone: `+2348015550196`
@@ -202,7 +202,7 @@ Password: **`LoomisDev2026!`** for all below.
 
 | Role | Login email | MFA notes |
 |------|-------------|-----------|
-| **parent** | `parent.jss3b@greenfield.loomis.com` | SMS on new device; SMS before fee payment |
+| **parent** | `parent.jss3b@greenfield.loomis.com` | SMS on new device |
 | **student** | *Greenfield student portal email (seed output)* | Password only |
 | **teacher** | `teacher01@greenfield.loomis.com` | Password only |
 | **class_teacher** | `teacher03@greenfield.loomis.com` | Password only |
@@ -220,7 +220,6 @@ Separate from login MFA — required before specific actions:
 | Refund approve &lt; ₦100,000 (Core) | None | — |
 | Refund approve (Enterprise) | TOTP | Authenticator |
 | Result publish (Enterprise Principal emergency) | TOTP | Authenticator |
-| Parent online fee payment | SMS | `000000` |
 | Platform data export / PSF rate change | TOTP | Authenticator |
 
 Policy summary also appears under **School → Settings → Security** (Core tenants).

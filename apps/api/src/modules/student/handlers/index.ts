@@ -1,4 +1,7 @@
 export {
+  listAttestationsHandler,
+} from './attestation.handler.js';
+export {
   acceptParentLinkHandler,
   admissionDecisionHandler,
   createAdmissionHandler,

@@ -7,7 +7,11 @@ import { z } from 'zod';
  */
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  API_PORT: z.coerce.number().int().default(8080),
+  /** API listen port. Cloud hosts (Railway, Render) set `PORT`; we fall back to that. */
+  API_PORT: z.preprocess(
+    (value) => (value !== undefined && value !== '' ? value : process.env.PORT),
+    z.coerce.number().int().default(8080),
+  ),
 
   DATABASE_URL: z.string().url(),
   DATABASE_AUDIT_URL: z.string().url(),

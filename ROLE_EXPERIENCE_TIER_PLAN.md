@@ -157,7 +157,7 @@ Document for compliance/product:
 |-------|------------|-------|
 | **Owner, Principal, Finance Officer** | Password + **SMS OTP on first login** + **trusted device 30 days** | After trust: password only for routine use |
 | **Teachers, Class Teachers** | Password only | |
-| **Parents** | Password only | OTP on: fee payment, password reset, new device login |
+| **Parents** | Password only | OTP on: password reset, new device login |
 | **Students** | Password only | |
 
 ### 4.2 Step-up (SMS unless Advanced enables TOTP)

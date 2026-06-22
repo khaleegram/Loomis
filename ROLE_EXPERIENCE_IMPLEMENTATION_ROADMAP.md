@@ -164,7 +164,7 @@
 - [x] Trusted device registry: 30-day persistent token (SRS SEC-AUTH-014 pattern)
 - [x] Census lock: SMS OTP step-up (Owner)
 - [x] Refund approve: SMS OTP when amount ≥ ₦100,000 (configurable)
-- [x] Parents: OTP on payment, password reset, new device only
+- [x] Parents: OTP on password reset and new device only (not fee payment)
 - [x] Teachers: password only
 - [x] Document in tenant-facing copy: Core MFA policy (tier plan §4)
 - [x] Rate limit + lockout unchanged

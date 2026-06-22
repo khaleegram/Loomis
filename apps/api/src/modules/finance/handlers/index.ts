@@ -7,7 +7,6 @@ export {
   getPaymentHandler,
   getPaymentGatewayConfigHandler,
   initializeOnlinePaymentHandler,
-  sendParentPaymentOtpHandler,
   issueInvoiceHandler,
   listFeeStructuresHandler,
   listInvoicesHandler,

@@ -11,7 +11,7 @@ Do not stub these in application code — see `loomis-implementation-guardrails.
 
 | Integration | Env vars | Impact |
 |-------------|----------|--------|
-| **Termii SMS** | `TERMII_API_KEY`, `TERMII_SENDER_ID` | Core login SMS, census OTP, parent payment SMS. Local dev uses `000000` bypass when key unset. |
+| **Termii SMS** | `TERMII_API_KEY`, `TERMII_SENDER_ID` | Core login SMS, census OTP, parent new-device login. Local dev uses `000000` bypass when key unset. |
 | **AWS SES** | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `SES_REGION` | Transactional email (invitations, offer letters, security alerts). |
 | **AWS S3** | `S3_BUCKET`, `S3_REGION`, credentials | File uploads, branding logos, document storage. |
 | **Paystack / gateways** | Provider secret keys + webhook secrets | Live online fee payments. |

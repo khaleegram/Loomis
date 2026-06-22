@@ -96,11 +96,6 @@ export function parentNewDeviceRequiresSms(role: Role): boolean {
   return role === 'parent';
 }
 
-/** Parents: SMS before initiating an online fee payment. */
-export function parentPaymentRequiresSms(role: Role): boolean {
-  return role === 'parent';
-}
-
 /** Advanced optional TOTP: leadership/finance staff use authenticator when flag is on. */
 export function advancedOptionalTotpLogin(
   role: Role,

@@ -9,7 +9,6 @@ export type SmsOtpPurpose =
   | 'login'
   | 'step_up'
   | 'password_reset'
-  | 'parent_payment'
   | 'parent_new_device';
 
 const OTP_TTL_SECONDS = 5 * 60;

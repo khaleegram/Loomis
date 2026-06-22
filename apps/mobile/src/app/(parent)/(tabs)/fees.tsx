@@ -1,13 +1,8 @@
 import { useState } from 'react';
 import * as WebBrowser from 'expo-web-browser';
-import {
-  useInitializeOnlinePayment,
-  useMyProfile,
-  useParentFees,
-  useSendParentPaymentOtp,
-} from '@loomis/api-client';
+import { useInitializeOnlinePayment, useMyProfile, useParentFees } from '@loomis/api-client';
 import { formatKobo } from '@loomis/core';
-import { SummaryDetail, Button, Alert, Input } from '@loomis/ui-mobile';
+import { SummaryDetail, Button, Alert } from '@loomis/ui-mobile';
 import { ParentScopedScreen } from '@/components/parent/parent-scoped-screen';
 import { paystackMobileReturnUrl } from '@/lib/paystack';
 
@@ -53,7 +48,6 @@ function FeesPanel({
   setPayError: (msg: string | null) => void;
 }) {
   const feesQuery = useParentFees(tenantId, studentId, termId);
-  const sendPaymentOtp = useSendParentPaymentOtp(tenantId);
   const initializePayment = useInitializeOnlinePayment(
     tenantId,
     termId ?? '',
@@ -61,20 +55,6 @@ function FeesPanel({
   );
 
   const fees = feesQuery.data;
-  const [smsCode, setSmsCode] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpMeta, setOtpMeta] = useState<{ maskedPhone?: string; devBypass?: boolean }>({});
-
-  async function handleSendOtp() {
-    setPayError(null);
-    try {
-      const result = await sendPaymentOtp.mutateAsync();
-      setOtpMeta({ maskedPhone: result.maskedPhone, devBypass: result.devBypass });
-      setOtpSent(true);
-    } catch {
-      setPayError('Could not send SMS code. Check that your phone number is on file.');
-    }
-  }
 
   async function handlePay() {
     if (!fees?.invoiceId || fees.balanceMinor <= 0 || !payerEmail) {
@@ -87,10 +67,6 @@ function FeesPanel({
       );
       return;
     }
-    if (smsCode.length !== 6) {
-      setPayError('Enter the 6-digit SMS code sent to your phone.');
-      return;
-    }
     setPayError(null);
     try {
       const result = await initializePayment.mutateAsync({
@@ -100,7 +76,6 @@ function FeesPanel({
         provider: 'paystack',
         method: 'card',
         clientPlatform: 'mobile',
-        smsOtpCode: smsCode,
       });
 
       const returnUrl = paystackMobileReturnUrl();
@@ -147,32 +122,6 @@ function FeesPanel({
             <Alert tone="danger" className="mb-3">
               {payError}
             </Alert>
-          ) : null}
-          {fees && fees.balanceMinor > 0 && fees.onlinePaymentEnabled ? (
-            <>
-              <Button
-                variant="secondary"
-                loading={sendPaymentOtp.isPending}
-                className="mb-3"
-                onPress={() => void handleSendOtp()}
-              >
-                {otpSent ? 'Resend SMS code' : 'Send SMS code to pay'}
-              </Button>
-              {otpSent && otpMeta.maskedPhone ? (
-                <Alert tone="info" className="mb-3">
-                  Code sent to {otpMeta.maskedPhone}
-                  {otpMeta.devBypass ? ' · Dev: use 000000' : ''}
-                </Alert>
-              ) : null}
-              <Input
-                className="mb-3 font-mono"
-                placeholder="SMS code"
-                keyboardType="number-pad"
-                maxLength={6}
-                value={smsCode}
-                onChangeText={(v) => setSmsCode(v.replace(/\D/g, '').slice(0, 6))}
-              />
-            </>
           ) : null}
           <Button
             loading={initializePayment.isPending}
