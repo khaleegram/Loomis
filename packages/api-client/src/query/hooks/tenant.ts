@@ -16,7 +16,9 @@ export function tenantExperienceQueryOptions(client: ApiClient, tenantId: string
   return {
     queryKey: queryKeys.tenant.experience(tenantId),
     queryFn: () =>
-      client.get<TenantExperienceResponse>(`/tenants/${tenantId}/experience`),
+      client.get<TenantExperienceResponse>(`/tenants/${tenantId}/experience`, {
+        headers: { 'X-Tenant-Id': tenantId },
+      }),
     staleTime: EXPERIENCE_STALE_MS,
   };
 }
@@ -35,7 +37,9 @@ export function useUpdateTenantExperience(tenantId: string) {
 
   return useMutation({
     mutationFn: (body: UpdateTenantExperienceRequest) =>
-      client.patch<TenantExperienceResponse>(`/tenants/${tenantId}/experience`, body),
+      client.patch<TenantExperienceResponse>(`/tenants/${tenantId}/experience`, body, {
+        headers: { 'X-Tenant-Id': tenantId },
+      }),
     onSuccess: (data) => {
       queryClient.setQueryData(queryKeys.tenant.experience(tenantId), data);
     },

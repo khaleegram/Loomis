@@ -8,6 +8,7 @@ import type {
 import {
   mergeExperienceFlags,
   toTenantExperienceView,
+  enterpriseDefaultFlags,
   type ResolvedExperienceFlags,
 } from '@loomis/core';
 import { LoomisError } from '../../../shared/errors.js';
@@ -53,8 +54,8 @@ export const tenantExperienceService = {
   },
 
   /**
-   * Platform ops may set tier and finance mode. Enterprise tier requires platform role.
-   * Owner self-service for Advanced toggles lands in Sprint 8.
+   * Platform ops may set any tier. Owner may self-upgrade Core → Advanced (Sprint 8).
+   * Enterprise activation remains platform-only.
    */
   async updateExperience(
     tenantId: string,
@@ -67,21 +68,37 @@ export const tenantExperienceService = {
     }
 
     const isPlatform = actor.role === 'platform_owner' || actor.role === 'platform_admin';
+    const isOwner = actor.role === 'school_owner';
 
-    if (input.experienceTier !== undefined && !isPlatform) {
-      throw new LoomisError(
-        'FORBIDDEN',
-        403,
-        'Only platform operations can change experience tier',
-      );
-    }
+    if (input.experienceTier !== undefined) {
+      if (input.experienceTier === 'enterprise' && !isPlatform) {
+        throw new LoomisError(
+          'FORBIDDEN',
+          403,
+          'Enterprise tier activation requires Loomis team approval',
+        );
+      }
 
-    if (input.experienceTier === 'enterprise' && !isPlatform) {
-      throw new LoomisError(
-        'FORBIDDEN',
-        403,
-        'Enterprise tier activation requires Loomis team approval',
-      );
+      if (!isPlatform) {
+        if (!isOwner) {
+          throw new LoomisError(
+            'FORBIDDEN',
+            403,
+            'Only the School Owner can change experience tier',
+          );
+        }
+        if (input.experienceTier !== 'advanced') {
+          throw new LoomisError(
+            'FORBIDDEN',
+            403,
+            'School Owner may enable Advanced only. Contact Loomis to change tier further.',
+          );
+        }
+        const currentTier = parseExperienceTier(tenant.experienceTier);
+        if (currentTier !== 'core') {
+          throw new LoomisError('FORBIDDEN', 403, 'Advanced tier is already enabled');
+        }
+      }
     }
 
     if (input.financeMode !== undefined && !isPlatform && actor.role !== 'school_owner') {
@@ -104,6 +121,9 @@ export const tenantExperienceService = {
             admissionsRequirePrincipalApproval:
               input.flags.admissionsRequirePrincipalApproval ??
               baseFlags.admissionsRequirePrincipalApproval,
+            admissionsRequireOwnerApproval:
+              input.flags.admissionsRequireOwnerApproval ??
+              baseFlags.admissionsRequireOwnerApproval,
           }
         : undefined;
 
@@ -115,11 +135,17 @@ export const tenantExperienceService = {
 
     if (input.experienceTier !== undefined) {
       patch.experienceTier = input.experienceTier;
+      if (input.experienceTier === 'enterprise') {
+        patch.experienceFlags = {
+          ...enterpriseDefaultFlags(),
+          ...(mergedFlags ?? {}),
+        };
+      }
     }
     if (input.financeMode !== undefined) {
       patch.financeMode = input.financeMode;
     }
-    if (mergedFlags !== undefined) {
+    if (mergedFlags !== undefined && input.experienceTier !== 'enterprise') {
       patch.experienceFlags = mergedFlags;
     }
 

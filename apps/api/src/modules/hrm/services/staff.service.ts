@@ -15,6 +15,7 @@ import { createHash, randomBytes } from 'node:crypto';
   StaffProfileResponse,
   SubjectAssignmentResponse,
 } from '@loomis/contracts';
+import { isOptionalStaffRoleEnabled } from '@loomis/core';
 import { staffAccountService } from '../../identity/services/staff-account.service.js';
 import { DEFAULT_STAFF_PROVISIONED_PASSWORD } from '../../identity/services/provisioned-password.service.js';
 import { transactionalEmailService } from '../../comms/services/transactional-email.service.js';
@@ -41,6 +42,34 @@ export type ChangeStaffRoleResult =
 
 function parseFinanceMode(value: string | undefined): FinanceMode {
   return value === 'split' ? 'split' : 'combined';
+}
+
+function parseExperienceTier(value: string | undefined): 'core' | 'advanced' | 'enterprise' {
+  if (value === 'advanced' || value === 'enterprise') return value;
+  return 'core';
+}
+
+async function assertOptionalStaffRoleEnabled(
+  tenantId: string,
+  primaryRole: StaffPrimaryRole,
+): Promise<void> {
+  const tenant = await tenantRepository.findById(tenantId);
+  if (!tenant) {
+    throw new LoomisError('TENANT_NOT_FOUND', 404, 'Tenant not found');
+  }
+  if (
+    !isOptionalStaffRoleEnabled(
+      primaryRole,
+      parseExperienceTier(tenant.experienceTier),
+      tenant.experienceFlags as Record<string, boolean>,
+    )
+  ) {
+    throw new LoomisError(
+      'HRM_ROLE_NOT_ENABLED',
+      403,
+      'This role requires an Advanced module to be enabled in Experience settings',
+    );
+  }
 }
 
 async function loadTenantFinanceMode(tenantId: string): Promise<FinanceMode> {
@@ -175,6 +204,8 @@ export const staffService = {
   ): Promise<{ profile: StaffProfileResponse; loginEmail: string; temporaryPassword: string; credentialsEmail: EmailDeliveryResult }> {
     requireTenant(actor, tenantId);
 
+    await assertOptionalStaffRoleEnabled(tenantId, input.primaryRole);
+
     const temporaryPassword = input.temporaryPassword ?? DEFAULT_STAFF_PROVISIONED_PASSWORD;
     const email = input.email.toLowerCase();
 
@@ -232,6 +263,8 @@ export const staffService = {
     actor: ActorContext,
   ): Promise<{ profile: StaffProfileResponse; invitation: StaffInvitationResponse }> {
     requireTenant(actor, tenantId);
+
+    await assertOptionalStaffRoleEnabled(tenantId, input.primaryRole);
 
     const user = await staffAccountService.createPendingStaffAccount({
       tenantId,
@@ -436,6 +469,8 @@ export const staffService = {
       throw new LoomisError('HRM_ROLE_CONFLICT', 409, 'Staff cannot request a role change for themselves');
     }
 
+        await assertOptionalStaffRoleEnabled(tenantId, input.primaryRole);
+
     const financeMode = await loadTenantFinanceMode(tenantId);
     await assertSplitFinanceSoDForUser(tenantId, profile.userId, input.primaryRole, financeMode);
 
@@ -480,6 +515,8 @@ export const staffService = {
     if (profile.userId === approvedById) {
       throw new LoomisError('HRM_ROLE_CONFLICT', 409, 'Staff cannot approve their own role change');
     }
+
+        await assertOptionalStaffRoleEnabled(tenantId, input.primaryRole);
 
     const financeMode = await loadTenantFinanceMode(tenantId);
     await assertSplitFinanceSoDForUser(tenantId, profile.userId, input.primaryRole, financeMode);

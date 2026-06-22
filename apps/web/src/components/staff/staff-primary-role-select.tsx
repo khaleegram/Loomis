@@ -1,5 +1,6 @@
 'use client';
 
+import type { FinanceMode } from '@loomis/contracts';
 import { ChevronDown } from 'lucide-react';
 
 import { formatRoleLabel } from '@/components/school/school-nav-config';
@@ -22,6 +23,13 @@ interface StaffPrimaryRoleSelectProps {
   onValueChange: (value: string) => void;
   disabled?: boolean;
   id?: string;
+  /** Combined mode shows "Finance Officer" for accountant/cashier options. */
+  financeMode?: FinanceMode;
+  /** In split mode, hide roles already held by this user (future) or restrict selection. */
+  lockedRoles?: string[];
+  /** Advanced optional roles — hidden when false (Sprint 11). */
+  enableTimetableOfficer?: boolean;
+  enableDeputyExamOfficer?: boolean;
 }
 
 /** Native select — stable dropdown without Radix portal/clipping issues. */
@@ -30,7 +38,17 @@ export function StaffPrimaryRoleSelect({
   onValueChange,
   disabled,
   id,
+  financeMode = 'combined',
+  lockedRoles = [],
+  enableTimetableOfficer = false,
+  enableDeputyExamOfficer = false,
 }: StaffPrimaryRoleSelectProps) {
+  const optionalRoleEnabled = (role: string) => {
+    if (role === 'timetable_officer') return enableTimetableOfficer;
+    if (role === 'deputy_exam_officer') return enableDeputyExamOfficer;
+    return true;
+  };
+
   return (
     <div className="relative">
       <select
@@ -46,9 +64,12 @@ export function StaffPrimaryRoleSelect({
       >
         {ROLE_GROUPS.map((group) => (
           <optgroup key={group.label} label={group.label}>
-            {group.roles.map((role) => (
+            {group.roles
+              .filter((role) => !lockedRoles.includes(role))
+              .filter((role) => optionalRoleEnabled(role))
+              .map((role) => (
               <option key={role} value={role}>
-                {formatRoleLabel(role)}
+                {formatRoleLabel(role, financeMode)}
               </option>
             ))}
           </optgroup>

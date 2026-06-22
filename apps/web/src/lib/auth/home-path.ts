@@ -55,3 +55,12 @@ export function homePathForRole(role: Role, ctx?: HomePathContext): string {
 
   return GROUP_PREFIX[ROLE_GROUP[role]];
 }
+
+/**
+ * Edge-safe post-auth redirect when tenant experience is not loaded yet.
+ * School roles land on `/school` for tier-aware routing (finance mode, flags).
+ */
+export function landingPathForRole(role: Role): string {
+  if (ROLE_GROUP[role] === 'school') return '/school';
+  return homePathForRole(role);
+}

@@ -28,6 +28,7 @@ import {
 import { PageBody } from '@/components/school/school-shell';
 import { useCan } from '@/lib/auth/use-capability';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
+import { useTenantExperience } from '@/lib/tenant/use-tenant-experience';
 
 const panelClass =
   'rounded-2xl border border-neutral-200/70 bg-white p-6 sm:p-8 shadow-sm';
@@ -65,6 +66,7 @@ function FieldLabel({ children, required }: { children: React.ReactNode; require
 
 export default function AddStaffPage() {
   const tenantId = useTenantId();
+  const { financeMode, flags, isAdvanced } = useTenantExperience();
   const canOnboard = useCan('staff.onboard');
   const createStaff = useCreateStaff(tenantId ?? '');
   const [success, setSuccess] = useState<{
@@ -112,8 +114,11 @@ export default function AddStaffPage() {
         credentialsEmail: result.credentialsEmail,
       });
     } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to add staff member.';
       form.setError('root', {
-        message: err instanceof Error ? err.message : 'Failed to add staff member.',
+        message: message.includes('HRM_ROLE_CONFLICT')
+          ? 'In split finance mode, one person cannot be both Cashier and Accountant.'
+          : message,
       });
     }
   });
@@ -358,6 +363,9 @@ export default function AddStaffPage() {
                           value={field.value}
                           onValueChange={field.onChange}
                           disabled={isPending}
+                          financeMode={financeMode}
+                          enableTimetableOfficer={isAdvanced && flags.timetableDedicatedOfficer}
+                          enableDeputyExamOfficer={isAdvanced && flags.deputyExamEnabled}
                         />
                       </FormControl>
                       <FormMessage />

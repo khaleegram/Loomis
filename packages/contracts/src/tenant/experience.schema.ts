@@ -16,6 +16,8 @@ export const tenantExperienceFlags = z.object({
   totpOptional: z.boolean().optional(),
   /** When true, only Principal/Owner may approve admissions; Admin registers only. Default false (Core). */
   admissionsRequirePrincipalApproval: z.boolean().optional(),
+  /** Advanced: second admission workflow step requires Owner sign-off. Default false (Principal only). */
+  admissionsRequireOwnerApproval: z.boolean().optional(),
   /** Core refund: force single approver regardless of amount (tier plan §5). */
   coreRefundSingleApprover: z.enum(['principal', 'owner']).optional(),
 });
@@ -29,7 +31,7 @@ export const tenantExperienceResponse = z.object({
 });
 export type TenantExperienceResponse = z.infer<typeof tenantExperienceResponse>;
 
-/** Platform ops — set tier / finance mode (Enterprise activation). Owner flag updates in Sprint 8. */
+/** Owner self-service tier upgrade (Advanced) and feature flags; Enterprise via platform ops. */
 export const updateTenantExperienceRequest = z
   .object({
     experienceTier: experienceTier.optional(),
