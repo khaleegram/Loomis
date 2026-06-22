@@ -1,0 +1,54 @@
+# Render blueprint (alternative to Railway) — docs/deploy-loomis-digital.md
+
+services:
+  - type: web
+    name: loomis-api
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: WEB_APP_BASE_URL
+        value: https://www.loomis.digital
+      - key: PAYMENT_REDIRECT_BASE_URL
+        value: https://www.loomis.digital/payments/complete
+      - key: DATABASE_URL
+        fromDatabase:
+          name: loomis-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: loomis-redis
+          type: redis
+          property: connectionString
+      - key: DATABASE_AUDIT_URL
+        sync: false
+      - key: JWT_PRIVATE_KEY
+        sync: false
+      - key: JWT_PUBLIC_KEY
+        sync: false
+      - key: REFRESH_TOKEN_HMAC_SECRET
+        generateValue: true
+      - key: REFERRAL_CODE_HMAC_SECRET
+        generateValue: true
+      - key: TOTP_ENCRYPTION_KEY
+        generateValue: true
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_REGION
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+
+  - type: redis
+    name: loomis-redis
+    ipAllowList: []
+
+databases:
+  - name: loomis-db
+    databaseName: loomis
+    user: loomis
