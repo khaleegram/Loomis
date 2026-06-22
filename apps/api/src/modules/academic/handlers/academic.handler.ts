@@ -401,3 +401,12 @@ export async function listStudentPublishedResultsHandler(
   );
   return sendSuccess(reply, result);
 }
+
+export async function examOpsStatusHandler(
+  req: FastifyRequest<{ Params: TenantParams }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const { examOpsService } = await import('../services/exam-ops.service.js');
+  const status = await examOpsService.getStatus(req.params.tenantId);
+  return sendSuccess(reply, status);
+}

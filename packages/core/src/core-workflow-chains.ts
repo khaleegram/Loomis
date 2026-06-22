@@ -7,7 +7,12 @@ import type {
   WorkflowType,
 } from '@loomis/contracts';
 
-import { isAdvancedTier, mergeExperienceFlags, workflowsInboxEnabled } from './experience.js';
+import {
+  isAdvancedTier,
+  isEnterpriseTier,
+  mergeExperienceFlags,
+  workflowsInboxEnabled,
+} from './experience.js';
 
 /** Core: refunds at or above this amount require Owner approval (₦50,000). */
 export const CORE_OWNER_REFUND_THRESHOLD_MINOR = 5_000_000;
@@ -67,6 +72,8 @@ export function resolveCoreWorkflowChain(
     case 'staff_deactivation':
     case 'student_transfer_out':
       return [chainStep('principal')];
+    case 'admission_decision':
+      return [chainStep('principal')];
     default:
       return null;
   }
@@ -92,10 +99,15 @@ export function resolveEffectiveWorkflowChain(input: {
   defaultChain: ApproverChainStep[];
 }): ApproverChainStep[] {
   const resolvedFlags = mergeExperienceFlags(input.flags);
+  const useEnterpriseChains = isEnterpriseTier(input.experienceTier);
   const useAdvancedChains =
-    isAdvancedTier(input.experienceTier) && workflowsInboxEnabled(input.experienceTier, resolvedFlags);
+    useEnterpriseChains ||
+    (isAdvancedTier(input.experienceTier) && workflowsInboxEnabled(input.experienceTier, resolvedFlags));
 
   if (useAdvancedChains) {
+    if (input.workflowType === 'admission_decision' && !resolvedFlags.admissionsRequireOwnerApproval) {
+      return input.defaultChain.filter((step) => step.role !== 'school_owner');
+    }
     return input.defaultChain;
   }
 

@@ -89,6 +89,7 @@ export function AdmissionDecisionDialog({
     temporaryPassword: string;
   } | null>(null);
   const [credentialsEmail, setCredentialsEmail] = useState<EmailDeliveryResult | null>(null);
+  const [offerLetterEmail, setOfferLetterEmail] = useState<EmailDeliveryResult | null>(null);
   const decision = useAdmissionDecision(tenantId, admission?.id ?? '');
 
   const form = useForm<DecisionFormValues>({
@@ -112,6 +113,7 @@ export function AdmissionDecisionDialog({
       });
       setPortalCredentials(null);
       setCredentialsEmail(null);
+      setOfferLetterEmail(null);
     }
   }, [open, admission?.id, form]);
 
@@ -135,6 +137,7 @@ export function AdmissionDecisionDialog({
       if (result.portalCredentials) {
         setPortalCredentials(result.portalCredentials);
         setCredentialsEmail(result.credentialsEmail ?? null);
+        setOfferLetterEmail(result.offerLetterEmail ?? null);
         return;
       }
       onOpenChange(false);
@@ -156,6 +159,7 @@ export function AdmissionDecisionDialog({
           if (!next) {
             setPortalCredentials(null);
             setCredentialsEmail(null);
+            setOfferLetterEmail(null);
             onDecided?.();
           }
           onOpenChange(next);
@@ -169,6 +173,20 @@ export function AdmissionDecisionDialog({
               temporary password is shown only once.
             </DialogDescription>
           </DialogHeader>
+
+          <Alert variant={offerLetterEmail?.sent ? 'default' : 'warning'}>
+            <AlertTitle className="flex items-center gap-2">
+              <Mail aria-hidden className="size-4" />
+              {offerLetterEmail?.sent ? 'Offer letter emailed' : 'Offer letter not emailed'}
+            </AlertTitle>
+            <AlertDescription>
+              {offerLetterEmail?.sent
+                ? `Admission offer was sent to ${offerLetterEmail.recipient}.`
+                : offerLetterEmail?.reason === 'SES_NOT_CONFIGURED'
+                  ? 'Email is not configured. Share admission details with the guardian manually.'
+                  : 'Offer letter could not be delivered automatically.'}
+            </AlertDescription>
+          </Alert>
 
           <Alert variant={credentialsEmail?.sent ? 'default' : 'warning'}>
             <AlertTitle className="flex items-center gap-2">

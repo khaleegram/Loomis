@@ -62,6 +62,36 @@ describe('resolveEffectiveWorkflowChain', () => {
     });
     expect(refundApproverRolesFromChain(chain)).toEqual(['accountant', 'principal', 'school_owner']);
   });
+
+  it('trims Owner from Advanced admission chain when flag is off', () => {
+    const defaultAdmissionChain = [
+      { role: 'principal' as const, timeoutHours: 48 },
+      { role: 'school_owner' as const, timeoutHours: 72 },
+    ];
+    const chain = resolveEffectiveWorkflowChain({
+      workflowType: 'admission_decision',
+      experienceTier: 'advanced',
+      financeMode: 'combined',
+      flags: { workflowsInbox: true, admissionsRequireOwnerApproval: false },
+      defaultChain: defaultAdmissionChain,
+    });
+    expect(refundApproverRolesFromChain(chain)).toEqual(['principal']);
+  });
+
+  it('includes Owner in Advanced admission chain when flag is on', () => {
+    const defaultAdmissionChain = [
+      { role: 'principal' as const, timeoutHours: 48 },
+      { role: 'school_owner' as const, timeoutHours: 72 },
+    ];
+    const chain = resolveEffectiveWorkflowChain({
+      workflowType: 'admission_decision',
+      experienceTier: 'advanced',
+      financeMode: 'combined',
+      flags: { workflowsInbox: true, admissionsRequireOwnerApproval: true },
+      defaultChain: defaultAdmissionChain,
+    });
+    expect(refundApproverRolesFromChain(chain)).toEqual(['principal', 'school_owner']);
+  });
 });
 
 describe('shouldSkipLeadershipStep', () => {

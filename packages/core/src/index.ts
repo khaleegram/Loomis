@@ -5,4 +5,6 @@ export * from './finance-presets.js';
 export * from './approval-collapse.js';
 export * from './core-workflow-chains.js';
 export * from './core-mfa-policy.js';
+export * from './deputy-exam.js';
+export * from './optional-staff-roles.js';
 export * from './money.js';

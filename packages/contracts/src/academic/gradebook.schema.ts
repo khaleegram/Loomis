@@ -229,3 +229,16 @@ export const myResultsQuery = z.object({
   termId: z.string().uuid(),
 });
 export type MyResultsQuery = z.infer<typeof myResultsQuery>;
+
+/** Deputy Exam Officer activation status (FR-ACA-008 / loomis-roles 72h rule). */
+export const examOpsStatusResponse = z.object({
+  deputyExamEnabled: z.boolean(),
+  deputyActivated: z.boolean(),
+  hasExamOfficer: z.boolean(),
+  hasDeputyExamOfficer: z.boolean(),
+  examOfficerLastActiveAt: z.string().datetime().nullable(),
+  hoursUntilDeputyActivation: z.number().int().min(0),
+  emergencyEscalationActive: z.boolean(),
+  hoursUntilEmergencyEscalation: z.number().int().min(0),
+});
+export type ExamOpsStatusResponse = z.infer<typeof examOpsStatusResponse>;

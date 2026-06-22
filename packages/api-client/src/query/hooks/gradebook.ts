@@ -5,6 +5,7 @@ import type {
   CreateGradingSchemeRequest,
   ExamConfigListResponse,
   ExamConfigResponse,
+  ExamOpsStatusResponse,
   GradeCorrectionResponse,
   GradebookEntryListResponse,
   GradebookEntryResponse,
@@ -216,6 +217,17 @@ export function usePublishResults(config: UsePublishResultsConfig) {
         idempotencyKey,
       }),
     invalidates: [queryKeys.academic.gradebookEntries(tenantId, { termId, classArmId })],
+  });
+}
+
+/** Deputy Exam Officer activation status (72h rule). */
+export function useExamOpsStatus(tenantId: string) {
+  const client = useApiClient();
+  return useQuery<ExamOpsStatusResponse>({
+    queryKey: queryKeys.academic.examOpsStatus(tenantId),
+    queryFn: () => client.get<ExamOpsStatusResponse>(`/tenants/${tenantId}/exam-ops/status`),
+    enabled: Boolean(tenantId),
+    staleTime: 60_000,
   });
 }
 
