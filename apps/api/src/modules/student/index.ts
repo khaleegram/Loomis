@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { registerStudentEventConsumers } from './events/index.js';
 import { admissionsRoutes } from './routes/admissions.routes.js';
 import { studentsRoutes } from './routes/students.routes.js';
 
@@ -7,6 +8,7 @@ import { studentsRoutes } from './routes/students.routes.js';
  * links, and student records (loomis-module-patterns).
  */
 export async function studentModule(app: FastifyInstance): Promise<void> {
+  registerStudentEventConsumers();
   await app.register(admissionsRoutes);
   await app.register(studentsRoutes);
 }

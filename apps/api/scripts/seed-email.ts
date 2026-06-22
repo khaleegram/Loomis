@@ -7,6 +7,7 @@
 export const LOOMIS_DEV_ROOT = 'loomis.com';
 
 export const ADVANCED_SCHOOL_SLUG = 'advanced';
+export const ENTERPRISE_SCHOOL_SLUG = 'enterprise';
 export const GREENFIELD_SCHOOL_SLUG = 'greenfield';
 
 export function platformDevEmail(localPart: string): string {

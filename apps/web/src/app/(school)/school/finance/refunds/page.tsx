@@ -7,6 +7,7 @@ import { useState } from 'react';
 
 import { RefundApprovalTimeline } from '@/components/finance/refund-approval-timeline';
 import { PageBody, PageHeader } from '@/components/school/school-shell';
+import { SodNotice } from '@/components/school/sod-notice';
 import { useSchoolAcademic } from '@/lib/academic/school-academic-context';
 import { useCan, useRole } from '@/lib/auth/use-capability';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
@@ -81,16 +82,19 @@ export default function RefundsPage() {
           ) : null}
 
           {!refundsQuery.isLoading && termId ? (
-            <RefundApprovalTimeline
-              tenantId={tenantId}
-              termId={termId}
-              refunds={refunds}
-              selectedId={selectedId ?? refunds[0]?.id ?? null}
-              onSelect={setSelectedId}
-              currentRole={role}
-              canInitiate={canInitiate}
-              canApprove={canApprove}
-            />
+            <>
+              <SodNotice compact highlight="Approve refund" />
+              <RefundApprovalTimeline
+                tenantId={tenantId}
+                termId={termId}
+                refunds={refunds}
+                selectedId={selectedId ?? refunds[0]?.id ?? null}
+                onSelect={setSelectedId}
+                currentRole={role}
+                canInitiate={canInitiate}
+                canApprove={canApprove}
+              />
+            </>
           ) : null}
         </div>
       </PageBody>

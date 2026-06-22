@@ -270,3 +270,18 @@ export function useSetStudentPhoto(tenantId: string) {
     },
   });
 }
+
+/** US-REV-002 — census lock attestation history (read-only). */
+export function useTenantAttestations(tenantId: string, enabled = true) {
+  const client = useApiClient();
+  return useQuery({
+    queryKey: queryKeys.attestations.list(tenantId),
+    queryFn: () =>
+      client.get<{ attestations: import('@loomis/contracts').EnrollmentAttestationResponse[] }>(
+        `/tenants/${tenantId}/attestations`,
+        { headers: { 'X-Tenant-Id': tenantId } },
+      ),
+    enabled: enabled && Boolean(tenantId),
+    staleTime: 60_000,
+  });
+}

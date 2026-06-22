@@ -15,6 +15,8 @@ export type ResolvedExperienceFlags = {
   totpOptional: boolean;
   /** When true, Principal/Owner must approve; Admin cannot decide. */
   admissionsRequirePrincipalApproval: boolean;
+  /** When true, admission workflow includes Owner as second approver (Advanced). */
+  admissionsRequireOwnerApproval: boolean;
 };
 
 export const DEFAULT_EXPERIENCE_FLAGS: ResolvedExperienceFlags = {
@@ -23,6 +25,7 @@ export const DEFAULT_EXPERIENCE_FLAGS: ResolvedExperienceFlags = {
   deputyExamEnabled: false,
   totpOptional: false,
   admissionsRequirePrincipalApproval: false,
+  admissionsRequireOwnerApproval: false,
 };
 
 export function mergeExperienceFlags(
@@ -37,6 +40,9 @@ export function mergeExperienceFlags(
     admissionsRequirePrincipalApproval:
       partial?.admissionsRequirePrincipalApproval ??
       DEFAULT_EXPERIENCE_FLAGS.admissionsRequirePrincipalApproval,
+    admissionsRequireOwnerApproval:
+      partial?.admissionsRequireOwnerApproval ??
+      DEFAULT_EXPERIENCE_FLAGS.admissionsRequireOwnerApproval,
   };
 }
 
@@ -57,7 +63,20 @@ export function workflowsInboxEnabled(
   tier: ExperienceTier,
   flags: ResolvedExperienceFlags,
 ): boolean {
+  if (isEnterpriseTier(tier)) return true;
   return isAdvancedTier(tier) && flags.workflowsInbox;
+}
+
+/** Default feature flags applied when Loomis activates Enterprise tier. */
+export function enterpriseDefaultFlags(): ResolvedExperienceFlags {
+  return {
+    workflowsInbox: true,
+    timetableDedicatedOfficer: true,
+    deputyExamEnabled: true,
+    totpOptional: true,
+    admissionsRequirePrincipalApproval: true,
+    admissionsRequireOwnerApproval: true,
+  };
 }
 
 export function toTenantExperienceView(

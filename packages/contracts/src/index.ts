@@ -29,6 +29,7 @@ export * from './ledger/ledger.schema.js';
 
 // Student
 export * from './student/student.schema.js';
+export * from './student/attestation.schema.js';
 
 // Workflow
 export * from './workflow/workflow.schema.js';

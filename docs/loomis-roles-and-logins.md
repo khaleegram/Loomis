@@ -2,7 +2,7 @@
 
 All **17 roles** in the system, which app they use, where they land after login, and demo credentials where seeds exist.
 
-**Last updated:** Sprint 7 (Core audit, experience settings, admissions auto-register).
+**Last updated:** Sprint 13 (Enterprise activation, attestations, emergency publish).
 
 ---
 
@@ -14,6 +14,7 @@ School staff logins use **`{roleLocal}@{schoolSlug}.loomis.com`** — the slug i
 |---------------|------|---------------|-----------------|
 | Greenfield Academy Lagos | `greenfield` | `principal@greenfield.loomis.com` | **Core** |
 | Advanced QA School Lagos | `advanced` | `principal@advanced.loomis.com` | **Advanced** |
+| Enterprise QA School Lagos | `enterprise` | `principal@enterprise.loomis.com` | **Enterprise** |
 
 Platform / regional (no tenant): **`{local}@platform.loomis.com`** (e.g. `owner@platform.loomis.com`).
 
@@ -154,8 +155,15 @@ Also `teacher02`–`teacher13@greenfield.loomis.com` (class teachers on other ar
 
 | Role | Login email | Password | Login MFA | Notes |
 |------|-------------|----------|-----------|--------|
-| **school_owner** | `owner@advanced.loomis.com` | `LoomisDev2026!` | Password only | Workflows inbox enabled |
+| **school_owner** | `owner@advanced.loomis.com` | `LoomisDev2026!` | Password only | Enable Advanced / split finance in **Settings → Experience** |
 | **principal** | `principal@advanced.loomis.com` | `LoomisDev2026!` | Password only | Advanced flags in seed |
+| **cashier** | `cashier@advanced.loomis.com` | `LoomisDev2026!` | Password only | Split finance — home `/school/finance/payments/log` |
+| **accountant** | `accountant@advanced.loomis.com` | `LoomisDev2026!` | Password only | Split finance — home `/school/finance/payments/verify` |
+| **exam_officer** | `exam@advanced.loomis.com` | `LoomisDev2026!` | Password only | `/school/exams?section=corrections` |
+| **deputy_exam_officer** | `deputy-exam@advanced.loomis.com` | `LoomisDev2026!` | Password only | Deputy — active after Exam Officer 72h inactive |
+| **timetable_officer** | `timetable@advanced.loomis.com` | `LoomisDev2026!` | Password only | `/school/timetable` (requires dedicated officer flag) |
+
+Seed sets `finance_mode=split` on the Advanced QA tenant. Re-run `pnpm db:seed` if these accounts are missing.
 
 ---
 
@@ -192,6 +200,8 @@ Separate from login MFA — required before specific actions:
 | Census lock (Owner) | SMS | `000000` |
 | Refund approve ≥ ₦100,000 | SMS | `000000` |
 | Refund approve &lt; ₦100,000 (Core) | None | — |
+| Refund approve (Enterprise) | TOTP | Authenticator |
+| Result publish (Enterprise Principal emergency) | TOTP | Authenticator |
 | Parent online fee payment | SMS | `000000` |
 | Platform data export / PSF rate change | TOTP | Authenticator |
 
@@ -229,7 +239,12 @@ parent.jss3b@greenfield.loomis.com        parent portal / fees
 # Advanced QA
 principal@advanced.loomis.com             principal (Advanced tier)
 
+# Enterprise QA (platform activates tier)
+owner@enterprise.loomis.com               school_owner
+principal@enterprise.loomis.com           principal (emergency publish after 120h EO idle)
+exam@enterprise.loomis.com                exam_officer
+
 Password (all):  LoomisDev2026!
-TOTP secret:     JBSWY3DPEHPK3PXP   (platform / regional / Advanced step-up)
+TOTP secret:     JBSWY3DPEHPK3PXP   (platform / regional / Advanced+ step-up)
 Core SMS (dev):  000000             (Greenfield leadership + finance + parent)
 ```

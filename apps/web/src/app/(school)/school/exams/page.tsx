@@ -2,6 +2,7 @@
 
 import {
   useCreateGradingScheme,
+  useExamOpsStatus,
   useGradingSchemes,
   useWorkflowInbox,
 } from '@loomis/api-client';
@@ -10,6 +11,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { DeputyExamStatusBanner } from '@/components/academic/ops/deputy-exam-status-banner';
 import { ExamsNav, EXAMS_NAV_ITEMS, type ExamsNavItem, type ExamsSection } from '@/components/academic/ops/exams-nav';
 import { ExamsPageHeader } from '@/components/academic/ops/exams-page-header';
 import { ExamsPublishPanel } from '@/components/academic/ops/exams-publish-panel';
@@ -20,6 +22,7 @@ import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { academicErrorMessage } from '@/lib/academic/academic-errors';
 import { EXAMS_PAGE_CLASS } from '@/lib/academic/exams-ui';
 import { useCan, useCanAny } from '@/lib/auth/use-capability';
+import { useAuth } from '@/lib/auth/auth-context';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 
 function parseSection(
@@ -37,11 +40,17 @@ function parseSection(
 
 export default function SchoolExamsPage() {
   const tenantId = useTenantId();
+  const { session } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const canConfigure = useCan('grading_scheme.configure');
-  const canPublish = useCan('result.publish');
-  const canView = useCanAny(['grading_scheme.configure', 'result.publish', 'gradebook.read']);
+  const canPublishExamRole = useCan('result.publish');
+  const examOpsQuery = useExamOpsStatus(tenantId ?? '');
+  const isPrincipal = session?.role === 'principal';
+  const canEmergencyPublish =
+    isPrincipal && Boolean(examOpsQuery.data?.emergencyEscalationActive);
+  const canPublish = canPublishExamRole || canEmergencyPublish;
+  const canView = useCanAny(['grading_scheme.configure', 'result.publish', 'gradebook.read']) || canEmergencyPublish;
 
   const schemesQuery = useGradingSchemes(tenantId ?? '');
   const inboxQuery = useWorkflowInbox(tenantId ?? '');
@@ -106,6 +115,12 @@ export default function SchoolExamsPage() {
     <PageBody className={EXAMS_PAGE_CLASS}>
       <div className="space-y-5">
         <ExamsPageHeader pendingCorrections={pendingCorrections} />
+
+        <DeputyExamStatusBanner
+          status={examOpsQuery.data}
+          role={session?.role}
+          isLoading={examOpsQuery.isLoading}
+        />
 
         {!creatingScheme ? (
           <ExamsNav items={navItems} active={section} onChange={setSectionAndUrl} />
@@ -202,7 +217,7 @@ export default function SchoolExamsPage() {
         ) : null}
 
         {section === 'publish' && canPublish && !creatingScheme ? (
-          <ExamsPublishPanel tenantId={tenantId} />
+          <ExamsPublishPanel tenantId={tenantId} emergencyPrincipal={canEmergencyPublish} />
         ) : null}
       </div>
     </PageBody>

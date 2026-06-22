@@ -206,12 +206,12 @@
 
 ### Deliverables
 
-- [ ] Settings → **Experience** section: enable Advanced (Owner); Enterprise shown as "contact Loomis"
-- [ ] Toggle `financeMode: split` → enforce two-invite wizard (Cashier + Accountant)
-- [ ] Block assigning both roles to one user in split mode
-- [ ] Nav switches to Accountant + Cashier labels per master plan §5.4
-- [ ] Separate login homes: verify vs log
-- [ ] Toggle stubs: timetable dedicated officer, deputy exam, workflows inbox, optional TOTP (enable flags; full UX later)
+- [x] Settings → **Experience** section: enable Advanced (Owner); Enterprise shown as "contact Loomis"
+- [x] Toggle `financeMode: split` → enforce two-invite wizard (Cashier + Accountant)
+- [x] Block assigning both roles to one user in split mode
+- [x] Nav switches to Accountant + Cashier labels per master plan §5.4
+- [x] Separate login homes: verify vs log
+- [x] Toggle stubs: timetable dedicated officer, deputy exam, workflows inbox, optional TOTP (enable flags; full UX later)
 
 ### Exit criteria
 
@@ -226,12 +226,12 @@
 
 ### Deliverables
 
-- [ ] Full `school-nav-config.ts` matrix when `tier >= advanced`
-- [ ] Workflows nav + `/school/workflows` inbox for approver roles
-- [ ] Multi-step templates: refund (Cashier → Accountant → Principal → Owner), grade correction, fee amendment, transfer
-- [ ] Principal grade correction: inbox only (no Exams nav)
-- [ ] Finance redirects per master plan §2.4
-- [ ] Nav role labels: Operations, Registry, Overview, etc.
+- [x] Full `school-nav-config.ts` matrix when `tier >= advanced`
+- [x] Workflows nav + `/school/workflows` inbox for approver roles
+- [x] Multi-step templates: refund (Cashier → Accountant → Principal → Owner), grade correction, fee amendment, transfer
+- [x] Principal grade correction: inbox only (no Exams nav)
+- [x] Finance redirects per master plan §2.4
+- [x] Nav role labels: Operations, Registry, Overview, etc.
 
 ### Exit criteria
 
@@ -246,12 +246,12 @@
 
 ### Deliverables
 
-- [ ] `school-owner-dashboard.tsx` — Financial Command (master plan §6.1)
-- [ ] `principal-operations-dashboard.tsx` — Operations (master plan §6.2)
-- [ ] Branch in `dashboard/page.tsx` by tier + role
-- [ ] Unverified payment amber banner → Accountant verify queue (read-only link for Owner/Principal)
-- [ ] Remove generic fallback for Owner, Principal, Accountant, Cashier when Advanced
-- [ ] Core keeps Sprint 4 card homes when `tier === core`
+- [x] `school-owner-dashboard.tsx` — Financial Command (master plan §6.1)
+- [x] `principal-operations-dashboard.tsx` — Operations (master plan §6.2)
+- [x] Branch in `dashboard/page.tsx` by tier + role
+- [x] Unverified payment amber banner → Accountant verify queue (read-only link for Owner/Principal)
+- [x] Remove generic fallback for Owner, Principal, Accountant, Cashier when Advanced
+- [x] Core keeps Sprint 4 card homes when `tier === core`
 
 ### Exit criteria
 
@@ -266,13 +266,13 @@
 
 ### Deliverables
 
-- [ ] `timetable.dedicatedOfficer` → Timetable Officer invite + `/school/timetable` home
-- [ ] Core: Principal/Teacher timetable paths unchanged when flag off
-- [ ] `deputy_exam_enabled` → Deputy invite + 72h server rule surfaced in UI
-- [ ] Exam Officer corrections on `/school/exams?section=corrections`
-- [ ] Multi-step refund chain when Advanced + workflows enabled
-- [ ] Admission optional Owner step in workflow template
-- [ ] PSF top-level nav for Owner/Accountant when Advanced (optional; balances section still OK for Core)
+- [x] `timetable.dedicatedOfficer` → Timetable Officer invite + `/school/timetable` home
+- [x] Core: Principal/Teacher timetable paths unchanged when flag off
+- [x] `deputy_exam_enabled` → Deputy invite + 72h server rule surfaced in UI
+- [x] Exam Officer corrections on `/school/exams?section=corrections`
+- [x] Multi-step refund chain when Advanced + workflows enabled
+- [x] Admission optional Owner step in workflow template
+- [x] PSF top-level nav for Owner/Accountant when Advanced (optional; balances section still OK for Core)
 
 ### Exit criteria
 
@@ -287,13 +287,13 @@
 
 ### Deliverables
 
-- [ ] Optional TOTP MFA for school (Advanced toggle)
-- [ ] Audit export + advanced filters (Advanced)
-- [ ] Balances export US-FIN-005
-- [ ] Admission offer letter step US-SIS-002
-- [ ] Workflow card enrichment: fee amendment diff, transfer context
-- [ ] Promotion held-back → Owner prompt when Advanced (can use inbox)
-- [ ] Remove remaining `role ===` hacks → capabilities (master plan Phase D partial)
+- [x] Optional TOTP MFA for school (Advanced toggle)
+- [x] Audit export + advanced filters (Advanced)
+- [x] Balances export US-FIN-005
+- [x] Admission offer letter step US-SIS-002
+- [x] Workflow card enrichment: fee amendment diff, transfer context
+- [x] Promotion held-back → Owner prompt when Advanced (can use inbox)
+- [x] Remove remaining `role ===` hacks → capabilities (master plan Phase D partial)
 
 ### Exit criteria
 
@@ -308,13 +308,13 @@
 
 ### Deliverables
 
-- [ ] Platform admin: set tenant `experienceTier=enterprise`
-- [ ] **Attestations API:** `GET /tenants/:tenantId/attestations` + contract + hook
-- [ ] `/school/academic/attestations` read-only UI
-- [ ] **Emergency publish:** backend `emergencyEscalationActive` flag; Principal publish UI gated (master plan §7)
-- [ ] Mandatory step-up TOTP for Enterprise high-risk actions
-- [ ] Full master plan §7 workflow table for Enterprise tenants
-- [ ] Hard SoD UI messaging (Appendix A)
+- [x] Platform admin: set tenant `experienceTier=enterprise`
+- [x] **Attestations API:** `GET /tenants/:tenantId/attestations` + contract + hook
+- [x] `/school/academic/attestations` read-only UI
+- [x] **Emergency publish:** backend `emergencyEscalationActive` flag; Principal publish UI gated (master plan §7)
+- [x] Mandatory step-up TOTP for Enterprise high-risk actions
+- [x] Full master plan §7 workflow table for Enterprise tenants
+- [x] Hard SoD UI messaging (Appendix A)
 
 ### Exit criteria
 

@@ -5,7 +5,14 @@ import type {
   StudentResponse,
   TransferStudentOutRequest,
 } from '@loomis/contracts';
+import {
+  isAdvancedTier,
+  mergeExperienceFlags,
+  workflowsInboxEnabled,
+} from '@loomis/core';
 import { LoomisError } from '../../../shared/errors.js';
+import { tenantRepository } from '../../tenant/repository/tenant.repository.js';
+import { workflowService } from '../../workflow/services/workflow.service.js';
 import { STUDENT_EVENT_TYPES } from '../events/types.js';
 import { studentOutboxRepository } from '../repository/outbox.repository.js';
 import { studentRepository } from '../repository/student.repository.js';
@@ -121,7 +128,7 @@ export const studentService = {
     return serializeStudent(row);
   },
 
-  /** US-SIS-006. Transfer out ends active enrollments and marks student transferred. */
+  /** US-SIS-006. Transfer out — Admin initiates workflow in Advanced; Principal/Owner may execute directly. */
   async transferOut(
     tenantId: string,
     studentId: string,
@@ -142,13 +149,88 @@ export const studentService = {
       );
     }
 
+    const tenant = await tenantRepository.findById(tenantId);
+    if (!tenant) {
+      throw new LoomisError('TENANT_NOT_FOUND', 404, 'Tenant not found');
+    }
+    const flags = mergeExperienceFlags(tenant.experienceFlags);
+    const inboxModule =
+      isAdvancedTier(tenant.experienceTier as 'core' | 'advanced' | 'enterprise') &&
+      workflowsInboxEnabled(tenant.experienceTier as 'core' | 'advanced' | 'enterprise', flags);
+
+    if (inboxModule && actor.role === 'admin_officer') {
+      const started = await workflowService.startWorkflow({
+        workflowType: 'student_transfer_out',
+        tenantId,
+        requestedById: actor.userId,
+        requestedByRole: actor.role,
+        subjectType: 'student',
+        subjectId: studentId,
+        title: `Transfer out: ${student.firstName} ${student.lastName}`,
+        payload: {
+          studentId,
+          destinationSchool: input.destinationSchool,
+          reason: input.reason,
+        },
+      });
+      return {
+        student: serializeStudent(student),
+        pendingApproval: true,
+        workflowInstanceId: started.workflowInstanceId,
+      };
+    }
+
+    return this.executeTransferOut(tenantId, studentId, input, actor.userId);
+  },
+
+  async applyApprovedTransferOut(
+    tenantId: string,
+    payload: Record<string, unknown>,
+    approvedById: string,
+  ) {
+    const studentId = payload.studentId;
+    const destinationSchool = payload.destinationSchool;
+    const reason = payload.reason;
+    if (
+      typeof studentId !== 'string' ||
+      typeof destinationSchool !== 'string' ||
+      typeof reason !== 'string'
+    ) {
+      return;
+    }
+    await this.executeTransferOut(
+      tenantId,
+      studentId,
+      { destinationSchool, reason },
+      approvedById,
+    );
+  },
+
+  async executeTransferOut(
+    tenantId: string,
+    studentId: string,
+    input: TransferStudentOutRequest,
+    actorUserId: string,
+  ) {
+    const student = await studentRepository.findStudentById(tenantId, studentId);
+    if (!student) {
+      throw new LoomisError('STUDENT_NOT_FOUND', 404, 'Student not found');
+    }
+    if (student.status === 'transferred_out' || student.status === 'graduated') {
+      throw new LoomisError(
+        'STUDENT_TRANSFER_BLOCKED',
+        409,
+        'Student has already left the school',
+      );
+    }
+
     const ended = await studentRepository.endActiveEnrollments(tenantId, studentId, 'transfer');
     const updated = await studentRepository.markTransferredOut(
       tenantId,
       studentId,
       input.destinationSchool,
       input.reason,
-      actor.userId,
+      actorUserId,
     );
     if (!updated) {
       throw new LoomisError('STUDENT_NOT_FOUND', 404, 'Student not found');
@@ -164,7 +246,7 @@ export const studentService = {
         studentId,
         destinationSchool: input.destinationSchool,
         reason: input.reason,
-        transferredById: actor.userId,
+        transferredById: actorUserId,
         transferredAt: updated.transferredAt?.toISOString() ?? new Date().toISOString(),
       },
     });

@@ -7,6 +7,7 @@ import { useMemo } from 'react';
 import { PaymentVerifyHero } from '@/components/finance/payment-verify-hero';
 import { PaymentVerifyQueue } from '@/components/finance/payment-verify-queue';
 import { PageBody } from '@/components/school/school-shell';
+import { SodNotice } from '@/components/school/sod-notice';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { useAcademicOpsContext } from '@/lib/academic/use-academic-ops-context';
 import { useAuth } from '@/lib/auth/auth-context';
@@ -93,11 +94,14 @@ export default function PaymentVerifyPage() {
             </p>
           </div>
         ) : (
-          <PaymentVerifyQueue
-            tenantId={tenantId}
-            termId={ctx.termId}
-            currentUserId={currentUserId}
-          />
+          <>
+            <SodNotice compact highlight="Verify payment" />
+            <PaymentVerifyQueue
+              tenantId={tenantId}
+              termId={ctx.termId}
+              currentUserId={currentUserId}
+            />
+          </>
         )}
       </div>
     </PageBody>

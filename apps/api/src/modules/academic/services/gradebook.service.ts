@@ -16,6 +16,7 @@ import type {
   UpsertGradebookEntryInput,
 } from '../types.js';
 import { requireTenant, requireTerm } from './_shared.js';
+import { examOpsService } from './exam-ops.service.js';
 import { SCHOOL_SUBJECT_CATALOGUE } from '../subject-catalogue.js';
 
 type GradingSchemeRow = NonNullable<Awaited<ReturnType<typeof academicRepository.findGradingSchemeById>>>;
@@ -435,6 +436,12 @@ export const gradebookService = {
 
   async publishResults(tenantId: string, input: PublishResultsRequestInput, actor: ActorContext) {
     requireTenant(actor, tenantId);
+    if (actor.role === 'deputy_exam_officer') {
+      await examOpsService.assertDeputyActivated(tenantId);
+    }
+    if (actor.role === 'principal') {
+      await examOpsService.assertPrincipalEmergencyPublish(tenantId);
+    }
     await requireTerm(tenantId, input.termId);
     const entries = await academicRepository.listGradebookEntries({ tenantId, ...input });
     if (entries.length === 0) {

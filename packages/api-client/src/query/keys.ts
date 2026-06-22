@@ -77,6 +77,10 @@ export const queryKeys = {
     sessions: () => ['identity', 'sessions'] as const,
     devices: () => ['identity', 'devices'] as const,
     myProfile: () => ['identity', 'me', 'profile'] as const,
+    mfaStatus: () => ['identity', 'mfa', 'status'] as const,
+  },
+  attestations: {
+    list: (tenantId: string) => ['attestations', tenantId, 'list'] as const,
   },
   students: {
     all: (tenantId: string) => ['students', tenantId] as const,
@@ -126,6 +130,7 @@ export const queryKeys = {
       ['academic', tenantId, 'grading-schemes'] as const,
     examConfigs: (tenantId: string, termId: string) =>
       ['academic', tenantId, 'terms', termId, 'exam-configs'] as const,
+    examOpsStatus: (tenantId: string) => ['academic', tenantId, 'exam-ops', 'status'] as const,
     gradebookEntries: (tenantId: string, filters: GradebookListFilters) =>
       ['academic', tenantId, 'gradebook', 'entries', filters] as const,
     attendance: (tenantId: string, filters: AttendanceListFilters) =>

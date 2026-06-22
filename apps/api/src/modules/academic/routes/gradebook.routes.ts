@@ -20,6 +20,7 @@ import {
 import { authenticate } from '../../../middleware/authenticate.js';
 import { requireIdempotencyKey } from '../../../middleware/require-idempotency-key.js';
 import { requireRole } from '../../../middleware/require-role.js';
+import { requireStepUpForPrincipal } from '../../../middleware/require-step-up-for-principal.js';
 import { requireTenantMatch } from '../../../middleware/require-tenant-match.js';
 import { validateBody, validateQuery } from '../../../shared/validation.js';
 import {
@@ -33,6 +34,7 @@ import {
   publishResultsHandler,
   requestGradeCorrectionHandler,
   upsertGradebookEntryHandler,
+  examOpsStatusHandler,
 } from '../handlers/index.js';
 
 const gradingAdmins = ['school_owner', 'principal', 'exam_officer', 'deputy_exam_officer'] as const;
@@ -122,6 +124,7 @@ export async function gradebookRoutes(app: FastifyInstance): Promise<void> {
         authenticate,
         requireTenantMatch,
         requireRole('exam_officer', 'deputy_exam_officer', 'principal'),
+        requireStepUpForPrincipal('result_publish'),
         requireIdempotencyKey,
       ],
       preValidation: [validateBody(publishResultsRequest)],
@@ -136,5 +139,17 @@ export async function gradebookRoutes(app: FastifyInstance): Promise<void> {
       preValidation: [validateQuery(myResultsQuery)],
     },
     listStudentPublishedResultsHandler,
+  );
+
+  app.get<{ Params: { tenantId: string } }>(
+    '/tenants/:tenantId/exam-ops/status',
+    {
+      preHandler: [
+        authenticate,
+        requireTenantMatch,
+        requireRole(...gradingAdmins, 'admin_officer'),
+      ],
+    },
+    examOpsStatusHandler,
   );
 }

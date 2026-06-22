@@ -53,6 +53,7 @@ import { z } from 'zod';
 import { uuidv7 } from 'uuidv7';
 
 import { PageBody } from '@/components/platform/platform-shell';
+import { PlatformTenantExperienceCard } from '@/components/platform/platform-tenant-experience-card';
 import { PsfRateCard } from '@/components/platform/psf-rate-card';
 import { BreakGlassModal } from '@/components/platform/break-glass-modal';
 import { BRONZE } from '@/components/dashboard/dashboard-primitives';
@@ -583,12 +584,13 @@ export default function TenantDetailPage({ params }: TenantDetailPageProps) {
       {/* ════════════════════════════════════════════════════
           PSF RATE CARD
           ════════════════════════════════════════════════════ */}
-      <div className="mb-5">
+      <div className="mb-5 grid gap-5 lg:grid-cols-2">
         <PsfRateCard
           tenantId={tenant.id}
           tenantName={tenant.name}
           currentRateMinor={tenant.currentPsfRateMinor}
         />
+        <PlatformTenantExperienceCard tenantId={tenant.id} tenantName={tenant.name} />
       </div>
 
       {/* ════════════════════════════════════════════════════

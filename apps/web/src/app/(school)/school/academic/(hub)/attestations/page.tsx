@@ -1,0 +1,97 @@
+'use client';
+
+import { useTenantAttestations } from '@loomis/api-client';
+import { formatKobo } from '@loomis/core';
+import { Skeleton } from '@loomis/ui-web';
+import { FileSearch } from 'lucide-react';
+
+import { ACADEMIC_PAGE_TITLE_STYLE, ACADEMIC_UI } from '@/lib/academic/academic-ui';
+import { useTenantId } from '@/lib/tenant/use-tenant-id';
+
+function formatWhen(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
+}
+
+export default function AttestationsHistoryPage() {
+  const tenantId = useTenantId();
+  const attestationsQuery = useTenantAttestations(tenantId ?? '');
+
+  const rows = attestationsQuery.data?.attestations ?? [];
+
+  if (!tenantId) {
+    return <p className="text-sm text-red-600">No tenant context.</p>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <header>
+        <p className={ACADEMIC_UI.sectionLabel}>Revenue integrity</p>
+        <h1 className={ACADEMIC_UI.pageTitle} style={ACADEMIC_PAGE_TITLE_STYLE}>
+          Census attestations
+        </h1>
+        <p className={ACADEMIC_UI.pageDesc}>
+          Immutable census-lock declarations for PSF billing — US-REV-002. Read-only history for
+          dispute resolution.
+        </p>
+      </header>
+
+      <div className={ACADEMIC_UI.dataPanel}>
+        {attestationsQuery.isLoading ? (
+          <div className="space-y-2 p-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-14 w-full rounded-xl" />
+            ))}
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 px-6 py-16 text-center">
+            <FileSearch aria-hidden className="size-10 text-neutral-300" />
+            <p className="text-[13px] font-medium text-neutral-600">No census attestations yet</p>
+            <p className="text-[12px] text-neutral-400">
+              Records appear here after the School Owner locks census for a term.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="hidden min-w-0 grid-cols-[1.2fr_1fr_1fr_1fr_auto] gap-3 px-5 py-3 sm:grid">
+              {['Term', 'Declared', 'System count', 'PSF rate', 'Attested'].map((h) => (
+                <span
+                  key={h}
+                  className="text-[10px] font-bold uppercase tracking-[0.15em] text-brand-800/70"
+                >
+                  {h}
+                </span>
+              ))}
+            </div>
+            <ul className="divide-y divide-brand-50/80">
+              {rows.map((row) => (
+                <li
+                  key={row.id}
+                  className="grid gap-2 px-4 py-3.5 sm:grid-cols-[1.2fr_1fr_1fr_1fr_auto] sm:items-center sm:gap-3 sm:px-5"
+                >
+                  <span className="text-[13px] font-medium text-neutral-900">
+                    Term {row.termId.slice(0, 8)}…
+                  </span>
+                  <span className="font-mono text-[13px] tabular-nums text-neutral-800">
+                    {row.declaredBillableCount}
+                  </span>
+                  <span className="font-mono text-[13px] tabular-nums text-neutral-600">
+                    {row.systemBillableCount}
+                  </span>
+                  <span className="font-mono text-[13px] tabular-nums text-neutral-800">
+                    {formatKobo(row.psfRateMinor)}
+                  </span>
+                  <span className="text-[12px] tabular-nums text-neutral-500">
+                    {formatWhen(row.attestedAt)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}

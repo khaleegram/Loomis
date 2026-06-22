@@ -27,6 +27,7 @@ import {
   getStudentHandler,
   getStudentProfileHandler,
   initiateParentLinkHandler,
+  listAttestationsHandler,
   listLeavingCertificatesHandler,
   listStudentsHandler,
   listStudentCertificatesHandler,
@@ -44,7 +45,7 @@ const studentReaders = [
   'deputy_exam_officer',
 ] as const;
 const studentWriters = ['school_owner', 'principal', 'admin_officer'] as const;
-const transferApprovers = ['school_owner', 'principal'] as const;
+const transferApprovers = ['school_owner', 'principal', 'admin_officer'] as const;
 const promotionRosterReaders = [
   'school_owner',
   'principal',
@@ -187,6 +188,18 @@ export async function studentsRoutes(app: FastifyInstance): Promise<void> {
       preValidation: [validateBody(setStudentPhotoRequest)],
     },
     setStudentPhotoHandler,
+  );
+
+  app.get<{ Params: { tenantId: string }; Querystring: { limit?: string } }>(
+    '/tenants/:tenantId/attestations',
+    {
+      preHandler: [
+        authenticate,
+        requireTenantMatch,
+        requireRole('school_owner', 'principal'),
+      ],
+    },
+    listAttestationsHandler,
   );
 
   /** US-SIS-005. Parent-only; no tenant header required (parent JWT is cross-tenant). */

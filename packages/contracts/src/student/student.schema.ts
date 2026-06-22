@@ -134,6 +134,7 @@ export const admissionDecisionResponse = z.object({
   student: studentResponse.nullable(),
   portalCredentials: portalCredentialsResponse.nullable().optional(),
   credentialsEmail: emailDeliveryResult.optional(),
+  offerLetterEmail: emailDeliveryResult.optional(),
 });
 export type AdmissionDecisionResponse = z.infer<typeof admissionDecisionResponse>;
 
@@ -144,6 +145,7 @@ export const createAdmissionResponse = z.object({
   autoApproved: z.boolean(),
   portalCredentials: portalCredentialsResponse.nullable().optional(),
   credentialsEmail: emailDeliveryResult.optional(),
+  offerLetterEmail: emailDeliveryResult.optional(),
 });
 export type CreateAdmissionResponse = z.infer<typeof createAdmissionResponse>;
 
@@ -256,7 +258,10 @@ export type TransferStudentOutRequest = z.infer<typeof transferStudentOutRequest
 
 export const transferStudentOutResponse = z.object({
   student: studentResponse,
-  endedEnrollments: z.number().int().nonnegative(),
+  endedEnrollments: z.number().int().nonnegative().optional(),
+  /** Set when Advanced workflow inbox defers transfer until Principal approves. */
+  pendingApproval: z.boolean().optional(),
+  workflowInstanceId: z.string().uuid().optional(),
 });
 export type TransferStudentOutResponse = z.infer<typeof transferStudentOutResponse>;
 

@@ -1,8 +1,13 @@
 'use client';
 
-import { useGradebookEntries, usePublishResults } from '@loomis/api-client';
-import { Alert, AlertDescription, Skeleton } from '@loomis/ui-web';
-import { useMemo, useState } from 'react';
+import {
+  useGradebookEntries,
+  usePublishResults,
+  useStepUpMfa,
+  useFinancialMutation,
+} from '@loomis/api-client';
+import { Alert, AlertDescription, Input, Skeleton } from '@loomis/ui-web';
+import { useCallback, useMemo, useState } from 'react';
 
 import { AcademicScopePicker } from '@/components/academic/ops/academic-scope-picker';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
@@ -11,14 +16,18 @@ import {
   classArmOptions,
   useAcademicOpsContext,
 } from '@/lib/academic/use-academic-ops-context';
+import type { PublishResultsRequest, ResultListResponse } from '@loomis/contracts';
 
 interface ExamsPublishPanelProps {
   tenantId: string;
+  /** Principal emergency publish — requires authenticator step-up. */
+  emergencyPrincipal?: boolean;
 }
 
-export function ExamsPublishPanel({ tenantId }: ExamsPublishPanelProps) {
+export function ExamsPublishPanel({ tenantId, emergencyPrincipal = false }: ExamsPublishPanelProps) {
   const ctx = useAcademicOpsContext(tenantId);
   const [error, setError] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState('');
 
   const arms = classArmOptions(ctx.arms, ctx.levels);
   const classLabel = arms.find((arm) => arm.id === ctx.classArmId)?.label ?? null;
@@ -45,6 +54,19 @@ export function ExamsPublishPanel({ tenantId }: ExamsPublishPanelProps) {
     classArmId: ctx.classArmId ?? '',
   });
 
+  const stepUp = useStepUpMfa();
+  const ensureStepUpToken = useCallback(async () => {
+    const res = await stepUp.mutateAsync({ action: 'result_publish', code: mfaCode });
+    return { mfaToken: res.mfaToken, expiresAt: res.expiresAt };
+  }, [stepUp, mfaCode]);
+
+  const emergencyPublish = useFinancialMutation<PublishResultsRequest, ResultListResponse>({
+    endpoint: `/tenants/${tenantId}/results/publish`,
+    action: 'result_publish',
+    ensureStepUpToken,
+    invalidates: [],
+  });
+
   const blockedReason = useMemo(() => {
     if (!ctx.termId || !ctx.classArmId) return null;
     if (entriesQuery.isLoading) return null;
@@ -61,18 +83,35 @@ export function ExamsPublishPanel({ tenantId }: ExamsPublishPanelProps) {
   async function handlePublish() {
     if (!ctx.termId || !ctx.classArmId) return;
     setError(null);
+    const body = { termId: ctx.termId, classArmId: ctx.classArmId };
     try {
-      await publish.mutateAsync({
-        termId: ctx.termId,
-        classArmId: ctx.classArmId,
-      });
+      if (emergencyPrincipal) {
+        if (mfaCode.length !== 6) {
+          setError('Enter your 6-digit authenticator code before emergency publish.');
+          return;
+        }
+        await emergencyPublish.mutateFinancialAsync(body);
+      } else {
+        await publish.mutateAsync(body);
+      }
     } catch (err) {
       setError(academicErrorMessage(err));
     }
   }
 
+  const isSubmitting = emergencyPrincipal ? emergencyPublish.isPending : publish.isSubmitting;
+
   return (
     <div className="space-y-4">
+      {emergencyPrincipal ? (
+        <Alert variant="warning">
+          <AlertDescription>
+            Emergency escalation — publishing as Principal requires authenticator step-up and is
+            fully audited.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
       <AcademicScopePicker
         classArmOptions={arms}
         classArmId={ctx.classArmId}
@@ -102,14 +141,25 @@ export function ExamsPublishPanel({ tenantId }: ExamsPublishPanelProps) {
                 <p className="mt-1 text-[13px] text-accent-green-700">Ready — results will go live immediately.</p>
               )}
             </div>
-            <button
-              type="button"
-              className={`${ACADEMIC_UI.btnPrimary} w-full sm:w-auto`}
-              disabled={!preflight.ready || publish.isSubmitting}
-              onClick={() => void handlePublish()}
-            >
-              {publish.isSubmitting ? 'Publishing…' : 'Publish results'}
-            </button>
+            <div className="flex w-full flex-col gap-2 sm:w-auto">
+              {emergencyPrincipal ? (
+                <Input
+                  value={mfaCode}
+                  onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="Authenticator code"
+                  className="font-mono sm:w-40"
+                  inputMode="numeric"
+                />
+              ) : null}
+              <button
+                type="button"
+                className={`${ACADEMIC_UI.btnPrimary} w-full sm:w-auto`}
+                disabled={!preflight.ready || isSubmitting}
+                onClick={() => void handlePublish()}
+              >
+                {isSubmitting ? 'Publishing…' : 'Publish results'}
+              </button>
+            </div>
           </div>
           {error ? (
             <Alert variant="destructive" className="mt-4">

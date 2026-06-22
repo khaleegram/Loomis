@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { enrollmentAttestations } from '../../../../drizzle/schema/student.js';
 import type { Executor } from '../../../shared/db.js';
 import { withTenantContext } from '../../../shared/tenant-context.js';
@@ -52,6 +52,17 @@ export const attestationRepository = {
         )
         .limit(1);
       return row ?? null;
+    });
+  },
+
+  async listByTenant(tenantId: string, limit = 50) {
+    return withTenantContext(tenantId, async (tx) => {
+      return tx
+        .select()
+        .from(enrollmentAttestations)
+        .where(eq(enrollmentAttestations.tenantId, tenantId))
+        .orderBy(desc(enrollmentAttestations.attestedAt))
+        .limit(Math.min(limit, 200));
     });
   },
 };

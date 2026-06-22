@@ -25,6 +25,7 @@ import { tenantRepository } from '../src/modules/tenant/repository/tenant.reposi
 import { withTenantContext } from '../src/shared/tenant-context.js';
 import {
   ADVANCED_SCHOOL_SLUG,
+  ENTERPRISE_SCHOOL_SLUG,
   GREENFIELD_SCHOOL_SLUG,
   platformDevEmail,
   schoolContactEmail,
@@ -319,6 +320,157 @@ async function ensureAdvancedFixtureTenant(platformOwnerId: string): Promise<voi
   console.log('');
 }
 
+/** Split finance QA accounts for Advanced tenant (Sprint 8). */
+async function ensureAdvancedSplitFinanceFixture(_platformOwnerId: string): Promise<void> {
+  const ownerEmail = schoolDevEmail('owner', ADVANCED_SCHOOL_SLUG);
+  const ownerUser = await userRepository.findByEmail(ownerEmail);
+  if (!ownerUser?.tenantId) return;
+
+  const cashierEmail = schoolDevEmail('cashier', ADVANCED_SCHOOL_SLUG);
+  const accountantEmail = schoolDevEmail('accountant', ADVANCED_SCHOOL_SLUG);
+  const existingCashier = await userRepository.findByEmail(cashierEmail);
+
+  await tenantRepository.updateExperience(ownerUser.tenantId, {
+    financeMode: 'split',
+  });
+
+  if (existingCashier) return;
+
+  console.log('Seeding Advanced split finance (cashier + accountant)…');
+
+  const cashierSpec: DemoAccountSpec = {
+    email: cashierEmail,
+    role: 'cashier',
+    fullName: 'Advanced QA Cashier',
+    primaryRole: 'cashier',
+    phone: '+2348010000102',
+  };
+  const accountantSpec: DemoAccountSpec = {
+    email: accountantEmail,
+    role: 'accountant',
+    fullName: 'Advanced QA Accountant',
+    primaryRole: 'accountant',
+    phone: '+2348010000103',
+  };
+
+  await createDemoUser(cashierSpec, ownerUser.tenantId, ownerUser.id);
+  await createDemoUser(accountantSpec, ownerUser.tenantId, ownerUser.id);
+
+  console.log(`    • ${cashierEmail}  (cashier → log desk)`);
+  console.log(`    • ${accountantEmail}  (accountant → verify desk)`);
+}
+
+/** Optional Advanced roles for Sprint 11 QA (exam, deputy, timetable). */
+async function ensureAdvancedOptionalRolesFixture(_platformOwnerId: string): Promise<void> {
+  const ownerEmail = schoolDevEmail('owner', ADVANCED_SCHOOL_SLUG);
+  const ownerUser = await userRepository.findByEmail(ownerEmail);
+  if (!ownerUser?.tenantId) return;
+
+  const examEmail = schoolDevEmail('exam', ADVANCED_SCHOOL_SLUG);
+  if (await userRepository.findByEmail(examEmail)) return;
+
+  console.log('Seeding Advanced optional roles (exam, deputy, timetable)…');
+
+  const specs: DemoAccountSpec[] = [
+    {
+      email: examEmail,
+      role: 'exam_officer',
+      fullName: 'Advanced QA Exam Officer',
+      primaryRole: 'exam_officer',
+      phone: '+2348010000104',
+    },
+    {
+      email: schoolDevEmail('deputy-exam', ADVANCED_SCHOOL_SLUG),
+      role: 'deputy_exam_officer',
+      fullName: 'Advanced QA Deputy Exam',
+      primaryRole: 'deputy_exam_officer',
+      phone: '+2348010000105',
+    },
+    {
+      email: schoolDevEmail('timetable', ADVANCED_SCHOOL_SLUG),
+      role: 'timetable_officer',
+      fullName: 'Advanced QA Timetable Officer',
+      primaryRole: 'timetable_officer',
+      phone: '+2348010000106',
+    },
+  ];
+
+  for (const spec of specs) {
+    await createDemoUser(spec, ownerUser.tenantId, ownerUser.id);
+    console.log(`    • ${spec.email}  (${spec.role})`);
+  }
+}
+
+/** Enterprise-tier fixture for QA (Sprint 13 — Loomis-team activation). */
+async function ensureEnterpriseFixtureTenant(platformOwnerId: string): Promise<void> {
+  const markerEmail = schoolDevEmail('principal', ENTERPRISE_SCHOOL_SLUG);
+  const existing = await userRepository.findByEmail(markerEmail);
+  if (existing?.tenantId) {
+    return;
+  }
+
+  console.log('Seeding Enterprise QA fixture school…');
+
+  const tenant = await tenantService.provisionTenant(
+    {
+      name: 'Enterprise QA School Lagos',
+      region: 'Lagos',
+      contactEmail: schoolContactEmail(ENTERPRISE_SCHOOL_SLUG),
+      address: '3 Enterprise Crescent, Ikeja, Lagos',
+      tierCode: TIER_CODE,
+      initialPsfRateMinor: PSF_RATE_MINOR,
+    },
+    { userId: platformOwnerId, role: 'platform_owner' },
+  );
+
+  await tenantRepository.updateExperience(tenant.id, {
+    experienceTier: 'enterprise',
+    financeMode: 'combined',
+    experienceFlags: {
+      workflowsInbox: true,
+      timetableDedicatedOfficer: true,
+      deputyExamEnabled: true,
+      totpOptional: true,
+      admissionsRequirePrincipalApproval: true,
+      admissionsRequireOwnerApproval: true,
+    },
+  });
+
+  const ownerSpec: DemoAccountSpec = {
+    email: schoolDevEmail('owner', ENTERPRISE_SCHOOL_SLUG),
+    role: 'school_owner',
+    fullName: 'Enterprise QA Owner',
+    primaryRole: 'principal',
+    phone: '+2348010000200',
+  };
+  const principalSpec: DemoAccountSpec = {
+    email: markerEmail,
+    role: 'principal',
+    fullName: 'Enterprise QA Principal',
+    primaryRole: 'principal',
+    phone: '+2348010000201',
+  };
+  const examSpec: DemoAccountSpec = {
+    email: schoolDevEmail('exam', ENTERPRISE_SCHOOL_SLUG),
+    role: 'exam_officer',
+    fullName: 'Enterprise QA Exam Officer',
+    primaryRole: 'exam_officer',
+    phone: '+2348010000202',
+  };
+
+  const { user: ownerUser } = await createDemoUser(ownerSpec, tenant.id, platformOwnerId);
+  await createDemoUser(principalSpec, tenant.id, ownerUser.id);
+  await createDemoUser(examSpec, tenant.id, ownerUser.id);
+
+  console.log('');
+  console.log('  Enterprise QA school (experience_tier=enterprise):');
+  console.log(`    Tenant ID: ${tenant.id}`);
+  console.log(`    • ${ownerSpec.email}  (school_owner)`);
+  console.log(`    • ${principalSpec.email}  (principal)`);
+  console.log(`    • ${examSpec.email}  (exam_officer)`);
+  console.log('');
+}
+
 function printCredentials() {
   const mfaCode = currentTotpCode();
   console.log('');
@@ -346,6 +498,16 @@ function printCredentials() {
   console.log('  Advanced QA school (experience_tier=advanced):');
   console.log(`    • ${schoolDevEmail('principal', ADVANCED_SCHOOL_SLUG)}  (principal)`);
   console.log(`    • ${schoolDevEmail('owner', ADVANCED_SCHOOL_SLUG)}  (school_owner)`);
+  console.log(`    • ${schoolDevEmail('cashier', ADVANCED_SCHOOL_SLUG)}  (cashier, split finance)`);
+  console.log(`    • ${schoolDevEmail('accountant', ADVANCED_SCHOOL_SLUG)}  (accountant, split finance)`);
+  console.log(`    • ${schoolDevEmail('exam', ADVANCED_SCHOOL_SLUG)}  (exam_officer)`);
+  console.log(`    • ${schoolDevEmail('deputy-exam', ADVANCED_SCHOOL_SLUG)}  (deputy_exam_officer)`);
+  console.log(`    • ${schoolDevEmail('timetable', ADVANCED_SCHOOL_SLUG)}  (timetable_officer)`);
+  console.log('');
+  console.log('  Enterprise QA school (experience_tier=enterprise):');
+  console.log(`    • ${schoolDevEmail('owner', ENTERPRISE_SCHOOL_SLUG)}  (school_owner)`);
+  console.log(`    • ${schoolDevEmail('principal', ENTERPRISE_SCHOOL_SLUG)}  (principal)`);
+  console.log(`    • ${schoolDevEmail('exam', ENTERPRISE_SCHOOL_SLUG)}  (exam_officer)`);
   console.log('');
   console.log('  MFA (platform logins + step-up on sensitive school actions):');
   console.log(`    Secret (base32): ${DEV_TOTP_BASE32}`);
@@ -366,9 +528,12 @@ async function main() {
   await ensureTier(TIER_CODE);
   await ensureDevPsfRate(platformOwner.id);
   await ensureAdvancedFixtureTenant(platformOwner.id);
+  await ensureAdvancedSplitFinanceFixture(platformOwner.id);
+  await ensureAdvancedOptionalRolesFixture(platformOwner.id);
+  await ensureEnterpriseFixtureTenant(platformOwner.id);
 
   printCredentials();
-  console.log('Dev seed completed (platform + regional + Advanced QA). Greenfield runs via db:seed:rich.');
+  console.log('Dev seed completed (platform + regional + Advanced + Enterprise QA). Greenfield runs via db:seed:rich.');
 }
 
 main()

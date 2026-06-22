@@ -9,6 +9,7 @@ describe('mergeExperienceFlags', () => {
       deputyExamEnabled: false,
       totpOptional: false,
       admissionsRequirePrincipalApproval: false,
+      admissionsRequireOwnerApproval: false,
     });
   });
 

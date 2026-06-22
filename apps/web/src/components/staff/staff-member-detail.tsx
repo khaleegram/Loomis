@@ -63,6 +63,7 @@ import { BookOpen, Briefcase, Shield, UserCog } from 'lucide-react';
 
 import { SEMANTIC, SURFACES } from '@/lib/design/surfaces';
 import { formatRoleLabel } from '@/components/school/school-nav-config';
+import { SodNotice } from '@/components/school/sod-notice';
 import {
   formatStaffDisplayRole,
   formatStaffExtensionLabels,
@@ -379,6 +380,7 @@ export function StaffMemberDetail({ staffProfileId, staff: staffProp }: StaffMem
             title="Role change awaiting your approval"
             description="Principal submitted this change — approve or reject inline."
           >
+            <SodNotice compact highlight="Finalize staff role change" />
             <CoreInlineWorkflowDecision
               tenantId={tenantId}
               item={pendingRoleChange}
@@ -406,6 +408,9 @@ export function StaffMemberDetail({ staffProfileId, staff: staffProp }: StaffMem
                   Role change submitted — waiting for the school owner to approve.
                 </AlertDescription>
               </Alert>
+            ) : null}
+            {role === 'principal' ? (
+              <SodNotice compact highlight="Initiate staff role change" />
             ) : null}
             <Form {...roleForm}>
               <form
