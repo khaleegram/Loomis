@@ -7,6 +7,8 @@ import { MonitorSmartphone, Shield } from 'lucide-react';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { useTenantExperience } from '@/lib/tenant/use-tenant-experience';
 
+import { OptionalTotpEnrollmentPanel } from '@/components/settings/optional-totp-enrollment';
+
 function CoreMfaPolicyNotice() {
   const { isCore, isAdvanced } = useTenantExperience();
 
@@ -56,6 +58,8 @@ export default function SecuritySettingsPage() {
       </p>
 
       <CoreMfaPolicyNotice />
+
+      <OptionalTotpEnrollmentPanel />
 
       <section>
         <div className="mb-3 flex items-center gap-2">

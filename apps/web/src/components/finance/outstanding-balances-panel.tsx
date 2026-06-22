@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from '@loomis/ui-web';
 import { useState } from 'react';
+import { Download } from 'lucide-react';
 
 import {
   formatClassLevelLabel,
@@ -50,6 +51,31 @@ export function OutstandingBalancesPanel({ tenantId, termId }: OutstandingBalanc
   const classLevels = classLevelsQuery.data?.levels ?? [];
   const data = balancesQuery.data;
   const rows = data?.rows ?? [];
+
+  function exportCsv() {
+    if (rows.length === 0) return;
+    const header = ['studentId', 'classLevelId', 'status', 'amountChargedMinor', 'amountPaidMinor', 'balanceMinor'];
+    const lines = rows.map((row) =>
+      [
+        row.studentId,
+        row.classLevelId,
+        row.status,
+        row.amountChargedMinor,
+        row.amountPaidMinor,
+        row.balanceMinor,
+      ]
+        .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
+        .join(','),
+    );
+    const csv = [header.join(','), ...lines].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `outstanding-balances-${termId.slice(0, 8)}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <div className="space-y-6">
@@ -114,8 +140,14 @@ export function OutstandingBalancesPanel({ tenantId, termId }: OutstandingBalanc
       ) : null}
 
       <div className={`${ACADEMIC_UI.dataPanel} overflow-hidden`}>
-        <div className="border-b border-border/80 px-5 py-4">
+        <div className="flex flex-col gap-3 border-b border-border/80 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <p className={ACADEMIC_UI.sectionLabel}>Student balances</p>
+          {rows.length > 0 ? (
+            <button type="button" className={ACADEMIC_UI.btnSecondarySm} onClick={exportCsv}>
+              <Download aria-hidden className="mr-1.5 inline size-4" />
+              Export CSV
+            </button>
+          ) : null}
         </div>
         <div className="p-5">
           {balancesQuery.isLoading ? <Skeleton className="h-64 w-full rounded-xl" /> : null}

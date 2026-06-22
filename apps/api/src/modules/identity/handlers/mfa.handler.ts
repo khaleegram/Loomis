@@ -43,3 +43,43 @@ export async function mfaEnrollConfirmHandler(
   const result = await authService.confirmEnrollment(userId, code);
   return sendSuccess(reply, result);
 }
+
+/** GET /auth/mfa/status — optional TOTP enrollment state for the signed-in user. */
+export async function mfaStatusHandler(req: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
+  const user = req.authUser;
+  if (!user) {
+    throw new LoomisError('IDENTITY_SESSION_INVALIDATED', 401, 'Not authenticated');
+  }
+  const result = await authService.getMfaStatus(user.sub, user.tenant_id ?? null);
+  return sendSuccess(reply, result);
+}
+
+/** POST /auth/mfa/voluntary/enroll — begin optional authenticator setup (session auth). */
+export async function mfaVoluntaryEnrollStartHandler(
+  req: FastifyRequest,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const user = req.authUser;
+  if (!user) {
+    throw new LoomisError('IDENTITY_SESSION_INVALIDATED', 401, 'Not authenticated');
+  }
+  const result = await authService.startVoluntaryEnrollment(user.sub, user.tenant_id ?? null);
+  return sendSuccess(reply, result);
+}
+
+/** POST /auth/mfa/voluntary/enroll/confirm — activate optional authenticator. */
+export async function mfaVoluntaryEnrollConfirmHandler(
+  req: FastifyRequest<{ Body: { code: string } }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const user = req.authUser;
+  if (!user) {
+    throw new LoomisError('IDENTITY_SESSION_INVALIDATED', 401, 'Not authenticated');
+  }
+  const result = await authService.confirmVoluntaryEnrollment(
+    user.sub,
+    user.tenant_id ?? null,
+    req.body.code,
+  );
+  return sendSuccess(reply, result);
+}

@@ -1,13 +1,16 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { useTenantAuditLogSearch } from '@loomis/api-client';
-import type { AuditLogEntryResponse } from '@loomis/contracts';
-import { Input, Skeleton, cn } from '@loomis/ui-web';
-import { FileSearch, Search } from 'lucide-react';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { useTenantAuditLogSearch, useExportTenantAuditLog, useStepUpMfa } from '@loomis/api-client';
+import type { AuditLogEntryResponse, AuditSensitivity } from '@loomis/contracts';
+import { Input, Skeleton, cn, Textarea } from '@loomis/ui-web';
+import { FileSearch, Search, Download } from 'lucide-react';
+import { uuidv7 } from 'uuidv7';
 
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import type { AuditLogFilters } from '@loomis/api-client';
+import { useTenantExperience } from '@/lib/tenant/use-tenant-experience';
+import { useAuth } from '@/lib/auth/auth-context';
 
 const CORE_RETENTION_DAYS = 90;
 
@@ -31,23 +34,49 @@ function resultTone(result: AuditLogEntryResponse['result']): string {
   return 'text-red-700 bg-red-50';
 }
 
+const SENSITIVITIES: AuditSensitivity[] = [
+  'standard',
+  'financial',
+  'pii',
+  'child_pii',
+  'privileged',
+  'security',
+];
+
 interface SchoolAuditLogProps {
   tenantId: string;
 }
 
 export function SchoolAuditLog({ tenantId }: SchoolAuditLogProps) {
+  const { isAdvanced, isCore } = useTenantExperience();
+  const { session } = useAuth();
+  const canExport = isAdvanced && session?.role === 'school_owner';
   const [actionQuery, setActionQuery] = useState('');
+  const [sensitivity, setSensitivity] = useState<AuditSensitivity | ''>('');
   const [fromDate, setFromDate] = useState(() => defaultFromIso().slice(0, 10));
   const [toDate, setToDate] = useState('');
+  const [exportReason, setExportReason] = useState('');
+  const [exportCode, setExportCode] = useState('');
+  const [exportMessage, setExportMessage] = useState<string | null>(null);
+  const exportIdempotencyRef = useRef(uuidv7());
   const [applied, setApplied] = useState<AuditLogFilters>(() => ({
     from: defaultFromIso(),
     limit: 50,
   }));
 
+  const stepUp = useStepUpMfa();
+  const ensureStepUpToken = useCallback(async () => {
+    const res = await stepUp.mutateAsync({ action: 'data_export', code: exportCode });
+    return { mfaToken: res.mfaToken, expiresAt: res.expiresAt };
+  }, [stepUp, exportCode]);
+
+  const exportAudit = useExportTenantAuditLog(tenantId, { ensureStepUpToken });
+
   const filters = useMemo(
     (): Omit<AuditLogFilters, 'tenantId'> => ({
       ...applied,
       action: applied.action || undefined,
+      sensitivity: applied.sensitivity,
       from: applied.from,
       to: applied.to,
       limit: 50,
@@ -63,6 +92,7 @@ export function SchoolAuditLog({ tenantId }: SchoolAuditLogProps) {
     const to = toDate ? new Date(`${toDate}T23:59:59`).toISOString() : undefined;
     setApplied({
       action: actionQuery.trim() || undefined,
+      sensitivity: sensitivity || undefined,
       from,
       to,
       limit: 50,
@@ -72,17 +102,43 @@ export function SchoolAuditLog({ tenantId }: SchoolAuditLogProps) {
 
   function clearFilters() {
     setActionQuery('');
+    setSensitivity('');
     setFromDate(defaultFromIso().slice(0, 10));
     setToDate('');
     setApplied({ from: defaultFromIso(), limit: 50 });
+  }
+
+  async function handleExport() {
+    setExportMessage(null);
+    try {
+      const result = await exportAudit.mutateFinancialAsync({
+        filters: { ...filters, tenantId },
+        format: 'csv',
+        reason: exportReason,
+      });
+      if (result.content) {
+        const blob = new Blob([result.content], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `audit-export-${tenantId.slice(0, 8)}.csv`;
+        anchor.click();
+        URL.revokeObjectURL(url);
+      }
+      setExportMessage(result.message);
+      exportIdempotencyRef.current = uuidv7();
+    } catch (err) {
+      setExportMessage(err instanceof Error ? err.message : 'Export failed');
+      exportIdempotencyRef.current = uuidv7();
+    }
   }
 
   return (
     <div className="space-y-4">
       <div className={`${ACADEMIC_UI.dataPanel} space-y-4 p-4 sm:p-5`}>
         <p className="text-[13px] text-neutral-600">
-          Read-only trail for dispute resolution — last {CORE_RETENTION_DAYS} days on Core. No export
-          on Core tier.
+          Read-only trail for dispute resolution — last {CORE_RETENTION_DAYS} days on Core.
+          {isAdvanced ? ' Advanced schools can export with step-up verification.' : ' No export on Core tier.'}
         </p>
 
         <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
@@ -117,6 +173,23 @@ export function SchoolAuditLog({ tenantId }: SchoolAuditLogProps) {
               className="h-10 rounded-lg bg-muted/45 px-3 text-[13px] text-neutral-800"
             />
           </label>
+          {isAdvanced ? (
+            <label className="flex flex-col gap-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
+              Sensitivity
+              <select
+                value={sensitivity}
+                onChange={(e) => setSensitivity(e.target.value as AuditSensitivity | '')}
+                className="h-10 rounded-lg bg-muted/45 px-3 text-[13px] text-neutral-800"
+              >
+                <option value="">All</option>
+                {SENSITIVITIES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           <div className="flex gap-2">
             <button type="button" onClick={applyFilters} className={ACADEMIC_UI.btnPrimarySm}>
               Apply
@@ -126,6 +199,46 @@ export function SchoolAuditLog({ tenantId }: SchoolAuditLogProps) {
             </button>
           </div>
         </div>
+
+        {isAdvanced && canExport ? (
+          <div className="space-y-3 rounded-xl border border-brand-100/40 bg-brand-50/20 p-4">
+            <p className="text-[12px] font-semibold text-neutral-800">Export audit log (CSV)</p>
+            <Textarea
+              value={exportReason}
+              onChange={(e) => setExportReason(e.target.value)}
+              placeholder="Business reason for export (min 10 characters)"
+              rows={2}
+              className="text-sm"
+            />
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+              <label className="flex flex-1 flex-col gap-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
+                Step-up code
+                <Input
+                  value={exportCode}
+                  onChange={(e) => setExportCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="000000"
+                  className="font-mono"
+                />
+              </label>
+              <button
+                type="button"
+                className={cn(ACADEMIC_UI.btnPrimarySm, 'inline-flex items-center gap-2')}
+                disabled={
+                  exportAudit.isPending ||
+                  exportReason.trim().length < 10 ||
+                  exportCode.length !== 6
+                }
+                onClick={() => void handleExport()}
+              >
+                <Download aria-hidden className="size-4" />
+                {exportAudit.isPending ? 'Exporting…' : 'Export CSV'}
+              </button>
+            </div>
+            {exportMessage ? (
+              <p className="text-[12px] text-neutral-600">{exportMessage}</p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <div className={ACADEMIC_UI.dataPanel}>

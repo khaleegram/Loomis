@@ -3,6 +3,10 @@ import type {
   ChangePasswordRequest,
   DeregisterDeviceRequest,
   DeviceListResponse,
+  MfaEnrollConfirmResponse,
+  MfaEnrollStartResponse,
+  MfaStatusResponse,
+  MfaVoluntaryEnrollConfirmRequest,
   MyProfileResponse,
   RevokeSessionRequest,
   SessionListResponse,
@@ -109,6 +113,35 @@ export function useChangePassword() {
       client.post<void>('/auth/change-password', body),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.identity.sessions() });
+    },
+  });
+}
+
+/** Optional TOTP enrollment status (Advanced `totpOptional`). */
+export function useMfaStatus() {
+  const client = useApiClient();
+  return useQuery({
+    queryKey: queryKeys.identity.mfaStatus(),
+    queryFn: () => client.get<MfaStatusResponse>('/auth/mfa/status'),
+    staleTime: 30_000,
+  });
+}
+
+export function useStartVoluntaryMfaEnrollment() {
+  const client = useApiClient();
+  return useMutation({
+    mutationFn: () => client.post<MfaEnrollStartResponse>('/auth/mfa/voluntary/enroll'),
+  });
+}
+
+export function useConfirmVoluntaryMfaEnrollment() {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: MfaVoluntaryEnrollConfirmRequest) =>
+      client.post<MfaEnrollConfirmResponse>('/auth/mfa/voluntary/enroll/confirm', body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.identity.mfaStatus() });
     },
   });
 }

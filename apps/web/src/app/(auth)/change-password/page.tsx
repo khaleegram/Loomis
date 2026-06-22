@@ -24,7 +24,7 @@ import { AuthFormCard } from '@/components/auth/auth-form-card';
 import { changePassword } from '@/lib/auth/auth-client';
 import { authErrorMessage } from '@/lib/auth/auth-errors';
 import { useAuth } from '@/lib/auth/auth-context';
-import { homePathForRole } from '@/lib/auth/route-groups';
+import { landingPathForRole } from '@/lib/auth/route-groups';
 
 const setupPasswordForm = changePasswordRequest
   .extend({ confirmPassword: z.string().min(1, 'Confirm your new password') })
@@ -57,7 +57,7 @@ export default function ChangePasswordPage() {
     try {
       const next = await changePassword({ newPassword: values.newPassword });
       completeAuthentication(next);
-      router.replace(homePathForRole(next.role));
+      router.replace(landingPathForRole(next.role));
     } catch (err) {
       setFormError(authErrorMessage(err));
     } finally {

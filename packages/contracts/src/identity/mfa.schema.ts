@@ -32,3 +32,15 @@ export const mfaResetRequest = z.object({
   code: z.string().length(6),
 });
 export type MfaResetRequest = z.infer<typeof mfaResetRequest>;
+
+export const mfaStatusResponse = z.object({
+  enrolled: z.boolean(),
+  status: z.enum(['none', 'pending', 'active']),
+  totpOptionalAvailable: z.boolean(),
+});
+export type MfaStatusResponse = z.infer<typeof mfaStatusResponse>;
+
+export const mfaVoluntaryEnrollConfirmRequest = z.object({
+  code: z.string().length(6),
+});
+export type MfaVoluntaryEnrollConfirmRequest = z.infer<typeof mfaVoluntaryEnrollConfirmRequest>;

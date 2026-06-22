@@ -24,7 +24,7 @@ import { verifyMfa } from '@/lib/auth/auth-client';
 import { authErrorMessage } from '@/lib/auth/auth-errors';
 import { useAuth } from '@/lib/auth/auth-context';
 import { useAuthFlow } from '@/lib/auth/auth-flow-store';
-import { homePathForRole } from '@/lib/auth/route-groups';
+import { landingPathForRole } from '@/lib/auth/route-groups';
 
 type CodeForm = Pick<MfaVerifyRequest, 'code'>;
 
@@ -52,7 +52,7 @@ export default function MfaVerifyPage() {
       const session = await verifyMfa({ mfaChallengeId, code });
       reset();
       completeAuthentication(session);
-      router.replace(homePathForRole(session.role));
+      router.replace(landingPathForRole(session.role));
     } catch (err) {
       setFormError(authErrorMessage(err));
     } finally {

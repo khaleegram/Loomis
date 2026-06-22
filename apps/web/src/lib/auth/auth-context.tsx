@@ -15,7 +15,7 @@ import {
 
 import { memoryTokenStore } from '@/lib/auth/memory-token-store';
 import * as authClient from '@/lib/auth/auth-client';
-import { homePathForRole } from '@/lib/auth/route-groups';
+import { landingPathForRole } from '@/lib/auth/route-groups';
 import { useActiveTenantStore } from '@/lib/tenant/active-tenant-store';
 
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
@@ -152,7 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       completeAuthentication,
       signOut,
-      homePath: () => (session ? homePathForRole(session.role) : '/login'),
+      homePath: () => (session ? landingPathForRole(session.role) : '/login'),
     }),
     [status, session, completeAuthentication, signOut],
   );

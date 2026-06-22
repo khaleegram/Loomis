@@ -43,7 +43,7 @@ export const ROLE_GROUP: Record<Role, RouteGroup> = {
   student: 'parent',
 };
 
-export { homePathForRole, type HomePathContext } from '@/lib/auth/home-path';
+export { homePathForRole, landingPathForRole, type HomePathContext } from '@/lib/auth/home-path';
 
 /** Resolves which protected group a pathname belongs to, or null if public. */
 export function groupForPath(pathname: string): RouteGroup | null {

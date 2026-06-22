@@ -5,7 +5,10 @@ export { logoutHandler } from './logout.handler.js';
 export {
   mfaEnrollConfirmHandler,
   mfaEnrollStartHandler,
+  mfaStatusHandler,
   mfaVerifyHandler,
+  mfaVoluntaryEnrollConfirmHandler,
+  mfaVoluntaryEnrollStartHandler,
 } from './mfa.handler.js';
 export { updateProfileHandler, getProfileHandler } from './profile.handler.js';
 export { refreshHandler } from './refresh.handler.js';

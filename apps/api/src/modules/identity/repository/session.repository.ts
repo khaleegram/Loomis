@@ -1,4 +1,4 @@
-import { and, asc, eq, gt } from 'drizzle-orm';
+import { and, asc, desc, eq, gt } from 'drizzle-orm';
 import { userSessions } from '../../../../drizzle/schema/identity.js';
 import { db, type Executor } from '../../../shared/db.js';
 import type { CreateSessionInput, SessionRevokeReason } from '../types.js';
@@ -54,6 +54,17 @@ export const sessionRepository = {
   async findOldestActiveSession(userId: string) {
     const sessions = await this.listActiveByUserId(userId);
     return sessions[0] ?? null;
+  },
+
+  /** Latest activity timestamp across all sessions (including revoked) for deputy-exam 72h rule. */
+  async findLatestLastActiveAt(userId: string): Promise<Date | null> {
+    const [row] = await db
+      .select({ lastActiveAt: userSessions.lastActiveAt })
+      .from(userSessions)
+      .where(eq(userSessions.userId, userId))
+      .orderBy(desc(userSessions.lastActiveAt))
+      .limit(1);
+    return row?.lastActiveAt ?? null;
   },
 
   async touchActivity(sessionId: string, idleExpiresAt: Date, tx?: Executor) {

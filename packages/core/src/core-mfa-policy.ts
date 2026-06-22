@@ -3,6 +3,7 @@ import type { ExperienceTier, Role, StepUpAction } from '@loomis/contracts';
 import {
   isAdvancedTier,
   isCoreTier,
+  isEnterpriseTier,
   mergeExperienceFlags,
   type ResolvedExperienceFlags,
 } from './experience.js';
@@ -48,6 +49,9 @@ export function stepUpUsesSms(
   flags: ResolvedExperienceFlags,
   context?: { refundAmountMinor?: number },
 ): boolean {
+  if (enterpriseMandatoryTotpStepUp(action, experienceTier)) {
+    return false;
+  }
   if (isAdvancedTier(experienceTier) && flags.totpOptional) {
     return false;
   }
@@ -71,6 +75,9 @@ export function refundApproveRequiresStepUp(
   flags: ResolvedExperienceFlags,
   amountMinor: number,
 ): boolean {
+  if (isEnterpriseTier(experienceTier)) {
+    return true;
+  }
   if (!isCoreTier(experienceTier)) {
     return true;
   }
@@ -92,4 +99,31 @@ export function parentNewDeviceRequiresSms(role: Role): boolean {
 /** Parents: SMS before initiating an online fee payment. */
 export function parentPaymentRequiresSms(role: Role): boolean {
   return role === 'parent';
+}
+
+/** Advanced optional TOTP: leadership/finance staff use authenticator when flag is on. */
+export function advancedOptionalTotpLogin(
+  role: Role,
+  experienceTier: ExperienceTier,
+  flags: ResolvedExperienceFlags,
+): boolean {
+  return isAdvancedTier(experienceTier) && flags.totpOptional && CORE_SMS_LOGIN_ROLES.has(role);
+}
+
+const ENTERPRISE_MANDATORY_STEPUP_ACTIONS: ReadonlySet<StepUpAction> = new Set([
+  'census_lock',
+  'refund_approve',
+  'data_export',
+  'result_publish',
+  'ledger_adjustment',
+  'financial_override',
+  'psf_rate_change',
+]);
+
+/** Enterprise: high-risk actions always require authenticator step-up (never SMS). */
+export function enterpriseMandatoryTotpStepUp(
+  action: StepUpAction,
+  experienceTier: ExperienceTier,
+): boolean {
+  return isEnterpriseTier(experienceTier) && ENTERPRISE_MANDATORY_STEPUP_ACTIONS.has(action);
 }

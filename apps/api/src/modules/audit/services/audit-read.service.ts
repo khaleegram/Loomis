@@ -34,6 +34,51 @@ function isSensitiveQuery(filters: AuditLogSearchFilters): boolean {
   );
 }
 
+function entriesToCsv(
+  entries: Array<{
+    id: string;
+    createdAt: string;
+    action: string;
+    resourceType: string;
+    resourceId: string | null;
+    sensitivity: string;
+    result: string;
+    actorUserId: string | null;
+    actorType: string;
+    requestId: string;
+  }>,
+): string {
+  const header = [
+    'id',
+    'createdAt',
+    'action',
+    'resourceType',
+    'resourceId',
+    'sensitivity',
+    'result',
+    'actorUserId',
+    'actorType',
+    'requestId',
+  ].join(',');
+  const rows = entries.map((e) =>
+    [
+      e.id,
+      e.createdAt,
+      e.action,
+      e.resourceType,
+      e.resourceId ?? '',
+      e.sensitivity,
+      e.result,
+      e.actorUserId ?? '',
+      e.actorType,
+      e.requestId,
+    ]
+      .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
+      .join(','),
+  );
+  return [header, ...rows].join('\n');
+}
+
 export const auditReadService = {
   async search(filters: AuditLogSearchFilters) {
     const client = await getReadClient();
@@ -79,10 +124,22 @@ export const auditReadService = {
     }
   },
 
-  async export(body: AuditLogExportRequest, actorUserId: string, requestId: string) {
-    const result = await this.search({ ...body.filters, limit: 200 });
+  async export(
+    body: AuditLogExportRequest,
+    actorUserId: string,
+    requestId: string,
+    opts?: { tenantId?: string; inlineDelivery?: boolean },
+  ) {
+    const scopedFilters = {
+      ...body.filters,
+      ...(opts?.tenantId ? { tenantId: opts.tenantId } : {}),
+      limit: 200,
+    };
+    const result = await this.search(scopedFilters);
+    const tenantId = opts?.tenantId ?? body.filters.tenantId ?? null;
+
     await writeDataAccess({
-      tenantId: null,
+      tenantId,
       actorUserId,
       accessReason: 'export',
       resourceType: 'audit_events',
@@ -91,7 +148,7 @@ export const auditReadService = {
       containsFinancialData: body.filters.sensitivity === 'financial',
     });
     await writeAudit({
-      tenantId: null,
+      tenantId,
       actorUserId,
       action: 'audit.export',
       resourceType: 'audit_events',
@@ -101,12 +158,23 @@ export const auditReadService = {
       requestId,
       metadata: { reason: body.reason, format: body.format, recordCount: result.entries.length },
     });
+
+    const content =
+      opts?.inlineDelivery && body.format === 'csv'
+        ? entriesToCsv(result.entries)
+        : opts?.inlineDelivery && body.format === 'json'
+          ? JSON.stringify(result.entries, null, 2)
+          : null;
+
     return {
       exportId: requestId,
       recordCount: result.entries.length,
       format: body.format,
       downloadUrl: null,
-      message: `Export of ${result.entries.length} records logged. Download delivery is async.`,
+      content,
+      message: content
+        ? `Exported ${result.entries.length} records.`
+        : `Export of ${result.entries.length} records logged. Download delivery is async.`,
     };
   },
 };

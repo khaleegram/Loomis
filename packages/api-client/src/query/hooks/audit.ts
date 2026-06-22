@@ -66,3 +66,13 @@ export function useExportAuditLog(config: UseExportAuditLogConfig) {
     invalidates: [queryKeys.platform.auditLog()],
   });
 }
+
+export function useExportTenantAuditLog(tenantId: string, config: UseExportAuditLogConfig) {
+  const { ensureStepUpToken } = config;
+  return useFinancialMutation<AuditLogExportRequest, AuditLogExportResponse>({
+    endpoint: `/tenants/${tenantId}/audit/export`,
+    action: 'data_export',
+    ensureStepUpToken,
+    invalidates: [queryKeys.tenant.auditLog(tenantId)],
+  });
+}

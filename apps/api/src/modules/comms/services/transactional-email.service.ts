@@ -50,6 +50,36 @@ function buildStaffCredentialsEmail(input: {
   };
 }
 
+function buildAdmissionOfferLetterEmail(input: {
+  guardianName: string;
+  studentFirstName: string;
+  studentLastName: string;
+  schoolName: string;
+  intendedClassName: string;
+  admissionNo: string;
+}): { subject: string; body: string } {
+  const studentName = `${input.studentFirstName} ${input.studentLastName}`.trim();
+  return {
+    subject: `Admission offer — ${studentName}`,
+    body: [
+      `Hello ${input.guardianName},`,
+      '',
+      `We are pleased to offer ${studentName} a place at ${input.schoolName}.`,
+      '',
+      `Admission number: ${input.admissionNo}`,
+      `Class: ${input.intendedClassName}`,
+      '',
+      'Next steps:',
+      '- Complete enrollment when the school opens the term.',
+      '- Student portal credentials will be sent separately.',
+      '',
+      'If you have questions, contact the admissions office.',
+      '',
+      `This offer is from ${input.schoolName} via Loomis.`,
+    ].join('\n'),
+  };
+}
+
 function buildStudentPortalCredentialsEmail(input: {
   studentFirstName: string;
   studentLastName: string;
@@ -154,6 +184,43 @@ export const transactionalEmailService = {
         studentLastName: input.studentLastName,
         loginEmail: input.loginEmail,
         temporaryPassword: input.temporaryPassword,
+      });
+      try {
+        await sendEmail({ to: recipient, subject, body });
+        result = { sent: true, recipient };
+      } catch {
+        result = { sent: false, recipient, reason: 'SEND_FAILED' };
+      }
+    }
+
+    await recordDeliveryEvent({ tenantId: input.tenantId, userId: input.userId, result });
+    return result;
+  },
+
+  async sendAdmissionOfferLetter(input: {
+    tenantId: string;
+    userId: string;
+    to: string;
+    guardianName: string;
+    studentFirstName: string;
+    studentLastName: string;
+    schoolName: string;
+    intendedClassName: string;
+    admissionNo: string;
+  }): Promise<EmailDeliveryResult> {
+    const recipient = input.to.toLowerCase();
+    let result: EmailDeliveryResult;
+
+    if (!isSesConfigured()) {
+      result = { sent: false, recipient, reason: 'SES_NOT_CONFIGURED' };
+    } else {
+      const { subject, body } = buildAdmissionOfferLetterEmail({
+        guardianName: input.guardianName,
+        studentFirstName: input.studentFirstName,
+        studentLastName: input.studentLastName,
+        schoolName: input.schoolName,
+        intendedClassName: input.intendedClassName,
+        admissionNo: input.admissionNo,
       });
       try {
         await sendEmail({ to: recipient, subject, body });

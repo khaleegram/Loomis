@@ -24,7 +24,7 @@ import { login } from '@/lib/auth/auth-client';
 import { authErrorMessage } from '@/lib/auth/auth-errors';
 import { useAuth } from '@/lib/auth/auth-context';
 import { useAuthFlow } from '@/lib/auth/auth-flow-store';
-import { homePathForRole } from '@/lib/auth/route-groups';
+import { landingPathForRole } from '@/lib/auth/route-groups';
 
 /** Email + password sign-in form used on `/` and `/login`. */
 export function LoginScreen() {
@@ -59,7 +59,7 @@ export function LoginScreen() {
             router.replace('/change-password');
             return;
           }
-          router.replace(homePathForRole(result.role));
+          router.replace(landingPathForRole(result.role));
           return;
         case 'mfa_required':
           setMfaChallenge(result.mfaChallengeId, {

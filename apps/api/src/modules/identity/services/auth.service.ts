@@ -1,6 +1,7 @@
 import type { Role, StepUpAction } from '@loomis/contracts';
 import { uuidv7 } from 'uuidv7';
 import {
+  advancedOptionalTotpLogin,
   coreLoginRequiresSms,
   mergeExperienceFlags,
   stepUpUsesSms,
@@ -218,6 +219,35 @@ export const authService = {
         maskedPhone: delivery.maskedPhone,
         devBypass: delivery.devBypass,
       };
+    }
+
+    if (
+      tenantCtx &&
+      advancedOptionalTotpLogin(
+        role,
+        tenantCtx.experienceTier,
+        mergeExperienceFlags(tenantCtx.experienceFlags),
+      )
+    ) {
+      const mfaConfig = await mfaRepository.findByUserId(user.id);
+      if (mfaConfig?.status === 'active') {
+        if (ctx.persistentToken && ctx.deviceFingerprint) {
+          const deviceId = await deviceService.verifyPersistentToken(
+            user.id,
+            ctx.deviceFingerprint,
+            ctx.persistentToken,
+          );
+          if (deviceId) {
+            const bundle = await this.issueAuthenticatedSession(user, ctx, {
+              mfaCompleted: true,
+              deviceId,
+            });
+            return { kind: 'authenticated', bundle };
+          }
+        }
+        const mfaChallengeId = await this.createMfaChallenge(user.id, ctx, 'totp');
+        return { kind: 'mfa_required', mfaChallengeId, channel: 'totp' as const };
+      }
     }
 
     if (role === 'parent') {
@@ -705,5 +735,64 @@ export const authService = {
     if (!updated) {
       throw new LoomisError('INTERNAL_ERROR', 500, 'Failed to update password');
     }
+  },
+
+  /** Voluntary TOTP enrollment for Advanced schools with `totpOptional` enabled. */
+  async getMfaStatus(userId: string, tenantId: string | null) {
+    const user = await userRepository.findById(userId);
+    if (!user) {
+      throw new LoomisError('IDENTITY_SESSION_INVALIDATED', 401, 'User not found');
+    }
+
+    const mfaConfig = await mfaRepository.findByUserId(userId);
+    const status =
+      mfaConfig?.status === 'active'
+        ? ('active' as const)
+        : mfaConfig?.status === 'pending'
+          ? ('pending' as const)
+          : ('none' as const);
+
+    const tenantCtx = await loadTenantMfaContext(tenantId);
+    const totpOptionalAvailable = Boolean(
+      tenantCtx &&
+        advancedOptionalTotpLogin(
+          user.role as Role,
+          tenantCtx.experienceTier,
+          mergeExperienceFlags(tenantCtx.experienceFlags),
+        ),
+    );
+
+    return {
+      enrolled: status === 'active',
+      status,
+      totpOptionalAvailable,
+    };
+  },
+
+  async startVoluntaryEnrollment(userId: string, tenantId: string | null) {
+    const status = await this.getMfaStatus(userId, tenantId);
+    if (!status.totpOptionalAvailable) {
+      throw new LoomisError(
+        'FORBIDDEN',
+        403,
+        'Authenticator enrollment is not available for your account',
+      );
+    }
+    if (status.enrolled) {
+      throw new LoomisError('IDENTITY_MFA_ALREADY_ENROLLED', 409, 'Authenticator is already active');
+    }
+    return this.startEnrollment(userId);
+  },
+
+  async confirmVoluntaryEnrollment(userId: string, tenantId: string | null, code: string) {
+    const status = await this.getMfaStatus(userId, tenantId);
+    if (!status.totpOptionalAvailable) {
+      throw new LoomisError(
+        'FORBIDDEN',
+        403,
+        'Authenticator enrollment is not available for your account',
+      );
+    }
+    return this.confirmEnrollment(userId, code);
   },
 };

@@ -35,6 +35,7 @@ import { studentDisplayName } from '@/lib/student/student-labels';
 import { useCan } from '@/lib/auth/use-capability';
 import { useCanConfirmPromotions } from '@/lib/auth/use-can-confirm-promotions';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
+import { useTenantExperience } from '@/lib/tenant/use-tenant-experience';
 import { cn } from '@loomis/ui-web';
 
 function pickNextYear(years: AcademicYearResponse[], fromYear: AcademicYearResponse | null) {
@@ -51,6 +52,7 @@ export default function AcademicPromotionsPage() {
   const tenantId = useTenantId();
   const canPromote = useCan('student.promote');
   const canConfirm = useCanConfirmPromotions();
+  const { isAdvanced, flags } = useTenantExperience();
   const [tab, setTab] = useState<PromotionsTab>('stage');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
@@ -64,6 +66,7 @@ export default function AcademicPromotionsPage() {
   const promotions = promotionsQuery.data?.records ?? [];
   const proposed = promotions.filter((p) => p.status === 'proposed');
   const confirmed = promotions.filter((p) => p.status === 'confirmed');
+  const proposedHeldBack = proposed.filter((p) => p.outcome === 'held_back');
   const confirmedGraduates = confirmed.filter((p) => p.outcome === 'graduated');
   const hasConfirmed = confirmed.length > 0;
 
@@ -154,6 +157,27 @@ export default function AcademicPromotionsPage() {
       </div>
 
       <AcademicYearBridge fromLabel={fromYear?.label ?? null} toLabel={toYear?.label ?? null} />
+
+      {isAdvanced && flags.workflowsInbox && proposedHeldBack.length > 0 ? (
+        <div className={`card rounded-2xl p-5 ${SEMANTIC.warning.surfaceSubtle}`}>
+          <div className="flex items-start gap-3">
+            <AlertTriangle aria-hidden className="mt-0.5 size-5 shrink-0 text-gold-700" />
+            <div className="space-y-1 text-[13px] text-neutral-700">
+              <p className="font-semibold text-neutral-900">
+                {proposedHeldBack.length} held-back student
+                {proposedHeldBack.length === 1 ? '' : 's'} need School Owner approval
+              </p>
+              <p>
+                Confirm promotions is blocked until held-back overrides are approved in the{' '}
+                <a href="/school/workflows/inbox" className="font-medium text-brand-700 underline">
+                  workflow inbox
+                </a>
+                .
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {!toYear ? (
         <div className={`card rounded-2xl p-5 ${SEMANTIC.warning.surfaceSubtle}`}>

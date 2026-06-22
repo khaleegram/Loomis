@@ -2,9 +2,18 @@ import { LoomisError } from '../../../shared/errors.js';
 import { academicEvents } from '../events/index.js';
 import { academicRepository } from '../repository/academic.repository.js';
 import { certificateService } from '../../student/services/certificate.service.js';
+import { workflowService } from '../../workflow/services/workflow.service.js';
+import { workflowRepository } from '../../workflow/repository/workflow.repository.js';
+import { tenantRepository } from '../../tenant/repository/tenant.repository.js';
 import type { ActorContext as StudentActorContext } from '../../student/types.js';
 import type { ActorContext, StagePromotionInput } from '../types.js';
 import { requireTenant, requireYear } from './_shared.js';
+import {
+  isAdvancedTier,
+  mergeExperienceFlags,
+  workflowsInboxEnabled,
+} from '@loomis/core';
+import type { TenantExperienceFlags } from '@loomis/contracts';
 
 /**
  * Student promotion & graduation (FR-ASM-007/008 / US-ASM-005/006).
@@ -54,6 +63,44 @@ export const promotionService = {
       input.decisions,
       actor.userId,
     );
+
+    const tenant = await tenantRepository.findById(tenantId);
+    if (tenant) {
+      const flags = mergeExperienceFlags(tenant.experienceFlags as TenantExperienceFlags);
+      const inboxModule =
+        isAdvancedTier(tenant.experienceTier as 'core' | 'advanced' | 'enterprise') &&
+        workflowsInboxEnabled(tenant.experienceTier as 'core' | 'advanced' | 'enterprise', flags);
+
+      if (inboxModule) {
+        const heldBack = records.filter((r) => r.outcome === 'held_back');
+        for (const record of heldBack) {
+          const pending = await workflowRepository.countPendingBySubject(
+            tenantId,
+            'held_back_override',
+            record.studentId,
+          );
+          if (pending > 0) continue;
+
+          await workflowService.startWorkflow({
+            workflowType: 'held_back_override',
+            tenantId,
+            requestedById: actor.userId,
+            requestedByRole: actor.role,
+            subjectType: 'student',
+            subjectId: record.studentId,
+            title: `Held back — owner approval required`,
+            payload: {
+              studentId: record.studentId,
+              fromAcademicYearId: input.fromAcademicYearId,
+              toAcademicYearId: input.toAcademicYearId,
+              heldBackReason: record.heldBackReason,
+              promotionRecordId: record.id,
+            },
+          });
+        }
+      }
+    }
+
     return records;
   },
 
@@ -79,6 +126,34 @@ export const promotionService = {
         404,
         'There is no staged promotion list to confirm for this year',
       );
+    }
+
+    const tenant = await tenantRepository.findById(tenantId);
+    if (tenant) {
+      const flags = mergeExperienceFlags(tenant.experienceFlags as TenantExperienceFlags);
+      const inboxModule =
+        isAdvancedTier(tenant.experienceTier as 'core' | 'advanced' | 'enterprise') &&
+        workflowsInboxEnabled(tenant.experienceTier as 'core' | 'advanced' | 'enterprise', flags);
+
+      if (inboxModule) {
+        const heldBackStudentIds = staged
+          .filter((r) => r.outcome === 'held_back')
+          .map((r) => r.studentId);
+        if (heldBackStudentIds.length > 0) {
+          const pending = await workflowRepository.countPendingBySubjects(
+            tenantId,
+            'held_back_override',
+            heldBackStudentIds,
+          );
+          if (pending > 0) {
+            throw new LoomisError(
+              'ACADEMIC_HELD_BACK_APPROVAL_PENDING',
+              409,
+              'Held-back students require School Owner approval in the workflow inbox before promotions can be confirmed',
+            );
+          }
+        }
+      }
     }
 
     const confirmed = await academicRepository.confirmPromotions(

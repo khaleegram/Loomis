@@ -62,5 +62,7 @@ export const auditLogExportResponse = z.object({
   format: z.enum(['csv', 'json']),
   downloadUrl: z.string().url().nullable(),
   message: z.string(),
+  /** Inline export payload when synchronous delivery is used (tenant-scoped export). */
+  content: z.string().nullable().optional(),
 });
 export type AuditLogExportResponse = z.infer<typeof auditLogExportResponse>;

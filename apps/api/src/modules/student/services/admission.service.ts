@@ -80,6 +80,7 @@ export const admissionService = {
         autoApproved: true,
         portalCredentials: decided.portalCredentials ?? null,
         credentialsEmail: decided.credentialsEmail,
+        offerLetterEmail: decided.offerLetterEmail,
       };
     }
 
@@ -170,7 +171,24 @@ export const admissionService = {
     let portalCredentials: { loginEmail: string; temporaryPassword: string } | null = null;
     let studentUserId: string | null = null;
     let credentialsEmail: import('@loomis/contracts').EmailDeliveryResult | undefined;
+    let offerLetterEmail: import('@loomis/contracts').EmailDeliveryResult | undefined;
     if (result.student) {
+      const level = await academicRepository.findClassLevelById(
+        tenantId,
+        admission.intendedClassLevelId,
+      );
+      offerLetterEmail = await transactionalEmailService.sendAdmissionOfferLetter({
+        tenantId,
+        userId: actor.userId,
+        to: admission.guardianEmail,
+        guardianName: admission.guardianName,
+        studentFirstName: result.student.firstName,
+        studentLastName: result.student.lastName,
+        schoolName: tenant.name,
+        intendedClassName: level?.name ?? 'Assigned class',
+        admissionNo: result.student.admissionNo,
+      });
+
       const temporaryPassword = DEFAULT_STUDENT_PROVISIONED_PASSWORD;
       const { user, loginEmail } = await studentAccountService.createPortalAccount({
         tenantId,
@@ -219,6 +237,7 @@ export const admissionService = {
         : null,
       portalCredentials,
       credentialsEmail,
+      offerLetterEmail,
     };
   },
 };
