@@ -3,7 +3,7 @@
 
 [build]
 builder = "DOCKERFILE"
-dockerfilePath = "apps/api/Dockerfile"
+dockerfilePath = "apps/api/Dockerfile.prod"
 watchPatterns = ["apps/api/**", "packages/**", "pnpm-lock.yaml"]
 
 [deploy]
