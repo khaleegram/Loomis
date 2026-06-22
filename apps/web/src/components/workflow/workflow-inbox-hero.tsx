@@ -11,6 +11,8 @@ interface WorkflowInboxHeroProps {
   gradeCorrectionCount: number;
   refundCount: number;
   isLoading?: boolean;
+  /** Exam Officer uses Exams module; Principal uses inbox only (§2.3). */
+  showExamsGradeLink?: boolean;
 }
 
 export function WorkflowInboxHero({
@@ -18,6 +20,7 @@ export function WorkflowInboxHero({
   gradeCorrectionCount,
   refundCount,
   isLoading,
+  showExamsGradeLink = false,
 }: WorkflowInboxHeroProps) {
   const stats = [
     {
@@ -74,9 +77,11 @@ export function WorkflowInboxHero({
             <Link href="/school/workflows/templates" className={ACADEMIC_UI.btnSecondary}>
               Workflow templates
             </Link>
-            <Link href="/school/exams" className={ACADEMIC_UI.btnSecondary}>
-              Grade corrections
-            </Link>
+            {showExamsGradeLink ? (
+              <Link href="/school/exams" className={ACADEMIC_UI.btnSecondary}>
+                Grade corrections
+              </Link>
+            ) : null}
           </div>
         </div>
 

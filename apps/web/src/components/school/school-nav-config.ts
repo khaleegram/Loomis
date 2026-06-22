@@ -30,6 +30,8 @@ export interface SchoolNavItem {
   hideInCore?: boolean;
   /** Only when Advanced+ and workflowsInbox flag is on. */
   requiresWorkflowsInbox?: boolean;
+  /** Enterprise tier only (attestations, mandatory TOTP surfaces). */
+  requiresEnterpriseTier?: boolean;
   /** Shown instead of separate log/verify/structures in combined finance mode. */
   combinedFinanceDeskOnly?: boolean;
   /** Hidden when combined finance desk replaces granular ledger links. */
@@ -40,6 +42,8 @@ const TEACHING_STAFF_ROLES: Role[] = ['teacher', 'class_teacher'];
 const ADMIN_OFFICER_ROLES: Role[] = ['admin_officer'];
 const EXAM_OFFICER_ROLES: Role[] = ['exam_officer', 'deputy_exam_officer'];
 const FINANCE_ROLES: Role[] = ['accountant', 'cashier'];
+/** Leadership roles — no teaching/exam module nav (master plan §5.4). */
+const LEADERSHIP_ROLES: Role[] = ['school_owner', 'principal', 'admin_officer'];
 
 export const SCHOOL_NAV: SchoolNavItem[] = [
   {
@@ -90,6 +94,15 @@ export const SCHOOL_NAV: SchoolNavItem[] = [
     hideForRoles: TEACHING_STAFF_ROLES,
   },
   {
+    id: 'attestations',
+    label: 'Attestations',
+    href: '/school/academic/attestations',
+    icon: ScrollText,
+    capabilities: ['audit.view', 'census.lock'],
+    hideForRoles: [...TEACHING_STAFF_ROLES, ...FINANCE_ROLES, ...EXAM_OFFICER_ROLES, 'admin_officer'],
+    requiresEnterpriseTier: true,
+  },
+  {
     id: 'timetable',
     label: 'Timetable',
     href: '/school/timetable',
@@ -107,8 +120,8 @@ export const SCHOOL_NAV: SchoolNavItem[] = [
     label: 'Assignments',
     href: '/school/assignments',
     icon: ClipboardList,
-    capabilities: ['gradebook.write', 'gradebook.read'],
-    hideForRoles: EXAM_OFFICER_ROLES,
+    capabilities: ['gradebook.write'],
+    hideForRoles: [...EXAM_OFFICER_ROLES, ...LEADERSHIP_ROLES],
   },
   {
     id: 'finance-desk',
@@ -188,8 +201,8 @@ export const SCHOOL_NAV: SchoolNavItem[] = [
     label: 'Exams',
     href: '/school/exams',
     icon: ClipboardList,
-    capabilities: ['grading_scheme.configure', 'result.publish', 'gradebook.read'],
-    hideForRoles: TEACHING_STAFF_ROLES,
+    capabilities: ['grading_scheme.configure', 'result.publish'],
+    hideForRoles: [...TEACHING_STAFF_ROLES, ...LEADERSHIP_ROLES],
   },
   {
     id: 'gradebook',
@@ -197,6 +210,7 @@ export const SCHOOL_NAV: SchoolNavItem[] = [
     href: '/school/gradebook',
     icon: BookOpen,
     capabilities: ['gradebook.write', 'gradebook.read'],
+    hideForRoles: LEADERSHIP_ROLES,
   },
   {
     id: 'report-cards',
@@ -204,6 +218,7 @@ export const SCHOOL_NAV: SchoolNavItem[] = [
     href: '/school/report-cards',
     icon: ScrollText,
     capabilities: ['gradebook.read', 'gradebook.write'],
+    hideForRoles: LEADERSHIP_ROLES,
   },
   {
     id: 'attendance',
@@ -229,7 +244,7 @@ export const SCHOOL_NAV: SchoolNavItem[] = [
     href: '/school/comms',
     icon: Users,
     capabilities: ['parent.message', 'staff.onboard'],
-    hideForRoles: ['teacher', ...EXAM_OFFICER_ROLES],
+    hideForRoles: ['teacher'],
   },
   {
     id: 'settings',
@@ -249,6 +264,7 @@ export function isNavVisible(role: Role, item: SchoolNavItem, ctx: SchoolNavCont
   if (item.hideForRoles?.includes(role)) return false;
 
   if (ctx.experienceTier === 'core' && item.hideInCore) return false;
+  if (item.requiresEnterpriseTier && ctx.experienceTier !== 'enterprise') return false;
 
   if (item.requiresWorkflowsInbox && !workflowsInboxEnabled(ctx.experienceTier, ctx.flags)) {
     return false;
@@ -327,6 +343,8 @@ export function schoolNavLabel(item: SchoolNavItem, role: Role, financeMode: Fin
   if (item.href === '/school/gradebook' && EXAM_OFFICER_ROLES.includes(role)) return 'Gradebook';
   if (item.href === '/school/exams' && EXAM_OFFICER_ROLES.includes(role)) return 'Exams';
   if (item.id === 'finance-desk' && financeMode === 'combined') return 'Finance';
+  if (item.id === 'finance-verify' && financeMode === 'split') return 'Accountant';
+  if (item.id === 'finance-log' && financeMode === 'split') return 'Cashier';
   return item.label;
 }
 

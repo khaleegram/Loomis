@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import {
   groupForPath,
-  homePathForRole,
+  landingPathForRole,
   roleCanAccessPath,
 } from '@/lib/auth/route-groups';
 import { SESSION_COOKIE, parseSession } from '@/lib/auth/session';
@@ -33,7 +33,7 @@ export function middleware(req: NextRequest): NextResponse {
       return NextResponse.redirect(new URL('/login', req.url));
     }
     if (!session.mustChangePassword) {
-      return NextResponse.redirect(new URL(homePathForRole(session.role), req.url));
+      return NextResponse.redirect(new URL(landingPathForRole(session.role), req.url));
     }
     return NextResponse.next();
   }
@@ -43,7 +43,7 @@ export function middleware(req: NextRequest): NextResponse {
       if (session.mustChangePassword) {
         return NextResponse.redirect(new URL('/change-password', req.url));
       }
-      return NextResponse.redirect(new URL(homePathForRole(session.role), req.url));
+      return NextResponse.redirect(new URL(landingPathForRole(session.role), req.url));
     }
     return NextResponse.next();
   }
@@ -51,7 +51,7 @@ export function middleware(req: NextRequest): NextResponse {
   // Authenticated users should not sit on the login/MFA/reset screens.
   if (AUTH_PAGES.has(pathname)) {
     if (session && !session.mustChangePassword) {
-      return NextResponse.redirect(new URL(homePathForRole(session.role), req.url));
+      return NextResponse.redirect(new URL(landingPathForRole(session.role), req.url));
     }
     return NextResponse.next();
   }
@@ -68,7 +68,7 @@ export function middleware(req: NextRequest): NextResponse {
   }
 
   if (!roleCanAccessPath(session.role, pathname)) {
-    return NextResponse.redirect(new URL(homePathForRole(session.role), req.url));
+    return NextResponse.redirect(new URL(landingPathForRole(session.role), req.url));
   }
 
   return NextResponse.next();

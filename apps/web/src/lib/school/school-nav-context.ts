@@ -17,5 +17,6 @@ export const DEFAULT_SCHOOL_NAV_CONTEXT: SchoolNavContext = {
     deputyExamEnabled: false,
     totpOptional: false,
     admissionsRequirePrincipalApproval: false,
+    admissionsRequireOwnerApproval: false,
   },
 };

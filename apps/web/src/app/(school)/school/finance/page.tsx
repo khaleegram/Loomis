@@ -17,6 +17,7 @@ import { useCan, useCanAny, useRole } from '@/lib/auth/use-capability';
 import { filterInboxByTypes } from '@/lib/leadership/leadership-attention';
 import { useTenantExperience } from '@/lib/tenant/use-tenant-experience';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
+import { useWorkflowInboxModule } from '@/lib/workflow/use-workflow-inbox-module';
 
 const pageClass = 'max-w-[1400px] px-4 py-5 sm:px-6 lg:px-12 lg:py-8';
 
@@ -25,6 +26,7 @@ export default function FinanceFeeStructuresPage() {
   const role = useRole();
   const router = useRouter();
   const { financeMode } = useTenantExperience();
+  const workflowInboxModule = useWorkflowInboxModule();
   const canConfigure = useCan('fee.configure');
   const canViewFinance = useCanAny(['fee.configure', 'payment.verify', 'payment.log']);
   const inboxQuery = useWorkflowInbox(tenantId ?? '');
@@ -88,7 +90,7 @@ export default function FinanceFeeStructuresPage() {
           isLoading={isLoading}
         />
 
-        {role === 'principal' && feeAmendmentInbox.length > 0 ? (
+        {role === 'principal' && !workflowInboxModule && feeAmendmentInbox.length > 0 ? (
           <section className="space-y-3">
             <div>
               <p className={ACADEMIC_UI.sectionLabel}>Pending approval</p>

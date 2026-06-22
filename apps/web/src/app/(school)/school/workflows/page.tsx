@@ -10,14 +10,18 @@ import { WorkflowInboxItemCard } from '@/components/workflow/workflow-inbox-item
 import { PageBody } from '@/components/school/school-shell';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { academicErrorMessage } from '@/lib/academic/academic-errors';
+import { isExamOfficerRole } from '@/lib/auth/is-exam-officer';
+import { useAuth } from '@/lib/auth/auth-context';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 
 const pageClass = 'max-w-[1400px] px-4 py-5 sm:px-6 lg:px-12 lg:py-8';
 
 export default function WorkflowInboxPage() {
   const tenantId = useTenantId();
+  const { session } = useAuth();
   const inboxQuery = useWorkflowInbox(tenantId ?? '');
   const items = inboxQuery.data?.items ?? [];
+  const showExamsGradeLink = session?.role ? isExamOfficerRole(session.role) : false;
 
   const metrics = useMemo(() => {
     const gradeCorrectionCount = items.filter(
@@ -51,6 +55,7 @@ export default function WorkflowInboxPage() {
           gradeCorrectionCount={metrics.gradeCorrectionCount}
           refundCount={metrics.refundCount}
           isLoading={inboxQuery.isLoading}
+          showExamsGradeLink={showExamsGradeLink}
         />
 
         {inboxQuery.isLoading ? (

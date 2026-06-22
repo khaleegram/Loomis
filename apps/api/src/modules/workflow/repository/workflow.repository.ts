@@ -454,6 +454,49 @@ export const workflowRepository = {
       return escalated;
     });
   },
+
+  async countPendingBySubject(
+    tenantId: string,
+    workflowType: string,
+    subjectId: string,
+  ): Promise<number> {
+    return withTenantContext(tenantId, async (tx) => {
+      const rows = await tx
+        .select({ id: workflowInstances.id })
+        .from(workflowInstances)
+        .where(
+          and(
+            eq(workflowInstances.tenantId, tenantId),
+            eq(workflowInstances.workflowType, workflowType),
+            eq(workflowInstances.status, 'pending'),
+            eq(workflowInstances.subjectId, subjectId),
+          ),
+        );
+      return rows.length;
+    });
+  },
+
+  async countPendingBySubjects(
+    tenantId: string,
+    workflowType: string,
+    subjectIds: string[],
+  ): Promise<number> {
+    if (subjectIds.length === 0) return 0;
+    return withTenantContext(tenantId, async (tx) => {
+      const rows = await tx
+        .select({ id: workflowInstances.id })
+        .from(workflowInstances)
+        .where(
+          and(
+            eq(workflowInstances.tenantId, tenantId),
+            eq(workflowInstances.workflowType, workflowType),
+            eq(workflowInstances.status, 'pending'),
+            inArray(workflowInstances.subjectId, subjectIds),
+          ),
+        );
+      return rows.length;
+    });
+  },
 };
 
 export type {

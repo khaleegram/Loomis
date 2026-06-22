@@ -13,6 +13,7 @@ import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { academicErrorMessage } from '@/lib/academic/academic-errors';
 import { formatRoleLabel } from '@/components/school/school-nav-config';
 import { formatWorkflowTypeLabel } from '@/lib/workflow/workflow-labels';
+import { summarizeWorkflowPayload } from '@/lib/workflow/workflow-payload-summary';
 
 interface WorkflowInboxItemCardProps {
   tenantId: string;
@@ -24,6 +25,7 @@ export function WorkflowInboxItemCard({ tenantId, item }: WorkflowInboxItemCardP
   const [comment, setComment] = useState('');
   const [error, setError] = useState<string | null>(null);
   const decide = useDecideWorkflow(tenantId, item.instance.id, item.activeStep.id);
+  const payloadLines = summarizeWorkflowPayload(item);
 
   async function submit(decision: 'approve' | 'reject' | 'return') {
     setError(null);
@@ -58,6 +60,13 @@ export function WorkflowInboxItemCard({ tenantId, item }: WorkflowInboxItemCardP
       </div>
 
       <div className="px-4 py-4 sm:px-5">
+        {payloadLines.length > 0 ? (
+          <ul className="mb-4 space-y-1 rounded-lg bg-muted/30 px-3 py-2.5 text-[13px] text-neutral-700">
+            {payloadLines.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        ) : null}
         {!expanded ? (
           <button type="button" className={ACADEMIC_UI.btnPrimarySm} onClick={() => setExpanded(true)}>
             Review & decide

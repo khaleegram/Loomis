@@ -12,6 +12,7 @@ import {
 } from '@loomis/core';
 import { LoomisError } from '../../../shared/errors.js';
 import { dispatchEvent } from '../../../shared/events/registry.js';
+import { examOpsService } from '../../academic/services/exam-ops.service.js';
 import { loadTenantMfaContext } from '../../identity/services/tenant-mfa-context.js';
 import { tokenService } from '../../identity/services/token.service.js';
 import {
@@ -204,6 +205,14 @@ export const workflowService = {
 
     if (actor.role !== activeStep.approverRole) {
       throw new LoomisError('FORBIDDEN', 403, 'Your role is not authorised for this approval step');
+    }
+
+    if (
+      tenantId &&
+      actor.role === 'deputy_exam_officer' &&
+      activeStep.approverRole === 'deputy_exam_officer'
+    ) {
+      await examOpsService.assertDeputyActivated(tenantId);
     }
 
     // CON-013 / FR-WFL-004: requester cannot approve their own request.
