@@ -175,6 +175,26 @@ export const authService = {
     }
 
     const tenantCtx = await loadTenantMfaContext(user.tenantId);
+    const enrolledMfa = await mfaRepository.findByUserId(user.id);
+    if (enrolledMfa?.status === 'active') {
+      if (ctx.persistentToken && ctx.deviceFingerprint) {
+        const deviceId = await deviceService.verifyPersistentToken(
+          user.id,
+          ctx.deviceFingerprint,
+          ctx.persistentToken,
+        );
+        if (deviceId) {
+          const bundle = await this.issueAuthenticatedSession(user, ctx, {
+            mfaCompleted: true,
+            deviceId,
+          });
+          return { kind: 'authenticated', bundle };
+        }
+      }
+      const mfaChallengeId = await this.createMfaChallenge(user.id, ctx, 'totp');
+      return { kind: 'mfa_required', mfaChallengeId, channel: 'totp' as const };
+    }
+
     if (
       tenantCtx &&
       coreLoginRequiresSms(

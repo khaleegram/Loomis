@@ -292,7 +292,7 @@ async function seedStudentsForClass(
 ) {
   for (let i = 0; i < count; i++) {
     const n = startIndex + i;
-    const admission = await admissionService.createAdmission(
+    const created = await admissionService.createAdmission(
       tenantId,
       {
         firstName: 'Student',
@@ -308,23 +308,36 @@ async function seedStudentsForClass(
       actor,
     );
 
-    const decided = await admissionService.decideAdmission(
-      tenantId,
-      admission.id,
-      { decision: 'approve', admissionNo: `GFA-${String(n).padStart(4, '0')}` },
-      actor,
-    );
-    const studentId = decided.student?.id;
+    let studentId = created.student?.id ?? null;
+    if (!studentId) {
+      const decided = await admissionService.decideAdmission(
+        tenantId,
+        created.admission.id,
+        { decision: 'approve', admissionNo: `GFA-${String(n).padStart(4, '0')}` },
+        actor,
+      );
+      studentId = decided.student?.id ?? null;
+    }
     if (!studentId) throw new Error('Student not created from admission');
 
-    await studentService.recordIdentityAttestation(
+    const student = await studentRepository.findStudentById(tenantId, studentId);
+    if (student && !student.identityAttestationType) {
+      await studentService.recordIdentityAttestation(
+        tenantId,
+        studentId,
+        { attestationType: 'birth_certificate' },
+        actor,
+      );
+    }
+
+    const existingEnrollment = await studentRepository.findEnrollmentForTerm(
       tenantId,
       studentId,
-      { attestationType: 'birth_certificate' },
-      actor,
+      termId,
     );
-
-    await enrollmentService.enrollStudent(tenantId, studentId, { termId, classArmId }, actor);
+    if (!existingEnrollment) {
+      await enrollmentService.enrollStudent(tenantId, studentId, { termId, classArmId }, actor);
+    }
   }
 }
 
@@ -805,6 +818,138 @@ async function seedTimetables(
 }
 
 /** Finish timetables when a prior run failed after enrolling students. */
+async function ensureSubjectAssignmentsForArms(
+  tenantId: string,
+  openTermId: string,
+  classArms: { id: string; levelId: string; label: string }[],
+  teachers: { staffProfileId: string }[],
+  principalUserId: string,
+): Promise<void> {
+  for (let armIndex = 0; armIndex < classArms.length; armIndex++) {
+    const arm = classArms[armIndex]!;
+    for (let s = 0; s < SUBJECTS.length; s++) {
+      const subject = SUBJECTS[s]!;
+      const teacher = teachers[(armIndex + s) % teachers.length];
+      if (!teacher) continue;
+      try {
+        await staffRepository.createSubjectAssignment({
+          tenantId,
+          staffProfileId: teacher.staffProfileId,
+          termId: openTermId,
+          classArmId: arm.id,
+          subjectId: subject.id,
+          actorUserId: principalUserId,
+          approvedById: principalUserId,
+        });
+      } catch (err) {
+        const code = err instanceof Error && 'code' in err ? (err as { code?: string }).code : undefined;
+        if (code !== 'HRM_SUBJECT_ASSIGNMENT_CONFLICT') throw err;
+      }
+    }
+  }
+}
+
+async function countEnrolledStudents(tenantId: string): Promise<number> {
+  const rows = await studentRepository.listStudents(tenantId);
+  return rows.filter((row) => row.status === 'enrolled').length;
+}
+
+/** Resume student enrollment when calendar exists but a prior run stopped early. */
+async function resumeGreenfieldStudentEnrollment(tenantId: string): Promise<boolean> {
+  const enrolled = await countEnrolledStudents(tenantId);
+  if (enrolled >= TOTAL_STUDENTS - 5) return false;
+
+  console.log(`  Resuming Greenfield enrollment (${enrolled}/${TOTAL_STUDENTS} enrolled)…`);
+
+  const staffProfiles = await loadRichStaffRefs(tenantId);
+  const principal = staffProfiles.find((s) => s.email === MARKER_EMAIL);
+  if (!principal) throw new Error('Principal missing on interrupted rich seed');
+
+  const actor = { userId: principal.userId, role: 'principal' as Role, tenantId };
+  const years = await academicRepository.listYears(tenantId);
+  const year = years.find((y) => y.status === 'active') ?? years[0];
+  if (!year) throw new Error('Academic year missing');
+
+  const terms = await academicRepository.listTermsByYear(tenantId, year.id);
+  const openTerm = terms.find((t) => t.status === 'open');
+  if (!openTerm) throw new Error('Open term missing');
+
+  const levelRows = await academicRepository.listClassLevels(tenantId);
+  const armRows = await academicRepository.listClassArms(tenantId, year.id);
+  const classArms = armRows.map((arm) => {
+    const level = levelRows.find((l) => l.id === arm.classLevelId);
+    return {
+      id: arm.id,
+      levelId: arm.classLevelId,
+      label: `${level?.code ?? '?'} ${arm.name}`,
+    };
+  });
+  if (classArms.length === 0) throw new Error('Class arms missing');
+
+  const teachers = staffProfiles.filter((s) => s.email.startsWith('teacher'));
+  const roster = await studentRepository.listTermEnrollmentRoster(tenantId, openTerm.id);
+  const basePerClass = Math.floor(TOTAL_STUDENTS / TOTAL_CLASSES);
+  let remainder = TOTAL_STUDENTS - basePerClass * TOTAL_CLASSES;
+  let studentCounter = 1;
+
+  for (let armIndex = 0; armIndex < classArms.length; armIndex++) {
+    const arm = classArms[armIndex]!;
+    const extra = remainder > 0 ? 1 : 0;
+    if (extra) remainder -= 1;
+    const target = basePerClass + extra;
+    const current = roster.filter((row) => row.classArmId === arm.id).length;
+    if (current >= target) {
+      studentCounter += target;
+      continue;
+    }
+
+    console.log(`  Enrolling ${target - current} more students in ${arm.label}…`);
+    await seedStudentsForClass(
+      tenantId,
+      actor,
+      openTerm.id,
+      arm.id,
+      arm.levelId,
+      target - current,
+      studentCounter + current,
+    );
+    studentCounter += target;
+
+    const classTeacher = resolveClassTeacherForArm(teachers, arm.label, armIndex);
+    if (classTeacher) {
+      try {
+        await staffRepository.assignClassTeacher({
+          tenantId,
+          staffProfileId: classTeacher.staffProfileId,
+          termId: openTerm.id,
+          classArmId: arm.id,
+          actorUserId: principal.userId,
+        });
+      } catch {
+        // idempotent
+      }
+    }
+  }
+
+  await ensureSubjectAssignmentsForArms(
+    tenantId,
+    openTerm.id,
+    classArms,
+    teachers.map((t) => ({ staffProfileId: t.staffProfileId })),
+    principal.userId,
+  );
+
+  await seedTimetables(
+    tenantId,
+    openTerm.id,
+    classArms,
+    teachers.map((t) => ({ staffProfileId: t.staffProfileId })),
+  );
+
+  return true;
+}
+
+/** Finish timetables when a prior run failed after enrolling students. */
 async function resumeRichSeedTimetables(tenantId: string): Promise<boolean> {
   const years = await academicRepository.listYears(tenantId);
   const year = years.find((y) => y.status === 'active') ?? years[0];
@@ -831,7 +976,23 @@ async function resumeRichSeedTimetables(tenantId: string): Promise<boolean> {
 
   if (teachers.length === 0) throw new Error('No teacher profiles found for resume');
 
-  await seedTimetables(tenantId, openTerm.id, arms, teachers);
+  const classArms = arms.map((arm) => ({
+    id: arm.id,
+    levelId: arm.classLevelId,
+    label: arm.name,
+  }));
+  const principal = (await loadRichStaffRefs(tenantId)).find((s) => s.email === MARKER_EMAIL);
+  if (principal) {
+    await ensureSubjectAssignmentsForArms(
+      tenantId,
+      openTerm.id,
+      classArms,
+      teachers,
+      principal.userId,
+    );
+  }
+
+  await seedTimetables(tenantId, openTerm.id, classArms, teachers);
   return true;
 }
 
@@ -1378,6 +1539,7 @@ async function main() {
     const platformOwner = await userRepository.findByEmail(PLATFORM_OWNER_EMAIL);
     const createdById = platformOwner?.id ?? existing.id;
 
+    const enrollmentResumed = await resumeGreenfieldStudentEnrollment(existing.tenantId);
     const reassigned = await ensureTeacher01SubjectTeacherOnly(existing.tenantId);
     const gradesSeeded = await seedJss1BGradebookEntries(existing.tenantId);
     const resumed = await resumeRichSeedTimetables(existing.tenantId);
@@ -1407,7 +1569,11 @@ async function main() {
       );
     }
     console.log(
-      resumed ? 'Rich seed timetables completed (resumed).' : 'Rich seed already applied.',
+      enrollmentResumed
+        ? 'Rich seed enrollment completed (resumed).'
+        : resumed
+          ? 'Rich seed timetables completed (resumed).'
+          : 'Rich seed already applied.',
     );
     return;
   }
