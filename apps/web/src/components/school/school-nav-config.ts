@@ -143,6 +143,15 @@ export const SCHOOL_NAV: SchoolNavItem[] = [
     hideInCombinedFinanceDesk: true,
   },
   {
+    id: 'finance-register',
+    label: 'Payment register',
+    href: '/school/finance/payments/history',
+    icon: ScrollText,
+    section: 'ledger',
+    capabilities: ['payment.log', 'payment.verify'],
+    hideInCombinedFinanceDesk: true,
+  },
+  {
     id: 'finance-verify',
     label: 'Verify payments',
     href: '/school/finance/payments/verify',

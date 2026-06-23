@@ -1,18 +1,21 @@
 'use client';
 
 import Link from 'next/link';
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { usePaymentStatusPoll } from '@loomis/api-client';
+import { usePaymentStatusPoll, queryKeys } from '@loomis/api-client';
 import { formatKobo } from '@loomis/core';
+import { useQueryClient } from '@tanstack/react-query';
 import { Alert, AlertDescription, Button, Skeleton } from '@loomis/ui-web';
 import { CheckCircle2, Clock, XCircle } from 'lucide-react';
 
+import { PaymentReceiptPanel } from '@/components/finance/payment-receipt-panel';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { useActiveTenantStore } from '@/lib/tenant/active-tenant-store';
 
 function PaymentCompleteContent() {
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const paymentId = searchParams.get('paymentId');
   const tenantFromQuery = searchParams.get('tenantId');
   const storeTenantId = useActiveTenantStore((s) => s.activeTenantId);
@@ -21,6 +24,19 @@ function PaymentCompleteContent() {
   const paymentQuery = usePaymentStatusPoll(tenantId, paymentId);
   const payment = paymentQuery.data;
   const status = payment?.status;
+
+  useEffect(() => {
+    if (status !== 'verified' || !tenantId || !payment) return;
+    void queryClient.invalidateQueries({ queryKey: queryKeys.parent.dashboard() });
+    if (payment.studentId && payment.termId) {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.parent.fees(tenantId, payment.studentId, payment.termId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.parent.payments(tenantId, payment.studentId, payment.termId),
+      });
+    }
+  }, [status, tenantId, payment, queryClient]);
 
   return (
     <main className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-4 py-12">
@@ -43,10 +59,14 @@ function PaymentCompleteContent() {
             <CheckCircle2 aria-hidden className="mx-auto size-12 text-emerald-600" />
             <h1 className="mt-4 text-xl font-bold text-neutral-900">Payment successful</h1>
             <p className="mt-2 text-[13px] text-neutral-500">
-              {payment ? formatKobo(payment.amountMinor) : 'Your payment'} has been confirmed. Your receipt
-              is ready in the portal.
+              {payment ? formatKobo(payment.amountMinor) : 'Your payment'} has been confirmed.
             </p>
-            <Button asChild className={`${ACADEMIC_UI.btnPrimary} mt-6`}>
+            {payment ? (
+              <div className="mt-6 text-left">
+                <PaymentReceiptPanel payment={payment} />
+              </div>
+            ) : null}
+            <Button asChild className={`${ACADEMIC_UI.btnPrimary} mt-6 w-full`}>
               <Link href="/parent/fees">View fee status</Link>
             </Button>
           </>

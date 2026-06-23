@@ -2,6 +2,8 @@ import type {
   FeeItemCategory,
   InvoiceStatus,
   OfflinePaymentMethod,
+  OnlinePaymentMethod,
+  PaymentChannel,
   PaymentStatus,
   RefundReasonCode,
   RefundRequestStatus,
@@ -36,6 +38,35 @@ const REFUND_REASON_LABELS: Record<RefundReasonCode, string> = {
   platform_error: 'Platform error',
   legal_compulsion: 'Legal compulsion',
 };
+
+const ONLINE_PAYMENT_METHOD_LABELS: Record<OnlinePaymentMethod, string> = {
+  card: 'Card',
+  bank_transfer: 'Bank transfer',
+  ussd: 'USSD',
+};
+
+const PAYMENT_CHANNEL_LABELS: Record<PaymentChannel, string> = {
+  offline: 'Offline',
+  online: 'Online',
+};
+
+export function formatOnlinePaymentMethod(method: OnlinePaymentMethod | string): string {
+  return ONLINE_PAYMENT_METHOD_LABELS[method as OnlinePaymentMethod] ?? method;
+}
+
+export function formatPaymentChannel(channel: PaymentChannel): string {
+  return PAYMENT_CHANNEL_LABELS[channel] ?? channel;
+}
+
+export function formatPaymentMethod(
+  channel: PaymentChannel,
+  method: string,
+): string {
+  if (channel === 'online') {
+    return formatOnlinePaymentMethod(method);
+  }
+  return formatOfflinePaymentMethod(method as OfflinePaymentMethod);
+}
 
 export function formatFeeCategory(category: FeeItemCategory): string {
   return FEE_CATEGORY_LABELS[category] ?? category;

@@ -377,6 +377,7 @@ export function useInitializeOnlinePayment(tenantId: string, termId: string, stu
     invalidates: [
       ...financeInvalidation(tenantId, termId),
       queryKeys.parent.fees(tenantId, studentId, termId),
+      queryKeys.parent.payments(tenantId, studentId, termId),
       queryKeys.parent.dashboard(),
     ],
   });

@@ -7,12 +7,14 @@ import {
   useMyProfile,
   useParentDashboard,
   useParentFees,
+  useParentPayments,
 } from '@loomis/api-client';
-import type { ParentChildCardResponse } from '@loomis/contracts';
+import type { OnlinePaymentMethod, ParentChildCardResponse } from '@loomis/contracts';
 import {
   Alert,
   AlertDescription,
   Badge,
+  CurrencyInput,
   Label,
   Select,
   SelectContent,
@@ -25,6 +27,7 @@ import { Banknote, CreditCard } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { ParentFeesHero } from '@/components/parent/parent-fees-hero';
+import { ParentPaymentHistory } from '@/components/finance/parent-payment-history';
 import { PageBody } from '@/components/parent/parent-shell';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { useAuth } from '@/lib/auth/auth-context';
@@ -47,6 +50,8 @@ function ParentFeesView() {
   const setActiveTenantId = useActiveTenantStore((s) => s.setActiveTenantId);
   const [payError, setPayError] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
+  const [payAmountMinor, setPayAmountMinor] = useState(0);
+  const [payMethod, setPayMethod] = useState<OnlinePaymentMethod>('card');
 
   const dashboardQuery = useParentDashboard();
   const profileQuery = useMyProfile();
@@ -74,6 +79,11 @@ function ParentFeesView() {
     activeCard?.studentId ?? null,
     resolvedTermId,
   );
+  const paymentsQuery = useParentPayments(
+    activeCard?.tenantId ?? '',
+    activeCard?.studentId ?? null,
+    resolvedTermId,
+  );
   const initializePayment = useInitializeOnlinePayment(
     activeCard?.tenantId ?? '',
     resolvedTermId ?? '',
@@ -85,17 +95,26 @@ function ParentFeesView() {
 
   const payerEmail = profileQuery.data?.email ?? '';
 
+  useEffect(() => {
+    if (fees && fees.balanceMinor > 0) {
+      setPayAmountMinor(fees.balanceMinor);
+    } else {
+      setPayAmountMinor(0);
+    }
+  }, [fees?.invoiceId, fees?.balanceMinor]);
+
   async function handlePayOnline() {
-    if (!fees?.invoiceId || fees.balanceMinor <= 0 || !payerEmail) return;
+    if (!fees?.invoiceId || fees.balanceMinor <= 0 || !payerEmail || payAmountMinor <= 0) return;
+    if (payAmountMinor > fees.balanceMinor) return;
     setPayError(null);
     setPaying(true);
     try {
       const result = await initializePayment.mutateAsync({
         invoiceId: fees.invoiceId,
-        amountMinor: fees.balanceMinor,
+        amountMinor: payAmountMinor,
         payerEmail,
         provider: 'paystack',
-        method: 'card',
+        method: payMethod,
         clientPlatform: 'web',
       });
       window.location.assign(result.authorizationUrl);
@@ -244,10 +263,32 @@ function ParentFeesView() {
             </div>
             <div className="space-y-4 p-4 sm:p-5">
               <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-4">
-                <p className="text-[13px] font-medium text-neutral-900">Outstanding balance</p>
-                <p className="mt-1 font-mono text-2xl font-bold tabular-nums text-neutral-900">
-                  {formatKobo(fees.balanceMinor)}
+                <p className="text-[13px] font-medium text-neutral-900">Amount to pay</p>
+                <div className="mt-2">
+                  <CurrencyInput
+                    valueKobo={payAmountMinor}
+                    onChangeKobo={(kobo) => setPayAmountMinor(Math.min(kobo, fees.balanceMinor))}
+                    disabled={paying || initializePayment.isPending}
+                  />
+                </div>
+                <p className="mt-2 text-[11px] text-neutral-500">
+                  Outstanding balance {formatKobo(fees.balanceMinor)}
                 </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-[12px] font-bold uppercase tracking-wide text-neutral-400">
+                  Payment method
+                </Label>
+                <Select value={payMethod} onValueChange={(v) => setPayMethod(v as OnlinePaymentMethod)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="card">Debit / credit card</SelectItem>
+                    <SelectItem value="bank_transfer">Bank transfer</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {payError ? (
@@ -282,12 +323,12 @@ function ParentFeesView() {
                   <button
                     type="button"
                     className={`${ACADEMIC_UI.btnPrimary} w-full`}
-                    disabled={paying || initializePayment.isPending}
+                    disabled={paying || initializePayment.isPending || payAmountMinor <= 0}
                     onClick={() => void handlePayOnline()}
                   >
                     {paying || initializePayment.isPending
                       ? 'Redirecting…'
-                      : `Pay ${formatKobo(fees.balanceMinor)} now`}
+                      : `Pay ${formatKobo(payAmountMinor)} now`}
                   </button>
                 </>
               )}
@@ -295,6 +336,13 @@ function ParentFeesView() {
           </div>
         </div>
       )}
+
+      {resolvedTermId && activeCard?.studentId ? (
+        <ParentPaymentHistory
+          payments={paymentsQuery.data?.payments ?? []}
+          isLoading={paymentsQuery.isLoading}
+        />
+      ) : null}
     </div>
   );
 }

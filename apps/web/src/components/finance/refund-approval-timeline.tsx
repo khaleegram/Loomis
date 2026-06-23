@@ -200,7 +200,6 @@ export function RefundApprovalTimeline({
   const verifiedPaymentsQuery = usePayments(tenantId, {
     termId,
     status: 'verified',
-    channel: 'offline',
   });
   const verifiedPayments = verifiedPaymentsQuery.data?.payments ?? [];
 

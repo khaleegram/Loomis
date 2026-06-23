@@ -90,6 +90,9 @@ export function PaymentVerifyHero({
           </div>
 
           <div className="flex w-full shrink-0 flex-wrap gap-2 lg:w-auto lg:justify-end">
+            <Link href="/school/finance/payments/history" className={ACADEMIC_UI.btnSecondary}>
+              Payment register
+            </Link>
             <Link href="/school/finance/payments/log" className={ACADEMIC_UI.btnSecondary}>
               Log payment
             </Link>

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { parentAttendanceQuery, parentFeesQuery, parentResultsQuery, parentTimetableQuery, type ParentAttendanceQuery, type ParentFeesQuery, type ParentResultsQuery, type ParentTimetableQuery } from '@loomis/contracts';
+import { parentAttendanceQuery, parentFeesQuery, parentPaymentsQuery, parentResultsQuery, parentTimetableQuery, type ParentAttendanceQuery, type ParentFeesQuery, type ParentPaymentsQuery, type ParentResultsQuery, type ParentTimetableQuery } from '@loomis/contracts';
 import { authenticate } from '../../../middleware/authenticate.js';
 import { requireRole } from '../../../middleware/require-role.js';
 import { requireTenantMatch } from '../../../middleware/require-tenant-match.js';
@@ -8,6 +8,7 @@ import {
   getParentAttendanceHandler,
   getParentDashboardHandler,
   getParentFeesHandler,
+  getParentPaymentsHandler,
   getParentResultsHandler,
   getParentTimetableHandler,
   getRegionalAnalyticsHandler,
@@ -55,6 +56,15 @@ export async function readModelsRoutes(app: FastifyInstance): Promise<void> {
       preValidation: [validateQuery(parentFeesQuery)],
     },
     getParentFeesHandler,
+  );
+
+  app.get<{ Querystring: ParentPaymentsQuery }>(
+    '/parents/me/payments',
+    {
+      preHandler: [authenticate, requireTenantMatch, requireRole('parent')],
+      preValidation: [validateQuery(parentPaymentsQuery)],
+    },
+    getParentPaymentsHandler,
   );
 
   app.get<{ Querystring: { region?: string } }>(

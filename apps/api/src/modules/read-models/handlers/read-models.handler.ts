@@ -2,6 +2,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import type {
   ParentAttendanceQuery,
   ParentFeesQuery,
+  ParentPaymentsQuery,
   ParentResultsQuery,
   ParentTimetableQuery,
 } from '@loomis/contracts';
@@ -11,7 +12,9 @@ import { attendanceRecordToResponse, timetableEntryToResponse } from '../../acad
 import { attendanceService } from '../../academic/services/attendance.service.js';
 import { gradebookService } from '../../academic/services/gradebook.service.js';
 import { timetableService } from '../../academic/services/timetable.service.js';
+import { paymentToResponse } from '../../finance/handlers/_serializers.js';
 import { invoiceService } from '../../finance/services/invoice.service.js';
+import { paymentService } from '../../finance/services/payment.service.js';
 import { parentDashboardReadService, regionalAnalyticsReadService } from '../services/index.js';
 
 function requireActor(req: FastifyRequest) {
@@ -142,6 +145,25 @@ export async function getParentFeesHandler(
   );
 
   return sendSuccess(reply, result);
+}
+
+export async function getParentPaymentsHandler(
+  req: FastifyRequest<{ Querystring: ParentPaymentsQuery }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const tenantId = req.headers['x-tenant-id'];
+  if (typeof tenantId !== 'string' || !tenantId) {
+    throw new LoomisError('VALIDATION_ERROR', 400, 'X-Tenant-Id header is required');
+  }
+
+  const results = await paymentService.listParentChildPayments(
+    tenantId,
+    req.query.studentId,
+    req.query.termId,
+    requireActor(req),
+  );
+
+  return sendSuccess(reply, { payments: results.map(paymentToResponse) });
 }
 
 export async function getRegionalAnalyticsHandler(

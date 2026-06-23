@@ -82,7 +82,7 @@ export async function paymentsRoutes(app: FastifyInstance): Promise<void> {
       preHandler: [
         authenticate,
         requireTenantMatch,
-        requireRole('cashier', 'accountant', 'principal'),
+        requireRole('cashier', 'accountant', 'principal', 'school_owner'),
       ],
       preValidation: [validateQuery(paymentsQuery)],
     },

@@ -369,9 +369,6 @@ export const paymentService = {
     }
 
     if (actor.role === 'parent') {
-      if (found.payment.loggedById !== actor.userId) {
-        throw new LoomisError('FORBIDDEN', 403, 'You can only view your own payments');
-      }
       const linked = await studentRepository.hasActiveParentLink(
         tenantId,
         actor.userId,
@@ -383,6 +380,25 @@ export const paymentService = {
     }
 
     return found;
+  },
+
+  /** US-PAR-004. Payment history for a linked child (all channels). */
+  async listParentChildPayments(
+    tenantId: string,
+    studentId: string,
+    termId: string,
+    actor: ActorContext,
+  ): Promise<PaymentWithReceipt[]> {
+    if (actor.role !== 'parent') {
+      throw new LoomisError('FORBIDDEN', 403, 'Parent role required');
+    }
+
+    const linked = await studentRepository.hasActiveParentLink(tenantId, actor.userId, studentId);
+    if (!linked) {
+      throw new LoomisError('FORBIDDEN', 403, 'You are not linked to this student');
+    }
+
+    return paymentRepository.listPayments(tenantId, { studentId, termId });
   },
 
   async listPayments(

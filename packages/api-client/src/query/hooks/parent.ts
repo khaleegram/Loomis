@@ -4,6 +4,7 @@ import type {
   ChildPublishedResultsResponse,
   ParentDashboardResponse,
   ParentFeeStatusResponse,
+  ParentPaymentsListResponse,
 } from '@loomis/contracts';
 import type { ApiClient } from '../../http/client.js';
 import { useApiClient } from '../context.js';
@@ -74,6 +75,26 @@ export function useParentFees(
     queryKey: queryKeys.parent.fees(tenantId, studentId ?? '', termId ?? ''),
     queryFn: () =>
       client.get<ParentFeeStatusResponse>(`/parents/me/fees?${params.toString()}`, {
+        headers: { 'X-Tenant-Id': tenantId },
+      }),
+    staleTime: STALE_MS,
+    enabled: Boolean(tenantId && studentId && termId),
+  });
+}
+
+export function useParentPayments(
+  tenantId: string,
+  studentId: string | null,
+  termId: string | null,
+) {
+  const client = useApiClient();
+  const params = new URLSearchParams();
+  if (studentId) params.set('studentId', studentId);
+  if (termId) params.set('termId', termId);
+  return useQuery<ParentPaymentsListResponse>({
+    queryKey: queryKeys.parent.payments(tenantId, studentId ?? '', termId ?? ''),
+    queryFn: () =>
+      client.get<ParentPaymentsListResponse>(`/parents/me/payments?${params.toString()}`, {
         headers: { 'X-Tenant-Id': tenantId },
       }),
     staleTime: STALE_MS,

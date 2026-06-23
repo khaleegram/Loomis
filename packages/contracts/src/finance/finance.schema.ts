@@ -397,6 +397,15 @@ export const parentFeeStatusResponse = z.object({
 });
 export type ParentFeeStatusResponse = z.infer<typeof parentFeeStatusResponse>;
 
+/** US-PAR-004. Parent views payment history for a linked child in a term. */
+export const parentPaymentsQuery = parentFeesQuery;
+export type ParentPaymentsQuery = z.infer<typeof parentPaymentsQuery>;
+
+export const parentPaymentsListResponse = z.object({
+  payments: z.array(paymentResponse),
+});
+export type ParentPaymentsListResponse = z.infer<typeof parentPaymentsListResponse>;
+
 // ── Refunds (US-FIN-006 / FR-FIN-007) ────────────────────────────────────────
 
 export const refundReasonCode = z.enum([
