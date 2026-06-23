@@ -30,7 +30,7 @@ export function PlatformAuthGate({ children }: PlatformAuthGateProps) {
     }
   }, [status, session, router, signOut]);
 
-  if (status === 'loading') {
+  if (status === 'loading' && !session) {
     return (
       <div className="flex h-screen flex-col overflow-hidden bg-neutral-50 dark:bg-forest-950">
         <Skeleton className="h-14 w-full shrink-0 rounded-none bg-neutral-200 dark:bg-forest-900" />

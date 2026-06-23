@@ -10,6 +10,7 @@ import {
   Textarea,
 } from '@loomis/ui-web';
 import { Check, X } from 'lucide-react';
+import Link from 'next/link';
 import { useState } from 'react';
 
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
@@ -116,9 +117,9 @@ export function CoreInlineWorkflowDecision({
           ) : null}
         </div>
         {href ? (
-          <a href={href} className={ACADEMIC_UI.btnSecondarySm}>
+          <Link href={href} prefetch className={ACADEMIC_UI.btnSecondarySm}>
             Open
-          </a>
+          </Link>
         ) : null}
       </div>
 

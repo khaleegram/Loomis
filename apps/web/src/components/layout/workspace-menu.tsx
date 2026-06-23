@@ -2,6 +2,7 @@
 
 import type { LucideIcon } from 'lucide-react';
 import { LogOut, Settings } from 'lucide-react';
+import Link from 'next/link';
 
 import { cn } from '@loomis/ui-web';
 
@@ -15,8 +16,9 @@ export function WorkspaceMenuItem({ item, active }: { item: WorkspaceNavItem; ac
   const Icon = item.icon;
 
   return (
-    <a
+    <Link
       href={item.href}
+      prefetch
       aria-current={active ? 'page' : undefined}
       className={cn(
         'group flex items-center gap-3 rounded-xl px-2.5 py-1.5 text-[13.5px] font-semibold transition-all duration-200',
@@ -42,7 +44,7 @@ export function WorkspaceMenuItem({ item, active }: { item: WorkspaceNavItem; ac
           aria-hidden
         />
       ) : null}
-    </a>
+    </Link>
   );
 }
 

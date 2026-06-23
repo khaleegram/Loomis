@@ -11,7 +11,7 @@ interface SchoolAuthGateProps {
 
 /** Ensures an authenticated school-session before rendering console pages. */
 export function SchoolAuthGate({ children }: SchoolAuthGateProps) {
-  const { status, signOut } = useAuth();
+  const { status, session, signOut } = useAuth();
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -20,7 +20,7 @@ export function SchoolAuthGate({ children }: SchoolAuthGateProps) {
     }
   }, [status, signOut]);
 
-  if (status === 'loading') {
+  if (status === 'loading' && !session) {
     return (
       <div className="flex h-screen flex-col overflow-hidden bg-background">
         <Skeleton className="h-14 w-full shrink-0 rounded-none" />

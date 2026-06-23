@@ -35,7 +35,7 @@ import { useIdempotentMutation } from '../../mutations/useIdempotentMutation.js'
 import { useApiClient } from '../context.js';
 import { assertTenantScopedKey, queryKeys } from '../keys.js';
 
-const ACADEMIC_STALE_MS = 30_000;
+const ACADEMIC_STALE_MS = 5 * 60_000;
 
 function invalidateAcademicQueries(
   queryClient: ReturnType<typeof useQueryClient>,

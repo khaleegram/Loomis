@@ -1,5 +1,6 @@
 'use client';
 
+import { useApiClient } from '@loomis/api-client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import {
@@ -15,6 +16,7 @@ import {
 
 import { memoryTokenStore } from '@/lib/auth/memory-token-store';
 import * as authClient from '@/lib/auth/auth-client';
+import { prefetchSchoolConsoleCache } from '@/lib/auth/prefetch-console-cache';
 import { landingPathForRole } from '@/lib/auth/route-groups';
 import { useActiveTenantStore } from '@/lib/tenant/active-tenant-store';
 
@@ -23,7 +25,8 @@ type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 interface AuthContextValue {
   status: AuthStatus;
   session: authClient.AuthenticatedSession | null;
-  /** Promote a fresh session (after login / MFA) into memory + schedule refresh. */
+  /** True once a valid access token is in memory. */
+  isTokenReady: boolean;
   completeAuthentication: (session: authClient.AuthenticatedSession) => void;
   signOut: (allDevices?: boolean) => Promise<void>;
   homePath: () => string;
@@ -37,8 +40,10 @@ const REFRESH_LEEWAY_MS = 60_000;
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const apiClient = useApiClient();
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [session, setSession] = useState<authClient.AuthenticatedSession | null>(null);
+  const [isTokenReady, setIsTokenReady] = useState(false);
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearTimer = useCallback(() => {
@@ -48,15 +53,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const applySession = useCallback(
-    (next: authClient.AuthenticatedSession) => {
-      memoryTokenStore.setAccessToken(next.accessToken);
-      useActiveTenantStore.getState().setActiveTenantId(next.tenantId);
-      setSession(next);
-      setStatus('authenticated');
-    },
-    [],
-  );
+  const applySession = useCallback((next: authClient.AuthenticatedSession) => {
+    memoryTokenStore.setAccessToken(next.accessToken);
+    useActiveTenantStore.getState().setActiveTenantId(next.tenantId);
+    setSession(next);
+    setStatus('authenticated');
+    setIsTokenReady(Boolean(next.accessToken));
+  }, []);
 
   const clearSession = useCallback(() => {
     clearTimer();
@@ -64,18 +67,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     useActiveTenantStore.getState().clear();
     setSession(null);
     setStatus('unauthenticated');
+    setIsTokenReady(false);
   }, [clearTimer]);
 
-  /** Clears httpOnly cookies when the in-memory session is dead but edge gating still sees a session. */
+  const prefetchShell = useCallback(
+    (tenantId: string | null) => {
+      if (!tenantId) return;
+      void prefetchSchoolConsoleCache(queryClient, apiClient, tenantId);
+    },
+    [apiClient, queryClient],
+  );
+
   const purgeStaleServerSession = useCallback(async () => {
     try {
       await authClient.logout();
     } catch {
-      // Best-effort — logout clears cookies even when the backend is unreachable.
+      // Best-effort
     }
   }, []);
 
-  // Single source for scheduling the next silent refresh.
   const scheduleRefresh = useCallback(
     (expiresAt: string) => {
       clearTimer();
@@ -103,8 +113,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     (next: authClient.AuthenticatedSession) => {
       applySession(next);
       scheduleRefresh(next.expiresAt);
+      prefetchShell(next.tenantId);
     },
-    [applySession, scheduleRefresh],
+    [applySession, prefetchShell, scheduleRefresh],
   );
 
   const signOut = useCallback(
@@ -113,7 +124,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await authClient.logout(allDevices);
       } finally {
         clearSession();
-        // Purge all cached tenant data on logout (loomis-frontend).
         queryClient.clear();
         router.replace('/login');
       }
@@ -121,40 +131,74 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [clearSession, queryClient, router],
   );
 
-  // Bootstrap: try to mint an access token from the httpOnly refresh cookie.
   useEffect(() => {
     let active = true;
+
     void (async () => {
+      const refreshPromise = authClient.refresh().catch(
+        () => null as authClient.AuthenticatedSession | null,
+      );
+
       try {
-        const next = await authClient.refresh();
+        const descriptor = await authClient.fetchSessionDescriptor();
         if (!active) return;
-        if (next) {
-          applySession(next);
-          scheduleRefresh(next.expiresAt);
-        } else if (!memoryTokenStore.getAccessToken()) {
-          await purgeStaleServerSession();
-          if (active) clearSession();
+
+        if (descriptor) {
+          useActiveTenantStore.getState().setActiveTenantId(descriptor.tenantId);
+          setSession(authClient.sessionFromDescriptor(descriptor));
+          setStatus('authenticated');
+          prefetchShell(descriptor.tenantId);
         }
+
+        const refreshed = await refreshPromise;
+        if (!active) return;
+
+        if (refreshed) {
+          applySession(refreshed);
+          scheduleRefresh(refreshed.expiresAt);
+          prefetchShell(refreshed.tenantId);
+          return;
+        }
+
+        if (!descriptor) {
+          if (!memoryTokenStore.getAccessToken()) {
+            await purgeStaleServerSession();
+            if (active) clearSession();
+          }
+          return;
+        }
+
+        await purgeStaleServerSession();
+        if (active) clearSession();
       } catch {
         await purgeStaleServerSession();
         if (active) clearSession();
       }
     })();
+
     return () => {
       active = false;
       clearTimer();
     };
-  }, [applySession, clearSession, clearTimer, purgeStaleServerSession, scheduleRefresh]);
+  }, [
+    applySession,
+    clearSession,
+    clearTimer,
+    prefetchShell,
+    purgeStaleServerSession,
+    scheduleRefresh,
+  ]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       status,
       session,
+      isTokenReady,
       completeAuthentication,
       signOut,
       homePath: () => (session ? landingPathForRole(session.role) : '/login'),
     }),
-    [status, session, completeAuthentication, signOut],
+    [status, session, isTokenReady, completeAuthentication, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

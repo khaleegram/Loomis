@@ -18,5 +18,7 @@ export async function GET(req: NextRequest) {
     authenticated: true,
     role: session.role,
     tenantId: session.tenantId,
+    ...(session.mustChangePassword ? { mustChangePassword: true } : {}),
+    ...(session.displayName ? { displayName: session.displayName } : {}),
   });
 }

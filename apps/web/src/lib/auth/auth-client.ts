@@ -171,6 +171,43 @@ export async function confirmPasswordReset(
   if (!res.ok) throw toAuthError(res.status, json);
 }
 
+export interface SessionDescriptor {
+  authenticated: true;
+  role: Role;
+  tenantId: string | null;
+  mustChangePassword?: boolean;
+  displayName?: string;
+}
+
+/** Fast session read from the BFF session cookie — no token mint, no backend hop. */
+export async function fetchSessionDescriptor(): Promise<SessionDescriptor | null> {
+  const res = await fetch('/api/auth/session', { credentials: 'same-origin' });
+  if (!res.ok) return null;
+  const json = (await res.json().catch(() => null)) as
+    | { authenticated?: boolean; role?: Role; tenantId?: string | null; mustChangePassword?: boolean; displayName?: string }
+    | null;
+  if (!json?.authenticated || !json.role) return null;
+  return {
+    authenticated: true,
+    role: json.role,
+    tenantId: json.tenantId ?? null,
+    ...(json.mustChangePassword ? { mustChangePassword: true } : {}),
+    ...(json.displayName ? { displayName: json.displayName } : {}),
+  };
+}
+
+/** Build a placeholder session for optimistic shell render before refresh completes. */
+export function sessionFromDescriptor(desc: SessionDescriptor): AuthenticatedSession {
+  return {
+    accessToken: '',
+    expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
+    role: desc.role,
+    tenantId: desc.tenantId,
+    ...(desc.mustChangePassword ? { mustChangePassword: true } : {}),
+    ...(desc.displayName ? { displayName: desc.displayName } : {}),
+  };
+}
+
 /** Exchange the httpOnly refresh cookie for a fresh in-memory access token. */
 export async function refresh(): Promise<AuthenticatedSession | null> {
   const res = await postJson('/api/auth/refresh', {});
