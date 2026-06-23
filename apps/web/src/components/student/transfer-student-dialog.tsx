@@ -24,6 +24,8 @@ import {
   Input,
   Textarea,
 } from '@loomis/ui-web';
+import Link from 'next/link';
+import { useState } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -55,6 +57,7 @@ export function TransferStudentDialog({
   onTransferred,
 }: TransferStudentDialogProps) {
   const transfer = useTransferStudentOut(tenantId, studentId);
+  const [pendingWorkflow, setPendingWorkflow] = useState(false);
 
   const form = useForm<TransferFormValues>({
     resolver: zodResolver(transferFormSchema) as Resolver<TransferFormValues>,
@@ -71,8 +74,12 @@ export function TransferStudentDialog({
       reason: values.reason,
     };
     try {
-      await transfer.mutateAsync(body);
+      const result = await transfer.mutateAsync(body);
       form.reset();
+      if (result.pendingApproval) {
+        setPendingWorkflow(true);
+        return;
+      }
       onOpenChange(false);
       onTransferred?.();
     } catch (err) {
@@ -81,7 +88,16 @@ export function TransferStudentDialog({
   });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) {
+          form.reset();
+          setPendingWorkflow(false);
+        }
+        onOpenChange(next);
+      }}
+    >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Process transfer out</DialogTitle>
@@ -90,76 +106,98 @@ export function TransferStudentDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <Alert variant="destructive">
-          <AlertTitle>Irreversible action</AlertTitle>
-          <AlertDescription>
-            This removes the student from future term enrollments and ends active class placements.
-            A transfer certificate will be generated on approval.
-          </AlertDescription>
-        </Alert>
-
-        <Form {...form}>
-          <form onSubmit={onSubmit} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="destinationSchool"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Destination school</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="School name or Unknown" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="reason"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Reason for transfer</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} rows={3} placeholder="Document the reason…" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="acknowledged"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start gap-3 space-y-0">
-                  <FormControl>
-                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>
-                      I understand this formally ends enrollment at this school
-                    </FormLabel>
-                    <FormMessage />
-                  </div>
-                </FormItem>
-              )}
-            />
-
-            {form.formState.errors.root ? (
-              <p className="text-sm text-destructive" role="alert">
-                {form.formState.errors.root.message}
-              </p>
-            ) : null}
-
-            <DialogFooter>
+        {pendingWorkflow ? (
+          <>
+            <Alert>
+              <AlertTitle>Transfer submitted for approval</AlertTitle>
+              <AlertDescription>
+                The Principal must approve this transfer in the workflow inbox before the certificate
+                is generated and enrollments end.
+              </AlertDescription>
+            </Alert>
+            <DialogFooter className="gap-2 sm:justify-end">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                Close
               </Button>
-              <Button type="submit" variant="destructive" disabled={transfer.isSubmitting}>
-                {transfer.isSubmitting ? 'Processing…' : 'Submit transfer'}
+              <Button asChild>
+                <Link href="/school/workflows/inbox">Open workflow inbox</Link>
               </Button>
             </DialogFooter>
-          </form>
-        </Form>
+          </>
+        ) : (
+          <>
+            <Alert variant="destructive">
+              <AlertTitle>Irreversible action</AlertTitle>
+              <AlertDescription>
+                This removes the student from future term enrollments and ends active class
+                placements. A transfer certificate will be generated on approval.
+              </AlertDescription>
+            </Alert>
+
+            <Form {...form}>
+              <form onSubmit={onSubmit} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="destinationSchool"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Destination school</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="School name or Unknown" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="reason"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Reason for transfer</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} rows={3} placeholder="Document the reason…" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="acknowledged"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start gap-3 space-y-0">
+                      <FormControl>
+                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>
+                          I understand this formally ends enrollment at this school
+                        </FormLabel>
+                        <FormMessage />
+                      </div>
+                    </FormItem>
+                  )}
+                />
+
+                {form.formState.errors.root ? (
+                  <p className="text-sm text-destructive" role="alert">
+                    {form.formState.errors.root.message}
+                  </p>
+                ) : null}
+
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" variant="destructive" disabled={transfer.isSubmitting}>
+                    {transfer.isSubmitting ? 'Processing…' : 'Submit transfer'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

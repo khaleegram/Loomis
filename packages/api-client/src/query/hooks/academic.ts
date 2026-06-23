@@ -21,6 +21,7 @@ import type {
   ConfigureTermRequest,
   CreateAcademicYearRequest,
   StagePromotionRequest,
+  TermClosurePreviewResponse,
   StepUpAction,
   StepUpRequest,
   StepUpResponse,
@@ -123,6 +124,23 @@ export function censusPreviewQueryOptions(
   };
 }
 
+export function termClosurePreviewQueryOptions(
+  client: ApiClient,
+  tenantId: string,
+  termId: string,
+) {
+  const queryKey = queryKeys.academic.closurePreview(tenantId, termId);
+  assertTenantScopedKey(queryKey, tenantId);
+  return {
+    queryKey,
+    queryFn: () =>
+      client.get<TermClosurePreviewResponse>(
+        `/tenants/${tenantId}/terms/${termId}/closure-preview`,
+      ),
+    staleTime: 30_000,
+  };
+}
+
 /** Lists academic years for the tenant (US-ASM-001). */
 export function useAcademicYears(tenantId: string) {
   const client = useApiClient();
@@ -156,6 +174,15 @@ export function useCensusPreview(tenantId: string, termId: string) {
   return useQuery({
     ...censusPreviewQueryOptions(client, tenantId, termId),
     enabled: Boolean(tenantId && termId),
+  });
+}
+
+/** Pre-close term gate review (US-ASM-004). */
+export function useTermClosurePreview(tenantId: string, termId: string, enabled = true) {
+  const client = useApiClient();
+  return useQuery({
+    ...termClosurePreviewQueryOptions(client, tenantId, termId),
+    enabled: Boolean(tenantId && termId && enabled),
   });
 }
 

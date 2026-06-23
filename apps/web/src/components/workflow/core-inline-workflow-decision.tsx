@@ -17,15 +17,22 @@ import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { refundAmountFromPayload } from '@/lib/leadership/leadership-attention';
 import { formatRoleLabel } from '@/components/school/school-nav-config';
 import { SEMANTIC } from '@/lib/design/surfaces';
+import { hrefForWorkflowItem } from '@/lib/workflow/workflow-context-link';
+import { summarizeWorkflowPayload } from '@/lib/workflow/workflow-payload-summary';
 
 const WORKFLOW_LABELS: Partial<Record<WorkflowType, string>> = {
   staff_role_change: 'Staff role change',
   refund_request: 'Refund request',
   fee_structure_change: 'Fee structure amendment',
   student_promotion_batch: 'Promotion batch',
+  student_transfer_out: 'Student transfer',
+  held_back_override: 'Held back override',
 };
 
 function describeWorkflowItem(item: WorkflowInboxItemResponse): string {
+  const payloadLines = summarizeWorkflowPayload(item);
+  if (payloadLines.length > 0) return payloadLines[0] ?? item.instance.title ?? 'Pending approval';
+
   const payload = item.instance.payload ?? {};
   switch (item.instance.workflowType) {
     case 'staff_role_change': {
@@ -40,21 +47,6 @@ function describeWorkflowItem(item: WorkflowInboxItemResponse): string {
       return item.instance.title ?? 'Fee amendment pending';
     default:
       return item.instance.title ?? 'Pending approval';
-  }
-}
-
-function hrefForWorkflowItem(item: WorkflowInboxItemResponse): string | null {
-  switch (item.instance.workflowType) {
-    case 'staff_role_change':
-      return item.instance.subjectId
-        ? `/school/staff/${item.instance.subjectId}`
-        : '/school/staff';
-    case 'refund_request':
-      return '/school/finance/refunds';
-    case 'fee_structure_change':
-      return '/school/workflows';
-    default:
-      return null;
   }
 }
 

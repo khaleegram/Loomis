@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { role as roleSchema, type Role } from '@loomis/contracts';
 
 import {
   REFRESH_COOKIE,
@@ -24,6 +25,16 @@ export function setAuthCookies(res: NextResponse, info: SessionInfo, refreshToke
   res.cookies.set(SESSION_COOKIE, serializeSession(info), sessionCookieOptions(maxAge));
 }
 
+export function parseStaffExtensionRoles(value: unknown): Role[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const roles: Role[] = [];
+  for (const item of value) {
+    const parsed = roleSchema.safeParse(item);
+    if (parsed.success) roles.push(parsed.data);
+  }
+  return roles.length > 0 ? roles : undefined;
+}
+
 /** Expires both auth cookies (logout / session invalidation). */
 export function clearAuthCookies(res: NextResponse): void {
   res.cookies.set(REFRESH_COOKIE, '', refreshCookieOptions(0));
@@ -44,6 +55,7 @@ export function respondAuthenticated(bundle: AuthenticatedBundle): NextResponse 
     tenantId: bundle.tenantId,
     mustChangePassword: bundle.mustChangePassword ?? false,
     displayName: bundle.displayName ?? undefined,
+    staffExtensionRoles: bundle.staffExtensionRoles,
     ...((bundle as { persistentToken?: string }).persistentToken
       ? { persistentToken: (bundle as { persistentToken?: string }).persistentToken }
       : {}),
@@ -55,6 +67,9 @@ export function respondAuthenticated(bundle: AuthenticatedBundle): NextResponse 
       tenantId: bundle.tenantId,
       ...(bundle.mustChangePassword ? { mustChangePassword: true } : {}),
       ...(bundle.displayName ? { displayName: bundle.displayName } : {}),
+      ...(bundle.staffExtensionRoles?.length
+        ? { staffExtensionRoles: bundle.staffExtensionRoles }
+        : {}),
     },
     bundle.refreshToken,
   );
@@ -83,6 +98,7 @@ interface BackendAuthData {
   refreshToken?: string;
   mustChangePassword?: boolean;
   displayName?: string;
+  staffExtensionRoles?: Role[];
   persistentToken?: string;
   [key: string]: unknown;
 }
@@ -115,6 +131,9 @@ export async function handleAuthBackendResponse(response: Response): Promise<Nex
       tenantId: typeof data.tenantId === 'string' ? data.tenantId : null,
       ...(data.mustChangePassword === true ? { mustChangePassword: true } : {}),
       ...(typeof data.displayName === 'string' ? { displayName: data.displayName } : {}),
+      ...(parseStaffExtensionRoles(data.staffExtensionRoles)
+        ? { staffExtensionRoles: parseStaffExtensionRoles(data.staffExtensionRoles) }
+        : {}),
     };
     return respondAuthenticated({
       ...session,

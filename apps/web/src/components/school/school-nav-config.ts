@@ -268,6 +268,14 @@ function isCombinedFinanceDesk(ctx: SchoolNavContext, role: Role): boolean {
   return ctx.financeMode === 'combined' && FINANCE_ROLES.includes(role);
 }
 
+/** Core tenants without Advanced optional-role flags — legacy accounts get minimal nav. */
+function isCoreOptionalRoleWithoutFlag(role: Role, ctx: SchoolNavContext): boolean {
+  if (ctx.experienceTier !== 'core') return false;
+  if (role === 'timetable_officer' && !ctx.flags.timetableDedicatedOfficer) return true;
+  if (role === 'deputy_exam_officer' && !ctx.flags.deputyExamEnabled) return true;
+  return false;
+}
+
 /** Tier-, flag-, and finance-mode-aware nav visibility (ROLE_EXPERIENCE Sprint 3). */
 export function isNavVisible(role: Role, item: SchoolNavItem, ctx: SchoolNavContext): boolean {
   if (item.hideForRoles?.includes(role)) return false;
@@ -279,12 +287,10 @@ export function isNavVisible(role: Role, item: SchoolNavItem, ctx: SchoolNavCont
     return false;
   }
 
-  if (role === 'deputy_exam_officer' && ctx.experienceTier === 'core' && !ctx.flags.deputyExamEnabled) {
-    if (item.id === 'exams') return false;
-  }
-
-  if (role === 'timetable_officer' && ctx.experienceTier === 'core' && !ctx.flags.timetableDedicatedOfficer) {
-    if (item.id === 'dashboard') return false;
+  if (isCoreOptionalRoleWithoutFlag(role, ctx)) {
+    if (item.id === 'settings') return true;
+    if (role === 'timetable_officer' && item.id === 'academic') return true;
+    return false;
   }
 
   const combinedDesk = isCombinedFinanceDesk(ctx, role);

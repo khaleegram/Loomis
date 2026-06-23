@@ -11,8 +11,12 @@ export default function Index() {
     return <Redirect href="/(auth)/login" />;
   }
 
-  if (isMobileRole(session.role)) {
-    return <Redirect href={homeRouteForRole(session.role) as Href} />;
+  if (isMobileRole(session.role, session.staffExtensionRoles ?? [])) {
+    return (
+      <Redirect
+        href={homeRouteForRole(session.role, session.staffExtensionRoles ?? []) as Href}
+      />
+    );
   }
 
   return <Redirect href="/(auth)/unsupported" />;

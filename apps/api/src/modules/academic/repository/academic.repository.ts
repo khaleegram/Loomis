@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, lte, ne } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, isNull, lte, ne, sql } from 'drizzle-orm';
 import {
   academicTerms,
   academicYears,
@@ -12,6 +12,7 @@ import {
   results,
   studentPromotionRecords,
 } from '../../../../drizzle/schema/academic.js';
+import { enrollments } from '../../../../drizzle/schema/student.js';
 import type { Executor } from '../../../shared/db.js';
 import { withTenantContext } from '../../../shared/tenant-context.js';
 import type {
@@ -980,5 +981,73 @@ export const academicRepository = {
         )
         .orderBy(asc(gradebookEntries.subjectId)),
     );
+  },
+
+  /** FR-ASM-006: gradebook rows that are not fully locked for term closure. */
+  async countUnlockedGradebookEntries(tenantId: string, termId: string): Promise<number> {
+    return withTenantContext(tenantId, async (tx) => {
+      const [row] = await tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(gradebookEntries)
+        .where(
+          and(
+            eq(gradebookEntries.tenantId, tenantId),
+            eq(gradebookEntries.termId, termId),
+            inArray(gradebookEntries.status, ['draft', 'correction_pending', 'corrected']),
+          ),
+        );
+      return row?.count ?? 0;
+    });
+  },
+
+  /** FR-ASM-006: active enrollments without a published result header for the term. */
+  async countEnrolledStudentsWithoutPublishedResults(
+    tenantId: string,
+    termId: string,
+  ): Promise<number> {
+    return withTenantContext(tenantId, async (tx) => {
+      const [row] = await tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(enrollments)
+        .leftJoin(
+          results,
+          and(
+            eq(results.tenantId, enrollments.tenantId),
+            eq(results.termId, enrollments.termId),
+            eq(results.studentId, enrollments.studentId),
+            eq(results.status, 'published'),
+          ),
+        )
+        .where(
+          and(
+            eq(enrollments.tenantId, tenantId),
+            eq(enrollments.termId, termId),
+            inArray(enrollments.status, ['active', 'active_billable']),
+            isNull(results.id),
+          ),
+        );
+      return row?.count ?? 0;
+    });
+  },
+
+  /** FR-ASM-006: grade-correction workflow rows still awaiting a decision. */
+  async countPendingGradeCorrectionsForTerm(tenantId: string, termId: string): Promise<number> {
+    return withTenantContext(tenantId, async (tx) => {
+      const [row] = await tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(gradeCorrectionLogs)
+        .innerJoin(
+          gradebookEntries,
+          eq(gradeCorrectionLogs.gradebookEntryId, gradebookEntries.id),
+        )
+        .where(
+          and(
+            eq(gradeCorrectionLogs.tenantId, tenantId),
+            eq(gradebookEntries.termId, termId),
+            eq(gradeCorrectionLogs.status, 'pending'),
+          ),
+        );
+      return row?.count ?? 0;
+    });
   },
 };

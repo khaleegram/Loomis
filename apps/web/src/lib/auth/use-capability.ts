@@ -7,7 +7,7 @@ import { useTeachingStaffContext } from '@loomis/api-client';
 import { useSchoolAcademicOptional } from '@/lib/academic/school-academic-context';
 import { useAuth } from '@/lib/auth/auth-context';
 import { useAuthQueryEnabled } from '@/lib/auth/use-auth-query-enabled';
-import { deriveTeachingEffectiveRoles } from '@/lib/school/derive-teaching-roles';
+import { resolveEffectiveStaffRoles } from '@/lib/school/resolve-effective-staff-roles';
 import { useTenantExperience } from '@/lib/tenant/use-tenant-experience';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 
@@ -36,7 +36,7 @@ export function useEffectiveRoles(): Role[] {
     queriesEnabled && role && isSchoolTenantRole(role) ? termId : null,
   );
   if (!role) return [];
-  return deriveTeachingEffectiveRoles(role, teaching);
+  return resolveEffectiveStaffRoles(role, session?.staffExtensionRoles, teaching);
 }
 
 /** True when the signed-in role has the given capability (UX gating; finance-mode aware). */

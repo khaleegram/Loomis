@@ -76,7 +76,7 @@
 - [x] **Combined mode SoD**: cashier≠verify same payment still enforced by `logged_by_id !== verifier_id` even when one person (allow only if product explicitly allows self-verify in combined — **default: block self-verify** per tier plan)
 - [x] Outstanding balances API: `requireCapability('finance.balances.view')` (Owner, Principal, Accountant preset)
 - [x] PSF list API: `ledger.view` capability check
-- [x] Census lock API: **Owner role required** (Principal cannot lock in Core; align with tier plan §5 — note: if same person has both accounts, collapse)
+- [x] Census lock API: **Owner and Principal** (`census.lock` capability; Principal enabled all tiers per master plan §2.2)
 - [x] Role change API: Principal may **request**; Owner **assign** only
 - [x] Same-person collapse helper: `shouldCollapseApproval(actor, requiredApprovers)`
 

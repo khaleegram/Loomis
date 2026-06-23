@@ -14,14 +14,18 @@ export async function refreshHandler(
     throw new LoomisError('IDENTITY_SESSION_INVALIDATED', 401, 'Missing refresh token');
   }
 
-  const { accessToken, refreshToken, expiresAt, refreshExpiresAt, mustChangePassword, displayName } =
+  const { accessToken, refreshToken, expiresAt, refreshExpiresAt, mustChangePassword, displayName, role, tenantId, staffExtensionRoles } =
     await authService.refresh(rawToken);
   setRefreshCookie(reply, refreshToken, refreshExpiresAt);
 
   return sendSuccess(reply, {
+    outcome: 'authenticated' as const,
     accessToken,
     refreshToken,
     expiresAt: expiresAt.toISOString(),
+    role,
+    tenantId,
+    staffExtensionRoles,
     ...(mustChangePassword ? { mustChangePassword: true } : {}),
     ...(displayName ? { displayName } : {}),
   });

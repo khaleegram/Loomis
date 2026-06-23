@@ -58,6 +58,7 @@ export default function LoginScreen() {
           mustChangePassword: result.mustChangePassword,
           displayName: result.displayName,
           refreshToken: result.refreshToken,
+          staffExtensionRoles: result.staffExtensionRoles,
         });
         return;
       }

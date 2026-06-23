@@ -27,6 +27,7 @@ export interface SessionState {
   tenantId: string | null;
   displayName?: string;
   mustChangePassword?: boolean;
+  staffExtensionRoles?: Role[];
 }
 
 interface AuthContextValue {
@@ -81,9 +82,12 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
             tenantId: restored.tenantId,
             displayName: restored.displayName,
             mustChangePassword: restored.mustChangePassword,
+            staffExtensionRoles: restored.staffExtensionRoles,
           });
-          if (isMobileRole(restored.role)) {
-            router.replace(homeRouteForRole(restored.role) as Href);
+          if (isMobileRole(restored.role, restored.staffExtensionRoles ?? [])) {
+            router.replace(
+              homeRouteForRole(restored.role, restored.staffExtensionRoles ?? []) as Href,
+            );
           } else {
             router.replace('/(auth)/unsupported');
           }
@@ -113,9 +117,10 @@ export function AuthProvider({ children, queryClient }: AuthProviderProps) {
       tenantId: next.tenantId,
       displayName: next.displayName,
       mustChangePassword: next.mustChangePassword,
+      staffExtensionRoles: next.staffExtensionRoles,
     });
-    if (isMobileRole(next.role)) {
-      router.replace(homeRouteForRole(next.role) as Href);
+    if (isMobileRole(next.role, next.staffExtensionRoles ?? [])) {
+      router.replace(homeRouteForRole(next.role, next.staffExtensionRoles ?? []) as Href);
     } else {
       router.replace('/(auth)/unsupported');
     }

@@ -20,5 +20,8 @@ export async function GET(req: NextRequest) {
     tenantId: session.tenantId,
     ...(session.mustChangePassword ? { mustChangePassword: true } : {}),
     ...(session.displayName ? { displayName: session.displayName } : {}),
+    ...(session.staffExtensionRoles?.length
+      ? { staffExtensionRoles: session.staffExtensionRoles }
+      : {}),
   });
 }

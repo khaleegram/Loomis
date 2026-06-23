@@ -141,15 +141,15 @@ Password for all: **`LoomisDev2026!`**
 | Role | Login email | Seeded phone | Login MFA (Core) | Default landing | Primary demo use |
 |------|-------------|--------------|------------------|-----------------|------------------|
 | **school_owner** | `owner@greenfield.loomis.com` | +2348011000005 | SMS → `000000` | `/school/dashboard` | Census lock, Experience settings, audit export (Advanced+) |
-| **principal** | `principal@greenfield.loomis.com` | +2348011000001 | SMS → `000000` | `/school/dashboard` | Operations home; **census lock** (all tiers); admit if toggle on |
+| **principal** | `principal@greenfield.loomis.com` | +2348011000001 | SMS → `000000` | `/school/dashboard` | Operations home; **census lock**; timetable builder via **Academic → Timetable** |
 | **admin_officer** | `admin@greenfield.loomis.com` | +2348011000004 | SMS → `000000` | `/school/dashboard` | **Register students (one step)**, registry |
 | **accountant** | `accountant@greenfield.loomis.com` | +2348011000006 | SMS → `000000` | Finance desk | Verify payments |
 | **cashier** | `cashier@greenfield.loomis.com` | +2348011000007 | SMS → `000000` | Finance desk | Log payments |
 | **exam_officer** | `exam@greenfield.loomis.com` | +2348011000002 | Password only | `/school/exams` | Exams & publish |
-| **deputy_exam_officer** | `deputy@greenfield.loomis.com` | +2348011000008 | Password only | `/school/exams` | Deputy exams |
-| **timetable_officer** | `timetable@greenfield.loomis.com` | +2348011000003 | Password only | `/school/timetable` | Timetable builder |
 | **teacher** | `teacher01@greenfield.loomis.com` | +2348011000101 | Password only | `/school/dashboard` | Teacher Desk (My Schedule, gradebook, assignments) |
 | **class_teacher** | `teacher03@greenfield.loomis.com` | +2348011000103 | Password only | `/school/dashboard` | JSS1 B — attendance |
+
+Core does **not** seed Timetable Officer or Deputy Exam Officer — use the **Advanced QA** tenant below for those roles.
 
 Also `teacher02`–`teacher13@greenfield.loomis.com` (class teachers on other arms).
 

@@ -28,6 +28,7 @@ export interface AuthenticatedSession {
   mustChangePassword?: boolean;
   displayName?: string;
   refreshToken?: string;
+  staffExtensionRoles?: Role[];
 }
 
 export class AuthError extends Error {
@@ -67,6 +68,15 @@ function toAuthError(status: number, json: unknown): AuthError {
   );
 }
 
+function parseStaffExtensionRoles(value: unknown): Role[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const roles: Role[] = [];
+  for (const item of value) {
+    if (typeof item === 'string') roles.push(item as Role);
+  }
+  return roles.length > 0 ? roles : undefined;
+}
+
 function toSession(data: Record<string, unknown>): AuthenticatedSession {
   const accessToken = String(data.accessToken);
   const decoded = decodeSessionFromAccessToken(accessToken);
@@ -75,6 +85,8 @@ function toSession(data: Record<string, unknown>): AuthenticatedSession {
   if (!role) {
     throw new AuthError('INTERNAL_ERROR', 'Session is missing role claim', 500);
   }
+
+  const staffExtensionRoles = parseStaffExtensionRoles(data.staffExtensionRoles);
 
   return {
     accessToken,
@@ -88,6 +100,7 @@ function toSession(data: Record<string, unknown>): AuthenticatedSession {
         ? { displayName: String(data.displayName) }
         : {}),
     ...(data.refreshToken ? { refreshToken: String(data.refreshToken) } : {}),
+    ...(staffExtensionRoles ? { staffExtensionRoles } : {}),
   };
 }
 
@@ -188,6 +201,7 @@ export async function refreshSession(): Promise<AuthenticatedSession | null> {
       outcome: 'authenticated',
       role: data.role,
       tenantId: data.tenantId ?? null,
+      staffExtensionRoles: data.staffExtensionRoles,
       accessToken: data.accessToken,
       expiresAt: data.expiresAt,
       refreshToken: data.refreshToken,

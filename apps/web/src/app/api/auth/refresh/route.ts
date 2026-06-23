@@ -9,6 +9,7 @@ import {
   bffError,
   clearAuthCookies,
   forwardError,
+  parseStaffExtensionRoles,
   respondAuthenticated,
 } from '@/lib/auth/bff-response';
 
@@ -53,7 +54,18 @@ export async function POST(req: NextRequest) {
     return res;
   }
 
-  const data = (json as { data: { accessToken?: string; refreshToken?: string; expiresAt?: string; mustChangePassword?: boolean; displayName?: string } }).data;
+  const data = (json as {
+    data: {
+      accessToken?: string;
+      refreshToken?: string;
+      expiresAt?: string;
+      mustChangePassword?: boolean;
+      displayName?: string;
+      role?: unknown;
+      tenantId?: unknown;
+      staffExtensionRoles?: unknown;
+    };
+  }).data;
   if (
     typeof data.accessToken !== 'string' ||
     typeof data.refreshToken !== 'string' ||
@@ -71,11 +83,15 @@ export async function POST(req: NextRequest) {
     return res;
   }
 
+  const staffExtensionRoles = parseStaffExtensionRoles(data.staffExtensionRoles);
+
   return respondAuthenticated({
     ...session,
+    ...(staffExtensionRoles ? { staffExtensionRoles } : {}),
     accessToken: data.accessToken,
     expiresAt: data.expiresAt,
     refreshToken: data.refreshToken,
     ...(data.mustChangePassword === true ? { mustChangePassword: true } : {}),
+    ...(typeof data.displayName === 'string' ? { displayName: data.displayName } : {}),
   });
 }

@@ -41,6 +41,9 @@ Cross-check that `.cursor/rules/` aligns with role experience authority docs.
 | `loomis-mobile-delivery.mdc` | Parent/student mobile stacks |
 | `loomis-core.mdc` | Tech stack fixed; module map |
 
+| Multi-role HRM extensions | `docs/HRM_STAFF_ROLE_EXTENSIONS.md` | `staff-role-resolver.ts`, auth `staffExtensionRoles`, `useEffectiveRoles()` |
+| Post-v1 tier build (A–D) | `docs/TIER_BUILD_SPRINTS.md` | Core TO/Deputy, extensions, closure gate, workflow links |
+
 ---
 
 ## Gaps / follow-ups (post v1)

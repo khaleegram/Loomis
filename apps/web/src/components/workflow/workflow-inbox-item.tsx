@@ -3,6 +3,7 @@
 import { useDecideWorkflow } from '@loomis/api-client';
 import type { WorkflowInboxItemResponse } from '@loomis/contracts';
 import { Alert, AlertDescription, Textarea, cn } from '@loomis/ui-web';
+import Link from 'next/link';
 import { useState } from 'react';
 
 import {
@@ -13,6 +14,7 @@ import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { academicErrorMessage } from '@/lib/academic/academic-errors';
 import { formatRoleLabel } from '@/components/school/school-nav-config';
 import { formatWorkflowTypeLabel } from '@/lib/workflow/workflow-labels';
+import { hrefForWorkflowItem } from '@/lib/workflow/workflow-context-link';
 import { summarizeWorkflowPayload } from '@/lib/workflow/workflow-payload-summary';
 
 interface WorkflowInboxItemCardProps {
@@ -26,6 +28,7 @@ export function WorkflowInboxItemCard({ tenantId, item }: WorkflowInboxItemCardP
   const [error, setError] = useState<string | null>(null);
   const decide = useDecideWorkflow(tenantId, item.instance.id, item.activeStep.id);
   const payloadLines = summarizeWorkflowPayload(item);
+  const contextHref = hrefForWorkflowItem(item);
 
   async function submit(decision: 'approve' | 'reject' | 'return') {
     setError(null);
@@ -56,6 +59,11 @@ export function WorkflowInboxItemCard({ tenantId, item }: WorkflowInboxItemCardP
         <div className="flex flex-wrap gap-2">
           <WorkflowStatusBadge status={item.instance.status} />
           <WorkflowStepStatusBadge status={item.activeStep.status} />
+          {contextHref ? (
+            <Link href={contextHref} prefetch className={ACADEMIC_UI.btnSecondarySm}>
+              Open context
+            </Link>
+          ) : null}
         </div>
       </div>
 

@@ -106,6 +106,23 @@ export const termService = {
   },
 
   /**
+   * Pre-close gate review (FR-ASM-006). Read-only; does not mutate the term.
+   */
+  async previewTermClosure(tenantId: string, termId: string, actor: ActorContext) {
+    requireTenant(actor, tenantId);
+    const term = await requireTerm(tenantId, termId);
+    const gate = await termClosureGate.evaluate(tenantId, termId);
+    return {
+      termId: term.id,
+      termStatus: term.status,
+      financialBlockers: gate.financialBlockers,
+      operationalBlockers: gate.operationalBlockers,
+      canCloseWithoutOverride:
+        gate.financialBlockers.length === 0 && gate.operationalBlockers.length === 0,
+    };
+  },
+
+  /**
    * Closes a term (FR-ASM-006 / US-ASM-004 / CON-021). The term must be census
    * locked. Closure is gated; financial blockers can NEVER be overridden at the
    * school level. See termClosureGate for the fail-closed rationale.

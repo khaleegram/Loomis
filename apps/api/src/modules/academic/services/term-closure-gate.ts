@@ -1,21 +1,15 @@
 import { paymentRepository } from '../../finance/repository/payment.repository.js';
 import { obligationRepository } from '../../ledger/repository/index.js';
+import { caseRepository } from '../../risk/repository/case.repository.js';
+import { academicRepository } from '../repository/academic.repository.js';
 
 /**
  * Term closure gate (FR-ASM-006 / US-ASM-004 / CON-021).
  *
- * Term closure is gated on conditions owned by modules that are NOT built yet
- * (Phase 1 stops at Student): unsettled PSF obligations and unverified offline
- * payments (FINANCIAL — can NEVER be overridden at the school level, CON-021),
- * plus locked gradebooks, published results, resolved grade-correction
- * workflows, and no open IVP case (OPERATIONAL — the Principal may override with
- * a documented reason).
- *
- * Per loomis-financial-integrity "Fail Closed" and loomis-implementation-
- * guardrails, we do NOT fabricate an "all clear". Until each source module's
- * read-model exists, its check is `unverifiable` and is treated as a blocker.
- * The financial blockers are unverifiable-and-unoverridable; closure stays
- * blocked rather than proceeding unsafely.
+ * Financial blockers (unsettled PSF, unverified offline payments) can NEVER be
+ * overridden at the school level. Operational blockers (gradebook lock,
+ * published results, pending grade corrections, open IVP case) may be overridden
+ * by the Principal with a documented reason.
  */
 export interface TermClosureEvaluation {
   /** Financial blockers — never overridable at school level (CON-021). */
@@ -27,32 +21,60 @@ export interface TermClosureEvaluation {
 export const termClosureGate = {
   async evaluate(tenantId: string, termId: string): Promise<TermClosureEvaluation> {
     const financialBlockers: string[] = [];
+    const operationalBlockers: string[] = [];
 
-    const unsettledObligations = await obligationRepository.countUnsettledForTerm(tenantId, termId);
+    const [
+      unsettledObligations,
+      unverifiedOffline,
+      unlockedGradebook,
+      unpublishedResults,
+      pendingCorrections,
+      ivpActive,
+    ] = await Promise.all([
+      obligationRepository.countUnsettledForTerm(tenantId, termId),
+      paymentRepository.countUnverifiedOfflinePayments(tenantId, termId),
+      academicRepository.countUnlockedGradebookEntries(tenantId, termId),
+      academicRepository.countEnrolledStudentsWithoutPublishedResults(tenantId, termId),
+      academicRepository.countPendingGradeCorrectionsForTerm(tenantId, termId),
+      caseRepository.hasActiveCaseForTerm(tenantId, termId),
+    ]);
+
     if (unsettledObligations > 0) {
       financialBlockers.push(
         `LEDGER_UNSETTLED_PSF_OBLIGATIONS: ${unsettledObligations} PSF obligation(s) remain unsettled for this term`,
       );
     }
 
-    const unverifiedOffline = await paymentRepository.countUnverifiedOfflinePayments(
-      tenantId,
-      termId,
-    );
     if (unverifiedOffline > 0) {
       financialBlockers.push(
         `FINANCE_UNVERIFIED_OFFLINE_PAYMENTS: ${unverifiedOffline} offline payment(s) await accountant verification`,
       );
     }
 
-    return {
-      financialBlockers,
-      // Academic gradebook/exams + Workflow + Risk (IVP) — operational.
-      operationalBlockers: [
-        'PENDING_ACADEMIC: gradebook lock / result publication state cannot be verified',
-        'PENDING_WORKFLOW: grade-correction workflow resolution cannot be verified',
-        'PENDING_RISK: open IVP investigation state cannot be verified',
-      ],
-    };
+    if (unlockedGradebook > 0) {
+      operationalBlockers.push(
+        `ACADEMIC_GRADEBOOK_UNLOCKED: ${unlockedGradebook} gradebook entr${unlockedGradebook === 1 ? 'y is' : 'ies are'} not locked for this term`,
+      );
+    }
+
+    if (unpublishedResults > 0) {
+      operationalBlockers.push(
+        `ACADEMIC_RESULTS_UNPUBLISHED: ${unpublishedResults} enrolled student${unpublishedResults === 1 ? ' lacks' : 's lack'} published results for this term`,
+      );
+    }
+
+    if (pendingCorrections > 0) {
+      operationalBlockers.push(
+        `ACADEMIC_GRADE_CORRECTION_PENDING: ${pendingCorrections} grade correction${pendingCorrections === 1 ? '' : 's'} await workflow resolution`,
+      );
+    }
+
+    if (ivpActive) {
+      operationalBlockers.push(
+        'RISK_IVP_ACTIVE: An open IVP investigation exists for this term',
+      );
+    }
+
+    return { financialBlockers, operationalBlockers };
   },
 };

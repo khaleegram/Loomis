@@ -17,9 +17,12 @@ import { useSchoolAcademic } from '@/lib/academic/school-academic-context';
 import { useTenantExperience } from '@/lib/tenant/use-tenant-experience';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 import {
-  deriveTeachingEffectiveRoles,
   hasTeachingDuties,
 } from '@/lib/school/derive-teaching-roles';
+import {
+  hasTeachingDutiesFromRoles,
+  resolveEffectiveStaffRoles,
+} from '@/lib/school/resolve-effective-staff-roles';
 import {
   formatRoleLabel,
   resolveSchoolNav,
@@ -70,20 +73,28 @@ export function SchoolTopBar() {
   const teachingTermId =
     queriesEnabled && role && isSchoolTenantRole(role) && activeTerm ? activeTerm.id : null;
   const { data: teaching } = useTeachingStaffContext(tenantId ?? '', teachingTermId);
+  const effectiveRoles = useMemo(
+    () =>
+      role
+        ? resolveEffectiveStaffRoles(role, session.staffExtensionRoles, teaching)
+        : undefined,
+    [role, session.staffExtensionRoles, teaching],
+  );
   const navContext: SchoolNavContext = useMemo(
     () => ({
       experienceTier: experience.experienceTier,
       financeMode: experience.financeMode,
       flags: experience.flags,
-      hasTeachingDuties: hasTeachingDuties(teaching),
-      effectiveRoles: role ? deriveTeachingEffectiveRoles(role, teaching) : undefined,
+      hasTeachingDuties:
+        hasTeachingDutiesFromRoles(effectiveRoles ?? []) || hasTeachingDuties(teaching),
+      effectiveRoles,
     }),
     [
       experience.experienceTier,
       experience.financeMode,
       experience.flags,
       teaching,
-      role,
+      effectiveRoles,
     ],
   );
   const inboxCount = inboxEnabled ? (inboxData?.items.length ?? 0) : 0;

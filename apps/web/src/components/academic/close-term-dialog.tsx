@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { LoomisClientError, useCloseTerm } from '@loomis/api-client';
+import { LoomisClientError, useCloseTerm, useTermClosurePreview } from '@loomis/api-client';
 import { closeTermRequest, type AcademicTermResponse } from '@loomis/contracts';
 import {
   Alert,
@@ -21,8 +21,9 @@ import {
   FormLabel,
   FormMessage,
   Input,
+  Skeleton,
 } from '@loomis/ui-web';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -53,10 +54,19 @@ export function CloseTermDialog({
   onOpenChange,
 }: CloseTermDialogProps) {
   const closeTerm = useCloseTerm(tenantId, yearId, term.id);
+  const preview = useTermClosurePreview(tenantId, term.id, open);
   const [serverBlockers, setServerBlockers] = useState<{
     financial?: string[];
     operational?: string[];
   } | null>(null);
+
+  const previewBlockers = preview.data
+    ? {
+        financial: preview.data.financialBlockers,
+        operational: preview.data.operationalBlockers,
+      }
+    : null;
+  const blockers = serverBlockers ?? previewBlockers;
 
   const form = useForm<CloseFormValues>({
     resolver: zodResolver(closeFormSchema),
@@ -65,6 +75,13 @@ export function CloseTermDialog({
       acknowledged: false,
     },
   });
+
+  useEffect(() => {
+    if (open) {
+      setServerBlockers(null);
+      form.reset({ overrideReason: '', acknowledged: false });
+    }
+  }, [open, form]);
 
   const onSubmit = form.handleSubmit(async (values) => {
     setServerBlockers(null);
@@ -119,12 +136,25 @@ export function CloseTermDialog({
           </AlertDescription>
         </Alert>
 
-        {serverBlockers?.financial?.length ? (
+        {preview.isLoading ? (
+          <Skeleton className="h-20 w-full rounded-lg" />
+        ) : null}
+
+        {preview.isError ? (
+          <Alert variant="warning">
+            <AlertDescription>
+              Could not load closure checks. You may still attempt to close — blockers will be returned
+              on submit.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        {blockers?.financial?.length ? (
           <Alert variant="destructive">
             <AlertTitle>Financial blockers</AlertTitle>
             <AlertDescription>
               <ul className="mt-2 list-disc space-y-1 pl-4">
-                {serverBlockers.financial.map((b) => (
+                {blockers.financial.map((b) => (
                   <li key={b}>{b}</li>
                 ))}
               </ul>
@@ -132,17 +162,23 @@ export function CloseTermDialog({
           </Alert>
         ) : null}
 
-        {serverBlockers?.operational?.length ? (
+        {blockers?.operational?.length ? (
           <Alert variant="warning">
             <AlertTitle>Operational blockers</AlertTitle>
             <AlertDescription>
               <ul className="mt-2 list-disc space-y-1 pl-4">
-                {serverBlockers.operational.map((b) => (
+                {blockers.operational.map((b) => (
                   <li key={b}>{b}</li>
                 ))}
               </ul>
               <p className="mt-2">You may document an override reason below if your role permits.</p>
             </AlertDescription>
+          </Alert>
+        ) : null}
+
+        {!preview.isLoading && preview.data?.canCloseWithoutOverride ? (
+          <Alert>
+            <AlertDescription>All closure checks passed. You may close this term.</AlertDescription>
           </Alert>
         ) : null}
 
@@ -195,7 +231,7 @@ export function CloseTermDialog({
               </button>
               <button
                 type="submit"
-                disabled={closeTerm.isPending}
+                disabled={closeTerm.isPending || Boolean(blockers?.financial?.length)}
                 className="inline-flex h-10 items-center rounded-lg border border-red-200 bg-red-50 px-5 text-[14px] font-medium text-red-800 transition-colors hover:bg-red-100 disabled:opacity-50"
               >
                 {closeTerm.isPending ? 'Closing…' : 'Close term'}

@@ -16,6 +16,7 @@ export function appErrorMessage(err: unknown): string {
 
   if (
     code.startsWith('ACADEMIC_') ||
+    code.startsWith('EXAM_') ||
     code.startsWith('IDENTITY_MFA') ||
     code === 'VALIDATION_ERROR' ||
     code === 'WORKFLOW_FORBIDDEN' ||
@@ -45,6 +46,8 @@ export function appErrorMessage(err: unknown): string {
 
 function staffFacingMessage(err: LoomisClientError): string {
   switch (err.code) {
+    case 'HRM_ROLE_NOT_ENABLED':
+      return 'This role is not enabled on your school tier. Enable it in Settings or use the web console.';
     case 'FORBIDDEN':
       return 'You do not have permission to do that.';
     case 'VALIDATION_ERROR':

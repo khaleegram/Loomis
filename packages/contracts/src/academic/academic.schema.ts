@@ -111,6 +111,19 @@ export const closeTermRequest = z.object({
 });
 export type CloseTermRequest = z.infer<typeof closeTermRequest>;
 
+/**
+ * FR-ASM-006 pre-close review. Read-only gate evaluation for the Principal before
+ * submitting closure (financial blockers are never overridable at school level).
+ */
+export const termClosurePreviewResponse = z.object({
+  termId: z.string().uuid(),
+  termStatus: academicTermStatus,
+  financialBlockers: z.array(z.string()),
+  operationalBlockers: z.array(z.string()),
+  canCloseWithoutOverride: z.boolean(),
+});
+export type TermClosurePreviewResponse = z.infer<typeof termClosurePreviewResponse>;
+
 export const academicTermResponse = z.object({
   id: z.string().uuid(),
   tenantId: z.string().uuid(),

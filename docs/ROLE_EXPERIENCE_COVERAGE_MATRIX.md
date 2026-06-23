@@ -19,6 +19,8 @@ Legend: ✅ Implemented · ⚠️ Partial / tier-gated · ❌ Not implemented ·
 | **C** | Workflow dedup (§2.3 canonical surfaces) | ✅ |
 | **D** | Replace permission `role ===` with `useCan` / `requireCapability` | ✅ |
 
+**Post-v1 tier build (Sprints A–D):** Core TO/Deputy alignment, HRM extensions, term closure gate, workflow deep links — see [`TIER_BUILD_SPRINTS.md`](./TIER_BUILD_SPRINTS.md).
+
 Key decisions applied:
 
 - **Principal may census lock** on all tiers (master plan §2.2; supersedes tier-plan “Owner only” note).
@@ -52,9 +54,11 @@ Key decisions applied:
 | **cashier** | `/school/finance/payments/log` | Log desk | ❌ | ❌ | ❌ |
 | **exam_officer** | `/school/exams` | Redirect | ❌ | ❌ | ❌ |
 | **deputy_exam_officer** | `/school/exams` | Redirect | ❌ | ❌ | ❌ |
-| **timetable_officer** | `/school/timetable` | Builder | ❌ | ❌ | ❌ |
+| **timetable_officer** | `/school/timetable` (Advanced + flag) | Builder | ❌ | ❌ | ❌ |
 | **teacher** | `/school/dashboard` | Teacher Desk | ❌ | ❌ | ❌ |
 | **class_teacher** | `/school/dashboard` | My Class | ❌ | ❌ | ❌ |
+
+Multi-role: non-teaching primaries with HRM `teacher` / `class_teacher` extensions union capabilities — see `docs/HRM_STAFF_ROLE_EXTENSIONS.md`.
 
 Regression: `apps/web/src/components/school/school-nav-config.regression.test.ts`  
 Dashboard resolver: `apps/web/src/lib/auth/school-dashboard-resolver.test.ts`
@@ -88,9 +92,9 @@ Valid `role ===` exceptions (not permission gates): home routing, nav labels, de
 | Promotion confirm | `/school/academic/promotions` | Admin stages; Owner/Principal confirm | `student.promote.confirm` cap | ✅ |
 | Census lock | `/school/academic/census-lock` | Owner, Principal | No duplicate under sessions | ✅ |
 | Admission decision | `/school/students/admissions` + optional workflow | Principal (+ Owner) | Dashboard count + link only | ✅ |
-| Student transfer out | Student profile + inbox | Admin → Principal | No separate page | ⚠️ |
-| Held-back override | Workflow inbox | Owner | From promotion confirm dialog | ⚠️ |
-| **Term closure** | — | — | — | 🔒 BLOCKED: contract only; no API handler / UI |
+| Student transfer out | Student profile + inbox | Admin → Principal | Pending approval → inbox link on submit | ✅ |
+| Held-back override | Workflow inbox (Advanced) / inline confirm (Core) | Owner (Advanced) | Promotions banner + confirm dialog | ✅ |
+| **Term closure** | Sessions → close dialog + preview | Owner, Principal | Real gate checks (financial + operational) | ✅ |
 
 Deep links: `core-inline-workflow-decision.tsx` → fee amendment href `/school/workflows`.
 
@@ -132,7 +136,6 @@ Parent/student use **role identity**, not `can()` — by design (§2.1).
 
 | Item | Reason |
 |------|--------|
-| Term closure workflow UI | No backend handler |
 | Live 2-week pilot | Manual — [`PILOT_CHECKLIST.md`](./PILOT_CHECKLIST.md) |
 | Playwright E2E for full matrix | Manual QA matrices remain source of truth |
 | Termii/SES prod | [`KNOWN_BLOCKERS.md`](./KNOWN_BLOCKERS.md) |

@@ -31,6 +31,7 @@ export interface AuthenticatedSession {
   tenantId: string | null;
   mustChangePassword?: boolean;
   displayName?: string;
+  staffExtensionRoles?: Role[];
 }
 
 export class AuthError extends Error {
@@ -83,6 +84,7 @@ function toAuthenticatedSession(data: {
   tenantId: string | null;
   mustChangePassword?: boolean;
   displayName?: string;
+  staffExtensionRoles?: Role[];
 }): AuthenticatedSession {
   return {
     accessToken: data.accessToken,
@@ -91,6 +93,7 @@ function toAuthenticatedSession(data: {
     tenantId: data.tenantId,
     ...(data.mustChangePassword ? { mustChangePassword: true } : {}),
     ...(data.displayName ? { displayName: data.displayName } : {}),
+    ...(data.staffExtensionRoles?.length ? { staffExtensionRoles: data.staffExtensionRoles } : {}),
   };
 }
 
@@ -115,8 +118,16 @@ export async function verifyMfa(input: MfaVerifyRequest): Promise<AuthenticatedS
   if (!parsed.success || parsed.data.outcome !== 'authenticated') {
     throw new AuthError('INTERNAL_ERROR', 'Malformed MFA verification response', 500);
   }
-  const { accessToken, expiresAt, role, tenantId, mustChangePassword, displayName } = parsed.data;
-  return toAuthenticatedSession({ accessToken, expiresAt, role, tenantId, mustChangePassword, displayName });
+  const { accessToken, expiresAt, role, tenantId, mustChangePassword, displayName, staffExtensionRoles } = parsed.data;
+  return toAuthenticatedSession({
+    accessToken,
+    expiresAt,
+    role,
+    tenantId,
+    mustChangePassword,
+    displayName,
+    staffExtensionRoles,
+  });
 }
 
 /** Begin TOTP enrollment using the enrollment token returned by login. */
@@ -177,6 +188,7 @@ export interface SessionDescriptor {
   tenantId: string | null;
   mustChangePassword?: boolean;
   displayName?: string;
+  staffExtensionRoles?: Role[];
 }
 
 /** Fast session read from the BFF session cookie — no token mint, no backend hop. */
@@ -184,7 +196,14 @@ export async function fetchSessionDescriptor(): Promise<SessionDescriptor | null
   const res = await fetch('/api/auth/session', { credentials: 'same-origin' });
   if (!res.ok) return null;
   const json = (await res.json().catch(() => null)) as
-    | { authenticated?: boolean; role?: Role; tenantId?: string | null; mustChangePassword?: boolean; displayName?: string }
+    | {
+        authenticated?: boolean;
+        role?: Role;
+        tenantId?: string | null;
+        mustChangePassword?: boolean;
+        displayName?: string;
+        staffExtensionRoles?: Role[];
+      }
     | null;
   if (!json?.authenticated || !json.role) return null;
   return {
@@ -193,6 +212,7 @@ export async function fetchSessionDescriptor(): Promise<SessionDescriptor | null
     tenantId: json.tenantId ?? null,
     ...(json.mustChangePassword ? { mustChangePassword: true } : {}),
     ...(json.displayName ? { displayName: json.displayName } : {}),
+    ...(json.staffExtensionRoles?.length ? { staffExtensionRoles: json.staffExtensionRoles } : {}),
   };
 }
 
@@ -205,6 +225,7 @@ export function sessionFromDescriptor(desc: SessionDescriptor): AuthenticatedSes
     tenantId: desc.tenantId,
     ...(desc.mustChangePassword ? { mustChangePassword: true } : {}),
     ...(desc.displayName ? { displayName: desc.displayName } : {}),
+    ...(desc.staffExtensionRoles?.length ? { staffExtensionRoles: desc.staffExtensionRoles } : {}),
   };
 }
 
@@ -218,8 +239,16 @@ export async function refresh(): Promise<AuthenticatedSession | null> {
   if (!parsed.success || parsed.data.outcome !== 'authenticated') {
     throw new AuthError('INTERNAL_ERROR', 'Malformed refresh response', 500);
   }
-  const { accessToken, expiresAt, role, tenantId, mustChangePassword, displayName } = parsed.data;
-  return toAuthenticatedSession({ accessToken, expiresAt, role, tenantId, mustChangePassword, displayName });
+  const { accessToken, expiresAt, role, tenantId, mustChangePassword, displayName, staffExtensionRoles } = parsed.data;
+  return toAuthenticatedSession({
+    accessToken,
+    expiresAt,
+    role,
+    tenantId,
+    mustChangePassword,
+    displayName,
+    staffExtensionRoles,
+  });
 }
 
 /** Change password after logging in with a provisioned temporary password. */

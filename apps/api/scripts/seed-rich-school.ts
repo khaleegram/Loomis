@@ -134,13 +134,6 @@ const RICH_EXTENDED_ROLE_SPECS: StaffSpec[] = [
     primaryRole: 'cashier',
     phone: '+2348011000007',
   },
-  {
-    email: seedEmail('deputy'),
-    role: 'deputy_exam_officer',
-    fullName: 'Yemi Bakare',
-    primaryRole: 'deputy_exam_officer',
-    phone: '+2348011000008',
-  },
 ];
 
 function buildStaffSpecs(): StaffSpec[] {
@@ -158,13 +151,6 @@ function buildStaffSpecs(): StaffSpec[] {
       fullName: 'Emeka Nwosu',
       primaryRole: 'exam_officer',
       phone: '+2348011000002',
-    },
-    {
-      email: seedEmail('timetable'),
-      role: 'timetable_officer',
-      fullName: 'Funke Adeyemi',
-      primaryRole: 'timetable_officer',
-      phone: '+2348011000003',
     },
     {
       email: seedEmail('admin'),
@@ -356,6 +342,33 @@ async function ensureRichExtendedRoleAccounts(
   return added;
 }
 
+/** Core tier must not ship Timetable Officer or Deputy Exam logins (tier plan §2.2–§3). */
+async function retireCoreOptionalRoleAccounts(tenantId: string): Promise<string[]> {
+  const retired: string[] = [];
+  for (const local of ['timetable', 'deputy'] as const) {
+    const email = seedEmail(local);
+    const user = await userRepository.findByEmail(email);
+    if (!user || user.tenantId !== tenantId || user.status === 'deactivated') continue;
+
+    await userRepository.setStatus(user.id, 'deactivated');
+    const profile = await staffRepository.findProfileByUserId(tenantId, user.id);
+    if (profile?.status === 'active') {
+      await withTenantContext(tenantId, async (tx) => {
+        await tx
+          .update(staffProfiles)
+          .set({ status: 'deactivated', updatedAt: new Date() })
+          .where(eq(staffProfiles.id, profile.id));
+        await tx
+          .update(roleAssignments)
+          .set({ active: false, updatedAt: new Date() })
+          .where(eq(roleAssignments.staffProfileId, profile.id));
+      });
+    }
+    retired.push(email);
+  }
+  return retired;
+}
+
 /** Student portal demo — JSS3 B child linked to parent.jss3b@greenfield.loomis.com. Idempotent. */
 async function ensureJss3BStudentPortal(tenantId: string): Promise<{
   ensured: boolean;
@@ -412,22 +425,22 @@ function printRichCredentials(tenantId: string, studentLoginEmail?: string) {
   console.log('');
   console.log('  Key logins:');
   console.log(`    • ${seedEmail('owner')}  (school owner)`);
-  console.log(`    • ${seedEmail('principal')}  (principal)`);
+  console.log(`    • ${seedEmail('principal')}  (principal — timetable builder via Academic hub)`);
   console.log(`    • ${seedEmail('admin')}  (admin officer)`);
   console.log(`    • ${seedEmail('accountant')}  (accountant → /school/finance)`);
   console.log(`    • ${seedEmail('cashier')}  (cashier → log payments)`);
-  console.log(`    • ${seedEmail('timetable')}  (timetable officer → /school/timetable)`);
   console.log(`    • ${seedEmail('exam')}  (exam officer → /school/exams)`);
-  console.log(`    • ${seedEmail('deputy')}  (deputy exam officer)`);
   console.log(`    • ${seedEmail('teacher01')}  (subject teacher — My Schedule / assignments)`);
   console.log(`    • ${seedEmail('teacher03')}  (class teacher JSS1 B — attendance)`);
   console.log(`    • ${PARENT_JSS3B_EMAIL}  (parent — linked child in JSS3 B → /parent/fees)`);
+  console.log('');
+  console.log('  Optional roles (Advanced QA tenant only): timetable_officer, deputy_exam_officer');
   if (studentLoginEmail) {
     console.log(`    • ${studentLoginEmail}  (student — JSS3 B portal)`);
   }
   console.log('');
-  console.log('  Data: 12 classes · 467 students · 24 staff · published timetables');
-  console.log('  Try: /school/timetable · /school/students · /parent/fees');
+  console.log('  Data: 12 classes · 467 students · 22 staff · published timetables');
+  console.log('  Try: /school/academic (timetable) · /school/students · /parent/fees');
   console.log('══════════════════════════════════════════════════════════════');
   console.log('');
 }
@@ -754,16 +767,16 @@ async function seedTimetables(
   classArms: { id: string }[],
   teachers: { staffProfileId: string }[],
 ) {
-  const timetableOfficer = await userRepository.findByEmail(seedEmail('timetable'));
-  if (!timetableOfficer) throw new Error('Timetable officer missing');
+  const principal = await userRepository.findByEmail(MARKER_EMAIL);
+  if (!principal) throw new Error('Principal missing');
 
   const timetableActor = {
-    userId: timetableOfficer.id,
-    role: 'timetable_officer' as Role,
+    userId: principal.id,
+    role: 'principal' as Role,
     tenantId,
   };
 
-  console.log('  Building and publishing timetables…');
+  console.log('  Building and publishing timetables (Principal — Core tier path)…');
   for (let armIndex = 0; armIndex < classArms.length; armIndex++) {
     const arm = classArms[armIndex]!;
     const existing = await timetableRepository.list(tenantId, openTermId, arm.id, false);
@@ -1557,6 +1570,7 @@ async function main() {
     const gradesSeeded = await seedJss1BGradebookEntries(existing.tenantId);
     const parentDemo = await ensureJss3BParentDemo(existing.tenantId);
     const addedRoles = await ensureRichExtendedRoleAccounts(existing.tenantId, createdById);
+    const retiredRoles = await retireCoreOptionalRoleAccounts(existing.tenantId);
     const studentPortal = await ensureJss3BStudentPortal(existing.tenantId);
 
     printRichCredentials(existing.tenantId, studentPortal.loginEmail);
@@ -1574,6 +1588,9 @@ async function main() {
     }
     if (addedRoles.length > 0) {
       console.log(`Added role demo accounts: ${addedRoles.join(', ')}`);
+    }
+    if (retiredRoles.length > 0) {
+      console.log(`Retired Core optional-role accounts (use Advanced QA tenant): ${retiredRoles.join(', ')}`);
     }
     if (studentPortal.ensured && studentPortal.loginEmail) {
       console.log(
@@ -1664,6 +1681,10 @@ async function seedGreenfieldTimetablesOnly(): Promise<void> {
   const platformOwner = await userRepository.findByEmail(PLATFORM_OWNER_EMAIL);
   if (platformOwner) {
     await ensureRichExtendedRoleAccounts(existing.tenantId, platformOwner.id);
+    const retired = await retireCoreOptionalRoleAccounts(existing.tenantId);
+    if (retired.length > 0) {
+      console.log(`Retired Core optional-role accounts: ${retired.join(', ')}`);
+    }
   }
 
   console.log('Publishing Greenfield timetables only…');

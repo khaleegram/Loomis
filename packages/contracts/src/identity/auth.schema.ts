@@ -7,6 +7,9 @@ export const loginRequest = z.object({
 });
 export type LoginRequest = z.infer<typeof loginRequest>;
 
+/** Active HRM extension roles (e.g. teacher on accountant primary) — not in JWT. */
+export const staffExtensionRoles = z.array(role).default([]);
+
 /** Login may complete, or require an MFA challenge before issuing tokens. */
 export const loginResponse = z.discriminatedUnion('outcome', [
   z.object({
@@ -17,6 +20,7 @@ export const loginResponse = z.discriminatedUnion('outcome', [
     tenantId: z.string().uuid().nullable(),
     mustChangePassword: z.boolean().default(false),
     displayName: z.string().optional(),
+    staffExtensionRoles: staffExtensionRoles.optional(),
   }),
   z.object({
     outcome: z.literal('mfa_required'),

@@ -100,4 +100,24 @@ describe('school nav Sprint 3', () => {
     expect(nav.some((i) => i.id === 'timetable')).toBe(true);
     expect(nav.some((i) => i.id === 'finance-desk')).toBe(true);
   });
+
+  it('Core: hides Timetable Officer nav when dedicated officer flag is off', () => {
+    const nav = resolveSchoolNav('timetable_officer', coreCombined);
+    expect(nav.some((i) => i.id === 'timetable')).toBe(false);
+    expect(nav.some((i) => i.id === 'dashboard')).toBe(false);
+    expect(nav.some((i) => i.id === 'academic')).toBe(true);
+    expect(nav.some((i) => i.id === 'settings')).toBe(true);
+  });
+
+  it('Core: hides Deputy Exam nav when deputy flag is off', () => {
+    const nav = resolveSchoolNav('deputy_exam_officer', coreCombined);
+    expect(nav.some((i) => i.id === 'exams')).toBe(false);
+    expect(nav.some((i) => i.id === 'gradebook')).toBe(false);
+    expect(nav.some((i) => i.id === 'settings')).toBe(true);
+  });
+
+  it('Advanced: Timetable Officer sees timetable when dedicated officer flag is on', () => {
+    const nav = resolveSchoolNav('timetable_officer', advancedWithFlags);
+    expect(nav.some((i) => i.id === 'timetable')).toBe(true);
+  });
 });

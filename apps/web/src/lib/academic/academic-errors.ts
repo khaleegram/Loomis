@@ -79,6 +79,14 @@ export function academicErrorMessage(err: unknown): string {
       return 'No enrollment found for this term.';
     case 'STUDENT_NOT_FOUND':
       return 'Student profile not found for your account.';
+    case 'ACADEMIC_HELD_BACK_APPROVAL_PENDING':
+      return 'Held-back students need School Owner approval in the workflow inbox before you can confirm promotions.';
+    case 'EXAM_EMERGENCY_PUBLISH_INACTIVE':
+      return 'Principal emergency publish is not active. Contact platform support or wait for Exam Officer action.';
+    case 'EXAM_DEPUTY_DISABLED':
+      return 'Deputy Exam Officer is not enabled for this school tier.';
+    case 'EXAM_DEPUTY_NOT_ACTIVATED':
+      return 'Deputy Exam Officer activates only after 72 hours of Exam Officer inactivity.';
     case 'WORKFLOW_FORBIDDEN':
       return 'You cannot action this workflow step.';
     case 'WORKFLOW_STEP_NOT_ACTIVE':

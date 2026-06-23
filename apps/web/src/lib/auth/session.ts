@@ -14,6 +14,8 @@ export interface SessionInfo {
   tenantId: string | null;
   mustChangePassword?: boolean;
   displayName?: string;
+  /** HRM extension roles (teacher / class_teacher) — refreshed on login/refresh. */
+  staffExtensionRoles?: Role[];
 }
 
 export function serializeSession(info: SessionInfo): string {
@@ -34,12 +36,30 @@ function safeJsonParse(raw: string): unknown {
 
 export function parseSession(raw: string | undefined | null): SessionInfo | null {
   if (!raw) return null;
-  const parsed = safeJsonParse(raw) as { role?: unknown; tenantId?: unknown; mustChangePassword?: unknown; displayName?: unknown } | null;
+  const parsed = safeJsonParse(raw) as {
+    role?: unknown;
+    tenantId?: unknown;
+    mustChangePassword?: unknown;
+    displayName?: unknown;
+    staffExtensionRoles?: unknown;
+  } | null;
   if (!parsed || typeof parsed !== 'object') return null;
   const parsedRole = roleSchema.safeParse(parsed.role);
   if (!parsedRole.success) return null;
   const tenantId = typeof parsed.tenantId === 'string' ? parsed.tenantId : null;
   const mustChangePassword = parsed.mustChangePassword === true;
   const displayName = typeof parsed.displayName === 'string' ? parsed.displayName : undefined;
-  return { role: parsedRole.data, tenantId, ...(mustChangePassword ? { mustChangePassword: true } : {}), ...(displayName ? { displayName } : {}) };
+  const staffExtensionRoles = Array.isArray(parsed.staffExtensionRoles)
+    ? parsed.staffExtensionRoles.flatMap((value) => {
+        const parsedExtension = roleSchema.safeParse(value);
+        return parsedExtension.success ? [parsedExtension.data] : [];
+      })
+    : undefined;
+  return {
+    role: parsedRole.data,
+    tenantId,
+    ...(mustChangePassword ? { mustChangePassword: true } : {}),
+    ...(displayName ? { displayName } : {}),
+    ...(staffExtensionRoles?.length ? { staffExtensionRoles } : {}),
+  };
 }

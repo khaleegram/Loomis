@@ -162,6 +162,18 @@ export async function closeTermHandler(
   return sendSuccess(reply, academicTermToResponse(term));
 }
 
+export async function termClosurePreviewHandler(
+  req: FastifyRequest<{ Params: TermParams }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const preview = await termService.previewTermClosure(
+    req.params.tenantId,
+    req.params.termId,
+    requireActor(req),
+  );
+  return sendSuccess(reply, preview);
+}
+
 // ── Census lock (Revenue Integrity) ──────────────────────────────────────────────
 
 export async function censusPreviewHandler(

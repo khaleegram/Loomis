@@ -15,6 +15,7 @@ import {
   getTermHandler,
   listTermsHandler,
   openTermHandler,
+  termClosurePreviewHandler,
 } from '../handlers/index.js';
 
 // FR-ASM-004: Principal, School Owner, or Timetable Officer configure a term.
@@ -60,6 +61,12 @@ export async function termsRoutes(app: FastifyInstance): Promise<void> {
     '/tenants/:tenantId/terms/:termId/open',
     { preHandler: [authenticate, requireTenantMatch, requireRole(...termLifecycleAdmins)] },
     openTermHandler,
+  );
+
+  app.get<{ Params: { tenantId: string; termId: string } }>(
+    '/tenants/:tenantId/terms/:termId/closure-preview',
+    { preHandler: [authenticate, requireTenantMatch, requireRole(...termLifecycleAdmins)] },
+    termClosurePreviewHandler,
   );
 
   app.post<{ Params: { tenantId: string; termId: string }; Body: CloseTermRequest }>(

@@ -97,9 +97,19 @@ describe('school nav tier regression (Sprint 14)', () => {
     expect(navIds('admin_officer', DEFAULT_SCHOOL_NAV_CONTEXT)).not.toContain('finance-balances');
   });
 
-  it('Advanced: exam officer lands on exams, not dashboard', () => {
+  it('Core: exam officer lands on exams, not dashboard', () => {
     const ids = navIds('exam_officer', advancedCtx);
     expect(ids).toContain('exams');
     expect(ids).not.toContain('dashboard');
+  });
+
+  it('Core: timetable_officer without flag sees only academic + settings', () => {
+    const ids = navIds('timetable_officer', DEFAULT_SCHOOL_NAV_CONTEXT);
+    expect(ids).toEqual(['academic', 'settings']);
+  });
+
+  it('Core: deputy_exam_officer without flag sees only settings', () => {
+    const ids = navIds('deputy_exam_officer', DEFAULT_SCHOOL_NAV_CONTEXT);
+    expect(ids).toEqual(['settings']);
   });
 });

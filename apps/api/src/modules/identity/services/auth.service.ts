@@ -3,9 +3,11 @@ import { uuidv7 } from 'uuidv7';
 import {
   advancedOptionalTotpLogin,
   coreLoginRequiresSms,
+  extractStaffExtensionRoles,
   mergeExperienceFlags,
   stepUpUsesSms,
 } from '@loomis/core';
+import { resolveStaffEffectiveRoles } from '../../hrm/services/staff-role-resolver.js';
 import { db } from '../../../shared/db.js';
 import { LoomisError } from '../../../shared/errors.js';
 import { getRedis } from '../../../shared/redis.js';
@@ -68,6 +70,21 @@ export interface AuthenticatedBundle {
   displayName?: string;
   persistentToken?: string;
   persistentTokenExpiresAt?: Date;
+  staffExtensionRoles?: Role[];
+}
+
+async function loadStaffExtensionRoles(user: {
+  id: string;
+  role: string;
+  tenantId: string | null;
+}): Promise<Role[]> {
+  if (!user.tenantId) return [];
+  const effective = await resolveStaffEffectiveRoles(
+    user.tenantId,
+    user.id,
+    user.role as Role,
+  );
+  return extractStaffExtensionRoles(user.role as Role, effective);
 }
 
 export type LoginResult =
@@ -498,6 +515,8 @@ export const authService = {
       ...(opts.deviceId !== undefined ? { deviceId: opts.deviceId } : {}),
     });
 
+    const staffExtensionRoles = await loadStaffExtensionRoles(user);
+
     return {
       accessToken,
       accessExpiresAt,
@@ -508,6 +527,7 @@ export const authService = {
       sessionId: session.id,
       deviceId: opts.deviceId ?? null,
       displacedSessionId,
+      staffExtensionRoles,
       ...(user.displayName ? { displayName: user.displayName } : {}),
       ...(opts.persistentToken !== undefined ? { persistentToken: opts.persistentToken } : {}),
       ...(opts.persistentTokenExpiresAt !== undefined
@@ -525,6 +545,9 @@ export const authService = {
     refreshToken: string;
     expiresAt: Date;
     refreshExpiresAt: Date;
+    role: Role;
+    tenantId: string | null;
+    staffExtensionRoles: Role[];
     mustChangePassword: boolean;
     displayName?: string;
   }> {
@@ -591,12 +614,16 @@ export const authService = {
       ...(user.displayName ? { displayName: user.displayName } : {}),
     };
     const { token: accessToken, expiresAt } = await tokenService.signAccessToken(accessPayload);
+    const staffExtensionRoles = await loadStaffExtensionRoles(user);
 
     return {
       accessToken,
       refreshToken: newRaw,
       expiresAt,
       refreshExpiresAt: record.expiresAt,
+      role: user.role as Role,
+      tenantId: user.tenantId,
+      staffExtensionRoles,
       mustChangePassword: user.mustChangePassword,
       ...(user.displayName ? { displayName: user.displayName } : {}),
     };

@@ -1,9 +1,12 @@
 import { Text, View } from 'react-native';
 import { AuthShell, Button } from '@loomis/ui-mobile';
+import { hasMobileTeachingAccess } from '@loomis/core';
 import { useAuth } from '@/lib/auth-context';
 
 export default function UnsupportedRoleScreen() {
   const { session, signOut } = useAuth();
+  const extensions = session?.staffExtensionRoles ?? [];
+  const teachingExtension = hasMobileTeachingAccess(session?.role ?? 'parent', extensions);
 
   return (
     <AuthShell
@@ -16,10 +19,18 @@ export default function UnsupportedRoleScreen() {
             Signed in as: {session.role.replace(/_/g, ' ')}
           </Text>
         ) : null}
-        <Text className="text-sm leading-5 text-neutral-700 dark:text-neutral-200">
-          Mobile supports parent, student, teacher, and class teacher only. You are on a staff or
-          admin account — use the web app instead.
-        </Text>
+        {teachingExtension ? (
+          <Text className="text-sm leading-5 text-neutral-700 dark:text-neutral-200">
+            Your account has teaching duties but mobile could not route you to a teaching stack. Sign
+            out and back in after HRM role changes, or use the web gradebook and attendance tools.
+          </Text>
+        ) : (
+          <Text className="text-sm leading-5 text-neutral-700 dark:text-neutral-200">
+            Mobile supports parent, student, teacher, and class teacher. School admin and finance
+            roles use the web console — including staff with teaching extensions (e.g. accountant +
+            teacher).
+          </Text>
+        )}
         <Text className="mt-3 text-sm leading-5 text-neutral-600 dark:text-neutral-300">
           To test the family portal, sign out and log in with{' '}
           <Text className="font-semibold">parent.jss3b@loomis.com</Text> (password{' '}

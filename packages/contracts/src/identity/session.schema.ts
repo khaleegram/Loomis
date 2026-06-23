@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { role } from '../common/roles.js';
+
 export const devicePlatform = z.enum(['ios', 'android', 'web']);
 export type DevicePlatform = z.infer<typeof devicePlatform>;
 
@@ -66,6 +68,9 @@ export const refreshTokenResponse = z.object({
   accessToken: z.string(),
   refreshToken: z.string(),
   expiresAt: z.string().datetime(),
+  role: role.optional(),
+  tenantId: z.string().uuid().nullable().optional(),
+  staffExtensionRoles: z.array(role).optional(),
   mustChangePassword: z.boolean().optional(),
   displayName: z.string().optional(),
 });

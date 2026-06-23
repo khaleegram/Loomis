@@ -21,6 +21,7 @@ import {
 } from '@loomis/contracts';
 import { authenticate } from '../../../middleware/authenticate.js';
 import { requireIdempotencyKey } from '../../../middleware/require-idempotency-key.js';
+import { requireOptionalStaffRoleIfApplicable } from '../../../middleware/require-optional-staff-role.js';
 import { requireRole } from '../../../middleware/require-role.js';
 import { requirePersonalTimetableAccess } from '../../../middleware/require-personal-timetable-access.js';
 import { requireTenantMatch } from '../../../middleware/require-tenant-match.js';
@@ -56,6 +57,8 @@ const bellScheduleReaders = [...timetableReaders, 'parent'] as const;
 
 /** Timetable routes (SRS §4.5 FR-ACA-001; US-ACA-006). All under /api/v1. */
 export async function timetableRoutes(app: FastifyInstance): Promise<void> {
+  app.addHook('preHandler', requireOptionalStaffRoleIfApplicable());
+
   app.post<{ Params: { tenantId: string }; Body: CreateTimetableEntryRequest }>(
     '/tenants/:tenantId/timetable-entries',
     {

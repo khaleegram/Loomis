@@ -106,6 +106,7 @@ export function respondAuthenticated(reply: FastifyReply, bundle: AuthenticatedB
     mustChangePassword: bundle.mustChangePassword ?? false,
     displayName: bundle.displayName ?? undefined,
     refreshToken: bundle.refreshToken,
+    staffExtensionRoles: bundle.staffExtensionRoles ?? [],
     ...(bundle.persistentToken !== undefined
       ? {
           persistentToken: bundle.persistentToken,

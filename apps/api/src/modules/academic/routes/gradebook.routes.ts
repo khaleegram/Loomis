@@ -19,6 +19,7 @@ import {
 } from '@loomis/contracts';
 import { authenticate } from '../../../middleware/authenticate.js';
 import { requireIdempotencyKey } from '../../../middleware/require-idempotency-key.js';
+import { requireOptionalStaffRoleIfApplicable } from '../../../middleware/require-optional-staff-role.js';
 import { requireRole } from '../../../middleware/require-role.js';
 import { requireStaffRole } from '../../../middleware/require-staff-role.js';
 import { requireStepUpForPrincipal } from '../../../middleware/require-step-up-for-principal.js';
@@ -52,6 +53,8 @@ const gradebookWriters = ['teacher', 'class_teacher', 'principal'] as const;
 
 /** Grading schemes, gradebook entries, corrections and result publication. */
 export async function gradebookRoutes(app: FastifyInstance): Promise<void> {
+  app.addHook('preHandler', requireOptionalStaffRoleIfApplicable());
+
   app.post<{ Params: { tenantId: string }; Body: CreateGradingSchemeRequest }>(
     '/tenants/:tenantId/grading-schemes',
     {

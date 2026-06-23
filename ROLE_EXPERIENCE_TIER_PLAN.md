@@ -30,7 +30,7 @@ Loomis_SRS_v3.md                 →  Non-negotiable server/security rules
 
 1. **Tier by complexity, not price** — until usage data links features to willingness to pay.
 2. **Split in the DB, merge in the UI** — roles and capabilities stay granular; onboarding chooses what schools see.
-3. **One primary role per staff account** — combined jobs use **capability presets**, not dual JWT roles on one login.
+3. **One primary role per staff account** — combined jobs use **capability presets** or **HRM role extensions** (`teacher`, `class_teacher`), not dual JWT primaries. See `docs/HRM_STAFF_ROLE_EXTENSIONS.md`.
 4. **Split mode requires a second invite** — one person cannot hold both sides of a SoD split in split mode.
 5. **10-staff / WhatsApp test** — before adding a role, screen, approval step, or security gate: *would a small Nigerian school use it or work around it?* If workaround, default off (Advanced/Enterprise).
 
@@ -317,9 +317,9 @@ Apply the **10-staff / WhatsApp test** (§0). Default new friction to Advanced o
 
 **API (always on, all tiers)**
 
-- [ ] Cashier cannot verify own payment (even in combined mode — use actor id check)
-- [ ] PSF at census lock
-- [ ] Audit writes on sensitive actions
+- [x] Cashier cannot verify own payment (even in combined mode — use actor id check)
+- [x] PSF at census lock
+- [x] Audit writes on sensitive actions
 
 ---
 
@@ -329,7 +329,7 @@ Apply the **10-staff / WhatsApp test** (§0). Default new friction to Advanced o
 |-------|----------|
 | Combined finance | Option A + B; split = second invite; no dual hat in split mode |
 | Core MFA | Hybrid D; softer than SRS UX; backend protections remain |
-| Census lock | Owner required |
+| Census lock | Owner and Principal (Principal enabled all tiers; see master plan §2.2) |
 | Role change | Owner one-tap approve; not workflow inbox in Core |
 | Refund thresholds | ₦50k Principal / above Owner (defaults, configurable) |
 | Same-person collapse | Yes |

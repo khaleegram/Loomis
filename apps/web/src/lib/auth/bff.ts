@@ -1,4 +1,4 @@
-import { role as roleSchema } from '@loomis/contracts';
+import { role as roleSchema, type Role } from '@loomis/contracts';
 
 import { SESSION_COOKIE, parseSession, serializeSession, type SessionInfo } from './session';
 
@@ -28,6 +28,7 @@ export interface AuthenticatedBundle extends SessionInfo {
   expiresAt: string;
   refreshToken: string;
   mustChangePassword?: boolean;
+  staffExtensionRoles?: Role[];
 }
 
 /** Cookie attributes shared by both session cookies (loomis-security). */

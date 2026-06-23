@@ -23,6 +23,46 @@ export const SCHOOL_TENANT_ROLES: readonly Role[] = [
   'class_teacher',
 ];
 
+/** Extension roles only (excludes JWT primary). */
+export function extractStaffExtensionRoles(
+  primaryRole: Role,
+  effectiveRoles: Iterable<Role>,
+): Role[] {
+  const extensions: Role[] = [];
+  for (const candidate of effectiveRoles) {
+    if (candidate !== primaryRole) extensions.push(candidate);
+  }
+  return extensions;
+}
+
+/** Whether this staff account may use parent/student/teacher mobile stacks. */
+export function hasMobileTeachingAccess(primaryRole: Role, extensionRoles: Iterable<Role> = []): boolean {
+  if (MOBILE_STAFF_ROLES.includes(primaryRole)) return true;
+  for (const extension of extensionRoles) {
+    if (MOBILE_STAFF_ROLES.includes(extension)) return true;
+  }
+  return false;
+}
+
+/** Mobile home stack — class teacher wins over subject teacher. */
+export function mobileHomeRole(primaryRole: Role, extensionRoles: Iterable<Role> = []): Role | null {
+  if (primaryRole === 'class_teacher' || hasStaffRole(extensionRoles, 'class_teacher')) {
+    return 'class_teacher';
+  }
+  if (primaryRole === 'teacher' || hasStaffRole(extensionRoles, 'teacher')) {
+    return 'teacher';
+  }
+  if (primaryRole === 'parent') return 'parent';
+  if (primaryRole === 'student') return 'student';
+  return null;
+}
+
+/** Roles supported on the Expo mobile app (primary or extension). */
+export const MOBILE_STAFF_ROLES: readonly Role[] = ['teacher', 'class_teacher'];
+
+/** Parent and student portals on mobile. */
+export const MOBILE_PORTAL_ROLES: readonly Role[] = ['parent', 'student'];
+
 /** Merge JWT primary role with active HRM extension roles (deduped). */
 export function mergeEffectiveRoles(primaryRole: Role, extensionRoles: Iterable<Role> = []): Role[] {
   const merged = new Set<Role>([primaryRole]);

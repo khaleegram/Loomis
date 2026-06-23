@@ -179,6 +179,24 @@ export default function AcademicPromotionsPage() {
         </div>
       ) : null}
 
+      {!isAdvanced && proposedHeldBack.length > 0 ? (
+        <div className={`card rounded-2xl p-5 ${SEMANTIC.warning.surfaceSubtle}`}>
+          <div className="flex items-start gap-3">
+            <AlertTriangle aria-hidden className="mt-0.5 size-5 shrink-0 text-gold-700" />
+            <div className="space-y-1 text-[13px] text-neutral-700">
+              <p className="font-semibold text-neutral-900">
+                {proposedHeldBack.length} held-back student
+                {proposedHeldBack.length === 1 ? '' : 's'} on this staging list
+              </p>
+              <p>
+                On Core tier the Principal confirms held-back promotions directly — document the
+                override reason when confirming promotions.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {!toYear ? (
         <div className={`card rounded-2xl p-5 ${SEMANTIC.warning.surfaceSubtle}`}>
           <div className="flex items-start gap-3">

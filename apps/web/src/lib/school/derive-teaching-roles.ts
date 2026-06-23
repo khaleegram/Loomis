@@ -1,7 +1,7 @@
 import type { Role, TeachingStaffContextResponse } from '@loomis/contracts';
 import { mergeEffectiveRoles } from '@loomis/core';
 
-/** Infer effective roles from JWT + `/teaching/me` (mirrors HRM extensions on the client). */
+/** @deprecated Prefer `resolveEffectiveStaffRoles` with session extensions + teaching context. */
 export function deriveTeachingEffectiveRoles(
   primaryRole: Role,
   teaching: TeachingStaffContextResponse | undefined,

@@ -123,6 +123,8 @@ export const queryKeys = {
       ['academic', tenantId, 'terms', termId] as const,
     censusPreview: (tenantId: string, termId: string) =>
       ['academic', tenantId, 'terms', termId, 'census', 'preview'] as const,
+    closurePreview: (tenantId: string, termId: string) =>
+      ['academic', tenantId, 'terms', termId, 'closure', 'preview'] as const,
     classLevels: (tenantId: string) => ['academic', tenantId, 'class-levels'] as const,
     classStructure: (tenantId: string, yearId: string) =>
       ['academic', tenantId, 'years', yearId, 'class-structure'] as const,
