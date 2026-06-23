@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Bell, ChevronDown, LogOut, ShieldAlert, Timer, User } from 'lucide-react';
 import {
   DropdownMenu,
@@ -107,8 +108,16 @@ export function AppBar({
   sessionControl,
   workspaceMenu,
 }: AppBarProps) {
+  const pathname = usePathname();
   const { session, signOut } = useAuth();
   const { data: profile } = useMyProfile();
+  const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setWorkspaceMenuOpen(false);
+    setProfileMenuOpen(false);
+  }, [pathname]);
 
   if (!session) return null;
 
@@ -137,7 +146,7 @@ export function AppBar({
         <div className="flex h-14 items-center gap-3 px-4 lg:gap-4 lg:px-6">
           {/* Workspace switcher */}
           {workspaceMenu ? (
-            <DropdownMenu>
+            <DropdownMenu open={workspaceMenuOpen} onOpenChange={setWorkspaceMenuOpen}>
               <DropdownMenuTrigger asChild>{workspaceButton}</DropdownMenuTrigger>
               <DropdownMenuContent align="start" sideOffset={8} className="max-h-[min(80vh,520px)] w-80 overflow-y-auto rounded-2xl border border-border bg-popover p-2 shadow-lg [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                 {workspaceMenu}
@@ -172,7 +181,7 @@ export function AppBar({
             ) : null}
           </button>
 
-          <DropdownMenu>
+          <DropdownMenu open={profileMenuOpen} onOpenChange={setProfileMenuOpen}>
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
