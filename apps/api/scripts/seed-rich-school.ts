@@ -843,7 +843,8 @@ async function ensureSubjectAssignmentsForArms(
         });
       } catch (err) {
         const code = err instanceof Error && 'code' in err ? (err as { code?: string }).code : undefined;
-        if (code !== 'HRM_SUBJECT_ASSIGNMENT_CONFLICT') throw err;
+        if (code === 'HRM_SUBJECT_ASSIGNMENT_CONFLICT' || code === '23505') continue;
+        throw err;
       }
     }
   }
@@ -963,8 +964,19 @@ async function resumeRichSeedTimetables(tenantId: string): Promise<boolean> {
   if (arms.length === 0) return false;
 
   const firstPublished = await timetableRepository.list(tenantId, openTerm.id, arms[0]!.id, true);
-  if (firstPublished.length >= PERIOD_SLOTS.length) {
+  const allArmsPublished = await Promise.all(
+    arms.map(async (arm) => {
+      const published = await timetableRepository.list(tenantId, openTerm.id, arm.id, true);
+      return published.length >= PERIOD_SLOTS.length;
+    }),
+  );
+  if (allArmsPublished.every(Boolean)) {
+    console.log('  Timetables already published for all class arms — skipping.');
     return false;
+  }
+
+  if (firstPublished.length >= PERIOD_SLOTS.length) {
+    console.log('  Some class arms still need timetables…');
   }
 
   console.log('  Resuming rich seed — completing timetables…');
@@ -1541,8 +1553,8 @@ async function main() {
 
     const enrollmentResumed = await resumeGreenfieldStudentEnrollment(existing.tenantId);
     const reassigned = await ensureTeacher01SubjectTeacherOnly(existing.tenantId);
-    const gradesSeeded = await seedJss1BGradebookEntries(existing.tenantId);
     const resumed = await resumeRichSeedTimetables(existing.tenantId);
+    const gradesSeeded = await seedJss1BGradebookEntries(existing.tenantId);
     const parentDemo = await ensureJss3BParentDemo(existing.tenantId);
     const addedRoles = await ensureRichExtendedRoleAccounts(existing.tenantId, createdById);
     const studentPortal = await ensureJss3BStudentPortal(existing.tenantId);
@@ -1643,7 +1655,24 @@ async function main() {
   console.log('Rich seed completed.');
 }
 
-main()
+async function seedGreenfieldTimetablesOnly(): Promise<void> {
+  const existing = await userRepository.findByEmail(MARKER_EMAIL);
+  if (!existing?.tenantId) {
+    throw new Error('Greenfield principal missing — run db:seed:rich first.');
+  }
+
+  const platformOwner = await userRepository.findByEmail(PLATFORM_OWNER_EMAIL);
+  if (platformOwner) {
+    await ensureRichExtendedRoleAccounts(existing.tenantId, platformOwner.id);
+  }
+
+  console.log('Publishing Greenfield timetables only…');
+  const resumed = await resumeRichSeedTimetables(existing.tenantId);
+  console.log(resumed ? 'Greenfield timetables published.' : 'Timetables already complete.');
+}
+
+const timetablesOnly = process.argv.includes('--timetables-only');
+(timetablesOnly ? seedGreenfieldTimetablesOnly() : main())
   .then(() => process.exit(0))
   .catch((err) => {
     console.error('Rich seed failed:', err);
