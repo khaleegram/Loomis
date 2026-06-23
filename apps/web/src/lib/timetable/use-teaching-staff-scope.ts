@@ -10,6 +10,7 @@ import {
   useAcademicOpsContext,
 } from '@/lib/academic/use-academic-ops-context';
 import { useRole } from '@/lib/auth/use-capability';
+import { useAuthQueryEnabled } from '@/lib/auth/use-auth-query-enabled';
 import { hasTeachingDuties } from '@/lib/school/derive-teaching-roles';
 import { isClassTeacherRole, isTeachingStaffRole } from '@/lib/timetable/is-teaching-staff';
 
@@ -26,10 +27,11 @@ interface TeachingStaffScopeOptions {
  */
 export function useTeachingStaffScope(tenantId: string, options: TeachingStaffScopeOptions = {}) {
   const role = useRole();
+  const queriesEnabled = useAuthQueryEnabled();
   const ctx = useAcademicOpsContext(tenantId);
   const teachingQuery = useTeachingStaffContext(
-    tenantId,
-    role && isSchoolTenantRole(role) ? ctx.termId : null,
+    queriesEnabled ? tenantId : '',
+    queriesEnabled && role && isSchoolTenantRole(role) ? ctx.termId : null,
   );
   const teaching = teachingQuery.data;
   const teachingDuties = hasTeachingDuties(teaching);

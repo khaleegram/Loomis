@@ -12,6 +12,7 @@ import { SchoolAcademicSessionBar } from '@/components/school/school-academic-se
 import { SchoolLogo } from '@/components/shared/school-logo';
 import { WorkspaceMenu, type WorkspaceNavItem } from '@/components/layout/workspace-menu';
 import { useAuth } from '@/lib/auth/auth-context';
+import { useAuthQueryEnabled } from '@/lib/auth/use-auth-query-enabled';
 import { useSchoolAcademic } from '@/lib/academic/school-academic-context';
 import { useTenantExperience } from '@/lib/tenant/use-tenant-experience';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
@@ -57,14 +58,17 @@ export function SchoolTopBar() {
   const pathname = usePathname();
   const tenantId = useTenantId();
   const { session, signOut } = useAuth();
+  const queriesEnabled = useAuthQueryEnabled();
   const role = session?.role;
   const experience = useTenantExperience();
   const inboxEnabled = workflowsInboxEnabled(experience.experienceTier, experience.flags);
-  const { data: inboxData } = useWorkflowInbox(inboxEnabled ? (tenantId ?? '') : '');
-  const { data: branding } = useSchoolBranding(tenantId ?? '');
+  const { data: inboxData } = useWorkflowInbox(
+    inboxEnabled && queriesEnabled ? (tenantId ?? '') : '',
+  );
+  const { data: branding } = useSchoolBranding(queriesEnabled ? (tenantId ?? '') : '');
   const { activeYear, activeTerm } = useSchoolAcademic();
   const teachingTermId =
-    role && isSchoolTenantRole(role) && activeTerm ? activeTerm.id : null;
+    queriesEnabled && role && isSchoolTenantRole(role) && activeTerm ? activeTerm.id : null;
   const { data: teaching } = useTeachingStaffContext(tenantId ?? '', teachingTermId);
   const navContext: SchoolNavContext = useMemo(
     () => ({

@@ -6,6 +6,7 @@ import { useTeachingStaffContext } from '@loomis/api-client';
 
 import { useSchoolAcademicOptional } from '@/lib/academic/school-academic-context';
 import { useAuth } from '@/lib/auth/auth-context';
+import { useAuthQueryEnabled } from '@/lib/auth/use-auth-query-enabled';
 import { deriveTeachingEffectiveRoles } from '@/lib/school/derive-teaching-roles';
 import { useTenantExperience } from '@/lib/tenant/use-tenant-experience';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
@@ -25,13 +26,14 @@ function resolveCapability(
 /** JWT primary + HRM teaching extensions for capability checks in school UI. */
 export function useEffectiveRoles(): Role[] {
   const { session } = useAuth();
+  const queriesEnabled = useAuthQueryEnabled();
   const tenantId = useTenantId();
   const role = session?.role;
   const schoolAcademic = useSchoolAcademicOptional();
   const termId = schoolAcademic?.termId ?? null;
   const { data: teaching } = useTeachingStaffContext(
-    tenantId ?? '',
-    role && isSchoolTenantRole(role) ? termId : null,
+    queriesEnabled ? tenantId ?? '' : '',
+    queriesEnabled && role && isSchoolTenantRole(role) ? termId : null,
   );
   if (!role) return [];
   return deriveTeachingEffectiveRoles(role, teaching);

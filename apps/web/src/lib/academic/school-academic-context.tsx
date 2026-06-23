@@ -15,6 +15,7 @@ import type { Capability } from '@loomis/core';
 import { can, effectiveCan } from '@loomis/core';
 
 import { useAuth } from '@/lib/auth/auth-context';
+import { useAuthQueryEnabled } from '@/lib/auth/use-auth-query-enabled';
 import { useTenantExperience } from '@/lib/tenant/use-tenant-experience';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 
@@ -56,13 +57,15 @@ const SchoolAcademicContext = createContext<SchoolAcademicContextValue | null>(n
 export function SchoolAcademicProvider({ children }: { children: ReactNode }) {
   const tenantId = useTenantId();
   const { session } = useAuth();
+  const queriesEnabled = useAuthQueryEnabled();
   const { financeMode } = useTenantExperience();
   const canSwitchTerm = Boolean(
     session &&
       HISTORICAL_CAPABILITIES.some((cap) => effectiveCan(session.role, cap, financeMode)),
   );
 
-  const yearsQuery = useAcademicYears(tenantId ?? '');
+  const scopedTenantId = queriesEnabled && tenantId ? tenantId : '';
+  const yearsQuery = useAcademicYears(scopedTenantId);
   const years = yearsQuery.data?.academicYears ?? [];
   const sortedYears = useMemo(() => sortYearsDesc(years), [years]);
 
@@ -71,10 +74,10 @@ export function SchoolAcademicProvider({ children }: { children: ReactNode }) {
   const [override, setOverride] = useState<TermOverride | null>(null);
 
   const overrideYearId = override?.yearId ?? systemYear?.id ?? null;
-  const termsQuery = useAcademicTerms(tenantId ?? '', overrideYearId ?? '');
+  const termsQuery = useAcademicTerms(scopedTenantId, overrideYearId ?? '');
   const overrideYearTerms = termsQuery.data?.terms ?? [];
 
-  const systemTermsQuery = useAcademicTerms(tenantId ?? '', systemYear?.id ?? '');
+  const systemTermsQuery = useAcademicTerms(scopedTenantId, systemYear?.id ?? '');
   const systemTerms = systemTermsQuery.data?.terms ?? [];
   const openTerm = useMemo(() => pickOpenTerm(systemTerms), [systemTerms]);
 

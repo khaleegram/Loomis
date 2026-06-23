@@ -16,6 +16,7 @@ import {
 
 import { memoryTokenStore } from '@/lib/auth/memory-token-store';
 import * as authClient from '@/lib/auth/auth-client';
+import { setAuthBootstrapping } from '@/lib/auth/auth-session-guard';
 import { prefetchSchoolConsoleCache } from '@/lib/auth/prefetch-console-cache';
 import { landingPathForRole } from '@/lib/auth/route-groups';
 import { useActiveTenantStore } from '@/lib/tenant/active-tenant-store';
@@ -25,7 +26,7 @@ type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 interface AuthContextValue {
   status: AuthStatus;
   session: authClient.AuthenticatedSession | null;
-  /** True once a valid access token is in memory. */
+  /** True once a valid access token is in memory (safe to call the API). */
   isTokenReady: boolean;
   completeAuthentication: (session: authClient.AuthenticatedSession) => void;
   signOut: (allDevices?: boolean) => Promise<void>;
@@ -36,6 +37,11 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 /** Refresh this many ms before the access token expires. */
 const REFRESH_LEEWAY_MS = 60_000;
+
+function applyDescriptorSession(desc: authClient.SessionDescriptor): authClient.AuthenticatedSession {
+  useActiveTenantStore.getState().setActiveTenantId(desc.tenantId);
+  return authClient.sessionFromDescriptor(desc);
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -61,6 +67,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsTokenReady(Boolean(next.accessToken));
   }, []);
 
+  const applyDescriptorOnly = useCallback((desc: authClient.SessionDescriptor) => {
+    setSession(applyDescriptorSession(desc));
+    setStatus('authenticated');
+    setIsTokenReady(false);
+  }, []);
+
   const clearSession = useCallback(() => {
     clearTimer();
     memoryTokenStore.setAccessToken(null);
@@ -72,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const prefetchShell = useCallback(
     (tenantId: string | null) => {
-      if (!tenantId) return;
+      if (!tenantId || !memoryTokenStore.getAccessToken()) return;
       void prefetchSchoolConsoleCache(queryClient, apiClient, tenantId);
     },
     [apiClient, queryClient],
@@ -133,24 +145,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
+    setAuthBootstrapping(true);
 
     void (async () => {
-      const refreshPromise = authClient.refresh().catch(
-        () => null as authClient.AuthenticatedSession | null,
-      );
-
       try {
-        const descriptor = await authClient.fetchSessionDescriptor();
-        if (!active) return;
+        const [descriptor, refreshed] = await Promise.all([
+          authClient.fetchSessionDescriptor(),
+          authClient.refresh().catch(() => null as authClient.AuthenticatedSession | null),
+        ]);
 
-        if (descriptor) {
-          useActiveTenantStore.getState().setActiveTenantId(descriptor.tenantId);
-          setSession(authClient.sessionFromDescriptor(descriptor));
-          setStatus('authenticated');
-          prefetchShell(descriptor.tenantId);
-        }
-
-        const refreshed = await refreshPromise;
         if (!active) return;
 
         if (refreshed) {
@@ -160,19 +163,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        if (!descriptor) {
-          if (!memoryTokenStore.getAccessToken()) {
-            await purgeStaleServerSession();
-            if (active) clearSession();
+        if (descriptor) {
+          applyDescriptorOnly(descriptor);
+          const retry = await authClient.refresh().catch(() => null);
+          if (!active) return;
+          if (retry) {
+            applySession(retry);
+            scheduleRefresh(retry.expiresAt);
+            prefetchShell(retry.tenantId);
+            return;
+          }
+
+          const recheck = await authClient.fetchSessionDescriptor();
+          if (!active) return;
+          if (!recheck) {
+            clearSession();
+            return;
           }
           return;
         }
 
-        await purgeStaleServerSession();
-        if (active) clearSession();
+        if (!memoryTokenStore.getAccessToken()) {
+          await purgeStaleServerSession();
+          if (active) clearSession();
+        }
       } catch {
         await purgeStaleServerSession();
         if (active) clearSession();
+      } finally {
+        if (active) setAuthBootstrapping(false);
       }
     })();
 
@@ -181,6 +200,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearTimer();
     };
   }, [
+    applyDescriptorOnly,
     applySession,
     clearSession,
     clearTimer,
