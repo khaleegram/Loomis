@@ -4,8 +4,8 @@ import { canDecideAdmissions, effectiveCan, effectiveCanForRoles, isSchoolTenant
 import type { Role } from '@loomis/contracts';
 import { useTeachingStaffContext } from '@loomis/api-client';
 
+import { useSchoolAcademicOptional } from '@/lib/academic/school-academic-context';
 import { useAuth } from '@/lib/auth/auth-context';
-import { useAcademicOpsContext } from '@/lib/academic/use-academic-ops-context';
 import { deriveTeachingEffectiveRoles } from '@/lib/school/derive-teaching-roles';
 import { useTenantExperience } from '@/lib/tenant/use-tenant-experience';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
@@ -27,7 +27,8 @@ export function useEffectiveRoles(): Role[] {
   const { session } = useAuth();
   const tenantId = useTenantId();
   const role = session?.role;
-  const { termId } = useAcademicOpsContext(tenantId ?? '');
+  const schoolAcademic = useSchoolAcademicOptional();
+  const termId = schoolAcademic?.termId ?? null;
   const { data: teaching } = useTeachingStaffContext(
     tenantId ?? '',
     role && isSchoolTenantRole(role) ? termId : null,

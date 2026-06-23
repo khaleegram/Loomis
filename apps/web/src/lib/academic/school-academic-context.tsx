@@ -12,10 +12,10 @@ import {
 import { useAcademicTerms, useAcademicYears } from '@loomis/api-client';
 import type { AcademicTermResponse, AcademicYearResponse } from '@loomis/contracts';
 import type { Capability } from '@loomis/core';
-import { can } from '@loomis/core';
+import { can, effectiveCan } from '@loomis/core';
 
 import { useAuth } from '@/lib/auth/auth-context';
-import { useCanAny } from '@/lib/auth/use-capability';
+import { useTenantExperience } from '@/lib/tenant/use-tenant-experience';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 
 import { pickActiveYear, pickOpenTerm, sortYearsDesc } from './academic-session-utils';
@@ -56,7 +56,11 @@ const SchoolAcademicContext = createContext<SchoolAcademicContextValue | null>(n
 export function SchoolAcademicProvider({ children }: { children: ReactNode }) {
   const tenantId = useTenantId();
   const { session } = useAuth();
-  const canSwitchTerm = useCanAny(HISTORICAL_CAPABILITIES);
+  const { financeMode } = useTenantExperience();
+  const canSwitchTerm = Boolean(
+    session &&
+      HISTORICAL_CAPABILITIES.some((cap) => effectiveCan(session.role, cap, financeMode)),
+  );
 
   const yearsQuery = useAcademicYears(tenantId ?? '');
   const years = yearsQuery.data?.academicYears ?? [];
