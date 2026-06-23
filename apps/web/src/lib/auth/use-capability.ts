@@ -1,37 +1,57 @@
 'use client';
 
-import { canDecideAdmissions, effectiveCan, type Capability } from '@loomis/core';
+import { canDecideAdmissions, effectiveCan, effectiveCanForRoles, isSchoolTenantRole, type Capability } from '@loomis/core';
 import type { Role } from '@loomis/contracts';
+import { useTeachingStaffContext } from '@loomis/api-client';
 
 import { useAuth } from '@/lib/auth/auth-context';
+import { useAcademicOpsContext } from '@/lib/academic/use-academic-ops-context';
+import { deriveTeachingEffectiveRoles } from '@/lib/school/derive-teaching-roles';
 import { useTenantExperience } from '@/lib/tenant/use-tenant-experience';
+import { useTenantId } from '@/lib/tenant/use-tenant-id';
 
 function resolveCapability(
-  role: Role,
+  roles: Role[],
   capability: Capability,
   financeMode: ReturnType<typeof useTenantExperience>['financeMode'],
   flags: ReturnType<typeof useTenantExperience>['flags'],
 ): boolean {
   if (capability === 'admissions.approve') {
-    return canDecideAdmissions(role, flags);
+    return roles.some((role) => canDecideAdmissions(role, flags));
   }
-  return effectiveCan(role, capability, financeMode);
+  return effectiveCanForRoles(roles, capability, financeMode);
+}
+
+/** JWT primary + HRM teaching extensions for capability checks in school UI. */
+export function useEffectiveRoles(): Role[] {
+  const { session } = useAuth();
+  const tenantId = useTenantId();
+  const role = session?.role;
+  const { termId } = useAcademicOpsContext(tenantId ?? '');
+  const { data: teaching } = useTeachingStaffContext(
+    tenantId ?? '',
+    role && isSchoolTenantRole(role) ? termId : null,
+  );
+  if (!role) return [];
+  return deriveTeachingEffectiveRoles(role, teaching);
 }
 
 /** True when the signed-in role has the given capability (UX gating; finance-mode aware). */
 export function useCan(capability: Capability): boolean {
   const { session } = useAuth();
   const { financeMode, flags } = useTenantExperience();
+  const effectiveRoles = useEffectiveRoles();
   if (!session) return false;
-  return resolveCapability(session.role, capability, financeMode, flags);
+  return resolveCapability(effectiveRoles, capability, financeMode, flags);
 }
 
 /** True when the signed-in role has any of the given capabilities. */
 export function useCanAny(capabilities: Capability[]): boolean {
   const { session } = useAuth();
   const { financeMode, flags } = useTenantExperience();
+  const effectiveRoles = useEffectiveRoles();
   if (!session) return false;
-  return capabilities.some((cap) => resolveCapability(session.role, cap, financeMode, flags));
+  return capabilities.some((cap) => resolveCapability(effectiveRoles, cap, financeMode, flags));
 }
 
 /** Returns the current role or null while loading / unauthenticated. */

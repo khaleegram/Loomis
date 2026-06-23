@@ -15,6 +15,7 @@ import {
 } from '@loomis/contracts';
 import { authenticate } from '../../../middleware/authenticate.js';
 import { requireRole } from '../../../middleware/require-role.js';
+import { requireStaffRole } from '../../../middleware/require-staff-role.js';
 import { requireTenantMatch } from '../../../middleware/require-tenant-match.js';
 import { validateBody, validateQuery } from '../../../shared/validation.js';
 import {
@@ -46,7 +47,7 @@ export async function assignmentRoutes(app: FastifyInstance): Promise<void> {
   app.post<{ Params: { tenantId: string }; Body: CreateAssignmentRequest }>(
     '/tenants/:tenantId/assignments',
     {
-      preHandler: [authenticate, requireTenantMatch, requireRole(...assignmentAuthors)],
+      preHandler: [authenticate, requireTenantMatch, requireStaffRole(...assignmentAuthors)],
       preValidation: [validateBody(createAssignmentRequest)],
     },
     createAssignmentHandler,
@@ -55,7 +56,7 @@ export async function assignmentRoutes(app: FastifyInstance): Promise<void> {
   app.patch<{ Params: { tenantId: string; assignmentId: string }; Body: UpdateAssignmentRequest }>(
     '/tenants/:tenantId/assignments/:assignmentId',
     {
-      preHandler: [authenticate, requireTenantMatch, requireRole(...assignmentAuthors)],
+      preHandler: [authenticate, requireTenantMatch, requireStaffRole(...assignmentAuthors)],
       preValidation: [validateBody(updateAssignmentRequest)],
     },
     updateAssignmentHandler,
@@ -63,14 +64,14 @@ export async function assignmentRoutes(app: FastifyInstance): Promise<void> {
 
   app.post<{ Params: { tenantId: string; assignmentId: string } }>(
     '/tenants/:tenantId/assignments/:assignmentId/publish',
-    { preHandler: [authenticate, requireTenantMatch, requireRole(...assignmentAuthors)] },
+    { preHandler: [authenticate, requireTenantMatch, requireStaffRole(...assignmentAuthors)] },
     publishAssignmentHandler,
   );
 
   app.get<{ Params: { tenantId: string }; Querystring: ListAssignmentsQuery }>(
     '/tenants/:tenantId/assignments',
     {
-      preHandler: [authenticate, requireTenantMatch, requireRole(...assignmentReaders)],
+      preHandler: [authenticate, requireTenantMatch, requireStaffRole(...assignmentReaders)],
       preValidation: [validateQuery(listAssignmentsQuery)],
     },
     listAssignmentsHandler,
@@ -96,14 +97,14 @@ export async function assignmentRoutes(app: FastifyInstance): Promise<void> {
 
   app.get<{ Params: { tenantId: string; assignmentId: string } }>(
     '/tenants/:tenantId/assignments/:assignmentId/submissions',
-    { preHandler: [authenticate, requireTenantMatch, requireRole(...submissionReaders)] },
+    { preHandler: [authenticate, requireTenantMatch, requireStaffRole(...submissionReaders)] },
     listSubmissionsHandler,
   );
 
   app.patch<{ Params: { tenantId: string; submissionId: string }; Body: GradeSubmissionRequest }>(
     '/tenants/:tenantId/submissions/:submissionId/grade',
     {
-      preHandler: [authenticate, requireTenantMatch, requireRole(...assignmentAuthors)],
+      preHandler: [authenticate, requireTenantMatch, requireStaffRole(...assignmentAuthors)],
       preValidation: [validateBody(gradeSubmissionRequest)],
     },
     gradeSubmissionHandler,

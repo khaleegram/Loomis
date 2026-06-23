@@ -1,7 +1,8 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { FinanceMode } from '@loomis/contracts';
-import { can, effectiveCan, type Capability } from '@loomis/core';
+import { effectiveCan, effectiveCanForRoles, type Capability } from '@loomis/core';
 import { tenantRepository } from '../modules/tenant/repository/tenant.repository.js';
+import { ensureStaffEffectiveRoles } from './require-staff-role.js';
 import { LoomisError } from '../shared/errors.js';
 
 const PLATFORM_ROLES = new Set([
@@ -45,11 +46,17 @@ export function requireCapability(...capabilities: Capability[]) {
       }
     }
 
-    const allowed = capabilities.some((capability) =>
-      tenantId && !PLATFORM_ROLES.has(user.role)
-        ? effectiveCan(user.role, capability, financeMode)
-        : can(user.role, capability),
-    );
+    let effectiveRoles: Awaited<ReturnType<typeof ensureStaffEffectiveRoles>> | null = null;
+    if (tenantId && !PLATFORM_ROLES.has(user.role)) {
+      effectiveRoles = await ensureStaffEffectiveRoles(req);
+    }
+
+    const allowed = capabilities.some((capability) => {
+      if (effectiveRoles) {
+        return effectiveCanForRoles(effectiveRoles, capability, financeMode);
+      }
+      return effectiveCan(user.role, capability, financeMode);
+    });
 
     if (!allowed) {
       throw new LoomisError('FORBIDDEN', 403, 'Insufficient capability for this resource');

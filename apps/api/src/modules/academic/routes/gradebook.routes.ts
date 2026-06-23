@@ -20,6 +20,7 @@ import {
 import { authenticate } from '../../../middleware/authenticate.js';
 import { requireIdempotencyKey } from '../../../middleware/require-idempotency-key.js';
 import { requireRole } from '../../../middleware/require-role.js';
+import { requireStaffRole } from '../../../middleware/require-staff-role.js';
 import { requireStepUpForPrincipal } from '../../../middleware/require-step-up-for-principal.js';
 import { requireTenantMatch } from '../../../middleware/require-tenant-match.js';
 import { validateBody, validateQuery } from '../../../shared/validation.js';
@@ -62,7 +63,7 @@ export async function gradebookRoutes(app: FastifyInstance): Promise<void> {
 
   app.get<{ Params: { tenantId: string } }>(
     '/tenants/:tenantId/grading-schemes',
-    { preHandler: [authenticate, requireTenantMatch, requireRole(...gradebookReaders)] },
+    { preHandler: [authenticate, requireTenantMatch, requireStaffRole(...gradebookReaders)] },
     listGradingSchemesHandler,
   );
 
@@ -77,14 +78,14 @@ export async function gradebookRoutes(app: FastifyInstance): Promise<void> {
 
   app.get<{ Params: { tenantId: string; termId: string } }>(
     '/tenants/:tenantId/terms/:termId/exam-configs',
-    { preHandler: [authenticate, requireTenantMatch, requireRole(...gradebookReaders)] },
+    { preHandler: [authenticate, requireTenantMatch, requireStaffRole(...gradebookReaders)] },
     listExamConfigsHandler,
   );
 
   app.put<{ Params: { tenantId: string }; Body: UpsertGradebookEntryRequest }>(
     '/tenants/:tenantId/gradebook/entries',
     {
-      preHandler: [authenticate, requireTenantMatch, requireRole(...gradebookWriters)],
+      preHandler: [authenticate, requireTenantMatch, requireStaffRole(...gradebookWriters)],
       preValidation: [validateBody(upsertGradebookEntryRequest)],
     },
     upsertGradebookEntryHandler,
@@ -102,7 +103,7 @@ export async function gradebookRoutes(app: FastifyInstance): Promise<void> {
   app.post<{ Params: { tenantId: string }; Body: LockGradebookRequest }>(
     '/tenants/:tenantId/gradebook/lock',
     {
-      preHandler: [authenticate, requireTenantMatch, requireRole(...gradebookWriters), requireIdempotencyKey],
+      preHandler: [authenticate, requireTenantMatch, requireStaffRole(...gradebookWriters), requireIdempotencyKey],
       preValidation: [validateBody(lockGradebookRequest)],
     },
     lockGradebookHandler,
@@ -111,7 +112,7 @@ export async function gradebookRoutes(app: FastifyInstance): Promise<void> {
   app.post<{ Params: { tenantId: string; entryId: string }; Body: RequestGradeCorrectionRequest }>(
     '/tenants/:tenantId/gradebook/entries/:entryId/corrections',
     {
-      preHandler: [authenticate, requireTenantMatch, requireRole(...gradebookWriters), requireIdempotencyKey],
+      preHandler: [authenticate, requireTenantMatch, requireStaffRole(...gradebookWriters), requireIdempotencyKey],
       preValidation: [validateBody(requestGradeCorrectionRequest)],
     },
     requestGradeCorrectionHandler,

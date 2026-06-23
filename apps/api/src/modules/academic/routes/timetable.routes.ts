@@ -22,6 +22,7 @@ import {
 import { authenticate } from '../../../middleware/authenticate.js';
 import { requireIdempotencyKey } from '../../../middleware/require-idempotency-key.js';
 import { requireRole } from '../../../middleware/require-role.js';
+import { requirePersonalTimetableAccess } from '../../../middleware/require-personal-timetable-access.js';
 import { requireTenantMatch } from '../../../middleware/require-tenant-match.js';
 import { validateBody, validateQuery } from '../../../shared/validation.js';
 import {
@@ -108,11 +109,7 @@ export async function timetableRoutes(app: FastifyInstance): Promise<void> {
   app.get<{ Params: { tenantId: string }; Querystring: MyTimetableQuery }>(
     '/tenants/:tenantId/timetable/me',
     {
-      preHandler: [
-        authenticate,
-        requireTenantMatch,
-        requireRole('student', 'teacher', 'class_teacher'),
-      ],
+      preHandler: [authenticate, requireTenantMatch, requirePersonalTimetableAccess()],
       preValidation: [validateQuery(myTimetableQuery)],
     },
     listStudentTimetableHandler,

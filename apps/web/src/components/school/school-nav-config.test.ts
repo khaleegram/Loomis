@@ -88,4 +88,16 @@ describe('school nav Sprint 3', () => {
     const dashboard = SCHOOL_NAV.find((i) => i.id === 'dashboard')!;
     expect(schoolNavLabel(dashboard, 'principal')).toBe('Operations');
   });
+
+  it('shows teaching nav for accountant with teacher extension capabilities', () => {
+    const nav = resolveSchoolNav('accountant', {
+      ...coreCombined,
+      effectiveRoles: ['accountant', 'teacher'],
+      hasTeachingDuties: true,
+    });
+    expect(nav.some((i) => i.id === 'gradebook')).toBe(true);
+    expect(nav.some((i) => i.id === 'assignments')).toBe(true);
+    expect(nav.some((i) => i.id === 'timetable')).toBe(true);
+    expect(nav.some((i) => i.id === 'finance-desk')).toBe(true);
+  });
 });

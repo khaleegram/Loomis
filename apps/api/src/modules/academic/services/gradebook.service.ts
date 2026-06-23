@@ -1,3 +1,4 @@
+import { hasStaffRole } from '@loomis/core';
 import { LoomisError } from '../../../shared/errors.js';
 import { staffService } from '../../hrm/services/staff.service.js';
 import { studentRepository } from '../../student/repository/student.repository.js';
@@ -15,6 +16,7 @@ import type {
   RequestGradeCorrectionInput,
   UpsertGradebookEntryInput,
 } from '../types.js';
+import { actorEffectiveRoles } from './actor-roles.js';
 import { requireTenant, requireTerm } from './_shared.js';
 import { examOpsService } from './exam-ops.service.js';
 import { SCHOOL_SUBJECT_CATALOGUE } from '../subject-catalogue.js';
@@ -100,7 +102,9 @@ async function requireGradebookWriteAccess(params: {
 }
 
 async function requireReadableGradebook(tenantId: string, input: ListGradebookInput, actor: ActorContext) {
-  if (actor.role === 'teacher') {
+  const roles = await actorEffectiveRoles(actor);
+
+  if (hasStaffRole(roles, 'teacher')) {
     if (!input.subjectId) {
       throw new LoomisError('VALIDATION_ERROR', 422, 'Teachers must filter gradebook reads by subjectId');
     }
@@ -113,7 +117,7 @@ async function requireReadableGradebook(tenantId: string, input: ListGradebookIn
     });
   }
 
-  if (actor.role === 'class_teacher') {
+  if (hasStaffRole(roles, 'class_teacher')) {
     const assignment = await staffService.findActiveClassTeacherAssignmentForUser({
       tenantId,
       userId: actor.userId,

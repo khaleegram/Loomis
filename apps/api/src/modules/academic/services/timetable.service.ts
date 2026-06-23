@@ -8,6 +8,7 @@ import { academicRepository } from '../repository/academic.repository.js';
 import { bellScheduleService } from './bell-schedule.service.js';
 import { timetableRepository } from '../repository/timetable.repository.js';
 import type { ActorContext } from '../types.js';
+import { actorCanActAsClassTeacher, actorCanTeachSubjects } from './actor-roles.js';
 import { requireTenant, requireTerm } from './_shared.js';
 
 const TIMETABLE_BUILDERS = new Set(['timetable_officer', 'principal', 'school_owner']);
@@ -181,7 +182,7 @@ export const timetableService = {
       };
     }
 
-    if (actor.role === 'teacher' || actor.role === 'class_teacher') {
+    if (await actorCanTeachSubjects(actor)) {
       const profile = await staffRepository.findProfileByUserId(tenantId, actor.userId);
       if (!profile) {
         throw new LoomisError('HRM_STAFF_NOT_FOUND', 404, 'Staff profile not found');
@@ -196,7 +197,7 @@ export const timetableService = {
       let classTeacherClassArmId: string | null = null;
       let classTeacherClassArmLabel: string | null = null;
 
-      if (actor.role === 'class_teacher') {
+      if (await actorCanActAsClassTeacher(actor)) {
         const classTeacherAssignment = await staffRepository.findActiveClassTeacherForStaffTerm(
           tenantId,
           profile.id,

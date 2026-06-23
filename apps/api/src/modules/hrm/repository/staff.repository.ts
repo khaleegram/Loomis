@@ -253,7 +253,12 @@ export const staffRepository = {
     });
   },
 
-  async addClassTeacherExtension(tenantId: string, staffProfileId: string, approvedById: string) {
+  async addRoleExtension(
+    tenantId: string,
+    staffProfileId: string,
+    role: 'teacher' | 'class_teacher',
+    approvedById: string,
+  ) {
     return withTenantContext(tenantId, async (tx) => {
       const [existing] = await tx
         .select()
@@ -262,7 +267,7 @@ export const staffRepository = {
           and(
             eq(roleAssignments.tenantId, tenantId),
             eq(roleAssignments.staffProfileId, staffProfileId),
-            eq(roleAssignments.role, 'class_teacher'),
+            eq(roleAssignments.role, role),
             eq(roleAssignments.active, true),
           ),
         )
@@ -274,14 +279,23 @@ export const staffRepository = {
         .values({
           tenantId,
           staffProfileId,
-          role: 'class_teacher',
+          role,
           assignmentType: 'extension',
           approvedById,
         })
         .returning();
-      if (!assignment) throw new Error('Failed to add class teacher extension');
+      if (!assignment) throw new Error(`Failed to add ${role} extension`);
       return assignment;
     });
+  },
+
+  async addClassTeacherExtension(tenantId: string, staffProfileId: string, approvedById: string) {
+    return staffRepository.addRoleExtension(
+      tenantId,
+      staffProfileId,
+      'class_teacher',
+      approvedById,
+    );
   },
 
   async createSubjectAssignment(input: {

@@ -2,6 +2,7 @@
 
 import { useTeachingStaffContext } from '@loomis/api-client';
 import type { Role } from '@loomis/contracts';
+import { isSchoolTenantRole } from '@loomis/core';
 import { useMemo } from 'react';
 
 import {
@@ -9,6 +10,7 @@ import {
   useAcademicOpsContext,
 } from '@/lib/academic/use-academic-ops-context';
 import { useRole } from '@/lib/auth/use-capability';
+import { hasTeachingDuties } from '@/lib/school/derive-teaching-roles';
 import { isClassTeacherRole, isTeachingStaffRole } from '@/lib/timetable/is-teaching-staff';
 
 export type TeachingStaffScopeMode = 'default' | 'classTeacherClass';
@@ -20,16 +22,21 @@ interface TeachingStaffScopeOptions {
 
 /**
  * Academic scope for teaching staff — resolves class arms from HRM assignments
- * (Greenfield rich seed: teacher01@loomis.com … teacher16@loomis.com), not the
- * first class in the school.
+ * (including staff whose primary role is accountant/admin with a teacher extension).
  */
 export function useTeachingStaffScope(tenantId: string, options: TeachingStaffScopeOptions = {}) {
   const role = useRole();
-  const isTeachingStaff = isTeachingStaffRole(role);
-  const isClassTeacher = isClassTeacherRole(role);
   const ctx = useAcademicOpsContext(tenantId);
-  const teachingQuery = useTeachingStaffContext(tenantId, isTeachingStaff ? ctx.termId : null);
+  const teachingQuery = useTeachingStaffContext(
+    tenantId,
+    role && isSchoolTenantRole(role) ? ctx.termId : null,
+  );
   const teaching = teachingQuery.data;
+  const teachingDuties = hasTeachingDuties(teaching);
+  const isTeachingStaff =
+    isTeachingStaffRole(role) || teachingDuties;
+  const isClassTeacher =
+    isClassTeacherRole(role) || Boolean(teaching?.classTeacherAssignment);
 
   const teachingClassArmOptions = useMemo(() => {
     if (!teaching?.subjectAssignments.length) return [];

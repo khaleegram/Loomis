@@ -2,6 +2,7 @@ import { staffRepository } from '../../hrm/repository/staff.repository.js';
 import { LoomisError } from '../../../shared/errors.js';
 import { academicRepository } from '../repository/academic.repository.js';
 import type { ActorContext } from '../types.js';
+import { actorCanActAsClassTeacher } from './actor-roles.js';
 import { requireTenant } from './_shared.js';
 
 async function classArmLabel(tenantId: string, classArmId: string): Promise<string> {
@@ -11,14 +12,10 @@ async function classArmLabel(tenantId: string, classArmId: string): Promise<stri
   return level ? `${level.code} ${classArm.name}` : classArm.name;
 }
 
-/** Resolved HRM teaching scope for the logged-in teacher or class teacher. */
+/** Resolved HRM teaching scope for staff with teaching duties (primary or extension). */
 export const teachingService = {
   async getStaffContext(tenantId: string, termId: string, actor: ActorContext) {
     requireTenant(actor, tenantId);
-
-    if (actor.role !== 'teacher' && actor.role !== 'class_teacher') {
-      throw new LoomisError('FORBIDDEN', 403, 'Teaching staff role required');
-    }
 
     const profile = await staffRepository.findProfileByUserId(tenantId, actor.userId);
     if (!profile || profile.status !== 'active') {
@@ -52,7 +49,7 @@ export const teachingService = {
       classArmLabel: string;
     } | null = null;
 
-    if (actor.role === 'class_teacher') {
+    if (await actorCanActAsClassTeacher(actor)) {
       const assignment = await staffRepository.findActiveClassTeacherForStaffTerm(
         tenantId,
         profile.id,

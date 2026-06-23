@@ -12,7 +12,7 @@ import {
   Wallet,
   type LucideIcon,
 } from 'lucide-react';
-import { effectiveCan, workflowsInboxEnabled, type Capability } from '@loomis/core';
+import { effectiveCanForRoles, workflowsInboxEnabled, type Capability } from '@loomis/core';
 import type { FinanceMode, Role } from '@loomis/contracts';
 
 import type { SchoolNavContext } from '@/lib/school/school-nav-context';
@@ -294,7 +294,8 @@ export function isNavVisible(role: Role, item: SchoolNavItem, ctx: SchoolNavCont
   if (item.always) return true;
   if (!item.capabilities?.length) return false;
 
-  return item.capabilities.some((cap) => effectiveCan(role, cap, ctx.financeMode));
+  const roles = ctx.effectiveRoles ?? [role];
+  return item.capabilities.some((cap) => effectiveCanForRoles(roles, cap, ctx.financeMode));
 }
 
 export function resolveSchoolNav(role: Role, ctx: SchoolNavContext): SchoolNavItem[] {

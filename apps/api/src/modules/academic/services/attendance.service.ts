@@ -12,6 +12,7 @@ import { academicRepository } from '../repository/academic.repository.js';
 import { attendanceRepository } from '../repository/attendance.repository.js';
 import { deviceKeyRepository } from '../repository/device-key.repository.js';
 import type { ActorContext } from '../types.js';
+import { actorCanActAsClassTeacher } from './actor-roles.js';
 import { verifyAttendanceSignature } from './device-signature.js';
 import { requireTenant, requireTerm } from './_shared.js';
 
@@ -29,7 +30,7 @@ function daysAgoUtc(days: number): string {
 /**
  * Attendance business rules (SRS §4.5 FR-ACA-002; CON-003; US-ACA-005).
  *
- * CON-003 is enforced in TWO layers: the route uses requireRole('class_teacher')
+ * CON-003 is enforced in TWO layers: the route uses requireStaffRole('class_teacher')
  * so regular Teachers are blocked at the middleware, and every method here
  * re-asserts the role AND that the actor is the *active Class Teacher of that
  * class arm for that term* (defense in depth — never trust the role claim alone).
@@ -127,7 +128,7 @@ export const attendanceService = {
     requestId: string,
   ) {
     requireTenant(actor, tenantId);
-    if (actor.role !== 'class_teacher') {
+    if (!(await actorCanActAsClassTeacher(actor))) {
       throw new LoomisError(
         'ACADEMIC_ATTENDANCE_FORBIDDEN_ROLE',
         403,
@@ -451,7 +452,7 @@ async function resolveActiveClassTeacher(
   classArmId: string,
   actor: ActorContext,
 ) {
-  if (actor.role !== 'class_teacher') {
+  if (!(await actorCanActAsClassTeacher(actor))) {
     throw new LoomisError(
       'ACADEMIC_ATTENDANCE_FORBIDDEN_ROLE',
       403,

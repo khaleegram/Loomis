@@ -108,6 +108,21 @@ function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
 
+function staffCanTeach(roles: Awaited<ReturnType<typeof staffRepository.listActiveRoles>>): boolean {
+  return roles.some((assignment) => ['teacher', 'class_teacher'].includes(assignment.role));
+}
+
+async function ensureTeacherExtension(
+  tenantId: string,
+  staffProfileId: string,
+  roles: Awaited<ReturnType<typeof staffRepository.listActiveRoles>>,
+  approvedById: string,
+): Promise<void> {
+  if (!staffCanTeach(roles)) {
+    await staffRepository.addRoleExtension(tenantId, staffProfileId, 'teacher', approvedById);
+  }
+}
+
 function requireTenant(actor: ActorContext, tenantId: string): void {
   if (actor.tenantId !== null && actor.tenantId !== tenantId) {
     throw new LoomisError('FORBIDDEN', 403, 'Tenant mismatch');
@@ -605,12 +620,7 @@ export const staffService = {
     requireTenant(actor, tenantId);
     const profile = await this.requireActiveProfile(tenantId, input.staffProfileId);
     const roles = await staffRepository.listActiveRoles(tenantId, profile.id);
-    const canTeach = roles.some((assignment) =>
-      ['teacher', 'class_teacher'].includes(assignment.role),
-    );
-    if (!canTeach) {
-      throw new LoomisError('HRM_ROLE_CONFLICT', 409, 'Only teachers can receive subject assignments');
-    }
+    await ensureTeacherExtension(tenantId, profile.id, roles, actor.userId);
 
     const existing = await staffRepository.findActiveSubjectAssignment({ tenantId, ...input });
     if (existing) {
@@ -653,12 +663,7 @@ export const staffService = {
     requireTenant(actor, tenantId);
     const profile = await this.requireActiveProfile(tenantId, input.staffProfileId);
     const roles = await staffRepository.listActiveRoles(tenantId, profile.id);
-    const isTeacher = roles.some((assignment) =>
-      ['teacher', 'class_teacher'].includes(assignment.role),
-    );
-    if (!isTeacher) {
-      throw new LoomisError('HRM_ROLE_CONFLICT', 409, 'Only teachers can be class teachers');
-    }
+    await ensureTeacherExtension(tenantId, profile.id, roles, actor.userId);
 
     const existingForStaff = await staffRepository.findActiveClassTeacherForStaffTerm(
       tenantId,
