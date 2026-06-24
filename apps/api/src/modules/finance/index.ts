@@ -6,6 +6,7 @@ import { paymentsRoutes } from './routes/payments.routes.js';
 import { reconciliationRoutes, refundsRoutes } from './routes/refunds.routes.js';
 import { webhooksRoutes } from './routes/webhooks.routes.js';
 import { startGatewayReconciliationJob } from './jobs/gateway-reconciliation.job.js';
+import { startFeeReminderJob } from './jobs/fee-reminder.job.js';
 
 /**
  * Finance module plugin (Phase 2). Fee structures, invoicing, payments, refunds,
@@ -14,6 +15,7 @@ import { startGatewayReconciliationJob } from './jobs/gateway-reconciliation.job
 export async function financeModule(app: FastifyInstance): Promise<void> {
   registerFinanceEventConsumers();
   await startGatewayReconciliationJob();
+  await startFeeReminderJob();
   await app.register(feeStructuresRoutes);
   await app.register(invoicesRoutes);
   await app.register(paymentsRoutes);

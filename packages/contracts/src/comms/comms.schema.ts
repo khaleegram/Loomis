@@ -11,6 +11,7 @@ export const notificationType = z.enum([
   'break_glass_alert',
   'assignment_reminder',
   'attendance_alert',
+  'fee_due_reminder',
   'generic',
 ]);
 export type NotificationType = z.infer<typeof notificationType>;

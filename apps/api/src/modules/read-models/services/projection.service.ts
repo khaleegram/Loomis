@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { invoices } from '../../../../drizzle/schema/finance.js';
 import { tenants } from '../../../../drizzle/schema/tenant.js';
 import {
@@ -76,13 +76,13 @@ export const readModelProjectionService = {
       if (!tenant) return;
 
       const [balanceRow] = await tx
-        .select({ total: invoices.balanceMinor })
+        .select({
+          total: sql<number>`coalesce(sum(${invoices.balanceMinor}), 0)::int`,
+        })
         .from(invoices)
         .where(
           and(eq(invoices.tenantId, payload.tenantId), eq(invoices.studentId, payload.studentId)),
-        )
-        .orderBy(desc(invoices.issuedAt))
-        .limit(1);
+        );
 
       await parentDashboardRepository.upsertCard(tx, {
         parentUserId,
@@ -166,22 +166,20 @@ export const readModelProjectionService = {
       if (!claimed) return;
 
       const [balanceRow] = await tx
-        .select({ total: invoices.balanceMinor })
+        .select({
+          total: sql<number>`coalesce(sum(${invoices.balanceMinor}), 0)::int`,
+        })
         .from(invoices)
         .where(
           and(eq(invoices.tenantId, payload.tenantId), eq(invoices.studentId, payload.studentId)),
-        )
-        .orderBy(desc(invoices.issuedAt))
-        .limit(1);
-
-      if (balanceRow) {
-        await parentDashboardRepository.updateBalance(
-          tx,
-          payload.tenantId,
-          payload.studentId,
-          balanceRow.total,
         );
-      }
+
+      await parentDashboardRepository.updateBalance(
+        tx,
+        payload.tenantId,
+        payload.studentId,
+        balanceRow?.total ?? 0,
+      );
 
       const tenant = await loadTenantRegion(payload.tenantId);
       if (!tenant) return;

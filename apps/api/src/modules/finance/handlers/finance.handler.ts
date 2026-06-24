@@ -2,6 +2,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import type {
   AmendFeeStructureRequest,
   BatchIssueInvoicesRequest,
+  BulkFeeReminderRequest,
   CreateFeeStructureRequest,
   InitializeOnlinePaymentRequest,
   IssueInvoiceRequest,
@@ -14,7 +15,7 @@ import type {
 import { LoomisError } from '../../../shared/errors.js';
 import { getEnv } from '../../../config/env.js';
 import { sendSuccess } from '../../../shared/http.js';
-import { feeStructureService, invoiceService, paymentService } from '../services/index.js';
+import { feeStructureService, feeReminderService, invoiceService, paymentService } from '../services/index.js';
 import { auditContext, requireParentActor, requireSchoolFinanceActor, requireTenantActor } from './_context.js';
 import {
   feeStructureToResponse,
@@ -269,4 +270,31 @@ export async function getPaymentGatewayConfigHandler(
     publicKey: env.PAYSTACK_PUBLIC_KEY ?? null,
     onlinePaymentEnabled: Boolean(env.PAYSTACK_SECRET_KEY),
   });
+}
+
+export async function sendFeeReminderHandler(
+  req: FastifyRequest<{ Params: { tenantId: string; studentId: string } }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const result = await feeReminderService.remindStudentNow(
+    req.params.tenantId,
+    req.params.studentId,
+    requireTenantActor(req),
+  );
+  return sendSuccess(reply, {
+    studentId: req.params.studentId,
+    remindedParentCount: result.remindedParentCount,
+  });
+}
+
+export async function bulkFeeReminderHandler(
+  req: FastifyRequest<{ Params: { tenantId: string }; Body: BulkFeeReminderRequest }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const result = await feeReminderService.remindStudentsBulk(
+    req.params.tenantId,
+    req.body.studentIds,
+    requireTenantActor(req),
+  );
+  return sendSuccess(reply, result);
 }

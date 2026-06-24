@@ -48,6 +48,7 @@ export type RefundsListFilters = {
 export type OutstandingBalancesFilters = {
   classLevelId?: string;
   status?: string;
+  scope?: 'term' | 'arrears' | 'all';
 };
 
 import type { AuditSensitivity } from '@loomis/contracts';

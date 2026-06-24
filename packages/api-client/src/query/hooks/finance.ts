@@ -1,6 +1,8 @@
-import { useQuery, type QueryKey } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import type {
   AmendFeeStructureRequest,
+  BulkFeeReminderRequest,
+  BulkFeeReminderResponse,
   CreateFeeStructureRequest,
   CreateRefundRequest,
   CreateRefundResponse,
@@ -21,6 +23,7 @@ import type {
   ResolveReconciliationExceptionRequest,
   RefundRequestListResponse,
   RefundRequestResponse,
+  SendFeeReminderResponse,
   StepUpAction,
   UpdateFeeStructureRequest,
   VerifyOfflinePaymentRequest,
@@ -114,6 +117,7 @@ export function outstandingBalancesQueryOptions(
   const params = new URLSearchParams();
   if (filters.classLevelId) params.set('classLevelId', filters.classLevelId);
   if (filters.status) params.set('status', filters.status);
+  if (filters.scope) params.set('scope', filters.scope);
   const qs = params.toString();
   return {
     queryKey,
@@ -227,6 +231,37 @@ export function useOutstandingBalances(
   return useQuery({
     ...outstandingBalancesQueryOptions(client, tenantId, termId, filters),
     enabled: Boolean(tenantId && termId),
+  });
+}
+
+export function useSendFeeReminder(tenantId: string, termId: string) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (studentId: string) =>
+      client.post<SendFeeReminderResponse>(
+        `/tenants/${tenantId}/students/${studentId}/fee-reminders`,
+        {},
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.finance.outstandingBalances(tenantId, termId),
+      });
+    },
+  });
+}
+
+export function useBulkFeeReminder(tenantId: string, termId: string) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: BulkFeeReminderRequest) =>
+      client.post<BulkFeeReminderResponse>(`/tenants/${tenantId}/fee-reminders/bulk`, body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.finance.outstandingBalances(tenantId, termId),
+      });
+    },
   });
 }
 

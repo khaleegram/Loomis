@@ -7,6 +7,7 @@ const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   payment_verified: 'Payment',
   break_glass_alert: 'Security alert',
   assignment_reminder: 'Assignment',
+  fee_due_reminder: 'Fee reminder',
   attendance_alert: 'Attendance',
   generic: 'Notice',
 };

@@ -96,12 +96,13 @@ function ParentFeesView() {
   const payerEmail = profileQuery.data?.email ?? '';
 
   useEffect(() => {
-    if (fees && fees.balanceMinor > 0) {
-      setPayAmountMinor(fees.balanceMinor);
+    if (fees) {
+      const owed = fees.totalBalanceMinor ?? fees.balanceMinor;
+      setPayAmountMinor(owed > 0 ? Math.min(owed, fees.balanceMinor > 0 ? fees.balanceMinor : owed) : 0);
     } else {
       setPayAmountMinor(0);
     }
-  }, [fees?.invoiceId, fees?.balanceMinor]);
+  }, [fees?.invoiceId, fees?.balanceMinor, fees?.totalBalanceMinor]);
 
   async function handlePayOnline() {
     if (!fees?.invoiceId || fees.balanceMinor <= 0 || !payerEmail || payAmountMinor <= 0) return;
@@ -153,9 +154,20 @@ function ParentFeesView() {
         classLabel={fees?.classArmLabel ?? activeCard?.classArmLabel ?? null}
         amountChargedMinor={fees?.amountChargedMinor ?? 0}
         amountPaidMinor={fees?.amountPaidMinor ?? 0}
-        balanceMinor={fees?.balanceMinor ?? activeCard?.outstandingBalanceMinor ?? 0}
+        balanceMinor={fees?.balanceMinor ?? 0}
+        arrearsBalanceMinor={fees?.arrearsBalanceMinor ?? 0}
+        totalBalanceMinor={fees?.totalBalanceMinor ?? fees?.balanceMinor ?? activeCard?.outstandingBalanceMinor ?? 0}
         isLoading={isLoading}
       />
+
+      {(fees?.arrearsBalanceMinor ?? 0) > 0 ? (
+        <Alert>
+          <AlertDescription>
+            {formatKobo(fees!.arrearsBalanceMinor)} is from earlier terms. Pay this term first, then
+            switch term to clear arrears — or contact the bursar for a combined payment.
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       <div className={`${ACADEMIC_UI.dataPanel} grid gap-4 p-4 sm:grid-cols-2`}>
         <div className="space-y-2">

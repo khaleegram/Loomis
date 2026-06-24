@@ -71,22 +71,37 @@ export function invoiceToResponse(data: InvoiceWithItems): InvoiceResponse {
 
 export function outstandingBalancesToResponse(result: {
   termId: string;
+  scope?: string;
   summary: {
     studentCount: number;
     totalChargedMinor: number;
     totalPaidMinor: number;
     totalBalanceMinor: number;
   };
-  rows: InvoiceRow[];
+  rows: Array<{
+    invoiceId: string | null;
+    studentId: string;
+    classLevelId: string;
+    status: string | null;
+    amountChargedMinor: number;
+    amountPaidMinor: number;
+    balanceMinor: number;
+    termBalanceMinor?: number;
+    arrearsBalanceMinor?: number;
+    totalBalanceMinor?: number;
+  }>;
 }): OutstandingBalancesResponse {
   const rows: OutstandingBalanceRow[] = result.rows.map((row) => ({
-    invoiceId: row.id,
+    invoiceId: row.invoiceId,
     studentId: row.studentId,
     classLevelId: row.classLevelId,
-    status: row.status as InvoiceStatus,
+    status: row.status as OutstandingBalanceRow['status'],
     amountChargedMinor: row.amountChargedMinor,
     amountPaidMinor: row.amountPaidMinor,
     balanceMinor: row.balanceMinor,
+    ...(row.termBalanceMinor !== undefined ? { termBalanceMinor: row.termBalanceMinor } : {}),
+    ...(row.arrearsBalanceMinor !== undefined ? { arrearsBalanceMinor: row.arrearsBalanceMinor } : {}),
+    ...(row.totalBalanceMinor !== undefined ? { totalBalanceMinor: row.totalBalanceMinor } : {}),
   }));
   return { termId: result.termId, summary: result.summary, rows };
 }

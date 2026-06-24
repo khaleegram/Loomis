@@ -31,6 +31,7 @@ export const NOTIFICATION_TYPES = [
   'break_glass_alert',
   'assignment_reminder',
   'attendance_alert',
+  'fee_due_reminder',
   'generic',
 ] as const;
 
@@ -119,7 +120,7 @@ export const notifications = commsSchema.table(
       'notifications_type_valid',
       sql`${table.notificationType} IN (
         'school_announcement', 'class_message', 'parent_reply', 'payment_verified',
-        'break_glass_alert', 'assignment_reminder', 'attendance_alert', 'generic'
+        'break_glass_alert', 'assignment_reminder', 'attendance_alert', 'fee_due_reminder', 'generic'
       )`,
     ),
     statusValid: check(

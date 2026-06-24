@@ -14,6 +14,8 @@ interface ParentFeesHeroProps {
   amountChargedMinor: number;
   amountPaidMinor: number;
   balanceMinor: number;
+  arrearsBalanceMinor?: number;
+  totalBalanceMinor?: number;
   isLoading?: boolean;
 }
 
@@ -25,8 +27,11 @@ export function ParentFeesHero({
   amountChargedMinor,
   amountPaidMinor,
   balanceMinor,
+  arrearsBalanceMinor = 0,
+  totalBalanceMinor,
   isLoading,
 }: ParentFeesHeroProps) {
+  const owedMinor = totalBalanceMinor ?? balanceMinor + arrearsBalanceMinor;
   const stats = [
     {
       label: 'Total charged',
@@ -43,11 +48,16 @@ export function ParentFeesHero({
       gradient: SURFACES.kpi.g2,
     },
     {
-      label: 'Outstanding',
-      value: isLoading ? '—' : formatKobo(balanceMinor),
-      hint: balanceMinor > 0 ? 'Due now' : 'All clear',
+      label: 'Total owed',
+      value: isLoading ? '—' : formatKobo(owedMinor),
+      hint:
+        arrearsBalanceMinor > 0
+          ? `${formatKobo(balanceMinor)} this term · ${formatKobo(arrearsBalanceMinor)} arrears`
+          : owedMinor > 0
+            ? 'Tap Pay below'
+            : 'All clear',
       icon: Wallet,
-      gradient: balanceMinor > 0 ? SURFACES.kpi.g4 : SURFACES.kpi.g2,
+      gradient: owedMinor > 0 ? SURFACES.kpi.g4 : SURFACES.kpi.g2,
     },
     {
       label: 'Portal',
@@ -72,7 +82,7 @@ export function ParentFeesHero({
             Fee status
           </h1>
           <p className={ACADEMIC_UI.pageDesc}>
-            Current term charges, payments received, and what is still outstanding for your child.
+            What you owe this term and from earlier terms — pay in one tap when you are ready.
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {childName ? (

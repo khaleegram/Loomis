@@ -1,4 +1,5 @@
-import { and, asc, desc, eq, gt, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, sql } from 'drizzle-orm';
+import { academicTerms } from '../../../../drizzle/schema/academic.js';
 import {
   feeStructureItems,
   feeStructures,
@@ -360,6 +361,52 @@ export const financeRepository = {
         .from(invoices)
         .where(and(...conditions))
         .orderBy(asc(invoices.classLevelId), asc(invoices.studentId));
+    });
+  },
+
+  async listOutstandingInvoicesWithTerm(tenantId: string) {
+    return withTenantContext(tenantId, async (tx) => {
+      const rows = await tx
+        .select({
+          invoice: invoices,
+          termStartDate: academicTerms.startDate,
+          termSequence: academicTerms.sequence,
+          academicYearId: academicTerms.academicYearId,
+        })
+        .from(invoices)
+        .innerJoin(
+          academicTerms,
+          and(eq(invoices.termId, academicTerms.id), eq(academicTerms.tenantId, tenantId)),
+        )
+        .where(and(eq(invoices.tenantId, tenantId), gt(invoices.balanceMinor, 0)))
+        .orderBy(asc(academicTerms.startDate), asc(invoices.studentId));
+
+      return rows.map((row) => ({
+        invoiceId: row.invoice.id,
+        studentId: row.invoice.studentId,
+        classLevelId: row.invoice.classLevelId,
+        status: row.invoice.status,
+        amountChargedMinor: row.invoice.amountChargedMinor,
+        amountPaidMinor: row.invoice.amountPaidMinor,
+        balanceMinor: row.invoice.balanceMinor,
+        termId: row.invoice.termId,
+        termStartDate: row.termStartDate,
+        termSequence: row.termSequence,
+        academicYearId: row.academicYearId,
+        dueDate: row.invoice.dueDate,
+      }));
+    });
+  },
+
+  async sumStudentBalanceMinor(tenantId: string, studentId: string): Promise<number> {
+    return withTenantContext(tenantId, async (tx) => {
+      const [row] = await tx
+        .select({
+          total: sql<number>`coalesce(sum(${invoices.balanceMinor}), 0)::int`,
+        })
+        .from(invoices)
+        .where(and(eq(invoices.tenantId, tenantId), eq(invoices.studentId, studentId)));
+      return row?.total ?? 0;
     });
   },
 };

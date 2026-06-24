@@ -202,23 +202,48 @@ export type BatchIssueInvoicesResponse = z.infer<typeof batchIssueInvoicesRespon
 
 // ── Outstanding balances (US-FIN-005) ─────────────────────────────────────────
 
-/** Filter outstanding balances by class level and/or payment status. */
+/** Lens for the outstanding balances list (US-FIN-005). */
+export const outstandingBalanceScope = z.enum(['term', 'arrears', 'all']);
+export type OutstandingBalanceScope = z.infer<typeof outstandingBalanceScope>;
+
+/** Filter outstanding balances by class level, payment status, and scope. */
 export const outstandingBalancesQuery = z.object({
   classLevelId: z.string().uuid().optional(),
   status: invoiceStatus.optional(),
+  scope: outstandingBalanceScope.optional(),
 });
 export type OutstandingBalancesQuery = z.infer<typeof outstandingBalancesQuery>;
 
 export const outstandingBalanceRow = z.object({
-  invoiceId: z.string().uuid(),
+  invoiceId: z.string().uuid().nullable(),
   studentId: z.string().uuid(),
   classLevelId: z.string().uuid(),
-  status: invoiceStatus,
+  status: invoiceStatus.nullable(),
   amountChargedMinor: koboAmount,
   amountPaidMinor: koboAmount,
   balanceMinor: koboAmount,
+  termBalanceMinor: koboAmount.optional(),
+  arrearsBalanceMinor: koboAmount.optional(),
+  totalBalanceMinor: koboAmount.optional(),
 });
 export type OutstandingBalanceRow = z.infer<typeof outstandingBalanceRow>;
+
+export const sendFeeReminderResponse = z.object({
+  studentId: z.string().uuid(),
+  remindedParentCount: z.number().int(),
+});
+export type SendFeeReminderResponse = z.infer<typeof sendFeeReminderResponse>;
+
+export const bulkFeeReminderRequest = z.object({
+  studentIds: z.array(z.string().uuid()).min(1).max(100),
+});
+export type BulkFeeReminderRequest = z.infer<typeof bulkFeeReminderRequest>;
+
+export const bulkFeeReminderResponse = z.object({
+  remindedStudentCount: z.number().int(),
+  remindedParentCount: z.number().int(),
+});
+export type BulkFeeReminderResponse = z.infer<typeof bulkFeeReminderResponse>;
 
 export const outstandingBalancesResponse = z.object({
   termId: z.string().uuid(),
@@ -390,7 +415,12 @@ export const parentFeeStatusResponse = z.object({
   status: invoiceStatus.nullable(),
   amountChargedMinor: koboAmount,
   amountPaidMinor: koboAmount,
+  /** Balance for the selected term invoice. */
   balanceMinor: koboAmount,
+  /** Unpaid balance from terms before the selected term. */
+  arrearsBalanceMinor: koboAmount,
+  /** Term balance + arrears — what the family owes in total. */
+  totalBalanceMinor: koboAmount,
   dueDate: calendarDate.nullable(),
   lineItems: z.array(parentFeeLineItem),
   onlinePaymentEnabled: z.boolean(),

@@ -15,6 +15,10 @@ import type {
   IssueInvoiceInput,
 } from '../types.js';
 import { assertAuditAvailable, requireTenant, writeFinanceAudit } from './_shared.js';
+import {
+  aggregateOutstandingByScope,
+  summarizeOutstandingRows,
+} from './outstanding-balance.utils.js';
 
 interface ResolvedFeeStructure {
   feeStructureId: string;
@@ -308,21 +312,29 @@ export const invoiceService = {
   ) {
     requireTenant(actor, tenantId);
 
+    const scope = query.scope ?? 'term';
     const filters: { classLevelId?: string; status?: string } = {};
     if (query.classLevelId) filters.classLevelId = query.classLevelId;
     if (query.status) filters.status = query.status;
 
-    const rows = await financeRepository.listOutstandingByTerm(tenantId, termId, filters);
+    const referenceTerm = await academicRepository.findTermById(tenantId, termId);
+    if (!referenceTerm) {
+      throw new LoomisError('ACADEMIC_TERM_NOT_FOUND', 404, 'Term not found');
+    }
 
-    const summary = rows.reduce(
-      (acc, row) => {
-        acc.totalChargedMinor += row.amountChargedMinor;
-        acc.totalPaidMinor += row.amountPaidMinor;
-        acc.totalBalanceMinor += row.balanceMinor;
-        return acc;
+    const slices = await financeRepository.listOutstandingInvoicesWithTerm(tenantId);
+    const rows = aggregateOutstandingByScope(
+      slices,
+      {
+        id: referenceTerm.id,
+        termStartDate: referenceTerm.startDate,
+        termSequence: referenceTerm.sequence,
+        academicYearId: referenceTerm.academicYearId,
       },
-      { studentCount: rows.length, totalChargedMinor: 0, totalPaidMinor: 0, totalBalanceMinor: 0 },
+      scope,
+      filters,
     );
+    const summary = summarizeOutstandingRows(rows);
 
     await writeDataAccess({
       tenantId,
@@ -333,7 +345,7 @@ export const invoiceService = {
       containsFinancialData: true,
     });
 
-    return { termId, summary, rows };
+    return { termId, scope, summary, rows };
   },
 
   /**
@@ -359,6 +371,27 @@ export const invoiceService = {
     const env = getEnv();
     const onlinePaymentEnabled = Boolean(env.PAYSTACK_SECRET_KEY);
 
+    const referenceTerm = await academicRepository.findTermById(tenantId, termId);
+    const slices = (await financeRepository.listOutstandingInvoicesWithTerm(tenantId)).filter(
+      (slice) => slice.studentId === studentId,
+    );
+    const aggregated =
+      referenceTerm && slices.length > 0
+        ? aggregateOutstandingByScope(
+            slices,
+            {
+              id: referenceTerm.id,
+              termStartDate: referenceTerm.startDate,
+              termSequence: referenceTerm.sequence,
+              academicYearId: referenceTerm.academicYearId,
+            },
+            'all',
+            {},
+          )[0]
+        : null;
+    const arrearsBalanceMinor = aggregated?.arrearsBalanceMinor ?? 0;
+    const totalBalanceMinor = aggregated?.totalBalanceMinor ?? 0;
+
     const found = await financeRepository.findInvoiceByTermStudent(tenantId, termId, studentId);
     if (!found) {
       return {
@@ -370,6 +403,8 @@ export const invoiceService = {
         amountChargedMinor: 0,
         amountPaidMinor: 0,
         balanceMinor: 0,
+        arrearsBalanceMinor,
+        totalBalanceMinor,
         dueDate: null,
         lineItems: [],
         onlinePaymentEnabled,
@@ -399,6 +434,8 @@ export const invoiceService = {
       amountChargedMinor: invoice.invoice.amountChargedMinor,
       amountPaidMinor: invoice.invoice.amountPaidMinor,
       balanceMinor: invoice.invoice.balanceMinor,
+      arrearsBalanceMinor,
+      totalBalanceMinor: invoice.invoice.balanceMinor + arrearsBalanceMinor,
       dueDate: invoice.invoice.dueDate,
       lineItems: allocatePaidToLineItems(invoice.items, invoice.invoice.amountPaidMinor),
       onlinePaymentEnabled,

@@ -13,6 +13,8 @@ export {
   listPaymentsHandler,
   logOfflinePaymentHandler,
   outstandingBalancesHandler,
+  sendFeeReminderHandler,
+  bulkFeeReminderHandler,
   updateFeeStructureHandler,
   verifyOfflinePaymentHandler,
 } from './finance.handler.js';

@@ -77,6 +77,11 @@ export const SAFE_NOTIFICATION_COPY = {
     body: 'You have an upcoming assignment deadline. Tap to view.',
     deepLinkResourceType: 'assignment',
   },
+  feeDueReminder: {
+    title: 'School fees reminder',
+    body: 'You have an outstanding school fee balance. Tap to view and pay.',
+    deepLinkResourceType: 'fees',
+  },
   attendanceAbsent: {
     title: 'Attendance update',
     body: 'Your child was marked absent today. Open the app for details.',
