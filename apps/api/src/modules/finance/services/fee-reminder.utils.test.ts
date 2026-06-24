@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { evaluateFeeReminderTriggers } from './fee-reminder.utils.js';
+import { evaluateFeeReminderTriggers, buildFeeReminderIdempotencyKey } from './fee-reminder.utils.js';
 
 describe('evaluateFeeReminderTriggers', () => {
   it('fires month_plus_week 28 days after term start', () => {
@@ -52,5 +52,40 @@ describe('evaluateFeeReminderTriggers', () => {
       preset: 'due_date_only',
     });
     expect(triggers).not.toContain('month_plus_week');
+  });
+});
+
+describe('buildFeeReminderIdempotencyKey', () => {
+  const ids = {
+    tenantId: '019ef49b-1f64-734c-bc4c-beada3071633',
+    studentId: '019ef56a-71de-7c01-b4ae-0ef3cfda5df4',
+    userId: '019ef98e-e14c-761c-a6f8-61bfe70f8a98',
+  };
+
+  it('stays within varchar(128) for bulk manual suffix', () => {
+    const key = buildFeeReminderIdempotencyKey({
+      trigger: 'manual',
+      ...ids,
+      suffix: `${ids.userId}:bulk:${Date.now()}:${ids.studentId}`,
+    });
+    expect(key.length).toBeLessThanOrEqual(128);
+    expect(key.startsWith('fr:manual:')).toBe(true);
+  });
+
+  it('differs per parent user for the same student', () => {
+    const suffix = 'actor:bulk:1:student';
+    const a = buildFeeReminderIdempotencyKey({
+      trigger: 'manual',
+      ...ids,
+      userId: '019ef49b-1f64-734c-bc4c-beada3071633',
+      suffix,
+    });
+    const b = buildFeeReminderIdempotencyKey({
+      trigger: 'manual',
+      ...ids,
+      userId: '019ef56a-71de-7c01-b4ae-0ef3cfda5df4',
+      suffix,
+    });
+    expect(a).not.toBe(b);
   });
 });

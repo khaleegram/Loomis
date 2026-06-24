@@ -10,6 +10,7 @@ import type { ActorContext } from '../types.js';
 import { requireTenant } from './_shared.js';
 import { feeReminderSettingsService } from './fee-reminder-settings.service.js';
 import {
+  buildFeeReminderIdempotencyKey,
   evaluateFeeReminderTriggers,
   reminderChannelsForTrigger,
   type FeeReminderTrigger,
@@ -34,7 +35,13 @@ async function notifyParentsForStudent(
     notificationType: 'fee_due_reminder' as const,
     safeCopy: SAFE_NOTIFICATION_COPY.feeDueReminder,
     resourceId: studentId,
-    eventIdempotencyKey: `fee-reminder:${trigger}:${tenantId}:${studentId}:${userId}:${idempotencySuffix}`,
+    eventIdempotencyKey: buildFeeReminderIdempotencyKey({
+      trigger,
+      tenantId,
+      studentId,
+      userId,
+      suffix: idempotencySuffix,
+    }),
   }));
 
   const created = await deliveryService.createManyInApp(inputs);

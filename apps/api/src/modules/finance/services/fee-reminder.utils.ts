@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 export type FeeReminderTrigger =
   | 'month_plus_week'
   | 'due_soon'
@@ -77,4 +79,25 @@ export function reminderChannelsForTrigger(
     return ['push', 'email', 'sms'];
   }
   return ['push', 'email'];
+}
+
+/** DB column `event_idempotency_key` is varchar(128) — keep keys short and per-parent unique. */
+export const FEE_REMINDER_IDEMPOTENCY_KEY_MAX_LENGTH = 128;
+
+export function buildFeeReminderIdempotencyKey(input: {
+  trigger: FeeReminderTrigger;
+  tenantId: string;
+  studentId: string;
+  userId: string;
+  suffix: string;
+}): string {
+  const digest = createHash('sha256')
+    .update(`${input.tenantId}|${input.studentId}|${input.userId}|${input.suffix}`)
+    .digest('hex')
+    .slice(0, 32);
+  const key = `fr:${input.trigger}:${digest}`;
+  if (key.length > FEE_REMINDER_IDEMPOTENCY_KEY_MAX_LENGTH) {
+    throw new Error('fee reminder idempotency key exceeds column limit');
+  }
+  return key;
 }
