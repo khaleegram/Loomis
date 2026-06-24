@@ -1324,6 +1324,84 @@ async function loadRichStaffRefs(tenantId: string): Promise<RichStaffRef[]> {
 }
 
 /** Academic calendar, enrollment, assignments, gradebook configs, and timetables. */
+const GREENFIELD_TERM_CONFIGS = [
+  {
+    name: 'First Term',
+    startDate: '2025-09-01',
+    endDate: '2025-12-15',
+    enrollmentWindowOpenDate: '2025-09-01',
+    enrollmentWindowCloseDate: '2025-10-31',
+    censusSnapshotDate: '2025-11-01',
+    examStartDate: '2025-11-15',
+    examEndDate: '2025-12-10',
+  },
+  {
+    name: 'Second Term',
+    startDate: '2026-01-08',
+    endDate: '2026-04-04',
+    enrollmentWindowOpenDate: '2026-01-08',
+    enrollmentWindowCloseDate: '2026-01-31',
+    censusSnapshotDate: '2026-02-01',
+    examStartDate: '2026-03-15',
+    examEndDate: '2026-04-01',
+  },
+  {
+    name: 'Third Term',
+    startDate: '2026-04-20',
+    endDate: '2026-07-10',
+    enrollmentWindowOpenDate: '2026-04-20',
+    enrollmentWindowCloseDate: '2026-05-01',
+    censusSnapshotDate: '2026-05-05',
+    examStartDate: '2026-06-15',
+    examEndDate: '2026-07-05',
+  },
+] as const;
+
+async function configureAndOpenRichSchoolTerms(
+  tenantId: string,
+  yearId: string,
+  actor: { userId: string; role: Role; tenantId: string },
+): Promise<void> {
+  const terms = await academicRepository.listTermsByYear(tenantId, yearId);
+  for (let i = 0; i < terms.length; i++) {
+    const term = terms[i];
+    const cfg = GREENFIELD_TERM_CONFIGS[i];
+    if (!term || !cfg) continue;
+    if (term.status === 'draft') {
+      await termService.configureTerm(tenantId, term.id, cfg, actor);
+    }
+    if (i === 0 && term.status !== 'open') {
+      await termService.openTerm(tenantId, term.id, actor);
+    }
+  }
+}
+
+/** Active year with zero terms — backfill placeholders and open First Term. */
+async function repairGreenfieldActiveYearTerms(
+  tenantId: string,
+  principal: RichStaffRef,
+): Promise<boolean> {
+  const years = await academicRepository.listYears(tenantId);
+  const activeYear = years.find((year) => year.status === 'active');
+  if (!activeYear) return false;
+
+  let terms = await academicRepository.listTermsByYear(tenantId, activeYear.id);
+  const actor = { userId: principal.userId, role: 'principal' as Role, tenantId };
+
+  if (terms.length === 0) {
+    terms = await academicRepository.ensureTermPlaceholdersForYear(
+      tenantId,
+      activeYear.id,
+      principal.userId,
+    );
+    if (terms.length === 0) return false;
+    console.log(`Repaired ${terms.length} term placeholder(s) for ${activeYear.label}.`);
+  }
+
+  await configureAndOpenRichSchoolTerms(tenantId, activeYear.id, actor);
+  return true;
+}
+
 async function seedRichSchoolCalendar(
   tenantId: string,
   principal: RichStaffRef,
@@ -1344,42 +1422,10 @@ async function seedRichSchoolCalendar(
   await academicYearService.activateYear(tenantId, year.id, actor);
 
   const draftTerms = await academicRepository.listTermsByYear(tenantId, year.id);
-  const termConfigs = [
-    {
-      name: 'First Term',
-      startDate: '2025-09-01',
-      endDate: '2025-12-15',
-      enrollmentWindowOpenDate: '2025-09-01',
-      enrollmentWindowCloseDate: '2025-10-31',
-      censusSnapshotDate: '2025-11-01',
-      examStartDate: '2025-11-15',
-      examEndDate: '2025-12-10',
-    },
-    {
-      name: 'Second Term',
-      startDate: '2026-01-08',
-      endDate: '2026-04-04',
-      enrollmentWindowOpenDate: '2026-01-08',
-      enrollmentWindowCloseDate: '2026-01-31',
-      censusSnapshotDate: '2026-02-01',
-      examStartDate: '2026-03-15',
-      examEndDate: '2026-04-01',
-    },
-    {
-      name: 'Third Term',
-      startDate: '2026-04-20',
-      endDate: '2026-07-10',
-      enrollmentWindowOpenDate: '2026-04-20',
-      enrollmentWindowCloseDate: '2026-05-01',
-      censusSnapshotDate: '2026-05-05',
-      examStartDate: '2026-06-15',
-      examEndDate: '2026-07-05',
-    },
-  ];
 
   for (let i = 0; i < draftTerms.length; i++) {
     const term = draftTerms[i];
-    const cfg = termConfigs[i];
+    const cfg = GREENFIELD_TERM_CONFIGS[i];
     if (!term || !cfg) continue;
     await termService.configureTerm(tenantId, term.id, cfg, actor);
     if (i === 0) {
@@ -1563,6 +1609,15 @@ async function main() {
 
     const platformOwner = await userRepository.findByEmail(PLATFORM_OWNER_EMAIL);
     const createdById = platformOwner?.id ?? existing.id;
+
+    const staffProfiles = await loadRichStaffRefs(existing.tenantId);
+    const principal = staffProfiles.find((s) => s.email === MARKER_EMAIL);
+    if (principal) {
+      const repairedTerms = await repairGreenfieldActiveYearTerms(existing.tenantId, principal);
+      if (repairedTerms) {
+        console.log('Greenfield active-year terms repaired — refresh Sessions in the browser.');
+      }
+    }
 
     const enrollmentResumed = await resumeGreenfieldStudentEnrollment(existing.tenantId);
     const reassigned = await ensureTeacher01SubjectTeacherOnly(existing.tenantId);

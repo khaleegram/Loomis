@@ -132,6 +132,13 @@ export default function AcademicSessionsPage() {
         />
       ) : null}
 
+      {termsQuery.isError ? (
+        <div className={`rounded-xl border p-4 text-sm ${SEMANTIC.danger.surface}`}>
+          Failed to load terms for this year. If you recently deployed platform billing, run API
+          migration 0047 on the database, then refresh.
+        </div>
+      ) : null}
+
       {!yearsQuery.isLoading && years.length > 0 && activeYear ? (
         <div className="grid gap-6 lg:grid-cols-12">
           {/* Year & term picker sidebar */}

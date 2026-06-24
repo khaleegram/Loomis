@@ -149,6 +149,34 @@ export const academicRepository = {
     });
   },
 
+  /** Backfill draft term placeholders when a year is active but terms were never created. */
+  async ensureTermPlaceholdersForYear(tenantId: string, yearId: string, actorUserId: string) {
+    return withTenantContext(tenantId, async (tx) => {
+      const [year] = await tx
+        .select()
+        .from(academicYears)
+        .where(and(eq(academicYears.tenantId, tenantId), eq(academicYears.id, yearId)))
+        .limit(1);
+      if (!year) return [];
+
+      const existing = await tx
+        .select()
+        .from(academicTerms)
+        .where(and(eq(academicTerms.tenantId, tenantId), eq(academicTerms.academicYearId, yearId)))
+        .orderBy(asc(academicTerms.sequence));
+      if (existing.length > 0) return existing;
+
+      const rows = Array.from({ length: year.termCount }, (_, i) => ({
+        tenantId,
+        academicYearId: yearId,
+        name: defaultTermName(i + 1),
+        sequence: i + 1,
+        createdById: actorUserId,
+      }));
+      return tx.insert(academicTerms).values(rows).returning();
+    });
+  },
+
   async closeYear(tenantId: string, yearId: string, actorUserId: string) {
     return withTenantContext(tenantId, async (tx) => {
       const now = new Date();
