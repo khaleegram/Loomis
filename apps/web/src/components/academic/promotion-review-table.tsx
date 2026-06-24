@@ -92,7 +92,7 @@ export function PromotionReviewTable({
         <TableBody>
           {records.map((record, index) => {
             const studentLabel =
-              studentNames[record.studentId] ?? `${record.studentId.slice(0, 8)}…`;
+              studentNames[record.studentId] ?? 'Student';
 
             return (
               <TableRow

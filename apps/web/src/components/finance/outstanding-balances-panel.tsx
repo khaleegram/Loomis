@@ -27,6 +27,11 @@ import {
   formatInvoiceStatus,
   formatStudentRef,
 } from '@/lib/finance/finance-labels';
+import {
+  buildClassLevelNameMap,
+  resolveClassLevelName,
+  useStudentNameMap,
+} from '@/lib/student/use-student-name-map';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { cn } from '@loomis/ui-web';
 
@@ -58,6 +63,7 @@ export function OutstandingBalancesPanel({ tenantId, termId }: OutstandingBalanc
   const [remindSuccess, setRemindSuccess] = useState<string | null>(null);
 
   const classLevelsQuery = useClassLevels(tenantId);
+  const { resolveStudentName } = useStudentNameMap(tenantId);
   const balancesQuery = useOutstandingBalances(tenantId, termId, {
     ...(classLevelId ? { classLevelId } : {}),
     ...(status ? { status } : {}),
@@ -67,6 +73,7 @@ export function OutstandingBalancesPanel({ tenantId, termId }: OutstandingBalanc
   const bulkReminder = useBulkFeeReminder(tenantId, termId);
 
   const classLevels = classLevelsQuery.data?.levels ?? [];
+  const classLevelById = useMemo(() => buildClassLevelNameMap(classLevels), [classLevels]);
   const data = balancesQuery.data;
   const rows = data?.rows ?? [];
 
@@ -78,8 +85,8 @@ export function OutstandingBalancesPanel({ tenantId, termId }: OutstandingBalanc
   function exportCsv() {
     if (rows.length === 0) return;
     const header = [
-      'studentId',
-      'classLevelId',
+      'student',
+      'class',
       'status',
       'termBalanceMinor',
       'arrearsBalanceMinor',
@@ -87,8 +94,8 @@ export function OutstandingBalancesPanel({ tenantId, termId }: OutstandingBalanc
     ];
     const lines = rows.map((row) =>
       [
-        row.studentId,
-        row.classLevelId,
+        resolveStudentName(row.studentId),
+        resolveClassLevelName(row.classLevelId, classLevelById),
         row.status ?? '',
         row.termBalanceMinor ?? row.balanceMinor,
         row.arrearsBalanceMinor ?? 0,
@@ -282,11 +289,14 @@ export function OutstandingBalancesPanel({ tenantId, termId }: OutstandingBalanc
                 <tbody>
                   {rows.map((row) => (
                     <tr key={`${row.studentId}-${row.invoiceId ?? 'agg'}`} className="border-t border-brand-50/80">
-                      <td className="px-4 py-3 font-mono text-[12px] text-neutral-800">
-                        {formatStudentRef(row.studentId)}
+                      <td className="px-4 py-3 text-[13px] font-medium text-neutral-800">
+                        {formatStudentRef(row.studentId, resolveStudentName(row.studentId))}
                       </td>
                       <td className="px-4 py-3 text-neutral-700">
-                        {formatClassLevelLabel(row.classLevelId)}
+                        {formatClassLevelLabel(
+                          row.classLevelId,
+                          resolveClassLevelName(row.classLevelId, classLevelById),
+                        )}
                       </td>
                       {showTermColumn ? (
                         <td className="px-4 py-3 text-right font-mono tabular-nums text-neutral-800">

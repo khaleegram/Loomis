@@ -35,6 +35,7 @@ import {
   formatPaymentMethod,
   formatStudentRef,
 } from '@/lib/finance/finance-labels';
+import { useStudentNameMap } from '@/lib/student/use-student-name-map';
 
 interface PaymentRegisterPanelProps {
   tenantId: string;
@@ -53,6 +54,7 @@ export function PaymentRegisterPanel({ tenantId, termId }: PaymentRegisterPanelP
   });
 
   const payments = paymentsQuery.data?.payments ?? [];
+  const { resolveStudentName } = useStudentNameMap(tenantId);
 
   const metrics = useMemo(() => {
     let verifiedCount = 0;
@@ -147,8 +149,8 @@ export function PaymentRegisterPanel({ tenantId, termId }: PaymentRegisterPanelP
               <TableBody>
                 {payments.map((payment) => (
                   <TableRow key={payment.id}>
-                    <TableCell className="font-mono text-sm">
-                      {formatStudentRef(payment.studentId)}
+                    <TableCell className="text-sm font-medium">
+                      {formatStudentRef(payment.studentId, resolveStudentName(payment.studentId))}
                     </TableCell>
                     <TableCell className="font-mono tabular-nums">
                       {formatKobo(payment.amountMinor)}

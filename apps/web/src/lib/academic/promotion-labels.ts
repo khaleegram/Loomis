@@ -6,7 +6,7 @@ export function classLevelName(
 ): string {
   if (!levelId) return '—';
   const level = levels.find((l) => l.id === levelId);
-  return level ? `${level.name} (${level.code})` : levelId.slice(0, 8);
+  return level ? `${level.name} (${level.code})` : 'Class';
 }
 
 export function promotionOutcomeLabel(outcome: PromotionRecordResponse['outcome']): string {

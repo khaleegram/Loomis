@@ -35,6 +35,7 @@ interface AssignmentDetailSheetProps {
   onOpenChange: (open: boolean) => void;
   assignment: AssignmentResponse | null;
   submissions: SubmissionResponse[];
+  studentNameById?: Record<string, string>;
   canGrade: boolean;
   gradingSubmissionId?: string | null;
   onGrade: (submissionId: string, values: GradeForm) => Promise<void>;
@@ -45,6 +46,7 @@ export function AssignmentDetailSheet({
   onOpenChange,
   assignment,
   submissions,
+  studentNameById = {},
   canGrade,
   gradingSubmissionId,
   onGrade,
@@ -84,7 +86,7 @@ export function AssignmentDetailSheet({
                   <li key={submission.id} className="space-y-3 p-4">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-[13px] font-medium text-neutral-800">
-                        Student {submission.studentId.slice(0, 8)}…
+                        {studentNameById[submission.studentId] ?? 'Student'}
                       </p>
                       <span className="text-[12px] capitalize text-neutral-500">{submission.status}</span>
                     </div>

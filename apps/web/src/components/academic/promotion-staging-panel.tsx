@@ -263,7 +263,7 @@ export function PromotionStagingPanel({
                       <td className="px-4 py-3 font-medium text-neutral-900">
                         {entry
                           ? studentDisplayName(entry.firstName, entry.lastName)
-                          : row.studentId.slice(0, 8)}
+                          : 'Student'}
                         <p className="text-[10px] font-normal text-neutral-400">
                           {entry?.admissionNo}
                         </p>

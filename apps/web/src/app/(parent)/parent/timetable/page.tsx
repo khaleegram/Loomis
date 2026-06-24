@@ -27,6 +27,7 @@ import { PageBody } from '@/components/parent/parent-shell';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { useAuth } from '@/lib/auth/auth-context';
 import { useActiveTenantStore } from '@/lib/tenant/active-tenant-store';
+import { parentChildSelectorLabel } from '@/lib/student/parent-child-labels';
 import { useBellScheduleSlots } from '@/lib/timetable/use-bell-schedule-slots';
 
 function pickOpenTermId(terms: { id: string; status: string }[]): string | null {
@@ -195,7 +196,7 @@ function ParentTimetableView() {
               <SelectContent>
                 {cards.map((card) => (
                   <SelectItem key={card.studentId} value={card.studentId}>
-                    {card.studentFirstName} · {card.schoolName}
+                    {parentChildSelectorLabel(card)}
                   </SelectItem>
                 ))}
               </SelectContent>

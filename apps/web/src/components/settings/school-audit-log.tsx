@@ -294,12 +294,7 @@ export function SchoolAuditLog({ tenantId }: SchoolAuditLogProps) {
                     {entry.action}
                   </span>
                   <span className="truncate text-[12px] text-neutral-500">
-                    {entry.resourceType}
-                    {entry.resourceId ? (
-                      <span className="ml-1 font-mono text-[10px] text-neutral-400">
-                        {entry.resourceId.slice(0, 8)}…
-                      </span>
-                    ) : null}
+                    {entry.resourceType.replace(/_/g, ' ')}
                   </span>
                   <span
                     className={cn(
@@ -309,8 +304,8 @@ export function SchoolAuditLog({ tenantId }: SchoolAuditLogProps) {
                   >
                     {entry.result}
                   </span>
-                  <span className="font-mono text-[10px] text-neutral-400">
-                    {entry.actorUserId ? `${entry.actorUserId.slice(0, 8)}…` : entry.actorType}
+                  <span className="text-[10px] text-neutral-500">
+                    {entry.actorType === 'user' ? 'Staff member' : entry.actorType.replace(/_/g, ' ')}
                   </span>
                 </li>
               ))}

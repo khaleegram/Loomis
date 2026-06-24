@@ -1,6 +1,10 @@
+import { eq } from 'drizzle-orm';
+import { tenants } from '../../../../drizzle/schema/tenant.js';
 import { LoomisError } from '../../../shared/errors.js';
+import { withTenantContext } from '../../../shared/tenant-context.js';
 import { academicRepository } from '../../academic/repository/academic.repository.js';
 import { attendanceService } from '../../academic/services/attendance.service.js';
+import { studentRepository } from '../../student/repository/student.repository.js';
 import { parentDashboardRepository, regionalAnalyticsRepository } from '../repository/index.js';
 
 export interface ActorContext {
@@ -56,6 +60,17 @@ async function liveAttendanceSummary(
   }
 }
 
+async function loadTenantName(tenantId: string): Promise<string | null> {
+  return withTenantContext(null, async (tx) => {
+    const [row] = await tx
+      .select({ name: tenants.name })
+      .from(tenants)
+      .where(eq(tenants.id, tenantId))
+      .limit(1);
+    return row?.name ?? null;
+  });
+}
+
 export const parentDashboardReadService = {
   async getDashboard(actor: ActorContext) {
     if (actor.role !== 'parent') {
@@ -65,9 +80,16 @@ export const parentDashboardReadService = {
     const cards = await parentDashboardRepository.listForParent(actor.userId);
     return Promise.all(
       cards.map(async (card) => {
+        const student = await studentRepository.findStudentById(card.tenantId, card.studentId);
+        const studentLastName = student?.lastName ?? '';
+        const studentDisplayName = `${card.studentFirstName} ${studentLastName}`.trim();
         const live = await liveAttendanceSummary(card.tenantId, card.studentId, actor);
-        if (!live) return card;
-        return { ...card, attendanceSummary: live };
+        return {
+          ...card,
+          studentLastName,
+          studentDisplayName,
+          ...(live ? { attendanceSummary: live } : {}),
+        };
       }),
     );
   },
@@ -84,7 +106,14 @@ export const regionalAnalyticsReadService = {
       ? await regionalAnalyticsRepository.listByRegion(region, snapshotDate)
       : await regionalAnalyticsRepository.listForSnapshot(snapshotDate);
 
-    const totals = tenants.reduce(
+    const tenantsWithNames = await Promise.all(
+      tenants.map(async (row) => ({
+        ...row,
+        tenantName: (await loadTenantName(row.tenantId)) ?? 'School',
+      })),
+    );
+
+    const totals = tenantsWithNames.reduce(
       (acc, row) => ({
         totalStudents: acc.totalStudents + row.totalStudents,
         activeEnrollments: acc.activeEnrollments + row.activeEnrollments,
@@ -93,6 +122,6 @@ export const regionalAnalyticsReadService = {
       { totalStudents: 0, activeEnrollments: 0, feeCollectedMinor: 0 },
     );
 
-    return { region: region ?? null, snapshotDate, tenants, totals };
+    return { region: region ?? null, snapshotDate, tenants: tenantsWithNames, totals };
   },
 };

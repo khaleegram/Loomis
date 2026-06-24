@@ -3,6 +3,8 @@
 import type { ClassTeacherAssignmentResponse, SubjectAssignmentResponse } from '@loomis/contracts';
 import { BookOpen, GraduationCap, Users } from 'lucide-react';
 
+import { formatSubjectLabel } from '@/lib/academic/ops-labels';
+
 interface WorkloadOverviewProps {
   subjectAssignments: SubjectAssignmentResponse[];
   classTeacherAssignments: ClassTeacherAssignmentResponse[];
@@ -66,7 +68,9 @@ export function WorkloadOverview({
                     key={assignment.id}
                     className="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-[12px] shadow-sm"
                   >
-                    <span className="font-medium text-neutral-700">{assignment.subjectId.slice(0, 8)}…</span>
+                    <span className="font-medium text-neutral-700">
+                      {formatSubjectLabel(assignment.subjectId)}
+                    </span>
                     <span className="flex items-center gap-1 text-[11px] text-neutral-400">
                       <Users aria-hidden className="size-3" />
                       {armName}

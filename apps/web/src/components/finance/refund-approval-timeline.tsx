@@ -65,6 +65,7 @@ import {
   formatRefundStatus,
   formatStudentRef,
 } from '@/lib/finance/finance-labels';
+import { useStudentNameMap } from '@/lib/student/use-student-name-map';
 
 interface TimelineNode {
   id: string;
@@ -202,6 +203,7 @@ export function RefundApprovalTimeline({
     status: 'verified',
   });
   const verifiedPayments = verifiedPaymentsQuery.data?.payments ?? [];
+  const { resolveStudentName } = useStudentNameMap(tenantId);
 
   const createRefund = useCreateRefund(tenantId, termId);
 
@@ -359,8 +361,9 @@ export function RefundApprovalTimeline({
               <div>
                 <CardTitle>Refund approval timeline</CardTitle>
                 <CardDescription>
-                  {formatRefundReason(selected.reasonCode)} · Student{' '}
-                  {formatStudentRef(selected.studentId)} · {formatKobo(selected.amountMinor)}
+                  {formatRefundReason(selected.reasonCode)} ·{' '}
+                  {formatStudentRef(selected.studentId, resolveStudentName(selected.studentId))} ·{' '}
+                  {formatKobo(selected.amountMinor)}
                 </CardDescription>
               </div>
               <Badge variant={selected.status === 'executed' ? 'default' : 'gold'}>
@@ -538,7 +541,8 @@ export function RefundApprovalTimeline({
                       <SelectContent>
                         {verifiedPayments.map((payment) => (
                           <SelectItem key={payment.id} value={payment.id}>
-                            {formatStudentRef(payment.studentId)} · {formatKobo(payment.amountMinor)}
+                            {formatStudentRef(payment.studentId, resolveStudentName(payment.studentId))} ·{' '}
+                            {formatKobo(payment.amountMinor)}
                           </SelectItem>
                         ))}
                       </SelectContent>

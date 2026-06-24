@@ -63,6 +63,7 @@ import { BookOpen, Briefcase, Shield } from 'lucide-react';
 
 import { SEMANTIC, SURFACES } from '@/lib/design/surfaces';
 import { formatRoleLabel } from '@/components/school/school-nav-config';
+import { formatSubjectLabel, formatTermLabel } from '@/lib/academic/ops-labels';
 import { SodNotice } from '@/components/school/sod-notice';
 import {
   formatStaffDisplayRole,
@@ -709,10 +710,11 @@ export function StaffMemberDetail({ staffProfileId, staff: staffProp }: StaffMem
                         </span>
                         <div>
                           <p className="text-[13px] font-semibold text-neutral-800">
-                            {assignment.subjectId.slice(0, 8)}…
+                            {formatSubjectLabel(assignment.subjectId)}
                           </p>
                           <p className="text-[11px] text-neutral-400">
-                            {classArms.find((a) => a.id === assignment.classArmId)?.name ?? 'Class'} · Term {assignment.termId.slice(0, 8)}…
+                            {classArms.find((a) => a.id === assignment.classArmId)?.name ?? 'Class'} ·{' '}
+                            {formatTermLabel(assignment.termId, terms)}
                           </p>
                         </div>
                       </div>
@@ -754,10 +756,10 @@ export function StaffMemberDetail({ staffProfileId, staff: staffProp }: StaffMem
                       </span>
                       <div>
                         <p className="text-[13px] font-semibold text-neutral-800">
-                          {classArms.find((a) => a.id === assignment.classArmId)?.name ?? assignment.classArmId}
+                          {classArms.find((a) => a.id === assignment.classArmId)?.name ?? 'Class'}
                         </p>
                         <p className="text-[11px] text-neutral-400">
-                          Term {assignment.termId.slice(0, 8)}…
+                          {formatTermLabel(assignment.termId, terms)}
                         </p>
                       </div>
                     </div>

@@ -89,7 +89,7 @@ export function GraduationCertificatesPanel({
           {confirmedGraduates.map((record, index) => {
             const certificate = certificateByStudent.get(record.studentId);
             const studentLabel =
-              studentNames[record.studentId] ?? `${record.studentId.slice(0, 8)}…`;
+              studentNames[record.studentId] ?? 'Student';
 
             return (
               <TableRow

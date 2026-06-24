@@ -148,12 +148,15 @@ export function formatRefundStatus(status: RefundRequestStatus): string {
   }
 }
 
-export function formatClassLevelLabel(classLevelId: string): string {
-  return `Class ···${classLevelId.slice(-8)}`;
+export function formatClassLevelLabel(_classLevelId: string, levelName?: string | null): string {
+  const label = levelName?.trim();
+  return label || 'Class';
 }
 
-export function formatStudentRef(studentId: string): string {
-  return `···${studentId.slice(-8)}`;
+/** Prefer a resolved student name; never show raw UUIDs in user-facing UI. */
+export function formatStudentRef(_studentId: string, displayName?: string | null): string {
+  const label = displayName?.trim();
+  return label || 'Student';
 }
 
 /** Settlement voucher legs when an offline payment is verified (US-FIN-003). */

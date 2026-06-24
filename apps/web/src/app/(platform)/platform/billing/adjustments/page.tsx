@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   useApproveBillingAdjustment,
   usePlatformBillingAdjustments,
+  usePlatformTenants,
   useRejectBillingAdjustment,
 } from '@loomis/api-client';
 import { Alert, AlertDescription, Button, Input, Skeleton } from '@loomis/ui-web';
@@ -15,10 +16,19 @@ import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 
 export default function PlatformBillingAdjustmentsPage() {
   const { data, isLoading, isError, error } = usePlatformBillingAdjustments();
+  const { data: tenantsData } = usePlatformTenants();
   const approve = useApproveBillingAdjustment();
   const reject = useRejectBillingAdjustment();
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+
+  const schoolNameByTenantId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const tenant of tenantsData?.tenants ?? []) {
+      map.set(tenant.id, tenant.name);
+    }
+    return map;
+  }, [tenantsData?.tenants]);
 
   return (
     <PageBody className={PLATFORM_PAGE_CLASS}>
@@ -49,8 +59,9 @@ export default function PlatformBillingAdjustmentsPage() {
                   </p>
                   <p className="mt-1 text-sm font-semibold text-neutral-900">{request.reason}</p>
                   <p className="mt-2 text-xs text-neutral-500">
-                    Tenant {request.tenantId.slice(0, 8)}… · Term {request.termId.slice(0, 8)}… ·{' '}
-                    {request.studentIds.length} student(s)
+                    {schoolNameByTenantId.get(request.tenantId) ?? 'School'} ·{' '}
+                    {request.studentIds.length} student
+                    {request.studentIds.length === 1 ? '' : 's'}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">

@@ -459,17 +459,15 @@ export default function TenantDetailPage({ params }: TenantDetailPageProps) {
               <InfoRow label="Address">
                 <span>{tenant.address}</span>
               </InfoRow>
-              <InfoRow label="Tenant ID">
+              <InfoRow label="Support reference">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-[12px] text-neutral-500">
-                    {tenant.id.slice(0, 8)}…{tenant.id.slice(-4)}
-                  </span>
                   <button
                     type="button"
                     onClick={() => void navigator.clipboard.writeText(tenant.id)}
-                    className="rounded-md p-1 text-neutral-300 transition hover:bg-neutral-100 hover:text-neutral-600"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 px-2.5 py-1 text-[12px] font-medium text-neutral-600 transition hover:bg-neutral-50"
                   >
                     <Copy aria-hidden className="size-3" />
+                    Copy reference ID
                   </button>
                 </div>
               </InfoRow>

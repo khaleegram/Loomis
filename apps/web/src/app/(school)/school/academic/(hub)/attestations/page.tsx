@@ -1,11 +1,13 @@
 'use client';
 
-import { useTenantAttestations } from '@loomis/api-client';
+import { useAcademicTerms, useAcademicYears, useTenantAttestations } from '@loomis/api-client';
 import { formatKobo } from '@loomis/core';
 import { Skeleton } from '@loomis/ui-web';
 import { FileSearch } from 'lucide-react';
+import { useMemo } from 'react';
 
 import { ACADEMIC_PAGE_TITLE_STYLE, ACADEMIC_UI } from '@/lib/academic/academic-ui';
+import { formatTermLabel } from '@/lib/academic/ops-labels';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 
 function formatWhen(iso: string): string {
@@ -18,6 +20,18 @@ function formatWhen(iso: string): string {
 export default function AttestationsHistoryPage() {
   const tenantId = useTenantId();
   const attestationsQuery = useTenantAttestations(tenantId ?? '');
+  const yearsQuery = useAcademicYears(tenantId ?? '');
+  const activeYearId =
+    yearsQuery.data?.academicYears?.find((year) => year.status === 'active')?.id ??
+    yearsQuery.data?.academicYears?.[0]?.id ??
+    '';
+  const termsQuery = useAcademicTerms(tenantId ?? '', activeYearId);
+  const terms = termsQuery.data?.terms ?? [];
+
+  const termLabel = useMemo(
+    () => (termId: string) => formatTermLabel(termId, terms),
+    [terms],
+  );
 
   const rows = attestationsQuery.data?.attestations ?? [];
 
@@ -71,7 +85,7 @@ export default function AttestationsHistoryPage() {
                   className="grid gap-2 px-4 py-3.5 sm:grid-cols-[1.2fr_1fr_1fr_1fr_auto] sm:items-center sm:gap-3 sm:px-5"
                 >
                   <span className="text-[13px] font-medium text-neutral-900">
-                    Term {row.termId.slice(0, 8)}…
+                    {termLabel(row.termId)}
                   </span>
                   <span className="font-mono text-[13px] tabular-nums text-neutral-800">
                     {row.systemBillableCount}

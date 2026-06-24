@@ -33,6 +33,7 @@ import {
   formatOfflinePaymentMethod,
   formatStudentRef,
 } from '@/lib/finance/finance-labels';
+import { useStudentNameMap } from '@/lib/student/use-student-name-map';
 
 interface PaymentVerifyQueueProps {
   tenantId: string;
@@ -51,6 +52,7 @@ export function PaymentVerifyQueue({ tenantId, termId, currentUserId }: PaymentV
     status: 'pending_verification',
     channel: 'offline',
   });
+  const { resolveStudentName } = useStudentNameMap(tenantId);
 
   const verifyMutation = useVerifyOfflinePayment(
     tenantId,
@@ -141,8 +143,8 @@ export function PaymentVerifyQueue({ tenantId, termId, currentUserId }: PaymentV
                   const loggedBySelf = currentUserId !== null && payment.loggedById === currentUserId;
                   return (
                     <TableRow key={payment.id}>
-                      <TableCell className="font-mono text-sm">
-                        {formatStudentRef(payment.studentId)}
+                      <TableCell className="text-sm font-medium">
+                        {formatStudentRef(payment.studentId, resolveStudentName(payment.studentId))}
                       </TableCell>
                       <TableCell className="font-mono tabular-nums">
                         {formatKobo(payment.amountMinor)}
@@ -183,7 +185,10 @@ export function PaymentVerifyQueue({ tenantId, termId, currentUserId }: PaymentV
             <div className="mt-6 space-y-4">
               <div className="space-y-1 text-sm">
                 <p>
-                  Student <span className="font-mono">{formatStudentRef(selected.studentId)}</span>
+                  Student{' '}
+                  <span className="font-medium">
+                    {formatStudentRef(selected.studentId, resolveStudentName(selected.studentId))}
+                  </span>
                 </p>
                 <p className="font-mono text-lg font-semibold tabular-nums">
                   {formatKobo(selected.amountMinor)}

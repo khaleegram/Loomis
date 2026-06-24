@@ -4,7 +4,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useAuditLogSearch, useExportAuditLog, useStepUpMfa } from '@loomis/api-client';
+import { useAuditLogSearch, useExportAuditLog, usePlatformTenants, useStepUpMfa } from '@loomis/api-client';
 import type { AuditLogEntryResponse, AuditSensitivity } from '@loomis/contracts';
 import {
   Alert,
@@ -84,13 +84,26 @@ export default function AuditLogPage() {
   const exportAudit = useExportAuditLog({ ensureStepUpToken });
 
   const { data, isLoading, isError } = useAuditLogSearch(appliedFilters);
+  const { data: tenantsData } = usePlatformTenants();
+
+  const schoolNameByTenantId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const tenant of tenantsData?.tenants ?? []) {
+      map.set(tenant.id, tenant.name);
+    }
+    return map;
+  }, [tenantsData?.tenants]);
 
   const chips = useMemo(() => {
     const list: { key: string; label: string; value: string }[] = [];
     if (appliedFilters.actorUserId)
       list.push({ key: 'actorUserId', label: 'Actor', value: appliedFilters.actorUserId });
     if (appliedFilters.tenantId)
-      list.push({ key: 'tenantId', label: 'Tenant', value: appliedFilters.tenantId.slice(0, 8) + '…' });
+      list.push({
+        key: 'tenantId',
+        label: 'School',
+        value: schoolNameByTenantId.get(appliedFilters.tenantId) ?? 'School',
+      });
     if (appliedFilters.action)
       list.push({ key: 'action', label: 'Action', value: appliedFilters.action });
     if (appliedFilters.sensitivity)
@@ -100,7 +113,7 @@ export default function AuditLogPage() {
     if (appliedFilters.to)
       list.push({ key: 'to', label: 'To', value: appliedFilters.to.slice(0, 10) });
     return list;
-  }, [appliedFilters]);
+  }, [appliedFilters, schoolNameByTenantId]);
 
   function applySearch() {
     setAppliedFilters({ ...draftFilters, cursor: undefined });
@@ -302,9 +315,8 @@ export default function AuditLogPage() {
                           {new Date(entry.createdAt).toISOString().replace('T', ' ').slice(0, 19)}
                         </td>
                         <td className="px-4 py-3 font-mono text-[11px] text-neutral-800">{entry.action}</td>
-                        <td className="px-4 py-3 font-mono text-[11px] text-neutral-700">
-                          {entry.resourceType}
-                          {entry.resourceId ? ` · ${entry.resourceId.slice(0, 8)}` : ''}
+                        <td className="px-4 py-3 text-[11px] text-neutral-700">
+                          {entry.resourceType.replace(/_/g, ' ')}
                         </td>
                         <td className="px-4 py-3 font-mono text-[11px] text-neutral-600">{entry.sensitivity}</td>
                         <td className="px-4 py-3 font-mono text-[11px] text-neutral-600">{entry.result}</td>

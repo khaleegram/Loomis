@@ -16,6 +16,7 @@ import { PageBody } from '@/components/parent/parent-shell';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { useAuth } from '@/lib/auth/auth-context';
 import { useActiveTenantStore } from '@/lib/tenant/active-tenant-store';
+import { parentChildName, parentChildSelectorLabel } from '@/lib/student/parent-child-labels';
 
 function pickOpenTermId(terms: { id: string; status: string }[]): string | null {
   return (
@@ -119,7 +120,7 @@ function ParentAttendanceView() {
             <SelectContent>
               {cards.map((card) => (
                 <SelectItem key={card.studentId} value={card.studentId}>
-                  {card.studentFirstName} · {card.schoolName}
+                  {parentChildSelectorLabel(card)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -145,7 +146,7 @@ function ParentAttendanceView() {
       </div>
 
       <AttendanceTermView
-        title={activeCard?.studentFirstName ?? 'Child'}
+        title={activeCard ? parentChildName(activeCard) : 'Child'}
         subtitle="Track daily presence for the selected term. Monthly summaries update when the class teacher submits roll call."
         classArmLabel={attendanceQuery.data?.classArmLabel ?? activeCard?.classArmLabel ?? null}
         termLabel={termLabel}

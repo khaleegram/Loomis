@@ -136,7 +136,7 @@ export default function KycPage() {
                   {records.map((r) => (
                     <tr key={r.id} className="border-t border-brand-50/80">
                       <td className="px-4 py-3 font-medium text-neutral-900">
-                        {r.participantName ?? r.participantId?.slice(0, 8)}
+                        {r.participantName ?? 'Participant'}
                       </td>
                       <td className="px-4 py-3 text-neutral-500">
                         {r.submittedAt ? format(new Date(r.submittedAt), 'dd/MM/yyyy') : '—'}

@@ -5,6 +5,7 @@ import { formatKobo } from '@loomis/core';
 import {
   useMyEarnings,
   useMyEarningsSummary,
+  useRegionalAnalytics,
   useRegionalPayoutCycles,
 } from '@loomis/api-client';
 import type { EarningEntryResponse, PayoutCycleResponse } from '@loomis/contracts';
@@ -65,6 +66,15 @@ export default function ReferralEarningsPage() {
   const { data: summary, isLoading: summaryLoading } = useMyEarningsSummary();
   const { data: earnings, isLoading: earningsLoading } = useMyEarnings();
   const { data: cycles, isLoading: cyclesLoading } = useRegionalPayoutCycles();
+  const { data: regionalAnalytics } = useRegionalAnalytics();
+
+  const schoolNameByTenantId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const tenant of regionalAnalytics?.tenants ?? []) {
+      map.set(tenant.tenantId, tenant.tenantName ?? 'School');
+    }
+    return map;
+  }, [regionalAnalytics?.tenants]);
 
   const isLoading = summaryLoading || earningsLoading || cyclesLoading;
 
@@ -198,7 +208,9 @@ export default function ReferralEarningsPage() {
                             e.status === 'held' && 'bg-red-50/50',
                           )}
                         >
-                          <td className="px-4 py-3 text-[12px] text-neutral-700">{e.tenantId.slice(0, 8)}…</td>
+                          <td className="px-4 py-3 text-[12px] font-medium text-neutral-700">
+                            {schoolNameByTenantId.get(e.tenantId) ?? 'School'}
+                          </td>
                           <td className="px-4 py-3 text-neutral-800">{formatKobo(e.psfSettledAmountMinor)}</td>
                           <td className="px-4 py-3 text-neutral-800">{formatKobo(e.amountMinor)}</td>
                           <td className="px-4 py-3">

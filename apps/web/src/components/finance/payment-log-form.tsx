@@ -47,6 +47,7 @@ import {
   formatOfflinePaymentMethod,
   formatStudentRef,
 } from '@/lib/finance/finance-labels';
+import { studentDisplayName } from '@/lib/student/student-labels';
 
 const formSchema = z.object({
   invoiceId: z.string().uuid(),
@@ -72,6 +73,13 @@ export function PaymentLogForm({ tenantId, termId }: PaymentLogFormProps) {
   const logPayment = useLogOfflinePayment(tenantId, termId);
 
   const students = studentsQuery.data?.students ?? [];
+  const studentNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const student of students) {
+      map.set(student.id, studentDisplayName(student.firstName, student.lastName));
+    }
+    return map;
+  }, [students]);
   const invoices = invoicesQuery.data?.invoices ?? [];
 
   const filteredStudents = useMemo(() => {
@@ -200,7 +208,10 @@ export function PaymentLogForm({ tenantId, termId }: PaymentLogFormProps) {
               {selectedInvoice ? (
                 <div className="rounded-xl border border-brand-200/60 bg-brand-50/30 p-4 text-[13px]">
                   <p className="font-bold text-neutral-900">
-                    Student {formatStudentRef(selectedInvoice.studentId)}
+                    {formatStudentRef(
+                      selectedInvoice.studentId,
+                      studentNameById.get(selectedInvoice.studentId),
+                    )}
                   </p>
                   <p className="mt-1 text-neutral-600">
                     Charged {formatKobo(selectedInvoice.amountChargedMinor)} · Paid{' '}

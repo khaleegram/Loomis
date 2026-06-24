@@ -1,10 +1,13 @@
 'use client';
 
-import { usePsfObligations } from '@loomis/api-client';
+import { useAcademicTerms, useAcademicYears, usePsfObligations } from '@loomis/api-client';
 import { formatKobo } from '@loomis/core';
 import { Badge, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@loomis/ui-web';
+import { useMemo } from 'react';
 
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
+import { formatTermLabel } from '@/lib/academic/ops-labels';
+import { useStudentNameMap } from '@/lib/student/use-student-name-map';
 
 const STATUS_BADGE: Record<string, 'default' | 'warning' | 'success' | 'neutral'> = {
   pending: 'warning',
@@ -29,8 +32,22 @@ interface PsfObligationRow {
 /** Core PSF surface — section on balances, not top-level nav (Sprint 3). */
 export function PsfObligationsSection({ tenantId }: { tenantId: string }) {
   const { data, isLoading, isError, error } = usePsfObligations(tenantId);
+  const { resolveStudentName } = useStudentNameMap(tenantId);
+  const yearsQuery = useAcademicYears(tenantId);
+  const activeYearId =
+    yearsQuery.data?.academicYears?.find((year) => year.status === 'active')?.id ??
+    yearsQuery.data?.academicYears?.[0]?.id ??
+    '';
+  const termsQuery = useAcademicTerms(tenantId, activeYearId);
+  const terms = termsQuery.data?.terms ?? [];
+
   const obligations = ((data as { obligations?: PsfObligationRow[] } | undefined)?.obligations ??
     []) as PsfObligationRow[];
+
+  const termLabel = useMemo(
+    () => (termId?: string) => (termId ? formatTermLabel(termId, terms) : '—'),
+    [terms],
+  );
 
   return (
     <section className={ACADEMIC_UI.dataPanel}>
@@ -70,8 +87,10 @@ export function PsfObligationsSection({ tenantId }: { tenantId: string }) {
             <TableBody>
               {obligations.slice(0, 10).map((row) => (
                 <TableRow key={row.id}>
-                  <TableCell className="font-mono text-xs">{row.studentId?.slice(0, 8) ?? '—'}…</TableCell>
-                  <TableCell className="font-mono text-xs">{row.termId?.slice(0, 8) ?? '—'}…</TableCell>
+                  <TableCell className="text-sm font-medium">
+                    {row.studentId ? resolveStudentName(row.studentId) : '—'}
+                  </TableCell>
+                  <TableCell className="text-sm text-neutral-700">{termLabel(row.termId)}</TableCell>
                   <TableCell className="text-right tabular-nums font-medium">
                     {formatKobo(row.amountMinor ?? 0)}
                   </TableCell>

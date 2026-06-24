@@ -31,6 +31,8 @@ function cardToResponse(row: {
   studentId: string;
   schoolName: string;
   studentFirstName: string;
+  studentLastName?: string;
+  studentDisplayName?: string;
   classArmLabel: string | null;
   attendanceSummary: { presentCount: number; totalCount: number; lastStatus: string | null };
   latestResultSummary: { termId: string | null; averageScore: number | null } | null;
@@ -45,6 +47,8 @@ function cardToResponse(row: {
     studentId: row.studentId,
     schoolName: row.schoolName,
     studentFirstName: row.studentFirstName,
+    studentLastName: row.studentLastName,
+    studentDisplayName: row.studentDisplayName,
     classArmLabel: row.classArmLabel,
     attendanceSummary: row.attendanceSummary,
     latestResultSummary: row.latestResultSummary,
@@ -179,6 +183,7 @@ export async function getRegionalAnalyticsHandler(
     snapshotDate: data.snapshotDate,
     tenants: data.tenants.map((row) => ({
       tenantId: row.tenantId,
+      tenantName: (row as { tenantName?: string }).tenantName,
       region: row.region,
       snapshotDate: row.snapshotDate,
       totalStudents: row.totalStudents,

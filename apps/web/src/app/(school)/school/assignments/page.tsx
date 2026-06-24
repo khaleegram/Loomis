@@ -27,6 +27,7 @@ import { useCan, useCanAny, useRole } from '@/lib/auth/use-capability';
 import { isClassTeacherRole, isTeachingStaffRole } from '@/lib/timetable/is-teaching-staff';
 import { useTeachingStaffScope } from '@/lib/timetable/use-teaching-staff-scope';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
+import { useStudentNameMap } from '@/lib/student/use-student-name-map';
 
 export default function AssignmentsPage() {
   const tenantId = useTenantId();
@@ -76,6 +77,9 @@ export default function AssignmentsPage() {
   const publishAssignment = usePublishAssignment(tenantId ?? '');
   const gradeSubmission = useGradeSubmission(tenantId ?? '');
   const submissionsQuery = useAssignmentSubmissions(tenantId ?? '', selectedAssignment?.id ?? null);
+  const { nameById } = useStudentNameMap(tenantId ?? '');
+
+  const studentNameById = useMemo(() => Object.fromEntries(nameById), [nameById]);
 
   const assignments = assignmentsQuery.data?.assignments ?? [];
   const classLabelByArmId = useMemo(() => {
@@ -202,6 +206,7 @@ export default function AssignmentsPage() {
         }}
         assignment={selectedAssignment}
         submissions={submissionsQuery.data?.submissions ?? []}
+        studentNameById={studentNameById}
         canGrade={canCreate}
         gradingSubmissionId={gradingId}
         onGrade={async (submissionId, values) => {

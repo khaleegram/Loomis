@@ -28,12 +28,12 @@ export type RegionalAlert = {
 function deriveAlerts(tenants: RegionalTenantAnalyticsResponse[]): RegionalAlert[] {
   const alerts: RegionalAlert[] = [];
   for (const t of tenants) {
-    const shortId = t.tenantId.slice(0, 8);
+    const schoolLabel = t.tenantName?.trim() || 'School';
     if (t.attendanceRateMilli < ATTENDANCE_THRESHOLD_MILLI) {
       alerts.push({
         id: `${t.tenantId}-attendance`,
         tenantId: t.tenantId,
-        schoolLabel: `School · ${shortId}`,
+        schoolLabel,
         indicator: 'attendance',
         message: `Attendance ${(t.attendanceRateMilli / 10_000).toFixed(1)}% — below 75% threshold`,
         severity: t.attendanceRateMilli < 600_000 ? 'danger' : 'warning',
@@ -43,7 +43,7 @@ function deriveAlerts(tenants: RegionalTenantAnalyticsResponse[]): RegionalAlert
       alerts.push({
         id: `${t.tenantId}-fees`,
         tenantId: t.tenantId,
-        schoolLabel: `School · ${shortId}`,
+        schoolLabel,
         indicator: 'fee_collection',
         message: `Fee collection ${(t.feeCollectionRateMilli / 10_000).toFixed(1)}% — revenue decline flagged`,
         severity: t.feeCollectionRateMilli < 500_000 ? 'danger' : 'warning',
@@ -53,7 +53,7 @@ function deriveAlerts(tenants: RegionalTenantAnalyticsResponse[]): RegionalAlert
       alerts.push({
         id: `${t.tenantId}-enrollment`,
         tenantId: t.tenantId,
-        schoolLabel: `School · ${shortId}`,
+        schoolLabel,
         indicator: 'enrollment',
         message: 'Zero active enrollments with historical students — investigate',
         severity: 'danger',

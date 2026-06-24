@@ -6,6 +6,8 @@ export const parentChildCardResponse = z.object({
   studentId: z.string().uuid(),
   schoolName: z.string(),
   studentFirstName: z.string(),
+  studentLastName: z.string().optional(),
+  studentDisplayName: z.string().optional(),
   classArmLabel: z.string().nullable(),
   attendanceSummary: z.object({
     presentCount: z.number().int(),
@@ -32,6 +34,7 @@ export type ParentDashboardResponse = z.infer<typeof parentDashboardResponse>;
 
 export const regionalTenantAnalyticsResponse = z.object({
   tenantId: z.string().uuid(),
+  tenantName: z.string().optional(),
   region: z.string(),
   snapshotDate: z.string(),
   totalStudents: z.number().int(),

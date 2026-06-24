@@ -156,11 +156,8 @@ export default function RegionalOnboardingPage() {
           <div className={`${REGIONAL_UI.dataPanel} mx-auto max-w-lg p-8 text-center`}>
             <CheckCircle2 aria-hidden className="mx-auto size-12 text-accent-green-600" />
             <p className="mt-4 text-xl font-extrabold text-neutral-900">{success.name}</p>
-            <p className="mt-2 text-[13px] text-neutral-500">
-              Tracking ID: <span className="font-mono">{success.tenantId.slice(0, 13)}…</span>
-            </p>
             <p className="mt-4 text-[13px] text-neutral-500">
-              Attribution pending KYC verification. You will be notified when the school goes live.
+              We&apos;ll notify you when the school goes live and attribution is confirmed.
             </p>
             <button
               type="button"

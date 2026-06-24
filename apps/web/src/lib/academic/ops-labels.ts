@@ -72,7 +72,15 @@ export const SCHOOL_SUBJECT_OPTIONS = Object.entries(SUBJECT_LABELS).map(([id, l
 }));
 
 export function formatSubjectLabel(subjectId: string): string {
-  return SUBJECT_LABELS[subjectId] ?? `Subject ···${subjectId.slice(-8)}`;
+  return SUBJECT_LABELS[subjectId] ?? 'Subject';
+}
+
+export function formatTermLabel(
+  termId: string,
+  terms: Array<{ id: string; name?: string | null }>,
+): string {
+  const term = terms.find((t) => t.id === termId);
+  return term?.name?.trim() || 'Term';
 }
 
 export function todayCalendarDate(): string {

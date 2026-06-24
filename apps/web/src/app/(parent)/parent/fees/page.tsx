@@ -34,6 +34,7 @@ import { useAuth } from '@/lib/auth/auth-context';
 import { financeErrorMessage } from '@/lib/finance/finance-errors';
 import { formatFeeCategory } from '@/lib/finance/finance-labels';
 import { useActiveTenantStore } from '@/lib/tenant/active-tenant-store';
+import { parentChildName, parentChildSelectorLabel } from '@/lib/student/parent-child-labels';
 import { formatKobo } from '@loomis/core';
 
 function pickOpenTermId(terms: { id: string; status: string }[]): string | null {
@@ -154,7 +155,7 @@ function ParentFeesView() {
   return (
     <div className="space-y-6">
       <ParentFeesHero
-        childName={activeCard?.studentFirstName ?? null}
+        childName={activeCard ? parentChildName(activeCard) : null}
         schoolName={activeCard?.schoolName ?? null}
         termLabel={termLabel}
         classLabel={fees?.classArmLabel ?? activeCard?.classArmLabel ?? null}
@@ -202,7 +203,7 @@ function ParentFeesView() {
             <SelectContent>
               {cards.map((card) => (
                 <SelectItem key={card.studentId} value={card.studentId}>
-                  {card.studentFirstName} · {card.schoolName}
+                  {parentChildSelectorLabel(card)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -239,7 +240,7 @@ function ParentFeesView() {
         <div className={`${ACADEMIC_UI.dataPanel} p-10 text-center`}>
           <p className="text-[15px] font-semibold text-neutral-800">No invoice for this term yet</p>
           <p className="mt-2 text-[13px] text-neutral-500">
-            The school has not issued a fee invoice for {activeCard?.studentFirstName ?? 'your child'} this term.
+            The school has not issued a fee invoice for {activeCard ? parentChildName(activeCard) : 'your child'} this term.
             {creditBalanceMinor > 0
               ? ` You have ${formatKobo(creditBalanceMinor)} pay-ahead credit ready for when fees are issued.`
               : ' Contact the bursar if you expected one.'}
@@ -306,7 +307,7 @@ function ParentFeesView() {
               <p className="text-[14px] font-bold text-neutral-900">Pay ahead</p>
               <p className="mt-2 text-[13px] text-neutral-600">
                 Prepay school fees before the next invoice is issued. Surplus is saved as credit on{' '}
-                {activeCard?.studentFirstName ?? 'your child'}&apos;s account.
+                {activeCard ? parentChildName(activeCard) : 'Your child'}&apos;s account.
               </p>
             </div>
           ) : null}

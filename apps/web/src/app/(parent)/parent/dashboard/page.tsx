@@ -25,6 +25,7 @@ import {
 } from '@/components/dashboard/dashboard-primitives';
 import { PageBody } from '@/components/parent/parent-shell';
 import { useAuth } from '@/lib/auth/auth-context';
+import { parentChildName } from '@/lib/student/parent-child-labels';
 
 function attendancePercent(card: ParentChildCardResponse): number | null {
   const { presentCount, totalCount } = card.attendanceSummary;
@@ -190,7 +191,7 @@ export default function ParentDashboardPage() {
                   className="mt-1 text-neutral-900"
                   style={{ fontSize: '1.375rem', fontWeight: 800, letterSpacing: '-0.025em' }}
                 >
-                  {card.studentFirstName}
+                  {parentChildName(card)}
                 </p>
                 <p className="mt-0.5 text-[11px] text-neutral-400">{card.classArmLabel ?? 'Class not set'}</p>
 

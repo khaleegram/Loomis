@@ -107,7 +107,7 @@ export function BulkEnrollmentPanel({
               {enrollable.slice(0, 8).map((record) => (
                 <li key={record.id} className="flex items-center justify-between px-4 py-3 text-[13px]">
                   <span className="font-medium text-neutral-900">
-                    {studentNames[record.studentId] ?? `${record.studentId.slice(0, 8)}…`}
+                    {studentNames[record.studentId] ?? 'Student'}
                   </span>
                   <span className="text-neutral-500">
                     → {classLevelName(levels, record.toClassLevelId)}

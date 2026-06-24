@@ -8,6 +8,7 @@ import type { FormEvent } from 'react';
 import {
   useChangePassword,
   useMyProfile,
+  useSchoolBranding,
   useUpdateProfile,
 } from '@loomis/api-client';
 import { Button } from '@loomis/ui-web';
@@ -23,6 +24,7 @@ export default function ProfileSettingsPage() {
   const tenantId = useTenantId();
 
   const { data: profile, refetch: refetchProfile } = useMyProfile();
+  const { data: branding } = useSchoolBranding(tenantId ?? '');
   const updateProfile = useUpdateProfile();
   const changePassword = useChangePassword();
 
@@ -163,8 +165,8 @@ export default function ProfileSettingsPage() {
           <h1 className="truncate text-xl font-bold text-foreground">{displayName}</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">{roleLabel}</p>
           {tenantId ? (
-            <p className="mt-0.5 font-mono text-[11px] text-muted-foreground/80">
-              Tenant &middot; {tenantId.slice(0, 8)}&hellip;{tenantId.slice(-4)}
+            <p className="mt-0.5 text-[12px] text-muted-foreground/80">
+              {branding?.tenantName ?? 'Your school'}
             </p>
           ) : (
             <p className="mt-0.5 text-[11px] text-muted-foreground/80">Platform account</p>

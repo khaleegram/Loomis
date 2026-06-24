@@ -33,6 +33,7 @@ import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { academicErrorMessage } from '@/lib/academic/academic-errors';
 import { useAuth } from '@/lib/auth/auth-context';
 import { useActiveTenantStore } from '@/lib/tenant/active-tenant-store';
+import { parentChildName, parentChildSelectorLabel } from '@/lib/student/parent-child-labels';
 
 function pickOpenTermId(terms: { id: string; status: string }[]): string | null {
   return (
@@ -78,7 +79,7 @@ function ResultsScopePanel({
             <SelectContent>
               {childSelector.cards.map((card) => (
                 <SelectItem key={card.studentId} value={card.studentId}>
-                  {card.studentFirstName} · {card.schoolName}
+                  {parentChildSelectorLabel(card)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -274,7 +275,7 @@ function ParentResultsView() {
       <ParentResultsHero
         title="Child's results"
         description="Published term scores and the official report card for your selected child."
-        studentName={activeCard?.studentFirstName ?? null}
+        studentName={activeCard ? parentChildName(activeCard) : null}
         schoolName={activeCard?.schoolName ?? null}
         classLabel={data?.classArmLabel ?? activeCard?.classArmLabel ?? null}
         termLabel={termLabel}
@@ -285,7 +286,7 @@ function ParentResultsView() {
       />
 
       <ResultsScopePanel
-        studentName={activeCard?.studentFirstName ?? 'Student'}
+        studentName={activeCard ? parentChildName(activeCard) : 'Your child'}
         schoolName={activeCard?.schoolName ?? null}
         termId={resolvedTermId}
         onTermChange={setTermId}
@@ -303,7 +304,7 @@ function ParentResultsView() {
 
       <ChildResultsView
         title="Subject breakdown"
-        subtitle={`Continuous assessment and exam scores for ${activeCard?.studentFirstName ?? 'your child'}.`}
+        subtitle={`Continuous assessment and exam scores for ${activeCard ? parentChildName(activeCard) : 'your child'}.`}
         data={data}
         isLoading={resultsQuery.isLoading}
         isError={resultsQuery.isError}
@@ -313,7 +314,7 @@ function ParentResultsView() {
       {data?.published && activeCard ? (
         <PublishedResultsSection
           tenantId={activeCard.tenantId}
-          studentName={activeCard.studentFirstName}
+          studentName={parentChildName(activeCard)}
           data={data}
           sessionName={sessionName}
         />
