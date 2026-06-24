@@ -8,17 +8,29 @@ import type {
 } from '@loomis/contracts';
 import type { ApiClient } from '../../http/client.js';
 import { useApiClient } from '../context.js';
+import { dashboardLiveQueryExtras, type QueryLiveOptions } from '../dashboard-live.js';
 import { queryKeys } from '../keys.js';
 
 const STALE_MS = 30_000;
 
-export function useParentDashboard(enabled = true) {
+type ParentDashboardArg = boolean | { enabled?: boolean; live?: boolean };
+
+function normalizeParentDashboardArg(arg: ParentDashboardArg = true) {
+  if (typeof arg === 'boolean') {
+    return { enabled: arg, live: false };
+  }
+  return { enabled: arg.enabled ?? true, live: arg.live ?? false };
+}
+
+export function useParentDashboard(arg: ParentDashboardArg = true) {
+  const { enabled, live } = normalizeParentDashboardArg(arg);
   const client = useApiClient();
   return useQuery({
     queryKey: queryKeys.parent.dashboard(),
     queryFn: () => client.get<ParentDashboardResponse>('/parents/me/dashboard'),
     staleTime: STALE_MS,
     enabled,
+    ...dashboardLiveQueryExtras(live),
   });
 }
 

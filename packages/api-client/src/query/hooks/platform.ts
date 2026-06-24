@@ -18,6 +18,7 @@ import type {
   UpdateIvpCaseRequest,
 } from '@loomis/contracts';
 import { useApiClient } from '../context.js';
+import { dashboardLiveQueryExtras, type QueryLiveOptions } from '../dashboard-live.js';
 import { queryKeys } from '../keys.js';
 import type { StepUpTokenResult } from '../../mutations/financial-mutation.js';
 import { useFinancialMutation } from '../../mutations/useFinancialMutation.js';
@@ -53,16 +54,17 @@ function toIvpCasesListResponse(cases: IvpAnomalyCaseResponse[]): IvpCasesListRe
 
 // ── Revenue dashboard ──────────────────────────────────────────────────────────
 
-export function usePlatformRevenueSummary() {
+export function usePlatformRevenueSummary(options?: QueryLiveOptions) {
   const client = useApiClient();
   return useQuery({
     queryKey: queryKeys.platform.revenueSummary(),
     queryFn: () => client.get<PlatformRevenueSummaryResponse>('/platform/ledger/revenue/summary'),
     staleTime: PLATFORM_STALE_MS,
+    ...dashboardLiveQueryExtras(options?.live),
   });
 }
 
-export function usePlatformRevenueChart(period: string) {
+export function usePlatformRevenueChart(period: string, options?: QueryLiveOptions) {
   const client = useApiClient();
   return useQuery({
     queryKey: queryKeys.platform.revenueChart(period),
@@ -70,17 +72,19 @@ export function usePlatformRevenueChart(period: string) {
       client.get<PlatformRevenueChartResponse>(`/platform/ledger/revenue/chart?period=${period}`),
     staleTime: PLATFORM_STALE_MS,
     enabled: Boolean(period),
+    ...dashboardLiveQueryExtras(options?.live),
   });
 }
 
 // ── Tenants ────────────────────────────────────────────────────────────────────
 
-export function usePlatformTenants() {
+export function usePlatformTenants(options?: QueryLiveOptions) {
   const client = useApiClient();
   return useQuery({
     queryKey: queryKeys.platform.tenants(),
     queryFn: () => client.get<TenantListResponse>('/platform/tenants'),
     staleTime: PLATFORM_STALE_MS,
+    ...dashboardLiveQueryExtras(options?.live),
   });
 }
 
@@ -211,7 +215,10 @@ export function useRequestPsfRateOverride(config: UseRequestPsfRateOverrideConfi
 
 // ── IVP Risk cases ─────────────────────────────────────────────────────────────
 
-export function usePlatformRiskCases(filters?: { status?: string; priority?: string }) {
+export function usePlatformRiskCases(
+  filters?: { status?: string; priority?: string },
+  options?: QueryLiveOptions,
+) {
   const client = useApiClient();
   const params = new URLSearchParams();
   if (filters?.status) params.set('status', filters.status);
@@ -226,6 +233,7 @@ export function usePlatformRiskCases(filters?: { status?: string; priority?: str
       return toIvpCasesListResponse(cases);
     },
     staleTime: 15_000,
+    ...dashboardLiveQueryExtras(options?.live),
   });
 }
 
@@ -254,7 +262,7 @@ export function useUpdateRiskCase(caseId: string) {
 
 // ── Privileged changes (dual-approval) ────────────────────────────────────────
 
-export function usePlatformPrivilegedChanges(status?: string) {
+export function usePlatformPrivilegedChanges(status?: string, options?: QueryLiveOptions) {
   const client = useApiClient();
   return useQuery({
     queryKey: queryKeys.platform.privilegedChanges(status),
@@ -264,6 +272,7 @@ export function usePlatformPrivilegedChanges(status?: string) {
       return { changes: filtered, total: filtered.length };
     },
     staleTime: 20_000,
+    ...dashboardLiveQueryExtras(options?.live),
   });
 }
 

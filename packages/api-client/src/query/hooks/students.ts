@@ -20,6 +20,7 @@ import type {
 import type { ApiClient } from '../../http/client.js';
 import { useIdempotentMutation } from '../../mutations/useIdempotentMutation.js';
 import { useApiClient } from '../context.js';
+import { dashboardLiveQueryExtras, type QueryLiveOptions } from '../dashboard-live.js';
 import { assertTenantScopedKey, queryKeys, type StudentListFilters } from '../keys.js';
 
 const STUDENT_LIST_STALE_MS = 30_000;
@@ -73,9 +74,16 @@ export function studentProfileQueryOptions(
 }
 
 /** Tenant-scoped student registry list. */
-export function useStudents(tenantId: string, filters: StudentListFilters = {}) {
+export function useStudents(
+  tenantId: string,
+  filters: StudentListFilters = {},
+  options?: QueryLiveOptions,
+) {
   const client = useApiClient();
-  return useQuery(studentsListQueryOptions(client, tenantId, filters));
+  return useQuery({
+    ...studentsListQueryOptions(client, tenantId, filters),
+    ...dashboardLiveQueryExtras(options?.live),
+  });
 }
 
 /** Single student record. */
@@ -88,7 +96,11 @@ export function useStudent(tenantId: string, studentId: string) {
 }
 
 /** Active enrollments in a term for promotion staging (FR-ASM-007). */
-export function useTermEnrollmentRoster(tenantId: string, termId: string) {
+export function useTermEnrollmentRoster(
+  tenantId: string,
+  termId: string,
+  options?: QueryLiveOptions,
+) {
   const client = useApiClient();
   const queryKey = queryKeys.students.enrollmentRoster(tenantId, termId);
   assertTenantScopedKey(queryKey, tenantId);
@@ -100,6 +112,7 @@ export function useTermEnrollmentRoster(tenantId: string, termId: string) {
       ),
     staleTime: STUDENT_LIST_STALE_MS,
     enabled: Boolean(tenantId && termId),
+    ...dashboardLiveQueryExtras(options?.live),
   });
 }
 

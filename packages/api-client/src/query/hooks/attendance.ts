@@ -8,6 +8,7 @@ import type {
 } from '@loomis/contracts';
 import type { ApiClient } from '../../http/client.js';
 import { useApiClient } from '../context.js';
+import { dashboardLiveQueryExtras, type QueryLiveOptions } from '../dashboard-live.js';
 import { assertTenantScopedKey, queryKeys, type AttendanceListFilters } from '../keys.js';
 
 const ATTENDANCE_STALE_MS = 15_000;
@@ -36,7 +37,11 @@ export function attendanceQueryOptions(
 }
 
 /** Attendance records for a class (US-ACA-005). */
-export function useAttendance(tenantId: string, filters: AttendanceListFilters | null) {
+export function useAttendance(
+  tenantId: string,
+  filters: AttendanceListFilters | null,
+  options?: QueryLiveOptions,
+) {
   const client = useApiClient();
   const enabled = Boolean(tenantId && filters?.termId && filters?.classArmId);
 
@@ -62,6 +67,7 @@ export function useAttendance(tenantId: string, filters: AttendanceListFilters |
     },
     enabled,
     staleTime: ATTENDANCE_STALE_MS,
+    ...dashboardLiveQueryExtras(options?.live),
   });
 }
 

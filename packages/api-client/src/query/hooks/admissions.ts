@@ -10,6 +10,7 @@ import type {
 import type { ApiClient } from '../../http/client.js';
 import { useIdempotentMutation } from '../../mutations/useIdempotentMutation.js';
 import { useApiClient } from '../context.js';
+import { dashboardLiveQueryExtras, type QueryLiveOptions } from '../dashboard-live.js';
 import { assertTenantScopedKey, queryKeys, type AdmissionListFilters } from '../keys.js';
 
 const ADMISSIONS_STALE_MS = 30_000;
@@ -47,11 +48,16 @@ export function admissionDetailQueryOptions(
 }
 
 /** Tenant-scoped admissions pipeline (US-SIS-001/002). */
-export function useAdmissions(tenantId: string, filters: AdmissionListFilters = {}) {
+export function useAdmissions(
+  tenantId: string,
+  filters: AdmissionListFilters = {},
+  options?: QueryLiveOptions,
+) {
   const client = useApiClient();
   return useQuery({
     ...admissionsListQueryOptions(client, tenantId, filters),
     enabled: Boolean(tenantId),
+    ...dashboardLiveQueryExtras(options?.live),
   });
 }
 

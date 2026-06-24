@@ -17,6 +17,7 @@ import type {
   UpdateRetentionScheduleRequest,
 } from '@loomis/contracts';
 import { useApiClient } from '../context.js';
+import { dashboardLiveQueryExtras, type QueryLiveOptions } from '../dashboard-live.js';
 import { queryKeys } from '../keys.js';
 import type { BreachListFilters, DsarListFilters } from '../keys.js';
 
@@ -31,13 +32,14 @@ export function useComplianceDashboard() {
   });
 }
 
-export function useDsars(filters?: DsarListFilters) {
+export function useDsars(filters?: DsarListFilters, options?: QueryLiveOptions) {
   const client = useApiClient();
   const qs = filters?.status ? `?status=${encodeURIComponent(filters.status)}` : '';
   return useQuery({
     queryKey: queryKeys.compliance.dsars(filters ?? {}),
     queryFn: () => client.get<DsarResponse[]>(`/compliance/dsars${qs}`),
     staleTime: COMPLIANCE_STALE_MS,
+    ...dashboardLiveQueryExtras(options?.live),
   });
 }
 

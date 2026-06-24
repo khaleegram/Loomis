@@ -30,7 +30,7 @@ export function CorePrincipalHome({ tenantId, displayName }: CorePrincipalHomePr
     tenantId,
     'principal',
   );
-  const inboxQuery = useWorkflowInbox(tenantId);
+  const inboxQuery = useWorkflowInbox(tenantId, { live: true });
   const principalInbox = filterInboxByTypes(inboxQuery.data?.items ?? [], [
     'refund_request',
     'fee_structure_change',

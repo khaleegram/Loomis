@@ -72,8 +72,9 @@ export function PrincipalOperationsDashboard({
   tenantId,
   displayName,
 }: PrincipalOperationsDashboardProps) {
-  const admissionsQuery = useAdmissions(tenantId);
-  const staffQuery = useStaffDirectory(tenantId);
+  const live = { live: true as const };
+  const admissionsQuery = useAdmissions(tenantId, {}, live);
+  const staffQuery = useStaffDirectory(tenantId, live);
 
   const { stats, tasks, actionCount, focusTerm, census, inboxBreakdown, isLoading } =
     useLeadershipAttention(tenantId, 'principal', { workflowInboxModule: true });

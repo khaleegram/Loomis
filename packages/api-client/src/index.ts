@@ -4,6 +4,7 @@ export * from './http/interceptors.js';
 export * from './http/refresh.js';
 export * from './http/client.js';
 export * from './query/keys.js';
+export * from './query/dashboard-live.js';
 export * from './query/context.js';
 export * from './query/hooks/index.js';
 export * from './mutations/idempotency.js';

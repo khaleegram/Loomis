@@ -47,7 +47,7 @@ const TERM_OPTIONS = [
 export default function ParentDashboardPage() {
   const { session } = useAuth();
   const isStudent = session?.role === 'student';
-  const { data, isLoading } = useParentDashboard();
+  const { data, isLoading } = useParentDashboard({ live: true });
   const [selectedTerm, setSelectedTerm] = useState<string>('this-term');
   const [selectedPeriod, setSelectedPeriod] = useState('This Term');
 

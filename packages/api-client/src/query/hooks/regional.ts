@@ -11,17 +11,19 @@ import type {
   TenantResponse,
 } from '@loomis/contracts';
 import { useApiClient } from '../context.js';
+import { dashboardLiveQueryExtras, type QueryLiveOptions } from '../dashboard-live.js';
 import { queryKeys } from '../keys.js';
 
 const REGIONAL_STALE_MS = 30_000;
 
-export function useRegionalAnalytics(region?: string) {
+export function useRegionalAnalytics(region?: string, options?: QueryLiveOptions) {
   const client = useApiClient();
   const qs = region ? `?region=${encodeURIComponent(region)}` : '';
   return useQuery({
     queryKey: queryKeys.regional.analytics(region),
     queryFn: () => client.get<RegionalAnalyticsDashboardResponse>(`/regional/analytics${qs}`),
     staleTime: REGIONAL_STALE_MS,
+    ...dashboardLiveQueryExtras(options?.live),
   });
 }
 

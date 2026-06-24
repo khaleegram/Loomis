@@ -7,6 +7,11 @@ import type {
 } from '@loomis/contracts';
 import type { ApiClient } from '../../http/client.js';
 import { useApiClient } from '../context.js';
+import {
+  DASHBOARD_CONTEXT_POLL_MS,
+  dashboardLiveQueryExtras,
+  type QueryLiveOptions,
+} from '../dashboard-live.js';
 import { queryKeys } from '../keys.js';
 
 const BRANDING_STALE_MS = 5 * 60_000;
@@ -46,13 +51,14 @@ export function useUpdateTenantExperience(tenantId: string) {
   });
 }
 
-export function useSchoolBranding(tenantId: string) {
+export function useSchoolBranding(tenantId: string, options?: QueryLiveOptions) {
   const client = useApiClient();
   return useQuery({
     queryKey: queryKeys.tenant.branding(tenantId),
     queryFn: () => client.get<SchoolBrandingResponse>(`/tenants/${tenantId}/branding`),
     staleTime: BRANDING_STALE_MS,
     enabled: Boolean(tenantId),
+    ...dashboardLiveQueryExtras(options?.live, DASHBOARD_CONTEXT_POLL_MS),
   });
 }
 

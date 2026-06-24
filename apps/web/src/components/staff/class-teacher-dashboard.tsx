@@ -83,17 +83,20 @@ export function ClassTeacherDashboard({ tenantId, displayName }: ClassTeacherDas
   const termLabel = ctx.activeTerm?.name ?? 'This term';
   const today = todayCalendarDate();
 
-  const rosterQuery = useTermEnrollmentRoster(tenantId, ctx.termId ?? '');
+  const live = { live: true as const };
+  const rosterQuery = useTermEnrollmentRoster(tenantId, ctx.termId ?? '', live);
   const attendanceQuery = useAttendance(
     tenantId,
     classArmId && ctx.termId
       ? { termId: ctx.termId, classArmId, attendanceDate: today }
       : null,
+    live,
   );
-  const myScheduleQuery = useMyTimetable(tenantId, ctx.termId);
+  const myScheduleQuery = useMyTimetable(tenantId, ctx.termId, live);
   const classTimetableQuery = useTimetable(
     tenantId,
     classArmId && ctx.termId ? { termId: ctx.termId, classArmId } : null,
+    live,
   );
   const { scheduleSlots } = useBellScheduleSlots(tenantId, ctx.yearId);
 

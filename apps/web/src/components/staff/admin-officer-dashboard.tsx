@@ -82,16 +82,17 @@ function applicantName(admission: AdmissionResponse): string {
 }
 
 export function AdminOfficerDashboard({ tenantId, displayName }: AdminOfficerDashboardProps) {
-  const admissionsQuery = useAdmissions(tenantId);
-  const staffQuery = useStaffDirectory(tenantId);
-  const studentsQuery = useStudents(tenantId);
-  const yearsQuery = useAcademicYears(tenantId);
+  const live = { live: true as const };
+  const admissionsQuery = useAdmissions(tenantId, {}, live);
+  const staffQuery = useStaffDirectory(tenantId, live);
+  const studentsQuery = useStudents(tenantId, {}, live);
+  const yearsQuery = useAcademicYears(tenantId, live);
 
   const activeYear = useMemo(
     () => yearsQuery.data?.academicYears?.find((year) => year.status === 'active'),
     [yearsQuery.data],
   );
-  const termsQuery = useAcademicTerms(tenantId, activeYear?.id ?? '');
+  const termsQuery = useAcademicTerms(tenantId, activeYear?.id ?? '', live);
   const openTerm = useMemo(
     () => termsQuery.data?.terms?.find((term) => term.status === 'open'),
     [termsQuery.data],

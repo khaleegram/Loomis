@@ -44,19 +44,20 @@ export function useLeadershipAttention(
   role: 'school_owner' | 'principal',
   options?: { workflowInboxModule?: boolean },
 ) {
-  const admissionsQuery = useAdmissions(tenantId);
-  const inboxQuery = useWorkflowInbox(tenantId);
-  const mineQuery = useWorkflowMine(tenantId);
-  const yearsQuery = useAcademicYears(tenantId);
-  const psfQuery = usePsfObligations(tenantId);
-  const studentsQuery = useStudents(tenantId);
-  const brandingQuery = useSchoolBranding(tenantId);
+  const live = { live: true as const };
+  const admissionsQuery = useAdmissions(tenantId, {}, live);
+  const inboxQuery = useWorkflowInbox(tenantId, live);
+  const mineQuery = useWorkflowMine(tenantId, live);
+  const yearsQuery = useAcademicYears(tenantId, live);
+  const psfQuery = usePsfObligations(tenantId, live);
+  const studentsQuery = useStudents(tenantId, {}, live);
+  const brandingQuery = useSchoolBranding(tenantId, live);
 
   const activeYear = useMemo(
     () => yearsQuery.data?.academicYears?.find((year) => year.status === 'active'),
     [yearsQuery.data],
   );
-  const termsQuery = useAcademicTerms(tenantId, activeYear?.id ?? '');
+  const termsQuery = useAcademicTerms(tenantId, activeYear?.id ?? '', live);
   const focusTerm = useMemo(() => {
     const terms = termsQuery.data?.terms ?? [];
     return terms.find((term) => term.status === 'open') ?? terms.find((term) => term.status === 'census_locked') ?? terms[0] ?? null;
@@ -65,9 +66,10 @@ export function useLeadershipAttention(
   const censusPreviewQuery = useCensusPreview(
     tenantId,
     focusTerm?.status === 'open' ? (focusTerm.id ?? '') : '',
+    live,
   );
 
-  const balancesQuery = useOutstandingBalances(tenantId, focusTerm?.id ?? '', { scope: 'all' });
+  const balancesQuery = useOutstandingBalances(tenantId, focusTerm?.id ?? '', { scope: 'all' }, live);
 
   const inboxItems = inboxQuery.data?.items ?? [];
   const initiated = mineQuery.data?.instances ?? [];

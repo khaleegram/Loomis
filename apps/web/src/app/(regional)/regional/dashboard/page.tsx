@@ -51,7 +51,7 @@ export default function RegionalDashboardPage() {
   const [selectedPeriod, setSelectedPeriod] = useState('This Term');
 
   const regionFilter = selectedState ?? undefined;
-  const { data, isLoading } = useRegionalAnalytics(regionFilter);
+  const { data, isLoading } = useRegionalAnalytics(regionFilter, { live: true });
 
   const roleLabel =
     session?.role != null

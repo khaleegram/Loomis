@@ -18,6 +18,7 @@ import type {
 } from '@loomis/contracts';
 import type { ApiClient } from '../../http/client.js';
 import { useApiClient } from '../context.js';
+import { dashboardLiveQueryExtras, type QueryLiveOptions } from '../dashboard-live.js';
 import { assertTenantScopedKey, queryKeys } from '../keys.js';
 
 const STAFF_LIST_STALE_MS = 30_000;
@@ -64,11 +65,12 @@ export function staffDetailQueryOptions(
 }
 
 /** Staff directory (US-HRM-006). */
-export function useStaffDirectory(tenantId: string) {
+export function useStaffDirectory(tenantId: string, options?: QueryLiveOptions) {
   const client = useApiClient();
   return useQuery({
     ...staffListQueryOptions(client, tenantId),
     enabled: Boolean(tenantId),
+    ...dashboardLiveQueryExtras(options?.live),
   });
 }
 

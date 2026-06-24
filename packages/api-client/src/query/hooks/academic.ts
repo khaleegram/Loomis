@@ -37,6 +37,11 @@ import type { StepUpTokenResult } from '../../mutations/financial-mutation.js';
 import { useFinancialMutation } from '../../mutations/useFinancialMutation.js';
 import { useIdempotentMutation } from '../../mutations/useIdempotentMutation.js';
 import { useApiClient } from '../context.js';
+import {
+  DASHBOARD_CONTEXT_POLL_MS,
+  dashboardLiveQueryExtras,
+  type QueryLiveOptions,
+} from '../dashboard-live.js';
 import { assertTenantScopedKey, queryKeys } from '../keys.js';
 
 const ACADEMIC_STALE_MS = 5 * 60_000;
@@ -148,20 +153,26 @@ export function termClosurePreviewQueryOptions(
 }
 
 /** Lists academic years for the tenant (US-ASM-001). */
-export function useAcademicYears(tenantId: string) {
+export function useAcademicYears(tenantId: string, options?: QueryLiveOptions) {
   const client = useApiClient();
   return useQuery({
     ...academicYearsQueryOptions(client, tenantId),
     enabled: Boolean(tenantId),
+    ...dashboardLiveQueryExtras(options?.live, DASHBOARD_CONTEXT_POLL_MS),
   });
 }
 
 /** Terms for an academic year (US-ASM-002). */
-export function useAcademicTerms(tenantId: string, yearId: string) {
+export function useAcademicTerms(
+  tenantId: string,
+  yearId: string,
+  options?: QueryLiveOptions,
+) {
   const client = useApiClient();
   return useQuery({
     ...termsQueryOptions(client, tenantId, yearId),
     enabled: Boolean(tenantId && yearId),
+    ...dashboardLiveQueryExtras(options?.live, DASHBOARD_CONTEXT_POLL_MS),
   });
 }
 
@@ -175,11 +186,16 @@ export function useAcademicTerm(tenantId: string, termId: string) {
 }
 
 /** Platform billing preview (US-ASM-003). */
-export function usePlatformBillingPreview(tenantId: string, termId: string) {
+export function usePlatformBillingPreview(
+  tenantId: string,
+  termId: string,
+  options?: QueryLiveOptions,
+) {
   const client = useApiClient();
   return useQuery({
     ...platformBillingPreviewQueryOptions(client, tenantId, termId),
     enabled: Boolean(tenantId && termId),
+    ...dashboardLiveQueryExtras(options?.live),
   });
 }
 

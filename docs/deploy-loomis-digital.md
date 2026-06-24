@@ -30,7 +30,22 @@ In the Vercel project for `apps/web`, set:
 | `WEB_APP_BASE_URL` | `https://www.loomis.digital` |
 | `NODE_ENV` | `production` |
 
-Optional (when ready): `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY`, `NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY`.
+Optional (when ready): `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY`.
+
+**Web push (parent absence alerts):** generate VAPID keys and set on **Railway API** (required for browser push — not optional if you want alerts):
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+| Variable | Where |
+|----------|--------|
+| `WEB_PUSH_VAPID_PUBLIC_KEY` | Railway API |
+| `WEB_PUSH_VAPID_PRIVATE_KEY` | Railway API |
+| `WEB_PUSH_VAPID_SUBJECT` | Railway API — e.g. `mailto:support@loomis.digital` |
+| `NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY` | Vercel (optional; API also serves `/comms/push/config`) |
+
+Parents enable alerts via **Enable** on the parent portal banner or **Contact → Notifications**. A browser checkbox alone does not register push; the app must save a push subscription to the API. HTTPS + service worker (`/sw.js`) is enough on desktop/Android — full PWA install is only required on **iOS Safari** (Add to Home Screen).
 
 **Redeploy** after saving env vars (Deployments → … → Redeploy).
 

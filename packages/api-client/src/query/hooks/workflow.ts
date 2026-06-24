@@ -7,6 +7,7 @@ import type {
 import type { ApiClient } from '../../http/client.js';
 import { useIdempotentMutation } from '../../mutations/useIdempotentMutation.js';
 import { useApiClient } from '../context.js';
+import { dashboardLiveQueryExtras, type QueryLiveOptions } from '../dashboard-live.js';
 import { assertTenantScopedKey, queryKeys } from '../keys.js';
 
 const WORKFLOW_STALE_MS = 20_000;
@@ -59,20 +60,22 @@ export function workflowInstanceQueryOptions(
 }
 
 /** Pending workflow items for the signed-in approver (US-WRK-002). */
-export function useWorkflowInbox(tenantId: string) {
+export function useWorkflowInbox(tenantId: string, options?: QueryLiveOptions) {
   const client = useApiClient();
   return useQuery({
     ...workflowInboxQueryOptions(client, tenantId),
     enabled: Boolean(tenantId),
+    ...dashboardLiveQueryExtras(options?.live),
   });
 }
 
 /** Workflows initiated by the signed-in user (US-WRK-003). */
-export function useWorkflowMine(tenantId: string) {
+export function useWorkflowMine(tenantId: string, options?: QueryLiveOptions) {
   const client = useApiClient();
   return useQuery({
     ...workflowMineQueryOptions(client, tenantId),
     enabled: Boolean(tenantId),
+    ...dashboardLiveQueryExtras(options?.live),
   });
 }
 

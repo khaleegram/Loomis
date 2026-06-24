@@ -86,12 +86,13 @@ export default function PlatformDashboard() {
   const [selectedPeriod, setSelectedPeriod] = useState<DashboardPeriod>('This Term');
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
 
-  const { data: summary, isLoading } = usePlatformRevenueSummary();
-  const { data: revenueChart } = usePlatformRevenueChart(PERIOD_CHART_MAP[selectedPeriod]);
-  const { data: tenantsData } = usePlatformTenants();
-  const { data: riskCases } = usePlatformRiskCases({ status: 'OPEN' });
-  const { data: pendingApprovals } = usePlatformPrivilegedChanges('requested');
-  const { data: dsars } = useDsars();
+  const live = { live: true as const };
+  const { data: summary, isLoading } = usePlatformRevenueSummary(live);
+  const { data: revenueChart } = usePlatformRevenueChart(PERIOD_CHART_MAP[selectedPeriod], live);
+  const { data: tenantsData } = usePlatformTenants(live);
+  const { data: riskCases } = usePlatformRiskCases({ status: 'OPEN' }, live);
+  const { data: pendingApprovals } = usePlatformPrivilegedChanges('requested', live);
+  const { data: dsars } = useDsars(undefined, live);
 
   const tenantOptions = useMemo(
     () => (tenantsData?.tenants ?? []).map((tenant) => ({ value: tenant.id, label: tenant.name })),

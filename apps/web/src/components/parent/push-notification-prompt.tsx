@@ -1,20 +1,11 @@
 'use client';
 
-import { useRegisterPushSubscription, useRegisterWebDevice, useWebPushConfig } from '@loomis/api-client';
 import { Alert, AlertDescription, Button } from '@loomis/ui-web';
 import { Bell, X } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
-import {
-  getOrCreateDeviceFingerprint,
-  getStoredWebDeviceId,
-  isPushRegistered,
-  isWebPushSupported,
-  markPushRegistered,
-  serializePushSubscription,
-  storeWebDeviceId,
-  subscribeToWebPush,
-} from '@/lib/push/web-push';
+import { isPushRegistered, isWebPushSupported } from '@/lib/push/web-push';
+import { useWebPushRegistration } from '@/lib/push/use-web-push-registration';
 
 const DISMISS_KEY = 'loomis_push_prompt_dismissed';
 
@@ -23,65 +14,27 @@ const DISMISS_KEY = 'loomis_push_prompt_dismissed';
  * In-app notifications are always created; push requires VAPID keys on the API.
  */
 export function PushNotificationPrompt() {
-  const configQuery = useWebPushConfig();
-  const registerDevice = useRegisterWebDevice();
-  const registerPush = useRegisterPushSubscription();
+  const { serverEnabled, isLoading, enable, syncIfNeeded } = useWebPushRegistration();
   const [dismissed, setDismissed] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const wasDismissed = sessionStorage.getItem(DISMISS_KEY) === '1';
     const alreadyRegistered = isPushRegistered();
-    const permissionGranted = Notification.permission === 'granted';
-    setDismissed(wasDismissed || alreadyRegistered || permissionGranted);
+    setDismissed(wasDismissed || alreadyRegistered);
   }, []);
+
+  useEffect(() => {
+    void syncIfNeeded();
+  }, [syncIfNeeded]);
 
   const canPrompt =
     isWebPushSupported() &&
-    configQuery.data?.webPushEnabled &&
-    configQuery.data.vapidPublicKey &&
+    serverEnabled &&
     Notification.permission !== 'granted' &&
     !isPushRegistered() &&
-    !dismissed;
-
-  const enablePush = useCallback(async () => {
-    const vapidPublicKey = configQuery.data?.vapidPublicKey;
-    if (!vapidPublicKey) return;
-
-    setBusy(true);
-    setError(null);
-    try {
-      const permission = await Notification.requestPermission();
-      if (permission !== 'granted') {
-        setError('Notification permission was not granted.');
-        return;
-      }
-
-      let deviceId = getStoredWebDeviceId();
-      if (!deviceId) {
-        const fingerprint = getOrCreateDeviceFingerprint();
-        const registered = await registerDevice.mutateAsync({ deviceFingerprint: fingerprint });
-        deviceId = registered.deviceId;
-        storeWebDeviceId(deviceId);
-      }
-
-      const subscription = await subscribeToWebPush(vapidPublicKey);
-      await registerPush.mutateAsync({
-        deviceId,
-        platform: 'web',
-        token: serializePushSubscription(subscription),
-      });
-
-      markPushRegistered();
-      setDismissed(true);
-    } catch {
-      setError('Could not enable push notifications. Try again from your browser settings.');
-    } finally {
-      setBusy(false);
-    }
-  }, [configQuery.data?.vapidPublicKey, registerDevice, registerPush]);
+    !dismissed &&
+    !isLoading;
 
   if (!canPrompt) return null;
 
@@ -94,8 +47,8 @@ export function PushNotificationPrompt() {
           alerts.
         </AlertDescription>
         <div className="flex shrink-0 items-center gap-2">
-          <Button size="sm" disabled={busy} onClick={() => void enablePush()}>
-            {busy ? 'Enabling…' : 'Enable alerts'}
+          <Button size="sm" onClick={() => void enable()}>
+            Enable alerts
           </Button>
           <button
             type="button"
@@ -110,7 +63,6 @@ export function PushNotificationPrompt() {
           </button>
         </div>
       </div>
-      {error ? <p className="mt-2 text-[12px] text-red-600">{error}</p> : null}
     </Alert>
   );
 }

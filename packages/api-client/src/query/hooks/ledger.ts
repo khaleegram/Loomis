@@ -5,16 +5,18 @@ import type {
 } from '@loomis/contracts';
 import type { ApiClient } from '../../http/client.js';
 import { useApiClient } from '../context.js';
+import { dashboardLiveQueryExtras, type QueryLiveOptions } from '../dashboard-live.js';
 
 const STALE_MS = 30_000;
 
-export function usePsfObligations(tenantId: string) {
+export function usePsfObligations(tenantId: string, options?: QueryLiveOptions) {
   const client = useApiClient();
   return useQuery({
     queryKey: ['ledger', 'psf-obligations', tenantId],
     queryFn: () => client.get<any>(`/tenants/${tenantId}/psf-obligations`),
     staleTime: STALE_MS,
     enabled: Boolean(tenantId),
+    ...dashboardLiveQueryExtras(options?.live),
   });
 }
 

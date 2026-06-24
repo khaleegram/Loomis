@@ -18,6 +18,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
 import { ParentContactHero } from '@/components/parent/parent-contact-hero';
+import { ParentPushNotificationSettings } from '@/components/parent/parent-push-notification-settings';
 import { PageBody } from '@/components/parent/parent-shell';
 import {
   FormContextCard,
@@ -165,21 +166,26 @@ export default function ContactPage() {
                 />
               }
             >
-              <div className="space-y-3">
+              <ParentPushNotificationSettings />
+              <div className="mt-4 space-y-3 border-t border-neutral-100 pt-4">
                 {[
-                  { label: 'Push notifications', defaultChecked: true },
                   { label: 'Email notifications', defaultChecked: true },
                   { label: 'SMS alerts', defaultChecked: false },
                 ].map((pref) => (
                   <label
                     key={pref.label}
-                    className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-xl border border-neutral-200/80 bg-white px-4 py-3 text-[13px] font-medium text-neutral-800 transition hover:border-brand-200 hover:bg-brand-50/30"
+                    className="flex min-h-[44px] cursor-not-allowed items-center gap-3 rounded-xl border border-neutral-200/80 bg-neutral-50/80 px-4 py-3 text-[13px] font-medium text-neutral-600 opacity-80"
                   >
-                    <input type="checkbox" defaultChecked={pref.defaultChecked} className="size-4 rounded border-neutral-300" />
+                    <input
+                      type="checkbox"
+                      defaultChecked={pref.defaultChecked}
+                      disabled
+                      className="size-4 rounded border-neutral-300"
+                    />
                     {pref.label}
                   </label>
                 ))}
-                <SmartHint>Preference saving is not available yet.</SmartHint>
+                <SmartHint>Email and SMS preference saving is not available yet.</SmartHint>
               </div>
             </SmartFormPanel>
 

@@ -13,11 +13,15 @@ interface UnverifiedPaymentsBannerProps {
 
 /** Amber escalation banner — Owner/Principal read-only link to accountant verify queue (§6 / SRS). */
 export function UnverifiedPaymentsBanner({ tenantId, termId }: UnverifiedPaymentsBannerProps) {
-  const pendingQuery = usePayments(tenantId, {
-    termId: termId ?? undefined,
-    status: 'pending_verification',
-    channel: 'offline',
-  });
+  const pendingQuery = usePayments(
+    tenantId,
+    {
+      termId: termId ?? undefined,
+      status: 'pending_verification',
+      channel: 'offline',
+    },
+    { live: true },
+  );
 
   const count = pendingQuery.data?.payments.length ?? 0;
   if (pendingQuery.isLoading || count === 0) return null;

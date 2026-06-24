@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { usePathname } from 'next/navigation';
 import { useAcademicTerms, useAcademicYears } from '@loomis/api-client';
 import type { AcademicTermResponse, AcademicYearResponse } from '@loomis/contracts';
 import type { Capability } from '@loomis/core';
@@ -65,7 +66,9 @@ export function SchoolAcademicProvider({ children }: { children: ReactNode }) {
   );
 
   const scopedTenantId = queriesEnabled && tenantId ? tenantId : '';
-  const yearsQuery = useAcademicYears(scopedTenantId);
+  const pathname = usePathname();
+  const dashboardLive = pathname?.endsWith('/dashboard') ? { live: true as const } : undefined;
+  const yearsQuery = useAcademicYears(scopedTenantId, dashboardLive);
   const years = yearsQuery.data?.academicYears ?? [];
   const sortedYears = useMemo(() => sortYearsDesc(years), [years]);
 
@@ -74,10 +77,10 @@ export function SchoolAcademicProvider({ children }: { children: ReactNode }) {
   const [override, setOverride] = useState<TermOverride | null>(null);
 
   const overrideYearId = override?.yearId ?? systemYear?.id ?? null;
-  const termsQuery = useAcademicTerms(scopedTenantId, overrideYearId ?? '');
+  const termsQuery = useAcademicTerms(scopedTenantId, overrideYearId ?? '', dashboardLive);
   const overrideYearTerms = termsQuery.data?.terms ?? [];
 
-  const systemTermsQuery = useAcademicTerms(scopedTenantId, systemYear?.id ?? '');
+  const systemTermsQuery = useAcademicTerms(scopedTenantId, systemYear?.id ?? '', dashboardLive);
   const systemTerms = systemTermsQuery.data?.terms ?? [];
   const openTerm = useMemo(() => pickOpenTerm(systemTerms), [systemTerms]);
 

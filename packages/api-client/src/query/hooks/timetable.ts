@@ -14,6 +14,7 @@ import type {
 import type { ApiClient } from '../../http/client.js';
 import { useIdempotentMutation } from '../../mutations/useIdempotentMutation.js';
 import { useApiClient } from '../context.js';
+import { dashboardLiveQueryExtras, type QueryLiveOptions } from '../dashboard-live.js';
 import { assertTenantScopedKey, queryKeys } from '../keys.js';
 
 const STALE_MS = 30_000;
@@ -46,11 +47,16 @@ export function timetableQueryOptions(
   };
 }
 
-export function useTimetable(tenantId: string, filters: TimetableFilters | null) {
+export function useTimetable(
+  tenantId: string,
+  filters: TimetableFilters | null,
+  options?: QueryLiveOptions,
+) {
   const client = useApiClient();
   return useQuery({
     ...timetableQueryOptions(client, tenantId, filters ?? { termId: '', classArmId: '' }),
     enabled: Boolean(tenantId && filters?.termId && filters?.classArmId),
+    ...dashboardLiveQueryExtras(options?.live),
   });
 }
 
@@ -107,7 +113,11 @@ export function useStudentTimetable(tenantId: string, termId: string) {
 }
 
 /** Published personal timetable for students and teaching staff (teacher / class teacher). */
-export function useMyTimetable(tenantId: string, termId: string | null) {
+export function useMyTimetable(
+  tenantId: string,
+  termId: string | null,
+  options?: QueryLiveOptions,
+) {
   const client = useApiClient();
   return useQuery({
     queryKey: queryKeys.academic.studentTimetable(tenantId, termId ?? ''),
@@ -117,6 +127,7 @@ export function useMyTimetable(tenantId: string, termId: string | null) {
       ),
     staleTime: STALE_MS,
     enabled: Boolean(tenantId && termId),
+    ...dashboardLiveQueryExtras(options?.live),
   });
 }
 

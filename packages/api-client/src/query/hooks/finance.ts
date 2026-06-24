@@ -37,6 +37,7 @@ import type { StepUpTokenResult } from '../../mutations/financial-mutation.js';
 import { useFinancialMutation } from '../../mutations/useFinancialMutation.js';
 import { useIdempotentMutation } from '../../mutations/useIdempotentMutation.js';
 import { useApiClient } from '../context.js';
+import { dashboardLiveQueryExtras, type QueryLiveOptions } from '../dashboard-live.js';
 import {
   assertTenantScopedKey,
   queryKeys,
@@ -228,11 +229,13 @@ export function useOutstandingBalances(
   tenantId: string,
   termId: string,
   filters: OutstandingBalancesFilters = {},
+  options?: QueryLiveOptions,
 ) {
   const client = useApiClient();
   return useQuery({
     ...outstandingBalancesQueryOptions(client, tenantId, termId, filters),
     enabled: Boolean(tenantId && termId),
+    ...dashboardLiveQueryExtras(options?.live),
   });
 }
 
@@ -296,11 +299,16 @@ export function useUpdateFeeReminderSettings(tenantId: string) {
   });
 }
 
-export function usePayments(tenantId: string, filters: PaymentsListFilters = {}) {
+export function usePayments(
+  tenantId: string,
+  filters: PaymentsListFilters = {},
+  options?: QueryLiveOptions,
+) {
   const client = useApiClient();
   return useQuery({
     ...paymentsQueryOptions(client, tenantId, filters),
     enabled: Boolean(tenantId),
+    ...dashboardLiveQueryExtras(options?.live),
   });
 }
 
