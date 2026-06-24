@@ -1,4 +1,6 @@
+import { createHash, randomInt } from 'node:crypto';
 import type { Role, StepUpAction } from '@loomis/contracts';
+import type { PasswordResetConfirmRequest, PasswordResetResponse } from '@loomis/contracts';
 import { uuidv7 } from 'uuidv7';
 import {
   advancedOptionalTotpLogin,
@@ -8,6 +10,10 @@ import {
   stepUpUsesSms,
 } from '@loomis/core';
 import { resolveStaffEffectiveRoles } from '../../hrm/services/staff-role-resolver.js';
+import { transactionalEmailService } from '../../comms/services/transactional-email.service.js';
+import { isEmailConfigured } from '../../comms/gateways/resend.gateway.js';
+import { isTermiiConfigured, sendSms } from '../../comms/gateways/termii.gateway.js';
+import { getEnv } from '../../../config/env.js';
 import { db } from '../../../shared/db.js';
 import { LoomisError } from '../../../shared/errors.js';
 import { getRedis } from '../../../shared/redis.js';
@@ -29,6 +35,8 @@ const LOCKOUT_WINDOW_MS = 10 * 60 * 1000;
 const LOCKOUT_THRESHOLD = 5;
 const MFA_CHALLENGE_TTL_SECONDS = 5 * 60;
 const MFA_CHALLENGE_MAX_ATTEMPTS = 5;
+const PASSWORD_RESET_OTP_TTL_MS = 15 * 60 * 1000;
+const PASSWORD_RESET_DEV_BYPASS_CODE = '000000';
 
 function mfaChallengeKey(challengeId: string): string {
   return `identity:mfa:challenge:${challengeId}`;
@@ -331,11 +339,13 @@ export const authService = {
     if (failures < LOCKOUT_THRESHOLD) return;
 
     if (user) {
-      await userRepository.setStatus(user.id, 'locked', new Date(Date.now() + LOCKOUT_WINDOW_MS));
+      const unlocksAt = new Date(Date.now() + LOCKOUT_WINDOW_MS);
+      await userRepository.setStatus(user.id, 'locked', unlocksAt);
+      void transactionalEmailService.sendAccountLockoutEmail({
+        to: user.email,
+        unlocksAt,
+      });
     }
-    // BLOCKED: SEC-AUTH-006 requires an email notification to the registered
-    // address on lockout. AWS SES is not configured (no SES credentials in env),
-    // so the email is not sent here. Wire this to the comms module once SES is set up.
   },
 
   /** Verifies a TOTP challenge from login; on success issues an authenticated session. */
@@ -489,6 +499,13 @@ export const authService = {
       ...(ctx.ipAddress !== undefined ? { ipAddress: ctx.ipAddress } : {}),
       ...(ctx.userAgent !== undefined ? { userAgent: ctx.userAgent } : {}),
     });
+
+    if (displacedSessionId) {
+      void transactionalEmailService.sendSessionDisplacedEmail({
+        to: user.email,
+        platform: ctx.platform,
+      });
+    }
 
     const nowSec = Math.floor(Date.now() / 1000);
     const accessPayload: AccessTokenPayload = {
@@ -841,5 +858,105 @@ export const authService = {
       );
     }
     return this.confirmEnrollment(userId, code);
+  },
+
+  async requestPasswordReset(email: string): Promise<PasswordResetResponse> {
+    const normalized = email.toLowerCase();
+    const expiresAt = new Date(Date.now() + PASSWORD_RESET_OTP_TTL_MS);
+    const decoyResponse: PasswordResetResponse = {
+      otpId: uuidv7(),
+      channel: 'email',
+      expiresAt: expiresAt.toISOString(),
+    };
+
+    const user = await userRepository.findByEmail(normalized);
+    if (!user) return decoyResponse;
+
+    const devBypass =
+      getEnv().NODE_ENV === 'development' && !isEmailConfigured() && !isTermiiConfigured();
+    const otp = devBypass ? PASSWORD_RESET_DEV_BYPASS_CODE : String(randomInt(100_000, 999_999));
+    const otpHash = createHash('sha256').update(otp).digest('hex');
+
+    let channel: 'email' | 'phone' = 'email';
+    let delivered = devBypass;
+
+    if (!delivered && isEmailConfigured()) {
+      const result = await transactionalEmailService.sendPasswordResetOtp({
+        to: user.email,
+        otp,
+        expiresAt,
+      });
+      if (result.sent) {
+        delivered = true;
+        channel = 'email';
+      }
+    }
+
+    if (!delivered && user.phone && isTermiiConfigured()) {
+      try {
+        await sendSms({
+          to: user.phone,
+          message: `Your Loomis password reset code is ${otp}. Valid for 15 minutes.`,
+        });
+        delivered = true;
+        channel = 'phone';
+      } catch {
+        // fall through
+      }
+    }
+
+    if (!delivered) {
+      throw new LoomisError(
+        'COMMS_EMAIL_UNAVAILABLE',
+        503,
+        'Password reset delivery is unavailable — configure Resend or Termii',
+      );
+    }
+
+    const record = await userRepository.createPasswordResetOtp({
+      userId: user.id,
+      otpHash,
+      channel,
+      expiresAt,
+    });
+
+    return {
+      otpId: record.id,
+      channel,
+      expiresAt: expiresAt.toISOString(),
+    };
+  },
+
+  async confirmPasswordReset(input: PasswordResetConfirmRequest): Promise<void> {
+    const record = await userRepository.findActivePasswordResetOtp(input.otpId);
+    if (!record) {
+      throw new LoomisError('IDENTITY_PASSWORD_RESET_INVALID', 422, 'Invalid or expired reset code');
+    }
+
+    const devBypass =
+      getEnv().NODE_ENV === 'development' && !isEmailConfigured() && !isTermiiConfigured();
+    const otpValid =
+      createHash('sha256').update(input.otp).digest('hex') === record.otpHash ||
+      (devBypass && input.otp === PASSWORD_RESET_DEV_BYPASS_CODE);
+
+    if (!otpValid) {
+      throw new LoomisError('IDENTITY_PASSWORD_RESET_INVALID', 422, 'Invalid or expired reset code');
+    }
+
+    const passwordHash = await passwordService.hash(input.newPassword);
+
+    await db.transaction(async (tx) => {
+      await userRepository.markPasswordResetOtpUsed(record.id, tx);
+      const updated = await userRepository.updatePasswordHash(record.userId, passwordHash, tx);
+      if (!updated) {
+        throw new LoomisError('INTERNAL_ERROR', 500, 'Failed to update password');
+      }
+      const user = await userRepository.incrementUserVer(record.userId, tx);
+      if (user) {
+        await tokenService.setUserVerCache(user.id, user.userVer);
+      }
+      await sessionService.revokeAllForUser(record.userId, 'password_change', undefined, tx);
+      await deviceService.deregisterAllForUser(record.userId, tx);
+    });
   },
 };

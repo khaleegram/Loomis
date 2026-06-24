@@ -661,6 +661,42 @@ export const staffRepository = {
     });
   },
 
+  async findInvitationById(tenantId: string, invitationId: string) {
+    return withTenantContext(tenantId, async (tx) => {
+      const [invitation] = await tx
+        .select()
+        .from(staffInvitations)
+        .where(
+          and(eq(staffInvitations.tenantId, tenantId), eq(staffInvitations.id, invitationId)),
+        )
+        .limit(1);
+      return invitation ?? null;
+    });
+  },
+
+  async rotateInvitationToken(
+    tenantId: string,
+    invitationId: string,
+    tokenHash: string,
+    expiresAt: Date,
+  ) {
+    return withTenantContext(tenantId, async (tx) => {
+      const [invitation] = await tx
+        .update(staffInvitations)
+        .set({ tokenHash, expiresAt, updatedAt: new Date() })
+        .where(
+          and(
+            eq(staffInvitations.tenantId, tenantId),
+            eq(staffInvitations.id, invitationId),
+            isNull(staffInvitations.acceptedAt),
+            isNull(staffInvitations.revokedAt),
+          ),
+        )
+        .returning();
+      return invitation ?? null;
+    });
+  },
+
   async setPhoto(tenantId: string, staffProfileId: string, storageObjectId: string) {
     return withTenantContext(tenantId, async (tx) => {
       const [updated] = await tx

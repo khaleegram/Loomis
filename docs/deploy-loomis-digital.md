@@ -100,8 +100,8 @@ On the **API service** (not the DB plugins), set:
 | `PAYSTACK_SECRET_KEY` | Paystack live/test secret |
 | `PAYSTACK_PUBLIC_KEY` | Paystack public key |
 | `PAYSTACK_WEBHOOK_SECRET` | Paystack webhook secret |
-| `SES_REGION` | e.g. `af-south-1` |
-| `SES_FROM_EMAIL` | `noreply@loomis.digital` (domain verified in SES) |
+| `RESEND_API_KEY` | From [resend.com/api-keys](https://resend.com/api-keys) |
+| `RESEND_FROM_EMAIL` | `noreply@loomis.digital` (domain verified in Resend) |
 
 Railway sets `PORT` automatically; the API uses it when `API_PORT` is unset.
 

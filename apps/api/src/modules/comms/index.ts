@@ -7,7 +7,7 @@ import { templatesRoutes } from './routes/templates.routes.js';
 
 /**
  * Comms module plugin (SRS §4.7 FR-COM-001..002; §10.3/§10.4).
- * Messaging, in-app notifications, and delivery via SES / Termii / FCM / APNs.
+ * Messaging, in-app notifications, and delivery via Resend / Termii / FCM / APNs.
  */
 export async function commsModule(app: FastifyInstance): Promise<void> {
   registerCommsEventConsumers();

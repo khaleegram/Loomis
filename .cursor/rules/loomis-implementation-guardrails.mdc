@@ -35,7 +35,7 @@ Things that REQUIRE the user (non-exhaustive):
 - Payment gateway secret keys and webhook secrets (Paystack, Flutterwave, Monnify, Remita)
 - JWT signing keys, TOTP encryption key, HMAC secrets
 - Database / Redis connection strings
-- Email (SES) / SMS (Termii) credentials
+- Email (Resend) / SMS (Termii) credentials
 - FCM / APNs push credentials
 - Any third-party API key or endpoint URL
 

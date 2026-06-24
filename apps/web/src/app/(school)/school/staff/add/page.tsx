@@ -37,8 +37,8 @@ function credentialsEmailNotice(email: EmailDeliveryResult): string {
   if (email.sent) {
     return `Login details were emailed to ${email.recipient} with a direct link to sign in.`;
   }
-  if (email.reason === 'SES_NOT_CONFIGURED') {
-    return 'Email is not configured yet (add SES_FROM_EMAIL and SES_REGION to .env.local). Copy the credentials below and share them manually.';
+  if (email.reason === 'EMAIL_NOT_CONFIGURED') {
+    return 'Email is not configured yet (add RESEND_API_KEY and RESEND_FROM_EMAIL to .env.local). Copy the credentials below and share them manually.';
   }
   return 'The credentials email could not be delivered. Copy the details below and share them manually.';
 }

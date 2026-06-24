@@ -17,7 +17,7 @@ Revenue model: **Per-Student Fee (PSF)** charged once per billable student per a
 - **Auth:** JWT RS256 (access 8h) + TOTP MFA (speakeasy)
 - **Events:** BullMQ on Redis (outbox relay + background jobs)
 - **File Storage:** AWS S3 (pre-signed URLs only; never stream files through the server)
-- **Email:** AWS SES; SMS: Termii
+- **Email:** Resend; SMS: Termii
 - **Push:** FCM (Android) + APNs (iOS)
 - **Mobile:** React Native (Expo managed workflow)
 - **Web:** Next.js 15 (App Router)

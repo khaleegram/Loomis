@@ -55,10 +55,6 @@ export const sessionService = {
       if (oldest) {
         await this.revokeSession(oldest.id, 'concurrent_limit', tx);
         displacedSessionId = oldest.id;
-        // BLOCKED: SEC-AUTH-010 / US-XC-005 require notifying the user that a prior
-        // session was displaced. Push delivery (FCM/APNs) and the comms module are
-        // not configured yet, so no notification is sent here. The caller receives
-        // `displacedSessionId` so this can be wired to comms once push is available.
       }
     }
 

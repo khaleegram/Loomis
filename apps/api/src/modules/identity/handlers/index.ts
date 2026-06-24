@@ -1,4 +1,8 @@
 export { changePasswordHandler } from './change-password.handler.js';
+export {
+  passwordResetConfirmHandler,
+  passwordResetRequestHandler,
+} from './password-reset.handler.js';
 export { deregisterDeviceHandler, listDevicesHandler, registerWebDeviceHandler } from './devices.handler.js';
 export { loginHandler } from './login.handler.js';
 export { logoutHandler } from './logout.handler.js';

@@ -12,7 +12,7 @@ Do not stub these in application code — see `loomis-implementation-guardrails.
 | Integration | Env vars | Impact |
 |-------------|----------|--------|
 | **Termii SMS** | `TERMII_API_KEY`, `TERMII_SENDER_ID` | Core login SMS, census OTP, parent new-device login. Local dev uses `000000` bypass when key unset. |
-| **AWS SES** | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `SES_REGION` | Transactional email (invitations, offer letters, security alerts). |
+| **Resend email** | `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | Transactional email (invitations, offer letters, security alerts). |
 | **AWS S3** | `S3_BUCKET`, `S3_REGION`, credentials | File uploads, branding logos, document storage. |
 | **Paystack / gateways** | Provider secret keys + webhook secrets | Live online fee payments. |
 | **FCM / APNs** | EAS project ID, push credentials | Mobile push notifications. |
@@ -24,14 +24,14 @@ Do not stub these in application code — see `loomis-implementation-guardrails.
 
 | Area | File / module | What's missing |
 |------|---------------|----------------|
-| Auth | `auth.service.ts` | SEC-AUTH-006 email on new device login |
-| Sessions | `session.service.ts` | SEC-AUTH-010 notify user when prior session revoked |
-| Staff invite | `staff.service.ts` | AWS SES one-time invitation link email |
-| Parent OTP | `parent-otp.service.ts` | SES and/or Termii for parent link acceptance |
+| Auth | `auth.service.ts` | — (lockout + password reset wired) |
+| Sessions | `session.service.ts` | — (displaced-session email wired) |
+| Staff invite | `staff.service.ts` | — (Resend invitation email wired) |
+| Parent OTP | `parent-otp.service.ts` | — (Resend + Termii wired) |
 | Staff repo | `staff.repository.ts` | Non-RLS lookup for invitation accept without tenant hint |
 | Storage | `malware-scan.hook.ts` | ClamAV Lambda infrastructure |
 | Academic | `academic-year.service.ts` | FR-ASM-002 PSF obligation check on year rollover |
-| Risk | `break-glass.service.ts` | Owner notification on break-glass session |
+| Risk | `break-glass.service.ts` | — (owner notification via comms outbox) |
 | Mobile | `push-notifications.ts` | EAS/FCM production push setup |
 
 ---
@@ -52,7 +52,7 @@ Do not stub these in application code — see `loomis-implementation-guardrails.
 |------|------------|
 | Core SMS MFA | Enter `000000` when `TERMII_API_KEY` is unset |
 | Platform MFA | TOTP secret `JBSWY3DPEHPK3PXP` |
-| Staff invitation email | Copy invite token from API/DB in dev (or check Mailpit if configured) |
+| Staff invitation email | Invitation link emailed via Resend; dev bypass `000000` for parent OTP when unset |
 | Online parent payment | Use dev Paystack test keys if configured in `.env.local` |
 
 ---

@@ -76,10 +76,6 @@ export const breakGlassService = {
       },
     });
 
-    // BLOCKED: School Owner email/push notification requires Comms module (Chat 17).
-    // The `risk.break_glass.activated` outbox event is the integration contract;
-    // owner must be notified within 5 minutes per SEC-004 / Revenue Integrity doc.
-
     return session;
   },
 

@@ -19,6 +19,10 @@ export function authErrorMessage(err: unknown): string {
       return 'You must set a new password before continuing.';
     case 'IDENTITY_PASSWORD_REUSE':
       return 'Choose a password that is different from your current one.';
+    case 'IDENTITY_PASSWORD_RESET_INVALID':
+      return 'That reset code is incorrect or has expired. Request a new one.';
+    case 'COMMS_EMAIL_UNAVAILABLE':
+      return 'Email delivery is not available right now. Try again later or contact support.';
     case 'IDENTITY_SESSION_INVALIDATED':
       return 'Your session expired. Please sign in again.';
     case 'VALIDATION_ERROR':

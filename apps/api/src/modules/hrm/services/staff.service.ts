@@ -323,10 +323,14 @@ export const staffService = {
       },
     });
 
-    // BLOCKED: invitation onboarding requires sending the one-time link by AWS
-    // SES, but SES is not configured in env/comms yet. Do not mock email delivery
-    // or log the raw token. Wire this to SES once SES credentials and templates
-    // are added to src/config/env.ts and the comms module.
+    void transactionalEmailService.sendStaffInvitationEmail({
+      tenantId,
+      userId: user.id,
+      to: input.email,
+      fullName: input.fullName,
+      invitationToken: rawToken,
+      expiresAt,
+    });
 
     return {
       profile: serializeProfile(created.profile, [created.roleAssignment]),
@@ -350,6 +354,47 @@ export const staffService = {
     const accepted = await staffRepository.acceptInvitation(tenantId, invitation.id);
     const roles = await staffRepository.listActiveRoles(tenantId, accepted.profile.id);
     return serializeProfile(accepted.profile, roles);
+  },
+
+  async resendInvitation(
+    tenantId: string,
+    invitationId: string,
+    actor: ActorContext,
+  ): Promise<{ status: 'resent'; expiresAt: string }> {
+    requireTenant(actor, tenantId);
+
+    const invitation = await staffRepository.findInvitationById(tenantId, invitationId);
+    if (!invitation) {
+      throw new LoomisError('HRM_INVITATION_INVALID', 404, 'Invitation not found');
+    }
+    if (invitation.acceptedAt || invitation.revokedAt) {
+      throw new LoomisError('HRM_INVITATION_INVALID', 409, 'Invitation is no longer pending');
+    }
+
+    const profile = await staffRepository.findProfileByUserId(tenantId, invitation.userId);
+    const rawToken = randomBytes(32).toString('base64url');
+    const expiresAt = new Date(Date.now() + INVITATION_TTL_MS);
+
+    const rotated = await staffRepository.rotateInvitationToken(
+      tenantId,
+      invitationId,
+      hashToken(rawToken),
+      expiresAt,
+    );
+    if (!rotated) {
+      throw new LoomisError('HRM_INVITATION_INVALID', 409, 'Invitation is no longer pending');
+    }
+
+    void transactionalEmailService.sendStaffInvitationEmail({
+      tenantId,
+      userId: invitation.userId,
+      to: invitation.email,
+      fullName: profile?.fullName ?? invitation.email,
+      invitationToken: rawToken,
+      expiresAt,
+    });
+
+    return { status: 'resent', expiresAt: expiresAt.toISOString() };
   },
 
   async listStaff(tenantId: string, actor: ActorContext): Promise<StaffDirectoryEntryResponse[]> {

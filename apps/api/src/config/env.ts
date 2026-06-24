@@ -46,9 +46,9 @@ const envSchema = z.object({
   /** Public web app origin for links in transactional emails (defaults to http://localhost:3000 in dev). */
   WEB_APP_BASE_URL: z.string().url().optional(),
 
-  /** AWS SES (SRS §10.3). Required for email delivery when email channel is used. */
-  SES_REGION: z.string().min(1).optional(),
-  SES_FROM_EMAIL: z.string().email().optional(),
+  /** Resend (SRS §10.3). Required for email delivery when email channel is used. */
+  RESEND_API_KEY: z.string().min(1).optional(),
+  RESEND_FROM_EMAIL: z.string().email().optional(),
 
   /** Termii SMS (SRS §10.3). Required for SMS delivery when SMS channel is used. */
   TERMII_API_KEY: z.string().min(1).optional(),

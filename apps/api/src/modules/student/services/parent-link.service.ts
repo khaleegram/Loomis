@@ -60,7 +60,7 @@ export const parentLinkService = {
       throw new LoomisError(
         'STUDENT_PARENT_LINK_OTP_BLOCKED',
         503,
-        'Parent OTP delivery is unavailable — configure AWS SES and Termii credentials',
+        'Parent OTP delivery is unavailable — configure Resend and Termii credentials',
         { reason: delivery.reason },
       );
     }

@@ -30,7 +30,7 @@ export const COMMS_EVENT_TYPES = {
   accountCredentialsEmail: 'comms.account_credentials.email',
 } as const;
 
-export const emailDeliverySkipReason = z.enum(['SES_NOT_CONFIGURED', 'SEND_FAILED']);
+export const emailDeliverySkipReason = z.enum(['EMAIL_NOT_CONFIGURED', 'SEND_FAILED']);
 export type EmailDeliverySkipReason = z.infer<typeof emailDeliverySkipReason>;
 
 /** Result of a one-time credentials email (staff onboarding / student portal). */

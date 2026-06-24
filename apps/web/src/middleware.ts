@@ -18,7 +18,7 @@ import { SESSION_COOKIE, parseSession } from '@/lib/auth/session';
  * This is UX-level defence in depth — the backend remains the real authority.
  */
 
-const AUTH_PAGES = new Set(['/login', '/mfa', '/mfa-enrollment', '/reset-password', '/change-password']);
+const AUTH_PAGES = new Set(['/login', '/mfa', '/mfa-enrollment', '/reset-password', '/change-password', '/accept-invitation']);
 
 export function middleware(req: NextRequest): NextResponse {
   const { pathname } = req.nextUrl;

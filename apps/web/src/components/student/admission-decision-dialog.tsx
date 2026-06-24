@@ -182,7 +182,7 @@ export function AdmissionDecisionDialog({
             <AlertDescription>
               {offerLetterEmail?.sent
                 ? `Admission offer was sent to ${offerLetterEmail.recipient}.`
-                : offerLetterEmail?.reason === 'SES_NOT_CONFIGURED'
+                : offerLetterEmail?.reason === 'EMAIL_NOT_CONFIGURED'
                   ? 'Email is not configured. Share admission details with the guardian manually.'
                   : 'Offer letter could not be delivered automatically.'}
             </AlertDescription>
@@ -196,7 +196,7 @@ export function AdmissionDecisionDialog({
             <AlertDescription>
               {credentialsEmail?.sent
                 ? `Portal login details were emailed to ${credentialsEmail.recipient}.`
-                : credentialsEmail?.reason === 'SES_NOT_CONFIGURED'
+                : credentialsEmail?.reason === 'EMAIL_NOT_CONFIGURED'
                   ? 'Email is not configured yet. Copy the credentials below and share them with the guardian.'
                   : 'Could not deliver the email. Copy the credentials below and share them manually.'}
             </AlertDescription>

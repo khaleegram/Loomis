@@ -11,6 +11,10 @@ import {
   type MfaVerifyRequest,
   mfaVoluntaryEnrollConfirmRequest,
   type MfaVoluntaryEnrollConfirmRequest,
+  passwordResetConfirmRequest,
+  type PasswordResetConfirmRequest,
+  passwordResetRequest,
+  type PasswordResetRequest,
   type RefreshTokenRequest,
   stepUpRequest,
   type StepUpRequest,
@@ -30,6 +34,8 @@ import {
   mfaVerifyHandler,
   mfaVoluntaryEnrollConfirmHandler,
   mfaVoluntaryEnrollStartHandler,
+  passwordResetConfirmHandler,
+  passwordResetRequestHandler,
   refreshHandler,
   stepUpHandler,
   stepUpSendSmsHandler,
@@ -82,6 +88,18 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     '/auth/change-password',
     { preHandler: [authenticate], preValidation: [validateBody(changePasswordRequest)] },
     changePasswordHandler,
+  );
+
+  app.post<{ Body: PasswordResetRequest }>(
+    '/auth/password/reset',
+    { preValidation: [validateBody(passwordResetRequest)], preHandler: [loginRateLimiter] },
+    passwordResetRequestHandler,
+  );
+
+  app.post<{ Body: PasswordResetConfirmRequest }>(
+    '/auth/password/reset/confirm',
+    { preValidation: [validateBody(passwordResetConfirmRequest)] },
+    passwordResetConfirmHandler,
   );
 
   app.get('/auth/mfa/status', { preHandler: [authenticate] }, mfaStatusHandler);

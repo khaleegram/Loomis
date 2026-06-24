@@ -16,7 +16,7 @@ import {
   isWebPushSubscriptionInvalidError,
   sendWebPush,
 } from '../gateways/webpush.gateway.js';
-import { isSesConfigured, sendEmail } from '../gateways/ses.gateway.js';
+import { isEmailConfigured, sendEmail } from '../gateways/resend.gateway.js';
 import { isTermiiConfigured, sendSms } from '../gateways/termii.gateway.js';
 import {
   notificationRepository,
@@ -199,7 +199,7 @@ export const deliveryService = {
 
     await withTenantContext(tenantId, async (tx) => {
       if (input.channels.includes('email')) {
-        if (!isSesConfigured()) {
+        if (!isEmailConfigured()) {
           deliveryChannels.email = 'skipped';
         } else {
           const email = await recipientRepository.getUserEmail(tx, userId);
