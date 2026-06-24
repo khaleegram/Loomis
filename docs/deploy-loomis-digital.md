@@ -107,9 +107,19 @@ Railway sets `PORT` automatically; the API uses it when `API_PORT` is unset.
 
 ### 2.5 Custom domain for API
 
-1. API service → **Settings** → **Networking** → **Custom Domain** → `api.loomis.digital`
-2. At your DNS provider (where `loomis.digital` is managed), add the CNAME Railway gives you.
-3. Wait for TLS (usually a few minutes).
+1. API service → **Settings** → **Networking** → **Custom Domain** → `api.loomis.digital`  
+   (or CLI: `cd apps/api && railway domain api.loomis.digital`)
+2. At your DNS provider (where `loomis.digital` is managed), add the records Railway shows. Example:
+
+| Type | Name | Value |
+|------|------|--------|
+| CNAME | `api` | `nnye6l6v.up.railway.app` |
+| TXT | `_railway-verify.api` | `railway-verify=…` (copy from Railway dashboard) |
+
+3. Wait for Railway **Verified: yes** and TLS (usually minutes; DNS can take up to 72h).
+4. On **Vercel**, set `LOOMIS_API_CUSTOM_DOMAIN_READY=true` and redeploy so the web app uses `api.loomis.digital` instead of the Railway fallback URL.
+
+**Until DNS is live:** the web app automatically uses `https://loomis-api-production.up.railway.app/api/v1` when env vars point at `api.loomis.digital` and `LOOMIS_API_CUSTOM_DOMAIN_READY` is unset. No Vercel change required for the interim fix.
 
 ### 2.6 Run migrations
 
@@ -219,7 +229,9 @@ curl http://localhost:8080/health
 
 | Symptom | Fix |
 |---------|-----|
-| Login **503** on Vercel | API down or wrong `LOOMIS_API_BASE_URL`; test `/health` |
+| Login **502** / `api.loomis.digital` does not resolve | Add DNS CNAME for `api` → Railway (§2.5), or redeploy web (uses Railway URL fallback until DNS is ready) |
+| `/api/auth/refresh` **401** on login page | Normal — no session yet; ignore unless login also fails |
+| Login **503** on Vercel | API down or wrong `LOOMIS_API_BASE_URL`; test `https://loomis-api-production.up.railway.app/health` |
 | CORS errors in browser | API must be HTTPS; CORS is open with credentials |
 | Cookies not set | `NODE_ENV=production` on Vercel (Secure cookies) |
 | **Environment validation failed** | Missing required env on API service |

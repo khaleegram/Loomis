@@ -1,5 +1,6 @@
 import { role as roleSchema, type Role } from '@loomis/contracts';
 
+import { resolveApiBaseUrl } from '../api/resolve-api-base-url';
 import { SESSION_COOKIE, parseSession, serializeSession, type SessionInfo } from './session';
 
 export { SESSION_COOKIE, parseSession, serializeSession };
@@ -66,11 +67,9 @@ export function sessionCookieOptions(maxAgeSeconds?: number): CookieOptions {
 
 /** Server-only base URL of the Fastify backend (e.g. http://localhost:18080/api/v1). */
 export function backendBaseUrl(): string {
-  const url =
-    process.env.LOOMIS_API_BASE_URL ??
-    process.env.NEXT_PUBLIC_API_BASE_URL ??
-    'http://localhost:18080/api/v1';
-  return url.replace(/\/$/, '');
+  return resolveApiBaseUrl(
+    process.env.LOOMIS_API_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL,
+  );
 }
 
 /**

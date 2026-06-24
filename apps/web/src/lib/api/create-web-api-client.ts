@@ -1,5 +1,6 @@
 import { createApiClient, type ApiClient } from '@loomis/api-client';
 
+import { resolveApiBaseUrl } from '@/lib/api/resolve-api-base-url';
 import { memoryTokenStore } from '@/lib/auth/memory-token-store';
 import { getActiveTenantId } from '@/lib/tenant/active-tenant-store';
 import { handleSessionInvalidated } from '@/lib/auth/auth-session-guard';
@@ -7,10 +8,8 @@ import { handleSessionInvalidated } from '@/lib/auth/auth-session-guard';
 const BFF_REFRESH_PATH = '/api/auth/refresh';
 
 function apiBaseUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_API_BASE_URL ??
-    process.env.NEXT_PUBLIC_API_URL ??
-    'http://localhost:18080/api/v1'
+  return resolveApiBaseUrl(
+    process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.NEXT_PUBLIC_API_URL,
   );
 }
 
