@@ -1,5 +1,8 @@
 import { LoomisError } from '../../../shared/errors.js';
 import { withTenantContext } from '../../../shared/tenant-context.js';
+import { deliveryService } from '../../comms/services/delivery.service.js';
+import { transactionalEmailService } from '../../comms/services/transactional-email.service.js';
+import { staffRepository } from '../../hrm/repository/staff.repository.js';
 import { attestationRepository } from '../../student/repository/attestation.repository.js';
 import { studentRepository } from '../../student/repository/student.repository.js';
 import {
@@ -13,13 +16,13 @@ import type { TermCensusLockedPayload } from '../events/types.js';
 import { ACADEMIC_EVENT_TYPES } from '../events/types.js';
 import { academicRepository } from '../repository/academic.repository.js';
 import { outboxRepository } from '../repository/outbox.repository.js';
-import type { ActorContext, CensusLockInput } from '../types.js';
+import type { ActorContext } from '../types.js';
 import { requireTenant, requireTerm } from './_shared.js';
 
-/** Variance tolerance before a documented reason is required (System Design §8.1 step 3). */
-const VARIANCE_TOLERANCE = 0.02;
-
 const MTC_CONFIG_KEY = 'minimum_term_commitment';
+const ADJUSTMENT_WINDOW_DAYS = 7;
+
+export type SnapshotTrigger = 'scheduled' | 'manual_early';
 
 function parseMinimumTermCommitment(value: unknown): number | null {
   if (typeof value === 'number' && Number.isInteger(value) && value >= 0) {
@@ -31,27 +34,106 @@ function parseMinimumTermCommitment(value: unknown): number | null {
   return null;
 }
 
+function addDays(date: Date, days: number): Date {
+  const next = new Date(date);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
+}
+
+async function notifyOwnersSnapshotTaken(
+  tenantId: string,
+  termId: string,
+  termName: string,
+  systemBillableCount: number,
+  adjustmentWindowEndsAt: Date,
+): Promise<void> {
+  const owners = await staffRepository.findActiveUserIdsByRole(tenantId, 'school_owner');
+  if (owners.length === 0) return;
+
+  const title = 'Platform billing snapshot taken';
+  const body = `${termName}: ${systemBillableCount} billable students. You have until ${adjustmentWindowEndsAt.toISOString().slice(0, 10)} to request corrections.`;
+
+  await deliveryService.createManyInApp(
+    owners.map((userId) => ({
+      tenantId,
+      userId,
+      notificationType: 'generic' as const,
+      safeCopy: {
+        title,
+        body,
+        deepLinkResourceType: 'platform_billing',
+      },
+      resourceId: termId,
+      eventIdempotencyKey: `billing.snapshot:${tenantId}:${termId}`,
+    })),
+  );
+
+  for (const owner of owners) {
+    if (!owner.email) continue;
+    await transactionalEmailService.sendPlatformBillingSnapshotEmail({
+      to: owner.email,
+      termName,
+      systemBillableCount,
+      adjustmentWindowEndsAt,
+    });
+  }
+}
+
+async function notifyOwnersMtcWarning(
+  tenantId: string,
+  termId: string,
+  termName: string,
+  systemBillableCount: number,
+  minimumTermCommitment: number,
+  snapshotDate: string,
+): Promise<void> {
+  const owners = await staffRepository.findActiveUserIdsByRole(tenantId, 'school_owner');
+  if (owners.length === 0) return;
+
+  const title = 'Platform billing snapshot in 7 days';
+  const body = `${termName}: ${systemBillableCount} billable students is below your minimum term commitment of ${minimumTermCommitment}. Snapshot date: ${snapshotDate}.`;
+
+  await deliveryService.createManyInApp(
+    owners.map((userId) => ({
+      tenantId,
+      userId,
+      notificationType: 'generic' as const,
+      safeCopy: {
+        title,
+        body,
+        deepLinkResourceType: 'platform_billing',
+      },
+      resourceId: termId,
+      eventIdempotencyKey: `billing.mtc-warning:${tenantId}:${termId}`,
+    })),
+  );
+
+  for (const owner of owners) {
+    if (!owner.email) continue;
+    await transactionalEmailService.sendMtcBelowCommitmentWarningEmail({
+      to: owner.email,
+      termName,
+      systemBillableCount,
+      minimumTermCommitment,
+      snapshotDate,
+    });
+  }
+}
+
 export const censusService = {
   /**
-   * Read-only census review (US-ASM-003). Returns the system billable count,
-   * class-level breakdown, MTC, and effective PSF rate without locking.
+   * Read-only platform billing preview (US-ASM-003). System billable count and
+   * projected PSF — no snapshot is created.
    */
-  async previewCensus(tenantId: string, termId: string, actor: ActorContext) {
+  async previewPlatformBilling(tenantId: string, termId: string, actor: ActorContext) {
     requireTenant(actor, tenantId);
     const term = await requireTerm(tenantId, termId);
 
-    if (term.status === 'census_locked' || term.status === 'closed') {
-      throw new LoomisError(
-        'ACADEMIC_CENSUS_ALREADY_LOCKED',
-        409,
-        'The census for this term has already been locked',
-      );
-    }
-    if (term.status !== 'open') {
+    if (term.status !== 'open' && term.status !== 'census_locked') {
       throw new LoomisError(
         'ACADEMIC_CENSUS_NOT_READY',
         409,
-        'The term must be open before its census can be reviewed (FR-ASM-005)',
+        'The term must be open or snapshotted to preview platform billing',
       );
     }
 
@@ -73,53 +155,60 @@ export const censusService = {
       academicYearId: term.academicYearId,
       termName: term.name,
       termStatus: term.status,
+      censusSnapshotDate: term.censusSnapshotDate ?? null,
+      snapshotCreatedAt: term.snapshotCreatedAt?.toISOString() ?? null,
+      adjustmentWindowEndsAt: term.adjustmentWindowEndsAt?.toISOString() ?? null,
       systemBillableCount: studentIds.length,
       classLevelBreakdown,
       minimumTermCommitment: parseMinimumTermCommitment(mtcConfig?.value ?? null),
       psfRateMinor: psfRateMinor !== null && psfRateMinor > 0 ? psfRateMinor : null,
-      varianceTolerance: VARIANCE_TOLERANCE,
     };
   },
 
+  /** @deprecated Use previewPlatformBilling */
+  previewCensus(tenantId: string, termId: string, actor: ActorContext) {
+    return this.previewPlatformBilling(tenantId, termId, actor);
+  },
+
   /**
-   * Locks the enrollment census (FR-SIS-006 / FR-ASM-005 / US-ASM-003; System
-   * Design §8.1). Step-up MFA and the Idempotency-Key are enforced at the route.
-   *
-   * Validates pre-conditions, resolves the effective PSF rate (must exist and be
-   * non-zero — CON-011/CON-006), then performs the lock in a single SERIALIZABLE
-   * transaction that flips the term to `census_locked`, writes the immutable
-   * `enrollment_attestation`, and appends the `academic.term.census_locked`
-   * outbox event. The Ledger module consumes that event to create one PSF
-   * obligation per billable student plus balanced double-entry postings. PSF
-   * obligations are created by census lock, never by payment. This action
-   * cannot be undone.
+   * Creates the enrollment billing snapshot (System Design §8.1). System count
+   * only — idempotent when the term is already `census_locked`.
    */
-  async lockCensus(tenantId: string, termId: string, input: CensusLockInput, actor: ActorContext) {
-    requireTenant(actor, tenantId);
-
-    if (actor.role !== 'school_owner') {
-      throw new LoomisError(
-        'FORBIDDEN',
-        403,
-        'Only the school owner may lock census (ROLE_EXPERIENCE_TIER_PLAN §5)',
-      );
-    }
-
+  async createEnrollmentSnapshot(
+    tenantId: string,
+    termId: string,
+    options: { trigger: SnapshotTrigger; actorId?: string },
+  ) {
     const term = await requireTerm(tenantId, termId);
 
-    if (term.status === 'census_locked' || term.status === 'closed') {
+    if (term.status === 'census_locked') {
+      const psfRateMinor =
+        (await attestationRepository.findByTerm(tenantId, termId))?.psfRateMinor ?? 0;
+      return {
+        term,
+        psfRateMinor,
+        systemBillableCount: term.systemBillableCount ?? 0,
+        alreadySnapshotted: true as const,
+      };
+    }
+
+    if (term.status === 'closed') {
       throw new LoomisError(
         'ACADEMIC_CENSUS_ALREADY_LOCKED',
         409,
-        'The census for this term has already been locked (cannot be undone)',
+        'This term is closed; billing snapshot cannot be created',
       );
     }
     if (term.status !== 'open') {
       throw new LoomisError(
         'ACADEMIC_CENSUS_NOT_READY',
         409,
-        'The term must be open before its census can be locked (FR-ASM-005)',
+        'The term must be open before a billing snapshot can be created',
       );
+    }
+
+    if (options.trigger === 'manual_early' && !options.actorId) {
+      throw new LoomisError('FORBIDDEN', 403, 'Manual early snapshot requires an actor');
     }
 
     const tenant = await tenantRepository.findById(tenantId);
@@ -131,61 +220,49 @@ export const censusService = {
       throw new LoomisError(
         'ACADEMIC_CENSUS_PSF_RATE_MISSING',
         422,
-        'No non-zero PSF rate is configured for this tenant; census lock is blocked (CON-006/CON-011)',
+        'No non-zero PSF rate is configured; billing snapshot is blocked (CON-006)',
       );
     }
 
     const rateSnapshot = await psfRateService.ensureBillingSnapshot(tenantId, psfRateMinor);
+    const generatedBy =
+      options.trigger === 'manual_early' && options.actorId ? options.actorId : 'system';
 
-    const locked = await withTenantContext(
+    const snapshotted = await withTenantContext(
       tenantId,
       async (tx) => {
         const studentIds = await studentRepository.listBillableStudentIdsTx(tx, tenantId, termId);
         const systemBillableCount = studentIds.length;
-        const denominator = systemBillableCount === 0 ? 1 : systemBillableCount;
-        const variance =
-          Math.abs(input.declaredBillableCount - systemBillableCount) / denominator;
-        if (variance > VARIANCE_TOLERANCE && !input.varianceReason) {
-          throw new LoomisError(
-            'ACADEMIC_CENSUS_VARIANCE_REASON_REQUIRED',
-            422,
-            'The declared count differs from the system count beyond tolerance; a documented reason is required (System Design §8.1)',
-            { declared: input.declaredBillableCount, system: systemBillableCount },
-          );
-        }
-
         const now = new Date();
-        const lockedAt = now.toISOString();
+        const snapshotAt = now.toISOString();
+        const adjustmentWindowEndsAt = addDays(now, ADJUSTMENT_WINDOW_DAYS);
         const studentListHash = buildStudentListHash(studentIds);
         const attestationHash = buildAttestationHash({
           tenantId,
           termId,
-          declaredBillableCount: input.declaredBillableCount,
           systemBillableCount,
           studentListHash,
           rateSnapshotId: rateSnapshot.id,
           psfRateMinor,
-          attestedById: actor.userId,
-          lockedAt,
+          generatedBy,
+          snapshotAt,
         });
 
-        const updatedTerm = await academicRepository.lockCensusInTx(tx, {
+        const updatedTerm = await academicRepository.createSnapshotInTx(tx, {
           tenantId,
           termId,
-          declaredBillableCount: input.declaredBillableCount,
           systemBillableCount,
-          varianceReason: input.varianceReason ?? null,
-          attestedById: actor.userId,
-          lockedAt: now,
+          snapshotAt: now,
+          adjustmentWindowEndsAt,
         });
         if (!updatedTerm) return null;
 
         await attestationRepository.insert(tx, {
           tenantId,
           termId,
-          declaredBillableCount: input.declaredBillableCount,
           systemBillableCount,
-          attestedById: actor.userId,
+          generatedBy,
+          attestedById: options.actorId ?? null,
           attestedAt: now,
           studentListHash,
           attestationHash,
@@ -197,14 +274,13 @@ export const censusService = {
           tenantId,
           academicYearId: term.academicYearId,
           termId,
-          declaredBillableCount: input.declaredBillableCount,
           systemBillableCount,
           psfRateMinor,
           rateSnapshotId: rateSnapshot.id,
           studentListHash,
           attestationHash,
-          attestedById: actor.userId,
-          censusLockedAt: lockedAt,
+          generatedBy,
+          snapshotCreatedAt: snapshotAt,
         };
 
         await outboxRepository.append(tx, {
@@ -215,19 +291,110 @@ export const censusService = {
           payload: eventPayload,
         });
 
-        return { term: updatedTerm, systemBillableCount };
+        return { term: updatedTerm, systemBillableCount, adjustmentWindowEndsAt };
       },
       { isolationLevel: 'serializable' },
     );
 
-    if (!locked) {
+    if (!snapshotted) {
+      const existing = await requireTerm(tenantId, termId);
+      if (existing.status === 'census_locked') {
+        const attestation = await attestationRepository.findByTerm(tenantId, termId);
+        return {
+          term: existing,
+          psfRateMinor: attestation?.psfRateMinor ?? psfRateMinor,
+          systemBillableCount: existing.systemBillableCount ?? 0,
+          alreadySnapshotted: true as const,
+        };
+      }
       throw new LoomisError(
-        'ACADEMIC_CENSUS_ALREADY_LOCKED',
+        'ACADEMIC_CENSUS_NOT_READY',
         409,
-        'The census for this term has already been locked',
+        'Billing snapshot could not be created for this term',
       );
     }
 
-    return { term: locked.term, psfRateMinor, systemBillableCount: locked.systemBillableCount };
+    await notifyOwnersSnapshotTaken(
+      tenantId,
+      termId,
+      term.name,
+      snapshotted.systemBillableCount,
+      snapshotted.adjustmentWindowEndsAt,
+    );
+
+    return {
+      term: snapshotted.term,
+      psfRateMinor,
+      systemBillableCount: snapshotted.systemBillableCount,
+      alreadySnapshotted: false as const,
+    };
+  },
+
+  async snapshotNow(tenantId: string, termId: string, actor: ActorContext) {
+    requireTenant(actor, tenantId);
+    if (actor.role !== 'school_owner') {
+      throw new LoomisError('FORBIDDEN', 403, 'Only the school owner may take an early billing snapshot');
+    }
+    return this.createEnrollmentSnapshot(tenantId, termId, {
+      trigger: 'manual_early',
+      actorId: actor.userId,
+    });
+  },
+
+  /** Daily job: auto-snapshot open terms whose snapshot date has been reached. */
+  async runScheduledSnapshots(asOfDate?: string): Promise<{ snapshotted: number; skipped: number }> {
+    const today = asOfDate ?? new Date().toISOString().slice(0, 10);
+    const tenants = await tenantRepository.listAll();
+    let snapshotted = 0;
+    let skipped = 0;
+
+    for (const tenant of tenants) {
+      const dueTerms = await academicRepository.listOpenTermsDueForSnapshot(tenant.id, today);
+      for (const term of dueTerms) {
+        const result = await this.createEnrollmentSnapshot(tenant.id, term.id, {
+          trigger: 'scheduled',
+        });
+        if (result.alreadySnapshotted) skipped += 1;
+        else snapshotted += 1;
+      }
+    }
+
+    return { snapshotted, skipped };
+  },
+
+  /** Daily job: T-7 MTC warning when billable count is below commitment. */
+  async runMtcWarnings(asOfDate?: string): Promise<{ notified: number }> {
+    const today = asOfDate ?? new Date().toISOString().slice(0, 10);
+    const warningDate = addDays(new Date(`${today}T00:00:00.000Z`), 7)
+      .toISOString()
+      .slice(0, 10);
+    const tenants = await tenantRepository.listAll();
+    let notified = 0;
+
+    for (const tenant of tenants) {
+      const terms = await academicRepository.listOpenTermsForSnapshotDate(tenant.id, warningDate);
+      if (terms.length === 0) continue;
+
+      const mtcConfig = await configurationRepository.findByKey(tenant.id, MTC_CONFIG_KEY);
+      const mtc = parseMinimumTermCommitment(mtcConfig?.value ?? null);
+      if (mtc === null) continue;
+
+      for (const term of terms) {
+        const studentIds = await studentRepository.listBillableStudentIds(tenant.id, term.id);
+        if (studentIds.length >= mtc) continue;
+
+        await notifyOwnersMtcWarning(
+          tenant.id,
+          term.id,
+          term.name,
+          studentIds.length,
+          mtc,
+          warningDate,
+        );
+        notified += 1;
+      }
+    }
+
+    return { notified };
   },
 };

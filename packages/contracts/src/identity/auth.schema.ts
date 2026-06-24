@@ -47,7 +47,6 @@ export const stepUpAction = z.enum([
   'refund_approve',
   'data_export',
   'psf_rate_change',
-  'census_lock',
   'result_publish',
   'ledger_adjustment',
   'financial_override',

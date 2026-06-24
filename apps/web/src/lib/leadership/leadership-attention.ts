@@ -88,34 +88,34 @@ export function resolveCensusAttention(
   }
 
   if (term.status === 'open') {
-    const days = daysUntilIsoDate(term.censusLockDate);
+    const days = daysUntilIsoDate(term.censusSnapshotDate);
     const countdown =
       days == null
-        ? 'Census lock date not set'
+        ? 'Snapshot date not set'
         : days > 0
-          ? `${days} day${days === 1 ? '' : 's'} until census lock`
+          ? `${days} day${days === 1 ? '' : 's'} until billing snapshot`
           : days === 0
-            ? 'Census lock due today'
-            : `${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'} past census date`;
+            ? 'Billing snapshot due today'
+            : `${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'} past snapshot date`;
 
     return {
-      label: 'Census lock due',
+      label: 'Billing snapshot due',
       hint:
         billableCount != null
           ? `${billableCount.toLocaleString()} billable students · ${countdown}`
           : countdown,
       urgency: days != null && days <= 7 ? 'attention' : 'ready',
-      href: `/school/academic/census-lock?termId=${term.id}&yearId=${yearId}`,
+      href: `/school/academic/platform-billing?termId=${term.id}&yearId=${yearId}`,
     };
   }
 
   if (term.status === 'census_locked') {
     return {
-      label: 'Census locked',
+      label: 'Snapshot taken',
       hint:
         billableCount != null
-          ? `${billableCount.toLocaleString()} students attested · PSF obligations created`
-          : 'Enrollment attested for this term',
+          ? `${billableCount.toLocaleString()} students snapshotted · PSF obligations created`
+          : 'Billing snapshot recorded for this term',
       urgency: 'normal',
       href: '/school/academic/sessions',
     };
@@ -194,7 +194,7 @@ export function buildOwnerAttentionTasks(input: {
   const approvalHref = input.workflowInboxModule ? inboxHref : '/school/staff';
   const approvalCta = input.workflowInboxModule ? 'Open inbox' : 'Review items';
 
-  if (input.census.label === 'Census lock due') {
+  if (input.census.label === 'Billing snapshot due') {
     tasks.push({
       id: 'census',
       title: input.census.label,

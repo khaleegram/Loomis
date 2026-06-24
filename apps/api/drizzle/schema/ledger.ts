@@ -154,6 +154,45 @@ export const psfSettlements = ledgerSchema.table(
 );
 
 /**
+ * Owner-initiated PSF billing corrections during the post-snapshot adjustment window.
+ * Platform Ops approves before ledger deltas post via `platform_adjustment`.
+ */
+export const psfAdjustmentRequests = ledgerSchema.table(
+  'psf_adjustment_requests',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id),
+    termId: uuid('term_id').notNull(),
+    requestedById: uuid('requested_by_id').notNull(),
+    reason: varchar('reason', { length: 500 }).notNull(),
+    deltaType: varchar('delta_type', { length: 20 }).notNull(),
+    studentIds: jsonb('student_ids').$type<string[]>().notNull(),
+    status: varchar('status', { length: 20 }).notNull().default('pending'),
+    reviewedById: uuid('reviewed_by_id'),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+    rejectionReason: varchar('rejection_reason', { length: 500 }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    tenantTermIdx: index('psf_adjustment_requests_tenant_term_idx').on(table.tenantId, table.termId),
+    statusIdx: index('psf_adjustment_requests_status_idx').on(table.status),
+    deltaTypeValid: check(
+      'psf_adjustment_requests_delta_type_valid',
+      sql`${table.deltaType} IN ('add_students', 'remove_students')`,
+    ),
+    statusValid: check(
+      'psf_adjustment_requests_status_valid',
+      sql`${table.status} IN ('pending', 'approved', 'rejected')`,
+    ),
+  }),
+);
+
+/**
  * Immutable double-entry ledger (System Design §8.3; Revenue Integrity §A).
  * INSERT-only at the application and database layer. Every `ledger_txn_id` group
  * must net to zero per currency — enforced in LedgerService.post().

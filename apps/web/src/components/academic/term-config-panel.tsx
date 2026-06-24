@@ -43,7 +43,7 @@ function toFormValues(term: AcademicTermResponse): ConfigureTermRequest {
     endDate: term.endDate ?? '',
     enrollmentWindowOpenDate: term.enrollmentWindowOpenDate ?? '',
     enrollmentWindowCloseDate: term.enrollmentWindowCloseDate ?? '',
-    censusLockDate: term.censusLockDate ?? '',
+    censusSnapshotDate: term.censusSnapshotDate ?? '',
     examStartDate: term.examStartDate ?? undefined,
     examEndDate: term.examEndDate ?? undefined,
   };
@@ -197,10 +197,10 @@ export function TermConfigPanel({ tenantId, yearId, term }: TermConfigPanelProps
               </div>
               <FormField
                 control={form.control}
-                name="censusLockDate"
+                name="censusSnapshotDate"
                 render={({ field }) => (
                   <FormItem className="max-w-xs">
-                    <FormLabel>Census lock date</FormLabel>
+                    <FormLabel>Billing snapshot date</FormLabel>
                     <FormControl>
                       <Input {...field} type="date" disabled={readOnly} className="border-gold/40" />
                     </FormControl>

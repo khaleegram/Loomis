@@ -137,7 +137,7 @@ export const caseRepository = {
         .select({
           tenantId: academicTerms.tenantId,
           termId: academicTerms.id,
-          reportedEnrollment: academicTerms.declaredBillableCount,
+          reportedEnrollment: academicTerms.systemBillableCount,
         })
         .from(academicTerms)
         .innerJoin(tenants, eq(tenants.id, academicTerms.tenantId))
@@ -145,7 +145,7 @@ export const caseRepository = {
           and(
             eq(academicTerms.status, 'census_locked'),
             eq(tenants.status, 'active'),
-            sql`${academicTerms.declaredBillableCount} IS NOT NULL`,
+            sql`${academicTerms.systemBillableCount} IS NOT NULL`,
           ),
         ),
     );

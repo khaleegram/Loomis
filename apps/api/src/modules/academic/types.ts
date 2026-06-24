@@ -4,7 +4,6 @@ import type {
   CreateAcademicYearRequest,
   CreateClassArmRequest,
   CreateClassLevelRequest,
-  CensusLockRequest,
   PromotionDecision,
   CreateExamConfigRequest,
   CreateGradingSchemeRequest,
@@ -27,7 +26,6 @@ export interface ActorContext {
 export type CreateAcademicYearInput = CreateAcademicYearRequest;
 export type ConfigureTermInput = ConfigureTermRequest;
 export type CloseTermInput = CloseTermRequest;
-export type CensusLockInput = CensusLockRequest;
 export type CreateClassLevelInput = CreateClassLevelRequest;
 export type CreateClassArmInput = CreateClassArmRequest;
 export type UpsertProgressionInput = UpsertProgressionRequest;

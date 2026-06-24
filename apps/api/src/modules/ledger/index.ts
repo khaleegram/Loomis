@@ -3,6 +3,7 @@ import { registerLedgerEventConsumers } from './events/index.js';
 import { startBalanceCheckJob } from './jobs/balance-check.job.js';
 import { startOutboxRelayJob } from './jobs/outbox-relay.job.js';
 import { ledgerRoutes } from './routes/ledger.routes.js';
+import { platformBillingAdjustmentsRoutes } from './routes/platform-billing-adjustments.routes.js';
 
 /**
  * Ledger module plugin (Revenue Integrity §A/B; System Design §8.1/§8.3).
@@ -12,6 +13,7 @@ import { ledgerRoutes } from './routes/ledger.routes.js';
  */
 export async function ledgerModule(app: FastifyInstance): Promise<void> {
   await app.register(ledgerRoutes);
+  await app.register(platformBillingAdjustmentsRoutes);
   registerLedgerEventConsumers();
   await startOutboxRelayJob();
   await startBalanceCheckJob();

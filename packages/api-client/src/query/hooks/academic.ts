@@ -4,9 +4,12 @@ import type {
   AcademicTermResponse,
   AcademicYearListResponse,
   AcademicYearResponse,
-  CensusLockRequest,
-  CensusLockResponse,
-  CensusPreviewResponse,
+  CreatePsfAdjustmentRequest,
+  EnrollmentSnapshotResponse,
+  PlatformBillingPreviewResponse,
+  PsfAdjustmentRequestListResponse,
+  PsfAdjustmentRequestResponse,
+  SnapshotNowRequest,
   ClassArmResponse,
   ClassLevelListResponse,
   ClassLevelResponse,
@@ -107,7 +110,7 @@ export function termQueryOptions(client: ApiClient, tenantId: string, termId: st
   };
 }
 
-export function censusPreviewQueryOptions(
+export function platformBillingPreviewQueryOptions(
   client: ApiClient,
   tenantId: string,
   termId: string,
@@ -117,12 +120,15 @@ export function censusPreviewQueryOptions(
   return {
     queryKey,
     queryFn: () =>
-      client.get<CensusPreviewResponse>(
-        `/tenants/${tenantId}/terms/${termId}/census/preview`,
+      client.get<PlatformBillingPreviewResponse>(
+        `/tenants/${tenantId}/terms/${termId}/billing/preview`,
       ),
     staleTime: ACADEMIC_STALE_MS,
   };
 }
+
+/** @deprecated Use platformBillingPreviewQueryOptions */
+export const censusPreviewQueryOptions = platformBillingPreviewQueryOptions;
 
 export function termClosurePreviewQueryOptions(
   client: ApiClient,
@@ -168,14 +174,17 @@ export function useAcademicTerm(tenantId: string, termId: string) {
   });
 }
 
-/** Pre-lock census review (US-ASM-003). */
-export function useCensusPreview(tenantId: string, termId: string) {
+/** Platform billing preview (US-ASM-003). */
+export function usePlatformBillingPreview(tenantId: string, termId: string) {
   const client = useApiClient();
   return useQuery({
-    ...censusPreviewQueryOptions(client, tenantId, termId),
+    ...platformBillingPreviewQueryOptions(client, tenantId, termId),
     enabled: Boolean(tenantId && termId),
   });
 }
+
+/** @deprecated Use usePlatformBillingPreview */
+export const useCensusPreview = usePlatformBillingPreview;
 
 /** Pre-close term gate review (US-ASM-004). */
 export function useTermClosurePreview(tenantId: string, termId: string, enabled = true) {
@@ -307,25 +316,53 @@ export function useCloseTerm(tenantId: string, yearId: string, termId: string) {
   });
 }
 
-export interface UseLockCensusConfig {
+export interface UseSnapshotNowConfig {
   tenantId: string;
   yearId: string;
   termId: string;
-  ensureStepUpToken: (action: StepUpAction) => Promise<StepUpTokenResult>;
 }
 
-/** Locks the enrollment census — PSF trigger (US-ASM-003). */
-export function useLockCensus(config: UseLockCensusConfig) {
-  const { tenantId, yearId, termId, ensureStepUpToken } = config;
-  return useFinancialMutation<CensusLockRequest, CensusLockResponse>({
-    endpoint: `/tenants/${tenantId}/terms/${termId}/census/lock`,
-    action: 'census_lock',
-    ensureStepUpToken,
-    invalidates: [
-      queryKeys.academic.terms(tenantId, yearId),
-      queryKeys.academic.term(tenantId, termId),
-      queryKeys.academic.censusPreview(tenantId, termId),
-    ],
+/** Takes an early billing snapshot (Owner only, US-ASM-003). */
+export function useSnapshotNow(config: UseSnapshotNowConfig) {
+  const { tenantId, yearId, termId } = config;
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: SnapshotNowRequest) =>
+      client.post<EnrollmentSnapshotResponse>(
+        `/tenants/${tenantId}/terms/${termId}/billing/snapshot-now`,
+        body,
+      ),
+    onSuccess: () => invalidateAcademicQueries(queryClient, tenantId, yearId, termId),
+  });
+}
+
+export function useBillingAdjustments(tenantId: string, termId: string) {
+  const client = useApiClient();
+  return useQuery({
+    queryKey: ['billing', 'adjustments', tenantId, termId],
+    queryFn: () =>
+      client.get<PsfAdjustmentRequestListResponse>(
+        `/tenants/${tenantId}/terms/${termId}/billing/adjustments`,
+      ),
+    enabled: Boolean(tenantId && termId),
+    staleTime: ACADEMIC_STALE_MS,
+  });
+}
+
+export function useRequestBillingAdjustment(tenantId: string, termId: string, yearId: string) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CreatePsfAdjustmentRequest) =>
+      client.post<PsfAdjustmentRequestResponse>(
+        `/tenants/${tenantId}/terms/${termId}/billing/adjustments`,
+        body,
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['billing', 'adjustments', tenantId, termId] });
+      invalidateAcademicQueries(queryClient, tenantId, yearId, termId);
+    },
   });
 }
 

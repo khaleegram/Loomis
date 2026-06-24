@@ -120,7 +120,7 @@ How do you manage payments?
 
 | Persona | Underlying role(s) | Core notes |
 |---------|-------------------|------------|
-| Owner | `school_owner` | Census lock required; role-change approver; refund above threshold |
+| Owner | `school_owner` | Platform billing snapshot; role-change approver; refund above threshold |
 | Principal | `principal` | Direct authority on routine ops; attention badges not Workflow Inbox |
 | Admin Officer | `admin_officer` | Registry, admissions |
 | Finance Officer | preset on `accountant` | Combined finance preset |
@@ -129,7 +129,7 @@ How do you manage payments?
 | Class Teacher | `class_teacher` | |
 | Parent / Student | `parent`, `student` | Mobile-first |
 
-**Core always ships:** audit log (simple trail), exam officer, class teacher split, parent/student mobile, finance officer UX, payment tracking, census lock, role tracking.
+**Core always ships:** audit log (simple trail), exam officer, class teacher split, parent/student mobile, finance officer UX, payment tracking, platform billing snapshot, role tracking.
 
 **Core must NOT ship:**
 
@@ -164,7 +164,7 @@ Document for compliance/product:
 
 | Action | Core friction |
 |--------|----------------|
-| **Census lock** | **SMS OTP always** (few times per year — acceptable) |
+| **Platform billing snapshot** | **Auto on snapshot date** | Owner may snapshot early; corrections via Platform Ops approval |
 | **Refund approve** | SMS OTP **above threshold** (default ₦100,000 — configurable) |
 | **Result publish** | Exam Officer: confirm dialog Core; TOTP optional Advanced |
 | **Data export** | SMS OTP Advanced+ |
@@ -196,7 +196,7 @@ Avoid workflow-engine ceremony in Core. Use **notifications + one-tap approve** 
 | Refund below ₦50,000 | **Principal** | Default; configurable |
 | Refund above ₦50,000 | **Owner** | Default; configurable |
 | Refund (single approver mode) | **Principal** | Owner can override default in settings |
-| **Census lock** | **Owner required** | Always — affects PSF billing |
+| **Platform billing snapshot** | **Owner optional early snapshot** | Auto-snapshot on date — affects PSF billing |
 | **Staff role change** | **Owner required** | Principal submits change → Owner notification → **one-tap approve** — no Workflow Inbox module |
 
 ### 5.1 Same-person collapse
@@ -304,7 +304,7 @@ Apply the **10-staff / WhatsApp test** (§0). Default new friction to Advanced o
 **Auth**
 
 - [x] SMS OTP + 30-day trusted device (Owner/Principal/Finance)
-- [x] Census lock SMS OTP
+- [x] Platform billing auto-snapshot
 - [x] Refund threshold SMS OTP
 
 **UX**
@@ -318,7 +318,7 @@ Apply the **10-staff / WhatsApp test** (§0). Default new friction to Advanced o
 **API (always on, all tiers)**
 
 - [x] Cashier cannot verify own payment (even in combined mode — use actor id check)
-- [x] PSF at census lock
+- [x] PSF at billing snapshot
 - [x] Audit writes on sensitive actions
 
 ---
@@ -329,7 +329,7 @@ Apply the **10-staff / WhatsApp test** (§0). Default new friction to Advanced o
 |-------|----------|
 | Combined finance | Option A + B; split = second invite; no dual hat in split mode |
 | Core MFA | Hybrid D; softer than SRS UX; backend protections remain |
-| Census lock | Owner and Principal (Principal enabled all tiers; see master plan §2.2) |
+| Platform billing | Owner early snapshot; Principal preview | Auto-snapshot on configured date |
 | Role change | Owner one-tap approve; not workflow inbox in Core |
 | Refund thresholds | ₦50k Principal / above Owner (defaults, configurable) |
 | Same-person collapse | Yes |

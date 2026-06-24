@@ -74,7 +74,7 @@ async function main() {
         endDate: '2025-12-15',
         enrollmentWindowOpenDate: '2025-09-01',
         enrollmentWindowCloseDate: '2025-10-31',
-        censusLockDate: '2025-11-01',
+        censusSnapshotDate: '2025-11-01',
         examStartDate: '2025-11-15',
         examEndDate: '2025-12-10',
       },

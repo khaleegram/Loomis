@@ -712,4 +712,28 @@ export const staffRepository = {
       return updated ?? null;
     });
   },
+
+  async findActiveUserIdsByRole(
+    tenantId: string,
+    role: string,
+  ): Promise<Array<{ userId: string; email: string | null }>> {
+    return withTenantContext(tenantId, async (tx) => {
+      const rows = await tx
+        .select({
+          userId: staffProfiles.userId,
+          email: users.email,
+        })
+        .from(roleAssignments)
+        .innerJoin(staffProfiles, eq(roleAssignments.staffProfileId, staffProfiles.id))
+        .innerJoin(users, eq(staffProfiles.userId, users.id))
+        .where(
+          and(
+            eq(roleAssignments.tenantId, tenantId),
+            eq(roleAssignments.role, role),
+            eq(roleAssignments.active, true),
+          ),
+        );
+      return rows;
+    });
+  },
 };

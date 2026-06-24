@@ -95,7 +95,7 @@ export const SCHOOL_NAV: SchoolNavItem[] = [
   },
   {
     id: 'attestations',
-    label: 'Attestations',
+    label: 'Billing snapshots',
     href: '/school/academic/attestations',
     icon: ScrollText,
     capabilities: ['audit.view', 'census.lock'],

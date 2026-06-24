@@ -62,7 +62,7 @@ export function OpenTermDialog({
         <DialogHeader>
           <DialogTitle>Open {term.name}?</DialogTitle>
           <DialogDescription>
-            Census lock: {formatCalendarDate(term.censusLockDate)} · Only one term may be open per
+            Billing snapshot: {formatCalendarDate(term.censusSnapshotDate)} · Only one term may be open per
             year.
           </DialogDescription>
         </DialogHeader>

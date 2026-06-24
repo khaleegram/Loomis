@@ -60,8 +60,6 @@ export function stepUpUsesSms(
   }
 
   switch (action) {
-    case 'census_lock':
-      return true;
     case 'refund_approve':
       return (context?.refundAmountMinor ?? 0) >= CORE_SMS_REFUND_STEPUP_THRESHOLD_MINOR;
     default:
@@ -106,7 +104,6 @@ export function advancedOptionalTotpLogin(
 }
 
 const ENTERPRISE_MANDATORY_STEPUP_ACTIONS: ReadonlySet<StepUpAction> = new Set([
-  'census_lock',
   'refund_approve',
   'data_export',
   'result_publish',

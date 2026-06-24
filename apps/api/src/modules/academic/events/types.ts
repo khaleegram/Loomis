@@ -24,15 +24,15 @@ export interface TermCensusLockedPayload extends Record<string, unknown> {
   tenantId: string;
   academicYearId: string;
   termId: string;
-  declaredBillableCount: number;
   systemBillableCount: number;
-  /** The PSF rate snapshot in effect at lock time, in kobo (System Design §8.1). */
+  /** The PSF rate snapshot in effect at snapshot time, in kobo (System Design §8.1). */
   psfRateMinor: number;
   rateSnapshotId: string;
-  /** SHA-256 of the sorted billable student ID list at lock time. */
+  /** SHA-256 of the sorted billable student ID list at snapshot time. */
   studentListHash: string;
-  /** SHA-256 of the attested figures — the tamper-evident attestation digest. */
+  /** SHA-256 of the snapshot figures — the tamper-evident digest. */
   attestationHash: string;
-  attestedById: string;
-  censusLockedAt: string;
+  /** `system` or the Owner user id for manual early snapshot. */
+  generatedBy: string;
+  snapshotCreatedAt: string;
 }

@@ -45,7 +45,7 @@ const BADGE_TONE: Record<NonNullable<BentoTile['badgeTone']>, string> = {
 export function AcademicBentoGrid({ metrics, yearId, termId }: AcademicBentoGridProps) {
   const censusHref =
     yearId && termId && metrics.termStatus === 'open'
-      ? `/school/academic/census-lock?termId=${termId}&yearId=${yearId}`
+      ? `/school/academic/platform-billing?termId=${termId}&yearId=${yearId}`
       : '/school/academic/sessions';
 
   const tiles: BentoTile[] = [
@@ -61,7 +61,7 @@ export function AcademicBentoGrid({ metrics, yearId, termId }: AcademicBentoGrid
     },
     {
       id: 'census',
-      title: 'Census lock',
+      title: 'Platform billing',
       subtitle: 'PSF attestation',
       href: censusHref,
       icon: Lock,

@@ -52,7 +52,7 @@ export function AcademicWorkflowCards({
         metrics.termStatus === 'open'
           ? `${metrics.openTermName ?? 'Term'} is open`
           : metrics.termStatus === 'census_locked'
-            ? 'Census locked'
+            ? 'Snapshot taken'
             : metrics.termStatus === 'closed'
               ? 'Term closed'
               : 'Configure draft term',
@@ -65,7 +65,7 @@ export function AcademicWorkflowCards({
       href:
         censusLockHref ??
         (yearId && termId
-          ? `/school/academic/census-lock?termId=${termId}&yearId=${yearId}`
+          ? `/school/academic/platform-billing?termId=${termId}&yearId=${yearId}`
           : '/school/academic/sessions'),
       icon: Lock,
       gradient: BRONZE.gradients.g2,

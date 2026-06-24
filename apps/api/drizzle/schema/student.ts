@@ -225,9 +225,8 @@ export const enrollments = studentSchema.table(
 );
 
 /**
- * Census enrollment attestation (Revenue Integrity §A / System Design §8.1 step 6).
- * INSERT-only legal declaration at census lock: attested counts, rate snapshot,
- * and SHA-256 hashes of the attested figures and billable student list.
+ * Enrollment billing snapshot (System Design §8.1). INSERT-only record at snapshot
+ * time: system billable count, rate snapshot, and hashes of the student list.
  */
 export const enrollmentAttestations = studentSchema.table(
   'enrollment_attestations',
@@ -239,9 +238,10 @@ export const enrollmentAttestations = studentSchema.table(
       .notNull()
       .references(() => tenants.id),
     termId: uuid('term_id').notNull(),
-    declaredBillableCount: integer('declared_billable_count').notNull(),
     systemBillableCount: integer('system_billable_count').notNull(),
-    attestedById: uuid('attested_by_id').notNull(),
+    /** `system` for auto-snapshot, or the Owner user id for manual early snapshot. */
+    generatedBy: varchar('generated_by', { length: 50 }).notNull().default('system'),
+    attestedById: uuid('attested_by_id'),
     attestedAt: timestamp('attested_at', { withTimezone: true }).notNull(),
     /** SHA-256 of the sorted billable student ID list at lock time. */
     studentListHash: varchar('student_list_hash', { length: 64 }).notNull(),

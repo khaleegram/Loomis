@@ -3,7 +3,7 @@ import type {
   AcademicTermStatus,
   AcademicYearResponse,
   AcademicYearStatus,
-  CensusLockResponse,
+  EnrollmentSnapshotResponse,
   ClassArmResponse,
   ClassLevelResponse,
   ExamConfigResponse,
@@ -71,33 +71,35 @@ export function academicTermToResponse(row: AcademicTermRow): AcademicTermRespon
     endDate: row.endDate ?? null,
     enrollmentWindowOpenDate: row.enrollmentWindowOpenDate ?? null,
     enrollmentWindowCloseDate: row.enrollmentWindowCloseDate ?? null,
-    censusLockDate: row.censusLockDate ?? null,
+    censusSnapshotDate: row.censusSnapshotDate ?? null,
     examStartDate: row.examStartDate ?? null,
     examEndDate: row.examEndDate ?? null,
     status: row.status as AcademicTermStatus,
-    declaredBillableCount: row.declaredBillableCount ?? null,
     systemBillableCount: row.systemBillableCount ?? null,
     openedAt: row.openedAt?.toISOString() ?? null,
-    censusLockedAt: row.censusLockedAt?.toISOString() ?? null,
+    snapshotCreatedAt: row.snapshotCreatedAt?.toISOString() ?? null,
+    adjustmentWindowEndsAt: row.adjustmentWindowEndsAt?.toISOString() ?? null,
     closedAt: row.closedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
 }
 
-export function censusLockToResponse(result: {
+export function enrollmentSnapshotToResponse(result: {
   term: AcademicTermRow;
   psfRateMinor: number;
-  systemBillableCount: number | null;
-}): CensusLockResponse {
+  systemBillableCount: number;
+}): EnrollmentSnapshotResponse {
   return {
     termId: result.term.id,
     academicYearId: result.term.academicYearId,
     status: result.term.status as AcademicTermStatus,
-    declaredBillableCount: result.term.declaredBillableCount ?? 0,
     systemBillableCount: result.systemBillableCount,
     psfRateMinor: result.psfRateMinor,
-    censusLockedAt: result.term.censusLockedAt?.toISOString() ?? new Date().toISOString(),
+    snapshotCreatedAt:
+      result.term.snapshotCreatedAt?.toISOString() ?? new Date().toISOString(),
+    adjustmentWindowEndsAt:
+      result.term.adjustmentWindowEndsAt?.toISOString() ?? new Date().toISOString(),
   };
 }
 

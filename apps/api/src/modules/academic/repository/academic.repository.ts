@@ -237,7 +237,7 @@ export const academicRepository = {
           endDate: input.endDate,
           enrollmentWindowOpenDate: input.enrollmentWindowOpenDate,
           enrollmentWindowCloseDate: input.enrollmentWindowCloseDate,
-          censusLockDate: input.censusLockDate,
+          censusSnapshotDate: input.censusSnapshotDate,
           examStartDate: input.examStartDate ?? null,
           examEndDate: input.examEndDate ?? null,
           updatedAt: now,
@@ -296,32 +296,24 @@ export const academicRepository = {
     });
   },
 
-  /**
-   * Flips a term to `census_locked` inside the caller's SERIALIZABLE transaction.
-   * Attestation and outbox append are orchestrated by censusService.
-   */
-  async lockCensusInTx(
+  async createSnapshotInTx(
     tx: Executor,
     params: {
       tenantId: string;
       termId: string;
-      declaredBillableCount: number;
       systemBillableCount: number;
-      varianceReason: string | null;
-      attestedById: string;
-      lockedAt: Date;
+      snapshotAt: Date;
+      adjustmentWindowEndsAt: Date;
     },
   ) {
     const [term] = await tx
       .update(academicTerms)
       .set({
         status: 'census_locked',
-        declaredBillableCount: params.declaredBillableCount,
         systemBillableCount: params.systemBillableCount,
-        censusVarianceReason: params.varianceReason,
-        censusLockedAt: params.lockedAt,
-        censusLockedById: params.attestedById,
-        updatedAt: params.lockedAt,
+        snapshotCreatedAt: params.snapshotAt,
+        adjustmentWindowEndsAt: params.adjustmentWindowEndsAt,
+        updatedAt: params.snapshotAt,
       })
       .where(
         and(
@@ -332,6 +324,52 @@ export const academicRepository = {
       )
       .returning();
     return term ?? null;
+  },
+
+  async listOpenTermsDueForSnapshot(tenantId: string, asOfDate: string) {
+    return withTenantContext(tenantId, async (tx) =>
+      tx
+        .select()
+        .from(academicTerms)
+        .where(
+          and(
+            eq(academicTerms.tenantId, tenantId),
+            eq(academicTerms.status, 'open'),
+            sql`${academicTerms.censusSnapshotDate} <= ${asOfDate}`,
+            sql`${academicTerms.snapshotCreatedAt} IS NULL`,
+          ),
+        ),
+    );
+  },
+
+  async listOpenTermsForSnapshotDate(tenantId: string, snapshotDate: string) {
+    return withTenantContext(tenantId, async (tx) =>
+      tx
+        .select()
+        .from(academicTerms)
+        .where(
+          and(
+            eq(academicTerms.tenantId, tenantId),
+            eq(academicTerms.status, 'open'),
+            eq(academicTerms.censusSnapshotDate, snapshotDate),
+            sql`${academicTerms.snapshotCreatedAt} IS NULL`,
+          ),
+        ),
+    );
+  },
+
+  /** @deprecated Use createSnapshotInTx */
+  async lockCensusInTx(
+    tx: Executor,
+    params: {
+      tenantId: string;
+      termId: string;
+      systemBillableCount: number;
+      snapshotAt: Date;
+      adjustmentWindowEndsAt: Date;
+    },
+  ) {
+    return this.createSnapshotInTx(tx, params);
   },
 
   // ── Class structure ────────────────────────────────────────────────────────────

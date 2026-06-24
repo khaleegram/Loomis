@@ -74,13 +74,13 @@ export function buildTermCalendarEvents(term: AcademicTermResponse): CalendarEve
       category: 'enrollment',
     });
   }
-  if (term.censusLockDate) {
+  if (term.censusSnapshotDate) {
     events.push({
       id: `${term.id}-census`,
-      label: 'Census lock',
-      date: term.censusLockDate,
+      label: 'Billing snapshot',
+      date: term.censusSnapshotDate,
       category: 'census',
-      description: 'PSF obligations are created at census lock.',
+      description: 'PSF obligations are created when the billing snapshot is taken.',
     });
   }
   if (term.examStartDate) {

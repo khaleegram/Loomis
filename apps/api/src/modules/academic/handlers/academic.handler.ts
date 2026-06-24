@@ -1,6 +1,5 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import type {
-  CensusLockRequest,
   CloseTermRequest,
   ConfigureTermRequest,
   ConfirmPromotionRequest,
@@ -9,16 +8,19 @@ import type {
   CreateClassLevelRequest,
   CreateExamConfigRequest,
   CreateGradingSchemeRequest,
+  CreatePsfAdjustmentRequest,
   ListGradebookQuery,
   LockGradebookRequest,
   MyResultsQuery,
   PublishResultsRequest,
   RequestGradeCorrectionRequest,
+  SnapshotNowRequest,
   StagePromotionRequest,
   UpsertProgressionRequest,
   UpsertGradebookEntryRequest,
 } from '@loomis/contracts';
 import { sendSuccess } from '../../../shared/http.js';
+import { adjustmentService } from '../../ledger/services/adjustment.service.js';
 import {
   academicYearService,
   censusService,
@@ -31,7 +33,7 @@ import { requireActor } from './_context.js';
 import {
   academicTermToResponse,
   academicYearToResponse,
-  censusLockToResponse,
+  enrollmentSnapshotToResponse,
   classArmToResponse,
   classLevelToResponse,
   examConfigToResponse,
@@ -174,13 +176,13 @@ export async function termClosurePreviewHandler(
   return sendSuccess(reply, preview);
 }
 
-// ── Census lock (Revenue Integrity) ──────────────────────────────────────────────
+// ── Platform billing (Revenue Integrity) ───────────────────────────────────────
 
-export async function censusPreviewHandler(
+export async function platformBillingPreviewHandler(
   req: FastifyRequest<{ Params: TermParams }>,
   reply: FastifyReply,
 ): Promise<FastifyReply> {
-  const preview = await censusService.previewCensus(
+  const preview = await censusService.previewPlatformBilling(
     req.params.tenantId,
     req.params.termId,
     requireActor(req),
@@ -188,17 +190,52 @@ export async function censusPreviewHandler(
   return sendSuccess(reply, preview);
 }
 
-export async function censusLockHandler(
-  req: FastifyRequest<{ Params: TermParams; Body: CensusLockRequest }>,
+export async function snapshotNowHandler(
+  req: FastifyRequest<{ Params: TermParams; Body: SnapshotNowRequest }>,
   reply: FastifyReply,
 ): Promise<FastifyReply> {
-  const result = await censusService.lockCensus(
+  const result = await censusService.snapshotNow(
+    req.params.tenantId,
+    req.params.termId,
+    requireActor(req),
+  );
+  return sendSuccess(reply, enrollmentSnapshotToResponse(result), 201);
+}
+
+export async function censusLockDeprecatedHandler(
+  _req: FastifyRequest<{ Params: TermParams }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  return reply.status(410).send({
+    error: 'ACADEMIC_CENSUS_LOCK_REMOVED',
+    message:
+      'Manual census lock has been replaced by automatic platform billing snapshots. Use POST .../billing/snapshot-now or wait for the scheduled snapshot date.',
+  });
+}
+
+export async function createBillingAdjustmentHandler(
+  req: FastifyRequest<{ Params: TermParams; Body: CreatePsfAdjustmentRequest }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const result = await adjustmentService.createRequest(
     req.params.tenantId,
     req.params.termId,
     req.body,
     requireActor(req),
   );
-  return sendSuccess(reply, censusLockToResponse(result), 201);
+  return sendSuccess(reply, result, 201);
+}
+
+export async function listBillingAdjustmentsHandler(
+  req: FastifyRequest<{ Params: TermParams }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const requests = await adjustmentService.listForTerm(
+    req.params.tenantId,
+    req.params.termId,
+    requireActor(req),
+  );
+  return sendSuccess(reply, { requests });
 }
 
 // ── Class structure ────────────────────────────────────────────────────────────

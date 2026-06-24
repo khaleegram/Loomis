@@ -93,6 +93,30 @@ export const ledgerService = {
     });
   },
 
+  /** Reversal of a PSF obligation via platform adjustment (DR revenue / CR receivable). */
+  async postObligationReversal(
+    tx: Executor,
+    params: { tenantId: string; sourceId: string; amountMinor: number },
+  ): Promise<string> {
+    return this.post(tx, {
+      tenantId: params.tenantId,
+      sourceType: 'admin_adjustment',
+      sourceId: params.sourceId,
+      entries: [
+        {
+          accountCode: LEDGER_ACCOUNT_CODES.loomisPsfRevenue,
+          direction: 'debit',
+          amountMinor: params.amountMinor,
+        },
+        {
+          accountCode: LEDGER_ACCOUNT_CODES.schoolPsfReceivable,
+          direction: 'credit',
+          amountMinor: params.amountMinor,
+        },
+      ],
+    });
+  },
+
   /** DR cash_gateway_clearing / CR school_psf_receivable for a PSF settlement. */
   async postSettlement(
     tx: Executor,

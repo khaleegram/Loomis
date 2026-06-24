@@ -326,4 +326,53 @@ export const transactionalEmailService = {
       ].join('\n'),
     });
   },
+
+  async sendPlatformBillingSnapshotEmail(input: {
+    to: string;
+    termName: string;
+    systemBillableCount: number;
+    adjustmentWindowEndsAt: Date;
+  }): Promise<EmailDeliveryResult> {
+    return sendTransactionalEmail({
+      to: input.to,
+      subject: `Platform billing snapshot — ${input.termName}`,
+      body: [
+        'Hello,',
+        '',
+        `The platform billing snapshot for ${input.termName} has been taken.`,
+        '',
+        `Billable students: ${input.systemBillableCount}`,
+        `Adjustment window closes: ${input.adjustmentWindowEndsAt.toISOString().slice(0, 10)}`,
+        '',
+        'If the count looks wrong, submit a correction request in Platform Billing before the window closes.',
+        '',
+        `${webAppBaseUrl()}/school/academic/platform-billing`,
+      ].join('\n'),
+    });
+  },
+
+  async sendMtcBelowCommitmentWarningEmail(input: {
+    to: string;
+    termName: string;
+    systemBillableCount: number;
+    minimumTermCommitment: number;
+    snapshotDate: string;
+  }): Promise<EmailDeliveryResult> {
+    return sendTransactionalEmail({
+      to: input.to,
+      subject: `Platform billing snapshot in 7 days — ${input.termName}`,
+      body: [
+        'Hello,',
+        '',
+        `Your platform billing snapshot for ${input.termName} is scheduled for ${input.snapshotDate}.`,
+        '',
+        `Current billable students: ${input.systemBillableCount}`,
+        `Minimum term commitment: ${input.minimumTermCommitment}`,
+        '',
+        'Your billable count is below your minimum term commitment. Review enrollments before the snapshot date.',
+        '',
+        `${webAppBaseUrl()}/school/academic/platform-billing`,
+      ].join('\n'),
+    });
+  },
 };

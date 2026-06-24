@@ -109,9 +109,9 @@ Creating an academic year requires a label (for example 2025/2026), a start date
 *As a Principal, I want to create a term within the current academic year, set its enrollment window, define the census lock date, and open it to begin operations, so that teachers and students can start academic activities.*
 Each term requires a name (First, Second, or Third Term), a start date, an end date, and a census lock date. The census lock date cannot fall after the term end date. Opening a term changes its status from draft to open. Only one term can be in the open status within an academic year at any time.
 
-**US-ASM-003: Lock the Enrollment Census**
-*As a School Owner or Principal, I want to attest to the current enrollment count and lock the census, so that PSF obligations are created for the term.* **[Rev Int]**
-The census lock screen shows the current billable student count, a breakdown by class level, and the Minimum Term Commitment for comparison. If the count is below the MTC, a warning is shown and confirmation is required. Locking the census requires MFA step-up. A digitally signed attestation record is created. One PSF obligation is created per billable enrolled student. This action cannot be undone.
+**US-ASM-003: Platform Billing Snapshot**
+*As a School Owner, I want the system to snapshot billable enrollment automatically on the snapshot date (with an optional early snapshot), so that PSF obligations are created for the term without a manual census ceremony.* **[Rev Int]**
+The platform billing screen shows the current billable student count, projected PSF, snapshot date, and adjustment window status. The system auto-snapshots on the configured date. The Owner may take an early snapshot with plain confirmation (no MFA). A 7-day adjustment window allows the Owner to submit correction requests that Platform Ops must approve before PSF deltas post. One PSF obligation is created per billable enrolled student at snapshot time.
 
 **US-ASM-004: Close a Term**
 *As a Principal, I want to close the current term after all results have been published and all financial obligations are reconciled, so that the term's records are locked and permanent.*

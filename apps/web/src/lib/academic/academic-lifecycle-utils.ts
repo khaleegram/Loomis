@@ -5,7 +5,7 @@ import type { AcademicHubMetrics } from './academic-metrics';
 export const LIFECYCLE_PHASES = [
   { key: 'draft' as const, label: 'Configure', short: 'Setup' },
   { key: 'open' as const, label: 'Open', short: 'Live' },
-  { key: 'census_locked' as const, label: 'Census lock', short: 'Locked' },
+  { key: 'census_locked' as const, label: 'Billing snapshot', short: 'Snapshotted' },
   { key: 'closed' as const, label: 'Close', short: 'Done' },
 ];
 
@@ -54,7 +54,7 @@ export function resolveNextAcademicAction(
     return {
       title: 'Lock enrollment census',
       description: 'The term is open. Attest billable enrollment to create PSF obligations for this period.',
-      href: `/school/academic/census-lock?termId=${termId}&yearId=${yearId}`,
+      href: `/school/academic/platform-billing?termId=${termId}&yearId=${yearId}`,
       cta: 'Start census lock',
       urgency: 'ready',
     };

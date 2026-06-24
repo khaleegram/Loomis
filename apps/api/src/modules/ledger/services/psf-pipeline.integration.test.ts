@@ -27,21 +27,15 @@ describe('PSF billing entitlement pipeline (integration)', () => {
     expect(count).toBe(0);
   });
 
-  it('creates obligations and attestation when census locks via outbox', async () => {
-    await censusService.lockCensus(
-      fixture.tenantId,
-      fixture.termId,
-      {
-        declaredBillableCount: fixture.enrolledStudentIds.length,
-        belowMtcAcknowledged: false,
-      },
-      fixture.actor,
-    );
+  it('creates obligations and attestation when billing snapshot is taken via outbox', async () => {
+    await censusService.createEnrollmentSnapshot(fixture.tenantId, fixture.termId, {
+      trigger: 'scheduled',
+    });
 
     const attestation = await attestationRepository.findByTerm(fixture.tenantId, fixture.termId);
     expect(attestation).not.toBeNull();
-    expect(attestation?.declaredBillableCount).toBe(fixture.enrolledStudentIds.length);
     expect(attestation?.systemBillableCount).toBe(fixture.enrolledStudentIds.length);
+    expect(attestation?.generatedBy).toBe('system');
     expect(attestation?.studentListHash).toHaveLength(64);
     expect(attestation?.attestationHash).toHaveLength(64);
 

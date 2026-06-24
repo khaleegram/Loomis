@@ -74,11 +74,11 @@ export function SchoolOwnerDashboard({ tenantId, displayName }: SchoolOwnerDashb
     {
       href: census.href,
       icon: Lock,
-      label: census.label === 'Census lock due' ? 'Census lock' : 'Academic sessions',
+      label: census.label === 'Billing snapshot due' ? 'Platform billing' : 'Academic sessions',
       description:
-        census.label === 'Census lock due'
-          ? 'Attest enrollment and create PSF obligations.'
-          : 'Review term status and census history.',
+        census.label === 'Billing snapshot due'
+          ? 'Review billable enrollment and snapshot status.'
+          : 'Review term status and billing history.',
     },
     {
       href: '/school/settings/audit',
@@ -210,12 +210,12 @@ export function SchoolOwnerDashboard({ tenantId, displayName }: SchoolOwnerDashb
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-brand-100/40 px-4 py-3 sm:px-6">
           <p className="flex items-center gap-2 text-[13px] text-neutral-500">
             <ClipboardCheck aria-hidden className="size-4 shrink-0 text-neutral-400" />
-            {census.label === 'Census lock due'
+            {census.label === 'Billing snapshot due'
               ? 'Lock census to create PSF obligations for this term.'
               : 'Obligations are immutable after census lock.'}
           </p>
           <div className="flex flex-wrap gap-2">
-            {census.label === 'Census lock due' ? (
+            {census.label === 'Billing snapshot due' ? (
               <Link href={census.href} className={ACADEMIC_UI.btnPrimary}>
                 Start census lock
               </Link>

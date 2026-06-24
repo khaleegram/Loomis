@@ -235,7 +235,7 @@ export default function AcademicSessionsPage() {
                 <div className="flex flex-wrap gap-2">
                   {activeTerm.status === 'open' && canLockCensus ? (
                     <Link
-                      href={`/school/academic/census-lock?termId=${activeTerm.id}&yearId=${activeYear.id}`}
+                      href={`/school/academic/platform-billing?termId=${activeTerm.id}&yearId=${activeYear.id}`}
                       className={ACADEMIC_UI.btnPrimary}
                     >
                       Lock enrollment census

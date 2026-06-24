@@ -9,9 +9,9 @@ export const attestationRepository = {
     input: {
       tenantId: string;
       termId: string;
-      declaredBillableCount: number;
       systemBillableCount: number;
-      attestedById: string;
+      generatedBy: string;
+      attestedById: string | null;
       attestedAt: Date;
       studentListHash: string;
       attestationHash: string;
@@ -24,8 +24,8 @@ export const attestationRepository = {
       .values({
         tenantId: input.tenantId,
         termId: input.termId,
-        declaredBillableCount: input.declaredBillableCount,
         systemBillableCount: input.systemBillableCount,
+        generatedBy: input.generatedBy,
         attestedById: input.attestedById,
         attestedAt: input.attestedAt,
         studentListHash: input.studentListHash,

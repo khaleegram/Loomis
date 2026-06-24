@@ -41,10 +41,6 @@ describe('stepUpUsesSms', () => {
     totpOptional: false,
   };
 
-  it('uses SMS for census lock in Core', () => {
-    expect(stepUpUsesSms('census_lock', 'core', coreFlags)).toBe(true);
-  });
-
   it('uses SMS for large refunds in Core', () => {
     expect(
       stepUpUsesSms('refund_approve', 'core', coreFlags, {
@@ -108,13 +104,12 @@ describe('advancedOptionalTotpLogin', () => {
 });
 
 describe('enterpriseMandatoryTotpStepUp', () => {
-  it('requires TOTP for census lock and result publish in Enterprise', () => {
-    expect(enterpriseMandatoryTotpStepUp('census_lock', 'enterprise')).toBe(true);
+  it('requires TOTP for result publish in Enterprise', () => {
     expect(enterpriseMandatoryTotpStepUp('result_publish', 'enterprise')).toBe(true);
   });
 
   it('does not apply on Core tier', () => {
-    expect(enterpriseMandatoryTotpStepUp('census_lock', 'core')).toBe(false);
+    expect(enterpriseMandatoryTotpStepUp('result_publish', 'core')).toBe(false);
   });
 });
 

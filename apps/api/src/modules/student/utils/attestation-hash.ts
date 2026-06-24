@@ -6,17 +6,16 @@ export function buildStudentListHash(studentIds: string[]): string {
   return createHash('sha256').update(JSON.stringify(sorted)).digest('hex');
 }
 
-/** Tamper-evident digest of the attested census figures. */
+/** Tamper-evident digest of the billing snapshot figures. */
 export function buildAttestationHash(parts: {
   tenantId: string;
   termId: string;
-  declaredBillableCount: number;
   systemBillableCount: number;
   studentListHash: string;
   rateSnapshotId: string;
   psfRateMinor: number;
-  attestedById: string;
-  lockedAt: string;
+  generatedBy: string;
+  snapshotAt: string;
 }): string {
   return createHash('sha256').update(JSON.stringify(parts)).digest('hex');
 }

@@ -74,7 +74,7 @@ export const configureTermRequest = z
     endDate: calendarDate,
     enrollmentWindowOpenDate: calendarDate,
     enrollmentWindowCloseDate: calendarDate,
-    censusLockDate: calendarDate,
+    censusSnapshotDate: calendarDate,
     examStartDate: calendarDate.optional(),
     examEndDate: calendarDate.optional(),
   })
@@ -82,12 +82,12 @@ export const configureTermRequest = z
     message: 'endDate must be after startDate',
     path: ['endDate'],
   })
-  .refine((v) => v.censusLockDate >= v.startDate && v.censusLockDate <= v.endDate, {
-    message: 'censusLockDate must fall within the term start and end dates (FR-ASM-004)',
-    path: ['censusLockDate'],
+  .refine((v) => v.censusSnapshotDate >= v.startDate && v.censusSnapshotDate <= v.endDate, {
+    message: 'censusSnapshotDate must fall within the term start and end dates (FR-ASM-004)',
+    path: ['censusSnapshotDate'],
   })
-  .refine((v) => v.enrollmentWindowCloseDate <= v.censusLockDate, {
-    message: 'enrollmentWindowCloseDate must be on or before censusLockDate (FR-ASM-004)',
+  .refine((v) => v.enrollmentWindowCloseDate <= v.censusSnapshotDate, {
+    message: 'enrollmentWindowCloseDate must be on or before censusSnapshotDate (FR-ASM-004)',
     path: ['enrollmentWindowCloseDate'],
   })
   .refine((v) => v.enrollmentWindowOpenDate <= v.enrollmentWindowCloseDate, {
@@ -134,14 +134,14 @@ export const academicTermResponse = z.object({
   endDate: calendarDate.nullable(),
   enrollmentWindowOpenDate: calendarDate.nullable(),
   enrollmentWindowCloseDate: calendarDate.nullable(),
-  censusLockDate: calendarDate.nullable(),
+  censusSnapshotDate: calendarDate.nullable(),
   examStartDate: calendarDate.nullable(),
   examEndDate: calendarDate.nullable(),
   status: academicTermStatus,
-  declaredBillableCount: z.number().int().nullable(),
   systemBillableCount: z.number().int().nullable(),
   openedAt: z.string().datetime().nullable(),
-  censusLockedAt: z.string().datetime().nullable(),
+  snapshotCreatedAt: z.string().datetime().nullable(),
+  adjustmentWindowEndsAt: z.string().datetime().nullable(),
   closedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -153,37 +153,25 @@ export const academicTermListResponse = z.object({
 });
 export type AcademicTermListResponse = z.infer<typeof academicTermListResponse>;
 
-// ── Census Lock (Revenue Integrity) ──────────────────────────────────────────────
+// ── Platform Billing (Revenue Integrity) ─────────────────────────────────────────
 
-/**
- * FR-SIS-006 / FR-ASM-005 / US-ASM-003. The School Owner or Principal attests to
- * the billable student count and locks the census. This is the trigger that
- * creates PSF obligations (System Design §8.1) — performed in a single
- * SERIALIZABLE transaction with step-up MFA. It cannot be undone.
- *
- * `declaredBillableCount` is the legally-binding attested count. A variance from
- * the system count beyond tolerance requires a documented reason (§8.1 step 3).
- */
-export const censusLockRequest = z.object({
-  declaredBillableCount: z.number().int().nonnegative(),
-  varianceReason: z.string().min(3).max(500).optional(),
-  /** US-ASM-003: confirmation when the count is below the Minimum Term Commitment. */
-  belowMtcAcknowledged: z.boolean().default(false),
+export const snapshotNowRequest = z.object({
+  confirmed: z.literal(true),
 });
-export type CensusLockRequest = z.infer<typeof censusLockRequest>;
+export type SnapshotNowRequest = z.infer<typeof snapshotNowRequest>;
 
-export const censusLockResponse = z.object({
+export const enrollmentSnapshotResponse = z.object({
   termId: z.string().uuid(),
   academicYearId: z.string().uuid(),
   status: academicTermStatus,
-  declaredBillableCount: z.number().int(),
-  systemBillableCount: z.number().int().nullable(),
+  systemBillableCount: z.number().int(),
   psfRateMinor: z.number().int(),
-  censusLockedAt: z.string().datetime(),
+  snapshotCreatedAt: z.string().datetime(),
+  adjustmentWindowEndsAt: z.string().datetime(),
 });
-export type CensusLockResponse = z.infer<typeof censusLockResponse>;
+export type EnrollmentSnapshotResponse = z.infer<typeof enrollmentSnapshotResponse>;
 
-/** Billable enrollment count grouped by class level (US-ASM-003 preview). */
+/** Billable enrollment count grouped by class level (platform billing preview). */
 export const censusClassLevelBreakdown = z.object({
   classLevelId: z.string().uuid(),
   classLevelCode: z.string(),
@@ -193,21 +181,60 @@ export const censusClassLevelBreakdown = z.object({
 export type CensusClassLevelBreakdown = z.infer<typeof censusClassLevelBreakdown>;
 
 /**
- * Pre-lock census review payload (US-ASM-003). Read-only; does not create
- * obligations. `minimumTermCommitment` is null when not configured for the tenant.
+ * Platform billing preview (US-ASM-003). Read-only; does not create obligations.
  */
-export const censusPreviewResponse = z.object({
+export const platformBillingPreviewResponse = z.object({
   termId: z.string().uuid(),
   academicYearId: z.string().uuid(),
   termName: z.string(),
   termStatus: academicTermStatus,
+  censusSnapshotDate: calendarDate.nullable(),
+  snapshotCreatedAt: z.string().datetime().nullable(),
+  adjustmentWindowEndsAt: z.string().datetime().nullable(),
   systemBillableCount: z.number().int(),
   classLevelBreakdown: z.array(censusClassLevelBreakdown),
   minimumTermCommitment: z.number().int().nullable(),
   psfRateMinor: z.number().int().nullable(),
-  varianceTolerance: z.number(),
 });
-export type CensusPreviewResponse = z.infer<typeof censusPreviewResponse>;
+export type PlatformBillingPreviewResponse = z.infer<typeof platformBillingPreviewResponse>;
+
+export const psfAdjustmentDeltaType = z.enum(['add_students', 'remove_students']);
+export type PsfAdjustmentDeltaType = z.infer<typeof psfAdjustmentDeltaType>;
+
+export const psfAdjustmentStatus = z.enum(['pending', 'approved', 'rejected']);
+export type PsfAdjustmentStatus = z.infer<typeof psfAdjustmentStatus>;
+
+export const createPsfAdjustmentRequest = z.object({
+  deltaType: psfAdjustmentDeltaType,
+  studentIds: z.array(z.string().uuid()).min(1).max(50),
+  reason: z.string().min(3).max(500),
+});
+export type CreatePsfAdjustmentRequest = z.infer<typeof createPsfAdjustmentRequest>;
+
+export const psfAdjustmentRequestResponse = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
+  termId: z.string().uuid(),
+  requestedById: z.string().uuid(),
+  reason: z.string(),
+  deltaType: psfAdjustmentDeltaType,
+  studentIds: z.array(z.string().uuid()),
+  status: psfAdjustmentStatus,
+  reviewedById: z.string().uuid().nullable(),
+  reviewedAt: z.string().datetime().nullable(),
+  rejectionReason: z.string().nullable(),
+  createdAt: z.string().datetime(),
+});
+export type PsfAdjustmentRequestResponse = z.infer<typeof psfAdjustmentRequestResponse>;
+
+export const psfAdjustmentRequestListResponse = z.object({
+  requests: z.array(psfAdjustmentRequestResponse),
+});
+export type PsfAdjustmentRequestListResponse = z.infer<typeof psfAdjustmentRequestListResponse>;
+
+/** @deprecated Use platformBillingPreviewResponse */
+export const censusPreviewResponse = platformBillingPreviewResponse;
+export type CensusPreviewResponse = PlatformBillingPreviewResponse;
 
 // ── Class Structure (FR-ASM-009) ─────────────────────────────────────────────────
 

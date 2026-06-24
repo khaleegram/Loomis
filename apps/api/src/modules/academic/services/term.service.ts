@@ -56,7 +56,7 @@ export const termService = {
     if (term.status !== 'draft') {
       throw new LoomisError('ACADEMIC_TERM_NOT_DRAFT', 409, 'Only a draft term can be opened');
     }
-    if (!term.startDate || !term.endDate || !term.censusLockDate || !term.enrollmentWindowCloseDate) {
+    if (!term.startDate || !term.endDate || !term.censusSnapshotDate || !term.enrollmentWindowCloseDate) {
       throw new LoomisError(
         'ACADEMIC_TERM_INVALID_CONFIG',
         422,

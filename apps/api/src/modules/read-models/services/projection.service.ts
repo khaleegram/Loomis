@@ -203,7 +203,6 @@ export const readModelProjectionService = {
   async handleTermCensusLocked(event: OutboxEnvelope): Promise<void> {
     const payload = event.payload as {
       tenantId: string;
-      declaredBillableCount: number;
       systemBillableCount: number;
     };
 
@@ -224,7 +223,7 @@ export const readModelProjectionService = {
         region: tenant.region,
         snapshotDate,
         totalStudents: payload.systemBillableCount,
-        activeEnrollments: payload.declaredBillableCount,
+        activeEnrollments: payload.systemBillableCount,
       });
     });
   },

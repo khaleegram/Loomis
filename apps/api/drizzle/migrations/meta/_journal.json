@@ -330,6 +330,13 @@
       "when": 1780838000000,
       "tag": "0046_tenant_experience_tier",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1780838100000,
+      "tag": "0047_auto_enrollment_snapshot_billing",
+      "breakpoints": true
     }
   ]
 }
