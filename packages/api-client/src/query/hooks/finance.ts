@@ -328,6 +328,31 @@ export function usePaymentStatusPoll(tenantId: string, paymentId: string | null)
   });
 }
 
+/** Ask Paystack to verify a pending online payment immediately (return URL / receipt sheet). */
+export function useConfirmOnlinePayment() {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ tenantId, paymentId }: { tenantId: string; paymentId: string }) =>
+      client.post<PaymentResponse>(
+        `/tenants/${tenantId}/payments/${paymentId}/confirm-online`,
+        {},
+      ),
+    onSuccess: (data, { tenantId, paymentId }) => {
+      queryClient.setQueryData(queryKeys.finance.payment(tenantId, paymentId), data);
+      if (data.studentId && data.termId) {
+        void queryClient.invalidateQueries({
+          queryKey: queryKeys.parent.payments(tenantId, data.studentId, data.termId),
+        });
+        void queryClient.invalidateQueries({
+          queryKey: queryKeys.parent.fees(tenantId, data.studentId, data.termId),
+        });
+      }
+      void queryClient.invalidateQueries({ queryKey: queryKeys.parent.dashboard() });
+    },
+  });
+}
+
 export function usePaymentGatewayConfig() {
   const client = useApiClient();
   return useQuery<PaymentGatewayConfigResponse>({

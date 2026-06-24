@@ -1,8 +1,9 @@
 import { Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { usePaymentStatusPoll } from '@loomis/api-client';
+import { useConfirmOnlinePayment, usePaymentStatusPoll } from '@loomis/api-client';
 import { formatKobo } from '@loomis/core';
 import { Alert, Button, Skeleton } from '@loomis/ui-mobile';
+import { useEffect } from 'react';
 import { parseChildKey, useActiveChildStore } from '@/lib/active-child-store';
 
 export default function PaymentCompleteScreen() {
@@ -14,9 +15,16 @@ export default function PaymentCompleteScreen() {
   const parsedChild = activeChildKey ? parseChildKey(activeChildKey) : null;
   const tenantId = tenantFromQuery ?? parsedChild?.tenantId ?? '';
 
+  const confirmPayment = useConfirmOnlinePayment();
   const paymentQuery = usePaymentStatusPoll(tenantId, paymentId);
-  const payment = paymentQuery.data;
+  const payment = confirmPayment.data ?? paymentQuery.data;
   const status = payment?.status;
+
+  useEffect(() => {
+    if (!tenantId || !paymentId) return;
+    if (confirmPayment.isPending || confirmPayment.isSuccess) return;
+    confirmPayment.mutate({ tenantId, paymentId });
+  }, [tenantId, paymentId, confirmPayment.isPending, confirmPayment.isSuccess, confirmPayment.mutate]);
 
   if (!paymentId || !tenantId) {
     return (
@@ -29,7 +37,7 @@ export default function PaymentCompleteScreen() {
     );
   }
 
-  if (paymentQuery.isLoading && !payment) {
+  if (!payment && paymentQuery.isLoading) {
     return (
       <View className="flex-1 bg-neutral-50 px-6 pt-16 dark:bg-forest-950">
         <Skeleton className="h-40 w-full rounded-2xl" />
@@ -70,7 +78,7 @@ export default function PaymentCompleteScreen() {
     <View className="flex-1 items-center justify-center bg-neutral-50 px-6 dark:bg-forest-950">
       <Text className="text-xl font-bold text-neutral-900 dark:text-neutral-50">Confirming payment</Text>
       <Text className="mt-2 text-center text-sm text-neutral-600 dark:text-neutral-300">
-        Waiting for Paystack confirmation. This updates automatically.
+        Checking with Paystack now. This usually takes a few seconds.
       </Text>
       {paymentQuery.isError ? (
         <Alert tone="danger" className="mt-4">

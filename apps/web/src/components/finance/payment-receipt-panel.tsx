@@ -57,7 +57,9 @@ export function PaymentReceiptPanel({ payment, receipt }: PaymentReceiptPanelPro
         </div>
       ) : (
         <p className="text-neutral-500">
-          Receipt will appear once the payment is verified.
+          {payment.status === 'pending' && payment.channel === 'online'
+            ? 'Confirming with Paystack…'
+            : 'Receipt will appear once the payment is verified.'}
         </p>
       )}
     </div>

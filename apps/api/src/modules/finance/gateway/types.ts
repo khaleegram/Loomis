@@ -32,10 +32,17 @@ export interface GatewaySettlementRecord {
   settledAt: string;
 }
 
+export interface VerifyTransactionResult {
+  gatewayReference: string;
+  amountMinor: number | null;
+  status: 'success' | 'failed' | 'pending';
+}
+
 export interface PaymentGateway {
   readonly provider: PaymentGatewayProvider;
   verifyWebhookSignature(headers: Record<string, string | string[] | undefined>, rawBody: string): boolean;
   parseWebhookEvent(rawBody: string): ParsedWebhookEvent;
   initializePayment(input: InitializePaymentInput): Promise<InitializePaymentResult>;
+  verifyTransaction(reference: string): Promise<VerifyTransactionResult>;
   fetchSuccessfulTransactions(fromDate: string, toDate: string): Promise<GatewaySettlementRecord[]>;
 }

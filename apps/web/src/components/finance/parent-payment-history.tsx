@@ -4,27 +4,23 @@ import type { PaymentResponse } from '@loomis/contracts';
 import { formatKobo } from '@loomis/core';
 import {
   Button,
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
   Skeleton,
 } from '@loomis/ui-web';
 import { History } from 'lucide-react';
 import { useState } from 'react';
 
-import { PaymentReceiptPanel } from '@/components/finance/payment-receipt-panel';
+import { ParentPaymentReceiptSheet } from '@/components/finance/parent-payment-receipt-sheet';
 import { PaymentStatusChip } from '@/components/finance/payment-status-chip';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { formatPaymentChannel, formatPaymentMethod } from '@/lib/finance/finance-labels';
 
 interface ParentPaymentHistoryProps {
+  tenantId: string;
   payments: PaymentResponse[];
   isLoading?: boolean;
 }
 
-export function ParentPaymentHistory({ payments, isLoading }: ParentPaymentHistoryProps) {
+export function ParentPaymentHistory({ tenantId, payments, isLoading }: ParentPaymentHistoryProps) {
   const [selected, setSelected] = useState<PaymentResponse | null>(null);
 
   return (
@@ -74,19 +70,11 @@ export function ParentPaymentHistory({ payments, isLoading }: ParentPaymentHisto
         )}
       </div>
 
-      <Sheet open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-md">
-          <SheetHeader>
-            <SheetTitle>Payment receipt</SheetTitle>
-            <SheetDescription>Official receipt for this fee payment.</SheetDescription>
-          </SheetHeader>
-          {selected ? (
-            <div className="mt-6">
-              <PaymentReceiptPanel payment={selected} />
-            </div>
-          ) : null}
-        </SheetContent>
-      </Sheet>
+      <ParentPaymentReceiptSheet
+        payment={selected}
+        tenantId={tenantId}
+        onClose={() => setSelected(null)}
+      />
     </>
   );
 }

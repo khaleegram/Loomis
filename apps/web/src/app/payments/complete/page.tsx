@@ -3,7 +3,11 @@
 import Link from 'next/link';
 import { Suspense, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { usePaymentStatusPoll, queryKeys } from '@loomis/api-client';
+import {
+  useConfirmOnlinePayment,
+  usePaymentStatusPoll,
+  queryKeys,
+} from '@loomis/api-client';
 import { formatKobo } from '@loomis/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { Alert, AlertDescription, Button, Skeleton } from '@loomis/ui-web';
@@ -21,9 +25,16 @@ function PaymentCompleteContent() {
   const storeTenantId = useActiveTenantStore((s) => s.activeTenantId);
   const tenantId = tenantFromQuery ?? storeTenantId ?? '';
 
+  const confirmPayment = useConfirmOnlinePayment();
   const paymentQuery = usePaymentStatusPoll(tenantId, paymentId);
-  const payment = paymentQuery.data;
+  const payment = confirmPayment.data ?? paymentQuery.data;
   const status = payment?.status;
+
+  useEffect(() => {
+    if (!tenantId || !paymentId) return;
+    if (confirmPayment.isPending || confirmPayment.isSuccess) return;
+    confirmPayment.mutate({ tenantId, paymentId });
+  }, [tenantId, paymentId, confirmPayment.isPending, confirmPayment.isSuccess, confirmPayment.mutate]);
 
   useEffect(() => {
     if (status !== 'verified' || !tenantId || !payment) return;
@@ -37,6 +48,8 @@ function PaymentCompleteContent() {
       });
     }
   }, [status, tenantId, payment, queryClient]);
+
+  const isLoading = !payment && paymentQuery.isLoading;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-4 py-12">
@@ -52,7 +65,7 @@ function PaymentCompleteContent() {
               <Link href="/parent/fees">Back to fees</Link>
             </Button>
           </>
-        ) : paymentQuery.isLoading && !payment ? (
+        ) : isLoading ? (
           <Skeleton className="mx-auto h-32 w-full rounded-xl" />
         ) : status === 'verified' ? (
           <>
@@ -86,8 +99,7 @@ function PaymentCompleteContent() {
             <Clock aria-hidden className="mx-auto size-10 text-brand-600" />
             <h1 className="mt-4 text-xl font-bold text-neutral-900">Confirming payment</h1>
             <p className="mt-2 text-[13px] text-neutral-500">
-              Paystack is processing your payment. This page refreshes automatically once the school
-              receives confirmation.
+              Checking with Paystack now. This usually takes a few seconds.
             </p>
             {paymentQuery.isError ? (
               <Alert variant="destructive" className="mt-4 text-left">

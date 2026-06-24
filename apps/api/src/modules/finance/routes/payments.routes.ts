@@ -17,6 +17,7 @@ import { requireRole } from '../../../middleware/require-role.js';
 import { requireTenantMatch } from '../../../middleware/require-tenant-match.js';
 import { validateBody, validateQuery } from '../../../shared/validation.js';
 import {
+  confirmOnlinePaymentHandler,
   getPaymentHandler,
   getPaymentGatewayConfigHandler,
   initializeOnlinePaymentHandler,
@@ -99,5 +100,13 @@ export async function paymentsRoutes(app: FastifyInstance): Promise<void> {
       ],
     },
     getPaymentHandler,
+  );
+
+  app.post<{ Params: { tenantId: string; paymentId: string } }>(
+    '/tenants/:tenantId/payments/:paymentId/confirm-online',
+    {
+      preHandler: [authenticate, requireTenantMatch, requireRole('parent')],
+    },
+    confirmOnlinePaymentHandler,
   );
 }

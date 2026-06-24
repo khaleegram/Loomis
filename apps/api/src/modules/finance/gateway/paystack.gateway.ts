@@ -119,6 +119,47 @@ export const paystackGateway: PaymentGateway = {
     };
   },
 
+  async verifyTransaction(reference: string) {
+    const secret = requirePaystackSecret();
+    const response = await fetch(
+      `${PAYSTACK_API}/transaction/verify/${encodeURIComponent(reference)}`,
+      { headers: { Authorization: `Bearer ${secret}` } },
+    );
+
+    const body = (await response.json()) as {
+      status?: boolean;
+      message?: string;
+      data?: {
+        status?: string;
+        amount?: number;
+        reference?: string;
+      };
+    };
+
+    if (!response.ok || !body.status || !body.data) {
+      throw new LoomisError(
+        'FINANCE_GATEWAY_UNAVAILABLE',
+        502,
+        body.message ?? 'Paystack transaction verification failed',
+      );
+    }
+
+    const amountMinor =
+      typeof body.data.amount === 'number' ? body.data.amount : Number(body.data.amount ?? Number.NaN);
+    const status =
+      body.data.status === 'success'
+        ? 'success'
+        : body.data.status === 'failed'
+          ? 'failed'
+          : 'pending';
+
+    return {
+      gatewayReference: body.data.reference ?? reference,
+      amountMinor: Number.isFinite(amountMinor) ? amountMinor : null,
+      status,
+    };
+  },
+
   async fetchSuccessfulTransactions(fromDate: string, toDate: string) {
     const secret = requirePaystackSecret();
     const records: import('./types.js').GatewaySettlementRecord[] = [];

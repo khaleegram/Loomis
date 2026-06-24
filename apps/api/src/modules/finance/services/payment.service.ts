@@ -518,6 +518,82 @@ export const paymentService = {
     return paymentRepository.listPayments(tenantId, filters);
   },
 
+  /** Parent return URL — verify with Paystack immediately instead of waiting for webhook. */
+  async confirmOnlinePayment(
+    tenantId: string,
+    paymentId: string,
+    actor: ActorContext,
+  ): Promise<PaymentWithReceipt> {
+    requireTenant(actor, tenantId);
+    if (actor.role !== 'parent') {
+      throw new LoomisError('FORBIDDEN', 403, 'Only parents may confirm online payments');
+    }
+
+    const found = await paymentRepository.findPaymentById(tenantId, paymentId);
+    if (!found) {
+      throw new LoomisError('FINANCE_PAYMENT_NOT_FOUND', 404, 'Payment not found');
+    }
+
+    const linked = await studentRepository.hasActiveParentLink(
+      tenantId,
+      actor.userId,
+      found.payment.studentId,
+    );
+    if (!linked) {
+      throw new LoomisError('FORBIDDEN', 403, 'You are not linked to this student');
+    }
+
+    if (found.payment.status === 'verified') {
+      return found;
+    }
+
+    if (found.payment.channel !== 'online' || found.payment.status !== 'pending') {
+      throw new LoomisError(
+        'FINANCE_PAYMENT_NOT_VERIFIABLE',
+        409,
+        'Payment is not awaiting online confirmation',
+      );
+    }
+
+    const provider = found.payment.gatewayProvider;
+    if (!provider) {
+      throw new LoomisError('FINANCE_PAYMENT_NOT_VERIFIABLE', 409, 'Not an online payment');
+    }
+
+    const gateway = gatewayAbstractionLayer.get(provider as 'paystack');
+    const reference = found.payment.gatewayReference ?? found.payment.id;
+    const verification = await gateway.verifyTransaction(reference);
+
+    if (verification.status === 'failed') {
+      throw new LoomisError(
+        'FINANCE_PAYMENT_NOT_VERIFIABLE',
+        409,
+        'Paystack did not confirm this payment',
+      );
+    }
+
+    if (verification.status !== 'success') {
+      throw new LoomisError(
+        'FINANCE_PAYMENT_NOT_VERIFIABLE',
+        409,
+        'Paystack has not confirmed this payment yet',
+      );
+    }
+
+    if (
+      verification.amountMinor !== null &&
+      verification.amountMinor !== found.payment.amountMinor
+    ) {
+      throw new LoomisError(
+        'FINANCE_INVALID_AMOUNT',
+        409,
+        'Gateway amount does not match the logged payment',
+      );
+    }
+
+    return finalizeOnlinePaymentVerification(tenantId, paymentId, found);
+  },
+
   /** Called by the webhook consumer after a verified gateway event. */
   async settleOnlinePayment(
     tenantId: string,
@@ -542,22 +618,7 @@ export const paymentService = {
       );
     }
 
-    const verifiedAt = new Date();
-    const verified = await paymentRepository.verifyPayment({
-      tenantId,
-      paymentId,
-      verifiedById: null,
-      verifiedAt,
-      receiptFinalizedById: found.payment.loggedById,
-      event: {
-        aggregateType: 'payment',
-        aggregateId: paymentId,
-        eventType: FINANCE_EVENT_TYPES.paymentVerified,
-        tenantId,
-        payload: paymentVerifiedPayload(tenantId, found.payment, null, verifiedAt),
-      },
-    });
-
+    const verified = await finalizeOnlinePaymentVerification(tenantId, paymentId, found);
     await paymentRepository.markWebhookProcessed(webhookEventId);
     return verified;
   },
@@ -567,3 +628,25 @@ export const paymentService = {
     return Math.abs(Date.now() - timestamp.getTime()) <= WEBHOOK_TOLERANCE_MS;
   },
 };
+
+async function finalizeOnlinePaymentVerification(
+  tenantId: string,
+  paymentId: string,
+  found: PaymentWithReceipt,
+): Promise<PaymentWithReceipt> {
+  const verifiedAt = new Date();
+  return paymentRepository.verifyPayment({
+    tenantId,
+    paymentId,
+    verifiedById: null,
+    verifiedAt,
+    receiptFinalizedById: found.payment.loggedById,
+    event: {
+      aggregateType: 'payment',
+      aggregateId: paymentId,
+      eventType: FINANCE_EVENT_TYPES.paymentVerified,
+      tenantId,
+      payload: paymentVerifiedPayload(tenantId, found.payment, null, verifiedAt),
+    },
+  });
+}

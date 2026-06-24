@@ -417,6 +417,7 @@ function ParentFeesView() {
 
       {resolvedTermId && activeCard?.studentId ? (
         <ParentPaymentHistory
+          tenantId={activeCard.tenantId}
           payments={paymentsQuery.data?.payments ?? []}
           isLoading={paymentsQuery.isLoading}
         />

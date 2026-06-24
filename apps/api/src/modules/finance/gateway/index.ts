@@ -8,6 +8,7 @@ export type {
   GatewaySettlementRecord,
   ParsedWebhookEvent,
   PaymentGateway,
+  VerifyTransactionResult,
 } from './types.js';
 
 /** Gateway Abstraction Layer — Paystack only (System Design §9.1). */

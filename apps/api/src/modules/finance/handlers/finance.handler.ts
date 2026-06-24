@@ -261,6 +261,18 @@ export async function getPaymentHandler(
   return sendSuccess(reply, paymentToResponse(result));
 }
 
+export async function confirmOnlinePaymentHandler(
+  req: FastifyRequest<{ Params: PaymentParams }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const result = await paymentService.confirmOnlinePayment(
+    req.params.tenantId,
+    req.params.paymentId,
+    requireParentActor(req, req.params.tenantId),
+  );
+  return sendSuccess(reply, paymentToResponse(result));
+}
+
 export async function getPaymentGatewayConfigHandler(
   _req: FastifyRequest,
   reply: FastifyReply,
