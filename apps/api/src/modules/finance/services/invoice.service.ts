@@ -19,6 +19,7 @@ import {
   aggregateOutstandingByScope,
   summarizeOutstandingRows,
 } from './outstanding-balance.utils.js';
+import { oldestOpenInvoiceId, type OpenInvoiceSlice } from './payment-allocation.utils.js';
 
 interface ResolvedFeeStructure {
   feeStructureId: string;
@@ -375,6 +376,14 @@ export const invoiceService = {
     const slices = (await financeRepository.listOutstandingInvoicesWithTerm(tenantId)).filter(
       (slice) => slice.studentId === studentId,
     );
+    const fifoSlices: OpenInvoiceSlice[] = slices.map((slice) => ({
+      invoiceId: slice.invoiceId,
+      termId: slice.termId,
+      balanceMinor: slice.balanceMinor,
+      termStartDate: slice.termStartDate,
+      termSequence: slice.termSequence,
+    }));
+    const primaryInvoiceId = oldestOpenInvoiceId(fifoSlices);
     const aggregated =
       referenceTerm && slices.length > 0
         ? aggregateOutstandingByScope(
@@ -405,6 +414,7 @@ export const invoiceService = {
         balanceMinor: 0,
         arrearsBalanceMinor,
         totalBalanceMinor,
+        primaryInvoiceId,
         dueDate: null,
         lineItems: [],
         onlinePaymentEnabled,
@@ -436,6 +446,7 @@ export const invoiceService = {
       balanceMinor: invoice.invoice.balanceMinor,
       arrearsBalanceMinor,
       totalBalanceMinor: invoice.invoice.balanceMinor + arrearsBalanceMinor,
+      primaryInvoiceId,
       dueDate: invoice.invoice.dueDate,
       lineItems: allocatePaidToLineItems(invoice.items, invoice.invoice.amountPaidMinor),
       onlinePaymentEnabled,

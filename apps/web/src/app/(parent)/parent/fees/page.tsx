@@ -92,26 +92,28 @@ function ParentFeesView() {
 
   const fees = feesQuery.data;
   const isLoading = dashboardQuery.isLoading || feesQuery.isLoading;
+  const totalOwed = fees?.totalBalanceMinor ?? fees?.balanceMinor ?? 0;
+  const hasTermInvoice = Boolean(fees?.invoiceId);
 
   const payerEmail = profileQuery.data?.email ?? '';
 
   useEffect(() => {
-    if (fees) {
-      const owed = fees.totalBalanceMinor ?? fees.balanceMinor;
-      setPayAmountMinor(owed > 0 ? Math.min(owed, fees.balanceMinor > 0 ? fees.balanceMinor : owed) : 0);
+    if (fees && totalOwed > 0) {
+      setPayAmountMinor(totalOwed);
     } else {
       setPayAmountMinor(0);
     }
-  }, [fees?.invoiceId, fees?.balanceMinor, fees?.totalBalanceMinor]);
+  }, [fees?.invoiceId, fees?.balanceMinor, fees?.totalBalanceMinor, totalOwed]);
 
   async function handlePayOnline() {
-    if (!fees?.invoiceId || fees.balanceMinor <= 0 || !payerEmail || payAmountMinor <= 0) return;
-    if (payAmountMinor > fees.balanceMinor) return;
+    if (!activeCard?.studentId || !payerEmail || payAmountMinor <= 0 || totalOwed <= 0) return;
+    if (payAmountMinor > totalOwed) return;
     setPayError(null);
     setPaying(true);
     try {
       const result = await initializePayment.mutateAsync({
-        invoiceId: fees.invoiceId,
+        studentId: activeCard.studentId,
+        payAllOwed: true,
         amountMinor: payAmountMinor,
         payerEmail,
         provider: 'paystack',
@@ -163,8 +165,8 @@ function ParentFeesView() {
       {(fees?.arrearsBalanceMinor ?? 0) > 0 ? (
         <Alert>
           <AlertDescription>
-            {formatKobo(fees!.arrearsBalanceMinor)} is from earlier terms. Pay this term first, then
-            switch term to clear arrears — or contact the bursar for a combined payment.
+            {formatKobo(fees!.arrearsBalanceMinor)} is from earlier terms. One payment clears oldest
+            balances first, then this term.
           </AlertDescription>
         </Alert>
       ) : null}
@@ -219,7 +221,7 @@ function ParentFeesView() {
 
       {feesQuery.isLoading ? (
         <Skeleton className="h-64 w-full rounded-2xl" />
-      ) : !fees?.invoiceId ? (
+      ) : !hasTermInvoice && totalOwed <= 0 ? (
         <div className={`${ACADEMIC_UI.dataPanel} p-10 text-center`}>
           <p className="text-[15px] font-semibold text-neutral-800">No invoice for this term yet</p>
           <p className="mt-2 text-[13px] text-neutral-500">
@@ -229,6 +231,7 @@ function ParentFeesView() {
         </div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-2">
+          {hasTermInvoice ? (
           <div className={ACADEMIC_UI.dataPanel}>
             <div className="border-b border-border bg-gradient-to-r from-neutral-50 to-brand-50/30 px-4 py-4 sm:px-5">
               <p className="flex items-center gap-2 text-[14px] font-bold text-neutral-900">
@@ -265,6 +268,15 @@ function ParentFeesView() {
               ))}
             </div>
           </div>
+          ) : (
+            <div className={`${ACADEMIC_UI.dataPanel} p-8`}>
+              <p className="text-[14px] font-bold text-neutral-900">Earlier term balances</p>
+              <p className="mt-2 text-[13px] text-neutral-600">
+                No invoice for {termLabel ?? 'this term'} yet, but you still owe{' '}
+                <span className="font-semibold">{formatKobo(totalOwed)}</span> from previous terms.
+              </p>
+            </div>
+          )}
 
           <div className={ACADEMIC_UI.dataPanel}>
             <div className="border-b border-border bg-gradient-to-r from-neutral-50 to-brand-50/30 px-4 py-4 sm:px-5">
@@ -279,12 +291,15 @@ function ParentFeesView() {
                 <div className="mt-2">
                   <CurrencyInput
                     valueKobo={payAmountMinor}
-                    onChangeKobo={(kobo) => setPayAmountMinor(Math.min(kobo, fees.balanceMinor))}
+                    onChangeKobo={(kobo) => setPayAmountMinor(Math.min(kobo, totalOwed))}
                     disabled={paying || initializePayment.isPending}
                   />
                 </div>
                 <p className="mt-2 text-[11px] text-neutral-500">
-                  Outstanding balance {formatKobo(fees.balanceMinor)}
+                  Total owed {formatKobo(totalOwed)}
+                  {(fees?.arrearsBalanceMinor ?? 0) > 0
+                    ? ` · includes ${formatKobo(fees!.arrearsBalanceMinor)} arrears`
+                    : null}
                 </p>
               </div>
 
@@ -309,16 +324,16 @@ function ParentFeesView() {
                 </Alert>
               ) : null}
 
-              {!fees.onlinePaymentEnabled ? (
+              {!fees?.onlinePaymentEnabled ? (
                 <Alert>
                   <AlertDescription>
                     Online payments are not enabled for this school yet. Contact the bursar to pay by bank transfer
                     or at the school office.
                   </AlertDescription>
                 </Alert>
-              ) : fees.balanceMinor <= 0 ? (
+              ) : totalOwed <= 0 ? (
                 <Alert>
-                  <AlertDescription>All fees for this term are paid. No payment required.</AlertDescription>
+                  <AlertDescription>All fees are paid. No payment required.</AlertDescription>
                 </Alert>
               ) : !payerEmail ? (
                 <Alert>

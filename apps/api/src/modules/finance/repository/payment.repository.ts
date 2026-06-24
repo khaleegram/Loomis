@@ -9,6 +9,7 @@ import { db, type DbTransaction } from '../../../shared/db.js';
 import { withTenantContext } from '../../../shared/tenant-context.js';
 import type { OutboxEventInput } from '../types.js';
 import { financeOutboxRepository } from './outbox.repository.js';
+import { parsePaymentAllocations } from '../services/payment-allocation.utils.js';
 
 type PaymentRow = typeof payments.$inferSelect;
 type ReceiptRow = typeof receipts.$inferSelect;
@@ -23,6 +24,34 @@ function deriveInvoiceStatus(amountChargedMinor: number, amountPaidMinor: number
   if (amountPaidMinor <= 0) return 'issued';
   if (amountPaidMinor >= amountChargedMinor) return 'paid';
   return 'partially_paid';
+}
+
+async function applyAmountToInvoice(
+  tx: DbTransaction,
+  tenantId: string,
+  invoiceId: string,
+  amountMinor: number,
+): Promise<void> {
+  const [invoice] = await tx
+    .select()
+    .from(invoices)
+    .where(and(eq(invoices.tenantId, tenantId), eq(invoices.id, invoiceId)))
+    .limit(1);
+  if (!invoice) throw new Error('Invoice not found');
+
+  const newPaid = invoice.amountPaidMinor + amountMinor;
+  const newBalance = invoice.amountChargedMinor - newPaid;
+  const invoiceStatus = deriveInvoiceStatus(invoice.amountChargedMinor, newPaid);
+
+  await tx
+    .update(invoices)
+    .set({
+      amountPaidMinor: newPaid,
+      balanceMinor: newBalance,
+      status: invoiceStatus,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(invoices.tenantId, tenantId), eq(invoices.id, invoice.id)));
 }
 
 async function nextReceiptSequence(tx: DbTransaction, tenantId: string, termId: string): Promise<number> {
@@ -244,26 +273,30 @@ export const paymentRepository = {
         .limit(1);
       if (!payment) throw new Error('Payment not found');
 
+      const allocations = parsePaymentAllocations(payment.metadata as Record<string, unknown> | null);
+      if (allocations && allocations.length > 0) {
+        const allocatedTotal = allocations.reduce((sum, row) => sum + row.amountMinor, 0);
+        if (allocatedTotal !== payment.amountMinor) {
+          throw new Error('Payment allocation total mismatch');
+        }
+        for (const allocation of allocations) {
+          await applyAmountToInvoice(
+            tx,
+            params.tenantId,
+            allocation.invoiceId,
+            allocation.amountMinor,
+          );
+        }
+      } else {
+        await applyAmountToInvoice(tx, params.tenantId, payment.invoiceId, payment.amountMinor);
+      }
+
       const [invoice] = await tx
         .select()
         .from(invoices)
         .where(and(eq(invoices.tenantId, params.tenantId), eq(invoices.id, payment.invoiceId)))
         .limit(1);
       if (!invoice) throw new Error('Invoice not found');
-
-      const newPaid = invoice.amountPaidMinor + payment.amountMinor;
-      const newBalance = invoice.amountChargedMinor - newPaid;
-      const invoiceStatus = deriveInvoiceStatus(invoice.amountChargedMinor, newPaid);
-
-      await tx
-        .update(invoices)
-        .set({
-          amountPaidMinor: newPaid,
-          balanceMinor: newBalance,
-          status: invoiceStatus,
-          updatedAt: new Date(),
-        })
-        .where(and(eq(invoices.tenantId, params.tenantId), eq(invoices.id, invoice.id)));
 
       const [updatedPayment] = await tx
         .update(payments)

@@ -15,6 +15,11 @@ import type {
   VerifyOfflinePaymentInput,
 } from '../types.js';
 import { assertAuditAvailable, requireTenant, writeFinanceAudit } from './_shared.js';
+import {
+  buildFifoAllocations,
+  totalOpenBalance,
+  type OpenInvoiceSlice,
+} from './payment-allocation.utils.js';
 
 const WEBHOOK_TOLERANCE_MS = 5 * 60 * 1000;
 
@@ -283,8 +288,64 @@ export const paymentService = {
           };
         }
 
-        const invoice = await assertInvoicePayable(tenantId, input.invoiceId, input.amountMinor);
-        await assertParentLinkedToStudent(tenantId, invoice.invoice.studentId, actor.userId);
+        let invoiceId = input.invoiceId;
+        let termId: string;
+        let studentId: string;
+        let paymentMetadata: Record<string, unknown> = { payerEmail: input.payerEmail };
+
+        if (input.payAllOwed) {
+          if (!input.studentId) {
+            throw new LoomisError('VALIDATION_ERROR', 400, 'studentId is required when payAllOwed is true');
+          }
+          await assertParentLinkedToStudent(tenantId, input.studentId, actor.userId);
+          const slices: OpenInvoiceSlice[] = (
+            await financeRepository.listOutstandingInvoicesWithTerm(tenantId)
+          )
+            .filter((slice) => slice.studentId === input.studentId)
+            .map((slice) => ({
+              invoiceId: slice.invoiceId,
+              termId: slice.termId,
+              balanceMinor: slice.balanceMinor,
+              termStartDate: slice.termStartDate,
+              termSequence: slice.termSequence,
+            }));
+
+          const openTotal = totalOpenBalance(slices);
+          if (openTotal <= 0) {
+            throw new LoomisError('VALIDATION_ERROR', 422, 'No outstanding balance to pay');
+          }
+          if (input.amountMinor > openTotal) {
+            throw new LoomisError(
+              'FINANCE_PAYMENT_AMOUNT_EXCEEDS_BALANCE',
+              422,
+              'Payment amount exceeds the total outstanding balance',
+              { balanceMinor: openTotal },
+            );
+          }
+
+          let allocations;
+          try {
+            allocations = buildFifoAllocations(slices, input.amountMinor);
+          } catch {
+            throw new LoomisError(
+              'FINANCE_PAYMENT_AMOUNT_EXCEEDS_BALANCE',
+              422,
+              'Payment amount exceeds the total outstanding balance',
+              { balanceMinor: openTotal },
+            );
+          }
+
+          invoiceId = allocations[0]!.invoiceId;
+          termId = allocations[0]!.termId;
+          studentId = input.studentId;
+          paymentMetadata = { ...paymentMetadata, allocations };
+        } else {
+          const invoice = await assertInvoicePayable(tenantId, input.invoiceId!, input.amountMinor);
+          await assertParentLinkedToStudent(tenantId, invoice.invoice.studentId, actor.userId);
+          invoiceId = input.invoiceId!;
+          termId = invoice.invoice.termId;
+          studentId = invoice.invoice.studentId;
+        }
 
         const gateway = gatewayAbstractionLayer.get(input.provider);
         const paymentId = uuidv7();
@@ -303,17 +364,17 @@ export const paymentService = {
           metadata: {
             tenant_id: tenantId,
             payment_id: paymentId,
-            invoice_id: input.invoiceId,
-            student_id: invoice.invoice.studentId,
+            invoice_id: invoiceId,
+            student_id: studentId,
           },
         });
 
         const payment = await paymentRepository.createOnlinePayment({
           id: paymentId,
           tenantId,
-          invoiceId: input.invoiceId,
-          termId: invoice.invoice.termId,
-          studentId: invoice.invoice.studentId,
+          invoiceId,
+          termId,
+          studentId,
           amountMinor: input.amountMinor,
           method: input.method,
           idempotencyKey,
@@ -322,7 +383,7 @@ export const paymentService = {
           gatewayProvider: input.provider,
           gatewayReference: initialized.gatewayReference,
           gatewayAuthorizationUrl: initialized.authorizationUrl,
-          metadata: { payerEmail: input.payerEmail },
+          metadata: paymentMetadata,
           event: {
             aggregateType: 'payment',
             aggregateId: paymentId,
@@ -331,7 +392,7 @@ export const paymentService = {
             payload: {
               tenantId,
               paymentId,
-              invoiceId: input.invoiceId,
+              invoiceId,
               amountMinor: input.amountMinor,
               channel: 'online',
               gatewayProvider: input.provider,

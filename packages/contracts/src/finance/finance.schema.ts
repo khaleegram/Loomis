@@ -304,16 +304,30 @@ export type VerifyOfflinePaymentRequest = z.infer<typeof verifyOfflinePaymentReq
 export const paymentClientPlatform = z.enum(['web', 'mobile']);
 export type PaymentClientPlatform = z.infer<typeof paymentClientPlatform>;
 
-export const initializeOnlinePaymentRequest = z.object({
-  invoiceId: z.string().uuid(),
-  amountMinor: positiveKoboAmount,
-  /** Only Paystack is supported; field kept for forward-compatible clients. */
-  provider: paymentGatewayProvider.default('paystack'),
-  method: onlinePaymentMethod.default('card'),
-  payerEmail: z.string().email(),
-  /** Selects redirect URL after Paystack checkout (web vs mobile deep link). */
-  clientPlatform: paymentClientPlatform.default('web'),
-});
+export const initializeOnlinePaymentRequest = z
+  .object({
+    invoiceId: z.string().uuid().optional(),
+    /** Required when paying total owed without a single-term invoice. */
+    studentId: z.string().uuid().optional(),
+    /** Apply payment oldest-invoice-first across all open balances for the student. */
+    payAllOwed: z.boolean().optional(),
+    amountMinor: positiveKoboAmount,
+    /** Only Paystack is supported; field kept for forward-compatible clients. */
+    provider: paymentGatewayProvider.default('paystack'),
+    method: onlinePaymentMethod.default('card'),
+    payerEmail: z.string().email(),
+    /** Selects redirect URL after Paystack checkout (web vs mobile deep link). */
+    clientPlatform: paymentClientPlatform.default('web'),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.invoiceId && !(data.studentId && data.payAllOwed)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Provide invoiceId, or studentId with payAllOwed',
+        path: ['invoiceId'],
+      });
+    }
+  });
 export type InitializeOnlinePaymentRequest = z.infer<typeof initializeOnlinePaymentRequest>;
 
 export const paymentGatewayConfigResponse = z.object({
@@ -421,6 +435,8 @@ export const parentFeeStatusResponse = z.object({
   arrearsBalanceMinor: koboAmount,
   /** Term balance + arrears — what the family owes in total. */
   totalBalanceMinor: koboAmount,
+  /** Oldest open invoice — use for single-term pay; omit when payAllOwed. */
+  primaryInvoiceId: z.string().uuid().nullable(),
   dueDate: calendarDate.nullable(),
   lineItems: z.array(parentFeeLineItem),
   onlinePaymentEnabled: z.boolean(),
