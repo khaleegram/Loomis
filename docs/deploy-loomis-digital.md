@@ -231,6 +231,7 @@ curl http://localhost:8080/health
 |---------|-----|
 | Login **502** / `api.loomis.digital` does not resolve | Add DNS CNAME for `api` → Railway (§2.5), or redeploy web (uses Railway URL fallback until DNS is ready) |
 | `/api/auth/refresh` **401** on login page | Normal — no session yet; ignore unless login also fails |
+| Parent login **502**, owner works | Termii SMS failed (parent needs SMS on new device). Set `SMS_OTP_DEMO_BYPASS=true` on API for demo, or register sender ID on Termii |
 | Login **503** on Vercel | API down or wrong `LOOMIS_API_BASE_URL`; test `https://loomis-api-production.up.railway.app/health` |
 | CORS errors in browser | API must be HTTPS; CORS is open with credentials |
 | Cookies not set | `NODE_ENV=production` on Vercel (Secure cookies) |

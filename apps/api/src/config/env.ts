@@ -61,6 +61,14 @@ const envSchema = z.object({
   /** Termii SMS (SRS §10.3). Required for SMS delivery when SMS channel is used. */
   TERMII_API_KEY: z.string().min(1).optional(),
   TERMII_SENDER_ID: z.string().min(1).optional(),
+  /**
+   * Demo/staging only: accept SMS OTP `000000` without Termii (see loomis-roles-and-logins.md).
+   * Use when the Termii sender ID is not approved yet.
+   */
+  SMS_OTP_DEMO_BYPASS: z.preprocess(
+    (value) => value === true || value === 'true' || value === '1',
+    z.boolean().default(false),
+  ),
 
   /** Firebase Cloud Messaging (SRS §10.4 / MOB-004). Required for Android push. */
   FCM_SERVICE_ACCOUNT_JSON: z.string().min(1).optional(),

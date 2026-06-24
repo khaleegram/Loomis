@@ -33,7 +33,10 @@ function isTermiiConfigured(): boolean {
 
 function devBypassAllowed(): boolean {
   const env = getEnv();
-  return env.NODE_ENV === 'development' && !isTermiiConfigured();
+  return (
+    env.SMS_OTP_DEMO_BYPASS ||
+    (env.NODE_ENV === 'development' && !isTermiiConfigured())
+  );
 }
 
 function maskPhone(phoneE164: string): string {

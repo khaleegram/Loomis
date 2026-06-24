@@ -32,8 +32,17 @@ export async function sendSms(input: { to: string; message: string }): Promise<v
   });
 
   if (!response.ok) {
+    const detailText = await response.text().catch(() => '');
+    let termiiMessage: string | undefined;
+    try {
+      const parsed = JSON.parse(detailText) as { message?: string };
+      termiiMessage = typeof parsed.message === 'string' ? parsed.message : undefined;
+    } catch {
+      termiiMessage = undefined;
+    }
     throw new LoomisError('COMMS_DELIVERY_UNAVAILABLE', 502, 'Termii SMS delivery failed', {
       status: response.status,
+      ...(termiiMessage ? { termiiMessage } : {}),
     });
   }
 }
