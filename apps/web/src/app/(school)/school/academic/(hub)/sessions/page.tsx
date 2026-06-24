@@ -35,7 +35,6 @@ export default function AcademicSessionsPage() {
   const tenantId = useTenantId();
   const canManageYear = useCan('academic_year.manage');
   const canManageTerm = useCan('term.manage');
-  const canManageTerm = useCan('term.manage');
   const canView = useCanAny(['academic_year.manage', 'term.manage', 'census.lock']);
 
   const yearsQuery = useAcademicYears(tenantId ?? '');
