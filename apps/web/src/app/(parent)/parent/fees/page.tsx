@@ -256,7 +256,7 @@ function ParentFeesView() {
         </div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-2">
-          {hasTermInvoice ? (
+          {fees && fees.invoiceId ? (
           <div className={ACADEMIC_UI.dataPanel}>
             <div className="border-b border-border bg-gradient-to-r from-neutral-50 to-brand-50/30 px-4 py-4 sm:px-5">
               <p className="flex items-center gap-2 text-[14px] font-bold text-neutral-900">
@@ -335,7 +335,7 @@ function ParentFeesView() {
                     <>
                       Total owed {formatKobo(totalOwed)}
                       {(fees?.arrearsBalanceMinor ?? 0) > 0
-                        ? ` · includes ${formatKobo(fees!.arrearsBalanceMinor)} arrears`
+                        ? ` · includes ${formatKobo(fees?.arrearsBalanceMinor ?? 0)} arrears`
                         : null}
                     </>
                   ) : (
