@@ -115,19 +115,19 @@ export function useLeadershipAttention(
     if (workflowInboxModule) {
       return [
         {
-          label: 'Census',
+          label: 'Platform fee',
           value: isLoading ? '—' : census.label,
           hint: census.hint,
           tone:
             census.urgency === 'attention' ? 'warn' : census.urgency === 'ready' ? 'ok' : 'neutral',
         },
         {
-          label: 'PSF settled',
+          label: 'Platform fee paid',
           value: isLoading ? '—' : String(psfSummary.settled),
           hint:
             psfSummary.total > 0
               ? `${psfSummary.pending} still pending`
-              : 'Created at census lock',
+              : 'Recorded when term billing runs',
           tone: psfSummary.pending > 0 ? 'warn' : 'ok',
         },
         {
@@ -137,7 +137,7 @@ export function useLeadershipAttention(
           tone: ownerApprovalCount > 0 ? 'warn' : 'ok',
         },
         {
-          label: 'PSF outstanding',
+          label: 'Platform fee due',
           value: isLoading ? '—' : formatKobo(psfSummary.outstandingMinor),
           hint: psfSummary.outstandingMinor > 0 ? 'Unsettled obligations' : 'All settled',
           tone: psfSummary.outstandingMinor > 0 ? 'warn' : 'ok',
@@ -147,20 +147,20 @@ export function useLeadershipAttention(
 
     return [
       {
-        label: 'Census',
+        label: 'Platform fee',
         value: isLoading ? '—' : census.label,
         hint: census.hint,
         tone: census.urgency === 'attention' ? 'warn' : census.urgency === 'ready' ? 'ok' : 'neutral',
       },
       {
-        label: 'PSF obligations',
+        label: 'Platform fee',
         value: isLoading ? '—' : String(psfSummary.total),
         hint:
           psfSummary.pending > 0
             ? `${psfSummary.pending} pending settlement`
             : psfSummary.total > 0
               ? 'All settled'
-              : 'Created at census lock',
+              : 'Recorded when term billing runs',
         tone: psfSummary.pending > 0 ? 'warn' : 'ok',
       },
       {

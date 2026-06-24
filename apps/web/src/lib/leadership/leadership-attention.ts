@@ -81,7 +81,7 @@ export function resolveCensusAttention(
   if (!term || !yearId) {
     return {
       label: 'No open term',
-      hint: 'Configure the academic calendar to begin census tracking.',
+      hint: 'Configure the academic calendar to begin term setup.',
       urgency: 'normal',
       href: '/school/academic/sessions',
     };
@@ -91,40 +91,40 @@ export function resolveCensusAttention(
     const days = daysUntilIsoDate(term.censusSnapshotDate);
     const countdown =
       days == null
-        ? 'Snapshot date not set'
+        ? 'Billing date not set'
         : days > 0
-          ? `${days} day${days === 1 ? '' : 's'} until billing snapshot`
+          ? `${days} day${days === 1 ? '' : 's'} until platform fee is recorded`
           : days === 0
-            ? 'Billing snapshot due today'
-            : `${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'} past snapshot date`;
+            ? 'Platform fee records today'
+            : `Billing date was ${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'} ago`;
 
     return {
-      label: 'Billing snapshot due',
+      label: 'Platform fee pending',
       hint:
         billableCount != null
-          ? `${billableCount.toLocaleString()} billable students · ${countdown}`
+          ? `${billableCount.toLocaleString()} enrolled students · ${countdown}`
           : countdown,
-      urgency: days != null && days <= 7 ? 'attention' : 'ready',
-      href: `/school/academic/platform-billing?termId=${term.id}&yearId=${yearId}`,
+      urgency: days != null && days <= 7 ? 'attention' : 'normal',
+      href: '/school/finance/platform-fee',
     };
   }
 
   if (term.status === 'census_locked') {
     return {
-      label: 'Snapshot taken',
+      label: 'Platform fee recorded',
       hint:
         billableCount != null
-          ? `${billableCount.toLocaleString()} students snapshotted · PSF obligations created`
-          : 'Billing snapshot recorded for this term',
+          ? `${billableCount.toLocaleString()} students · fee recorded for this term`
+          : 'Platform fee recorded for this term',
       urgency: 'normal',
-      href: '/school/academic/sessions',
+      href: '/school/finance/platform-fee',
     };
   }
 
   if (term.status === 'closed') {
     return {
       label: 'Term closed',
-      hint: `${term.name ?? 'Term'} is closed — census complete`,
+      hint: `${term.name ?? 'Term'} is closed`,
       urgency: 'normal',
       href: '/school/academic/sessions',
     };
@@ -132,7 +132,7 @@ export function resolveCensusAttention(
 
   return {
     label: 'Term in draft',
-    hint: 'Open the term before census lock is available.',
+    hint: 'Open the term before platform fee billing applies.',
     urgency: 'normal',
     href: '/school/academic/sessions',
   };
@@ -194,13 +194,13 @@ export function buildOwnerAttentionTasks(input: {
   const approvalHref = input.workflowInboxModule ? inboxHref : '/school/staff';
   const approvalCta = input.workflowInboxModule ? 'Open inbox' : 'Review items';
 
-  if (input.census.label === 'Billing snapshot due') {
+  if (input.census.label === 'Platform fee pending') {
     tasks.push({
-      id: 'census',
+      id: 'platform-fee',
       title: input.census.label,
       description: input.census.hint,
       href: input.census.href,
-      cta: 'Review census',
+      cta: 'View platform fee',
       urgency: input.census.urgency,
     });
   }

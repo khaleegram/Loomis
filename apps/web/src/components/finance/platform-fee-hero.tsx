@@ -1,57 +1,61 @@
 'use client';
 
 import Link from 'next/link';
-import { formatKobo } from '@loomis/core';
-import { AlertCircle, Receipt, Users, Wallet } from 'lucide-react';
+import { CalendarClock, Receipt, Users, Wallet } from 'lucide-react';
 
 import { ACADEMIC_PAGE_TITLE_STYLE, ACADEMIC_UI } from '@/lib/academic/academic-ui';
+import { formatKobo } from '@loomis/core';
 import { SURFACES } from '@/lib/design/surfaces';
 
-interface FinanceBalancesHeroProps {
+interface PlatformFeeHeroProps {
   termLabel: string | null;
   yearLabel: string | null;
-  studentCount: number;
-  totalBalanceMinor: number;
-  totalChargedMinor: number;
+  enrolledCount: number;
+  psfRateMinor: number | null;
+  psfTotalMinor: number | null;
+  billingDate: string | null;
+  statusLabel: string;
   isLoading?: boolean;
 }
 
-export function FinanceBalancesHero({
+export function PlatformFeeHero({
   termLabel,
   yearLabel,
-  studentCount,
-  totalBalanceMinor,
-  totalChargedMinor,
+  enrolledCount,
+  psfRateMinor,
+  psfTotalMinor,
+  billingDate,
+  statusLabel,
   isLoading,
-}: FinanceBalancesHeroProps) {
+}: PlatformFeeHeroProps) {
   const stats = [
     {
-      label: 'Outstanding',
-      value: isLoading ? '—' : formatKobo(totalBalanceMinor),
-      hint: 'Total balance due',
-      icon: Wallet,
-      gradient: totalBalanceMinor > 0 ? SURFACES.kpi.g4 : SURFACES.kpi.g2,
-    },
-    {
-      label: 'Charged',
-      value: isLoading ? '—' : formatKobo(totalChargedMinor),
-      hint: 'Invoiced this term',
-      icon: Receipt,
+      label: 'Enrolled students',
+      value: isLoading ? '—' : String(enrolledCount),
+      hint: 'Billable for this term',
+      icon: Users,
       gradient: SURFACES.kpi.g3,
     },
     {
-      label: 'Students',
-      value: isLoading ? '—' : String(studentCount),
-      hint: 'With invoices',
-      icon: Users,
+      label: 'Platform fee',
+      value: isLoading || psfTotalMinor === null ? '—' : formatKobo(psfTotalMinor),
+      hint: psfRateMinor !== null ? `${formatKobo(psfRateMinor)} per student` : 'Rate not set',
+      icon: Wallet,
+      gradient: psfRateMinor === null ? SURFACES.kpi.g4 : SURFACES.kpi.g2,
+    },
+    {
+      label: 'Billing date',
+      value: isLoading ? '—' : billingDate ?? 'Not set',
+      hint: 'Counted automatically',
+      icon: CalendarClock,
       gradient: SURFACES.kpi.g1,
     },
     {
-      label: 'Alerts',
-      value: totalBalanceMinor > 0 ? 'Due' : 'Clear',
-      hint: 'Collection status',
-      icon: AlertCircle,
-      gradient: SURFACES.kpi.g4,
+      label: 'Status',
+      value: isLoading ? '—' : statusLabel,
+      hint: 'No action required',
+      icon: Receipt,
+      gradient: SURFACES.kpi.g2,
     },
   ];
 
@@ -63,12 +67,13 @@ export function FinanceBalancesHero({
       >
         <div className="relative flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
-            <p className={ACADEMIC_UI.sectionLabel}>Finance · collections</p>
+            <p className={ACADEMIC_UI.sectionLabel}>Finance · Loomis platform fee</p>
             <h1 className="text-foreground" style={ACADEMIC_PAGE_TITLE_STYLE}>
-              Outstanding balances
+              Platform fee
             </h1>
             <p className={ACADEMIC_UI.pageDesc}>
-              What parents owe your school this term — invoiced amounts and outstanding balances.
+              What Loomis charges your school per enrolled student each term. This is separate from
+              school fees parents pay you.
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {yearLabel ? (
@@ -83,8 +88,8 @@ export function FinanceBalancesHero({
               ) : null}
             </div>
           </div>
-          <Link href="/school/finance" className={ACADEMIC_UI.btnSecondary}>
-            Fee structures
+          <Link href="/school/finance/balances" className={ACADEMIC_UI.btnSecondary}>
+            School fee balances
           </Link>
         </div>
 
@@ -104,7 +109,11 @@ export function FinanceBalancesHero({
                 <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-400">{stat.label}</p>
                 <p
                   className="mt-1 tabular-nums leading-none text-neutral-900"
-                  style={{ fontSize: 'clamp(1.125rem, 2vw, 1.5rem)', fontWeight: 800, letterSpacing: '-0.02em' }}
+                  style={{
+                    fontSize: 'clamp(1.125rem, 2vw, 1.5rem)',
+                    fontWeight: 800,
+                    letterSpacing: '-0.02em',
+                  }}
                 >
                   {stat.value}
                 </p>

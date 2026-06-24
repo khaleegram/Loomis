@@ -62,7 +62,7 @@ export function OpenTermDialog({
         <DialogHeader>
           <DialogTitle>Open {term.name}?</DialogTitle>
           <DialogDescription>
-            Billing snapshot: {formatCalendarDate(term.censusSnapshotDate)} · Only one term may be open per
+            Platform fee billing date: {formatCalendarDate(term.censusSnapshotDate)} · Only one term may be open per
             year.
           </DialogDescription>
         </DialogHeader>

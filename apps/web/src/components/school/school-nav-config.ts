@@ -95,7 +95,7 @@ export const SCHOOL_NAV: SchoolNavItem[] = [
   },
   {
     id: 'attestations',
-    label: 'Billing snapshots',
+    label: 'Platform fee history',
     href: '/school/academic/attestations',
     icon: ScrollText,
     capabilities: ['audit.view', 'census.lock'],
@@ -196,6 +196,15 @@ export const SCHOOL_NAV: SchoolNavItem[] = [
     hideInCombinedFinanceDesk: true,
   },
   {
+    id: 'finance-platform-fee',
+    label: 'Platform fee',
+    href: '/school/finance/platform-fee',
+    icon: ShieldCheck,
+    section: 'ledger',
+    capabilities: ['census.lock'],
+    hideForRoles: ['principal', 'cashier', 'accountant', ...TEACHING_STAFF_ROLES, ...EXAM_OFFICER_ROLES, 'admin_officer'],
+  },
+  {
     id: 'psf-obligations',
     label: 'PSF Obligations',
     href: '/school/finance/psf',
@@ -203,7 +212,7 @@ export const SCHOOL_NAV: SchoolNavItem[] = [
     section: 'ledger',
     capabilities: ['ledger.view'],
     hideInCore: true,
-    hideForRoles: ['principal', 'cashier'],
+    hideForRoles: ['principal', 'cashier', 'school_owner'],
   },
   {
     id: 'exams',

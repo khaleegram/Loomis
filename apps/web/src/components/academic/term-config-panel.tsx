@@ -95,7 +95,7 @@ export function TermConfigPanel({ tenantId, yearId, term }: TermConfigPanelProps
         {term.status === 'open' ? (
           <Alert>
             <AlertDescription>
-              This term is open. Configure dates before opening; use census lock when ready.
+              This term is open. Students can enroll and staff can record attendance and grades.
             </AlertDescription>
           </Alert>
         ) : null}
@@ -164,7 +164,7 @@ export function TermConfigPanel({ tenantId, yearId, term }: TermConfigPanelProps
               <div className="border-l-2 border-accent-teal-400 pl-3">
                 <p className={ACADEMIC_UI.sectionLabel}>Enrollment window</p>
                 <p className="text-[12px] text-neutral-500">
-                  Must close on or before the census lock date
+                  Must close on or before the platform fee billing date
                 </p>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -200,7 +200,7 @@ export function TermConfigPanel({ tenantId, yearId, term }: TermConfigPanelProps
                 name="censusSnapshotDate"
                 render={({ field }) => (
                   <FormItem className="max-w-xs">
-                    <FormLabel>Billing snapshot date</FormLabel>
+                    <FormLabel>Platform fee billing date</FormLabel>
                     <FormControl>
                       <Input {...field} type="date" disabled={readOnly} className="border-gold/40" />
                     </FormControl>

@@ -38,9 +38,9 @@ export function PsfObligationsSection({ tenantId }: { tenantId: string }) {
         <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-neutral-400">
           Platform service fee
         </p>
-        <h2 className="text-lg font-extrabold tracking-tight text-neutral-900">PSF obligations</h2>
+        <h2 className="text-lg font-extrabold tracking-tight text-neutral-900">Per-student charges</h2>
         <p className="mt-1 text-sm text-neutral-500">
-          Created at census lock — read-only tenant view (US-REV-001).
+          Recorded automatically when Loomis bills your school each term. Read-only.
         </p>
       </div>
 
@@ -55,7 +55,7 @@ export function PsfObligationsSection({ tenantId }: { tenantId: string }) {
           <p className="text-sm text-destructive">{(error as Error).message ?? 'Failed to load PSF obligations.'}</p>
         ) : obligations.length === 0 ? (
           <p className="text-sm text-neutral-500">
-            No PSF obligations yet. They appear after the owner locks census for a term.
+            Nothing recorded yet. Charges appear after the automatic billing date for this term.
           </p>
         ) : (
           <Table>

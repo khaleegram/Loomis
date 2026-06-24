@@ -430,7 +430,7 @@ export default function StudentProfilePage({ params }: StudentProfilePageProps) 
                 <div className="card rounded-2xl p-6">
                   <h3 className="text-[13px] font-bold text-neutral-800">Identity attestation</h3>
                   <p className="mt-1 text-[12px] text-neutral-400">
-                    Required before billable enrollment and census lock.
+                    Required before a student counts toward platform fee billing.
                   </p>
                   <div className="mt-4 space-y-4">
                     {student.identityAttestationType ? (

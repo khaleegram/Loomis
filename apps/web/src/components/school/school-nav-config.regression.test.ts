@@ -55,6 +55,12 @@ describe('school nav tier regression (Sprint 14)', () => {
       if (role === 'principal' || role === 'school_owner') {
         expect(ids, role).not.toContain('psf-obligations');
       }
+      if (role === 'school_owner') {
+        expect(ids, role).toContain('finance-platform-fee');
+      }
+      if (role === 'principal') {
+        expect(ids, role).not.toContain('finance-platform-fee');
+      }
     }
   });
 
@@ -72,10 +78,11 @@ describe('school nav tier regression (Sprint 14)', () => {
     expect(ids).not.toContain('gradebook');
   });
 
-  it('Advanced: Owner sees PSF and Workflows', () => {
+  it('Advanced: Owner sees Platform fee and Workflows', () => {
     const ids = navIds('school_owner', advancedCtx);
     expect(ids).toContain('workflows');
-    expect(ids).toContain('psf-obligations');
+    expect(ids).toContain('finance-platform-fee');
+    expect(ids).not.toContain('psf-obligations');
   });
 
   it('Advanced split: accountant verify, cashier log — not combined desk', () => {

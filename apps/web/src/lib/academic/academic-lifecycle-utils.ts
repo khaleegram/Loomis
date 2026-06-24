@@ -5,7 +5,7 @@ import type { AcademicHubMetrics } from './academic-metrics';
 export const LIFECYCLE_PHASES = [
   { key: 'draft' as const, label: 'Configure', short: 'Setup' },
   { key: 'open' as const, label: 'Open', short: 'Live' },
-  { key: 'census_locked' as const, label: 'Billing snapshot', short: 'Snapshotted' },
+  { key: 'census_locked' as const, label: 'Platform fee recorded', short: 'Recorded' },
   { key: 'closed' as const, label: 'Close', short: 'Done' },
 ];
 
@@ -52,18 +52,18 @@ export function resolveNextAcademicAction(
 
   if (focusTerm?.status === 'open' && yearId && termId) {
     return {
-      title: 'Lock enrollment census',
-      description: 'The term is open. Attest billable enrollment to create PSF obligations for this period.',
-      href: `/school/academic/platform-billing?termId=${termId}&yearId=${yearId}`,
-      cta: 'Start census lock',
-      urgency: 'ready',
+      title: 'Term is live',
+      description: 'Platform fee is recorded automatically on the billing date. Manage school fee balances under Finance.',
+      href: '/school/finance/balances',
+      cta: 'View balances',
+      urgency: 'normal',
     };
   }
 
   if (focusTerm?.status === 'census_locked') {
     return {
       title: 'Close the term',
-      description: 'Census is locked. Resolve gate checks and close the term to freeze enrollments.',
+      description: 'Platform fee is recorded. Resolve gate checks and close the term when ready.',
       href: '/school/academic/sessions',
       cta: 'Go to sessions',
       urgency: 'attention',
@@ -103,7 +103,7 @@ export function resolveNextAcademicAction(
 
   return {
     title: 'Review the academic calendar',
-    description: 'Key dates for enrollment, exams, and census are visible to staff once configured.',
+    description: 'Key dates for enrollment, exams, and platform fee billing are visible to staff once configured.',
     href: '/school/academic/calendar',
     cta: 'View calendar',
     urgency: 'normal',

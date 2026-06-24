@@ -115,24 +115,34 @@ Railway sets `PORT` automatically; the API uses it when `API_PORT` is unset.
 
 **Option A — Railway one-off command** (API service → Settings → Deploy → Custom start / or use CLI):
 
-```bash
-railway run pnpm db:migrate:prod
-```
+From your PC (after `railway login` and `railway link` → **loomis-api** service):
 
-Run from the API service with env vars linked (or use Railway’s “Run command” with the deployed image).
-
-**Option B — Local against prod** (careful):
-
-```bash
+```powershell
 cd apps/api
-DATABASE_URL="postgresql://..." DATABASE_AUDIT_URL="postgresql://..." pnpm db:migrate:prod
+railway run pnpm db:migrate:prod
+railway run pnpm db:seed:rich:prod
 ```
+
+Run **from `apps/api`** — `db:migrate:prod` is not defined at the repo root. Use `db:seed:rich:prod` (not `db:seed:rich`), because the local seed script loads `.env.local` and will try `*.railway.internal` hostnames that do not resolve on your machine.
+
+**Option B — Local against prod** (careful): use the Postgres **public** URL from Railway → loomis-db → **Connect** → **Public network** (host ends in `.proxy.rlwy.net`). Do **not** use `*.railway.internal` from your PC — that hostname only works inside Railway.
+
+```powershell
+cd apps/api
+# Paste the PUBLIC url from Railway (not loomis-db.railway.internal)
+$env:DATABASE_URL="postgresql://postgres:PASSWORD@HOST.proxy.rlwy.net:PORT/railway"
+$env:DATABASE_AUDIT_URL=$env:DATABASE_URL
+pnpm db:migrate:prod
+pnpm db:seed:rich:prod
+```
+
+`db:seed:rich:prod` loads `.env.railway.local` for JWT/Redis/S3. Shell `DATABASE_URL` overrides the internal hostname in that file.
 
 ### 2.7 Seed demo data (optional)
 
-```bash
-railway run pnpm db:seed
-railway run pnpm db:seed:rich
+```powershell
+cd apps/api
+railway run pnpm db:seed:rich:prod
 ```
 
 Use only for staging/demo; change all passwords before real schools onboard.

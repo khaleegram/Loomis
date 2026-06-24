@@ -17,6 +17,7 @@
     "db:migrate": "node --env-file=../../.env.local ./node_modules/drizzle-kit/bin.cjs migrate",
     "db:seed": "node --env-file=../../.env.local ./node_modules/tsx/dist/cli.mjs scripts/seed-dev.ts",
     "db:seed:rich": "node --env-file=../../.env.local ./node_modules/tsx/dist/cli.mjs scripts/seed-rich-school.ts",
+    "db:seed:rich:prod": "node --env-file=../../.env.railway.local ./node_modules/tsx/dist/cli.mjs scripts/seed-rich-school.ts",
     "db:seed:timetables": "node --env-file=../../.env.local ./node_modules/tsx/dist/cli.mjs scripts/seed-rich-school.ts --timetables-only",
     "db:seed:advanced-demo": "node --env-file=../../.env.local ./node_modules/tsx/dist/cli.mjs scripts/seed-advanced-demo-data.ts",
     "db:seed:prod": "node ./node_modules/tsx/dist/cli.mjs scripts/seed-prod-all.ts"

@@ -52,35 +52,33 @@ export function AcademicWorkflowCards({
         metrics.termStatus === 'open'
           ? `${metrics.openTermName ?? 'Term'} is open`
           : metrics.termStatus === 'census_locked'
-            ? 'Snapshot taken'
+            ? 'Fee recorded'
             : metrics.termStatus === 'closed'
               ? 'Term closed'
               : 'Configure draft term',
     },
     {
-      id: 'census',
-      title: 'Enrollment census',
-      story: 'PSF trigger',
-      description: 'Attest billable count and lock census. MFA step-up required.',
-      href:
-        censusLockHref ??
-        (yearId && termId
-          ? `/school/academic/platform-billing?termId=${termId}&yearId=${yearId}`
-          : '/school/academic/sessions'),
+      id: 'platform-fee',
+      title: 'Platform fee',
+      story: 'Loomis billing',
+      description: 'See enrolled student count and platform fee for this term — billed automatically.',
+      href: '/school/finance/platform-fee',
       icon: Lock,
       gradient: BRONZE.gradients.g2,
       status:
         metrics.termStatus === 'open'
-          ? 'Ready to lock'
+          ? 'Auto on billing date'
           : metrics.termStatus === 'census_locked'
-            ? 'Locked'
-            : 'Open a term first',
+            ? 'Recorded'
+            : metrics.termStatus === 'closed'
+              ? 'Term closed'
+              : 'Open a term first',
     },
     {
       id: 'calendar',
       title: 'Academic calendar',
       story: 'Key dates',
-      description: 'Enrollment windows, exams, and census dates for the current term.',
+      description: 'Enrollment windows, exams, and billing dates for the current term.',
       href: '/school/academic/calendar',
       icon: CalendarDays,
       gradient: BRONZE.gradients.g3,

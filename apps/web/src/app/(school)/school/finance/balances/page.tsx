@@ -2,14 +2,14 @@
 
 import { useOutstandingBalances } from '@loomis/api-client';
 import { Alert, AlertDescription } from '@loomis/ui-web';
+import Link from 'next/link';
 
 import { FinanceBalancesHero } from '@/components/finance/finance-balances-hero';
 import { OutstandingBalancesPanel } from '@/components/finance/outstanding-balances-panel';
-import { PsfObligationsSection } from '@/components/finance/psf-obligations-section';
 import { PageBody } from '@/components/school/school-shell';
 import { useSchoolAcademic } from '@/lib/academic/school-academic-context';
+import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { useCan } from '@/lib/auth/use-capability';
-import { useTenantExperience } from '@/lib/tenant/use-tenant-experience';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 
 const pageClass = 'max-w-[1400px] px-4 py-5 sm:px-6 lg:px-12 lg:py-8';
@@ -17,8 +17,7 @@ const pageClass = 'max-w-[1400px] px-4 py-5 sm:px-6 lg:px-12 lg:py-8';
 export default function OutstandingBalancesPage() {
   const tenantId = useTenantId();
   const canView = useCan('finance.balances.view');
-  const canViewPsf = useCan('ledger.view');
-  const { isCore } = useTenantExperience();
+  const canViewPlatformFee = useCan('census.lock');
   const { termId, activeYear, activeTerm } = useSchoolAcademic();
 
   const balancesQuery = useOutstandingBalances(tenantId ?? '', termId ?? '', {});
@@ -61,12 +60,26 @@ export default function OutstandingBalancesPage() {
         ) : (
           <Alert>
             <AlertDescription>
-              No billing term selected. Use the session bar to choose a term.
+              No term selected. Use the session bar at the top to choose a term.
             </AlertDescription>
           </Alert>
         )}
 
-        {isCore && canViewPsf ? <PsfObligationsSection tenantId={tenantId} /> : null}
+        {canViewPlatformFee ? (
+          <div className={ACADEMIC_UI.dataPanel + ' flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6'}>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-neutral-400">
+                Loomis platform fee
+              </p>
+              <p className="text-sm text-neutral-600">
+                Separate from school fees — recorded automatically each term.
+              </p>
+            </div>
+            <Link href="/school/finance/platform-fee" className={ACADEMIC_UI.btnSecondary}>
+              View platform fee
+            </Link>
+          </div>
+        ) : null}
       </div>
     </PageBody>
   );

@@ -45,10 +45,16 @@ describe('school nav Sprint 3', () => {
     expect(resolveSchoolNav('principal', advancedWithFlags).some((i) => i.id === 'workflows')).toBe(true);
   });
 
-  it('shows PSF top-level nav on Advanced for owner', () => {
+  it('shows Platform fee for owner on Core', () => {
     expect(
-      resolveSchoolNav('school_owner', advancedWithFlags).some((i) => i.id === 'psf-obligations'),
+      resolveSchoolNav('school_owner', coreCombined).some((i) => i.id === 'finance-platform-fee'),
     ).toBe(true);
+  });
+
+  it('shows Platform fee for owner on Advanced (not legacy PSF nav)', () => {
+    const ownerNav = resolveSchoolNav('school_owner', advancedWithFlags);
+    expect(ownerNav.some((i) => i.id === 'finance-platform-fee')).toBe(true);
+    expect(ownerNav.some((i) => i.id === 'psf-obligations')).toBe(false);
   });
 
   it('shows Admissions nav for principal and admin officer on Core', () => {

@@ -103,7 +103,7 @@ export default function AcademicCalendarPage() {
           <AcademicCalendarView
             events={events}
             termName={selectedTerm?.name}
-            emptyMessage="Set term start/end dates, enrollment window, census lock, and exam dates in Sessions."
+            emptyMessage="Set term dates, enrollment window, platform fee billing date, and exams in Sessions."
           />
         </div>
         <aside className="lg:col-span-4">

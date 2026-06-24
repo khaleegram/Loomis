@@ -43,10 +43,7 @@ const BADGE_TONE: Record<NonNullable<BentoTile['badgeTone']>, string> = {
 };
 
 export function AcademicBentoGrid({ metrics, yearId, termId }: AcademicBentoGridProps) {
-  const censusHref =
-    yearId && termId && metrics.termStatus === 'open'
-      ? `/school/academic/platform-billing?termId=${termId}&yearId=${yearId}`
-      : '/school/academic/sessions';
+  const platformFeeHref = '/school/finance/platform-fee';
 
   const tiles: BentoTile[] = [
     {
@@ -61,20 +58,20 @@ export function AcademicBentoGrid({ metrics, yearId, termId }: AcademicBentoGrid
     },
     {
       id: 'census',
-      title: 'Platform billing',
-      subtitle: 'PSF attestation',
-      href: censusHref,
+      title: 'Platform fee',
+      subtitle: 'Loomis billing',
+      href: platformFeeHref,
       icon: Lock,
       gradient: BRONZE.gradients.g2,
       stat:
         metrics.termStatus === 'census_locked'
-          ? 'Locked'
+          ? 'Recorded'
           : metrics.termStatus === 'open'
-            ? 'Ready now'
+            ? 'Auto on date'
             : 'Needs open term',
       span: 'tall',
-      accent: metrics.termStatus === 'open' ? 'ring-1 ring-gold-200/80' : undefined,
-      badge: metrics.termStatus === 'open' ? 'Action ready' : undefined,
+      accent: undefined,
+      badge: undefined,
       badgeTone: 'gold',
     },
     {
@@ -195,8 +192,7 @@ export function AcademicBentoGrid({ metrics, yearId, termId }: AcademicBentoGrid
                 </p>
                 {tile.span === 'hero' ? (
                   <p className="mt-2 max-w-xs text-[12px] leading-relaxed text-neutral-500">
-                    Configure academic years, open terms, lock census, and close when all operational
-                    gates pass.
+                    Configure academic years, open terms, and close when the term ends.
                   </p>
                 ) : null}
                 <p className="mt-2.5 text-[11px] font-semibold text-brand-700/90">{tile.stat}</p>

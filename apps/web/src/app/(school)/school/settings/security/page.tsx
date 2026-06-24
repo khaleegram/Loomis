@@ -23,7 +23,7 @@ function CoreMfaPolicyNotice() {
             School Owner, Principal, and Finance staff sign in with password plus SMS on a new device.
             Trusted devices skip SMS for 30 days.
           </li>
-          <li>Platform billing snapshots run automatically on the configured date. No MFA required.</li>
+          <li>Platform fee is recorded automatically on the billing date you set for each term.</li>
           <li>
             Refund approvals at or above ₦100,000 require SMS verification; smaller refunds do not.
           </li>

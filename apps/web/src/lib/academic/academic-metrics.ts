@@ -77,10 +77,10 @@ export function buildTermCalendarEvents(term: AcademicTermResponse): CalendarEve
   if (term.censusSnapshotDate) {
     events.push({
       id: `${term.id}-census`,
-      label: 'Billing snapshot',
+      label: 'Platform billing date',
       date: term.censusSnapshotDate,
       category: 'census',
-      description: 'PSF obligations are created when the billing snapshot is taken.',
+      description: 'Loomis records the platform fee automatically on this date.',
     });
   }
   if (term.examStartDate) {

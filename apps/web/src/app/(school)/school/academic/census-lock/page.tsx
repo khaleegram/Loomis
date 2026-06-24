@@ -11,5 +11,5 @@ export default async function CensusLockRedirectPage({ searchParams }: PageProps
     if (typeof value === 'string') query.set(key, value);
   }
   const suffix = query.toString() ? `?${query.toString()}` : '';
-  redirect(`/school/academic/platform-billing${suffix}`);
+  redirect(`/school/finance/platform-fee${suffix}`);
 }

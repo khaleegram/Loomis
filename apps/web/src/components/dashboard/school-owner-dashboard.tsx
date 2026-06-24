@@ -74,11 +74,11 @@ export function SchoolOwnerDashboard({ tenantId, displayName }: SchoolOwnerDashb
     {
       href: census.href,
       icon: Lock,
-      label: census.label === 'Billing snapshot due' ? 'Platform billing' : 'Academic sessions',
+      label: census.label === 'Platform fee pending' ? 'Platform fee' : 'Academic sessions',
       description:
-        census.label === 'Billing snapshot due'
-          ? 'Review billable enrollment and snapshot status.'
-          : 'Review term status and billing history.',
+        census.label === 'Platform fee pending'
+          ? 'Platform fee records automatically on the billing date.'
+          : 'Review term status and school fee balances.',
     },
     {
       href: '/school/settings/audit',
@@ -100,9 +100,9 @@ export function SchoolOwnerDashboard({ tenantId, displayName }: SchoolOwnerDashb
             {firstName ? `${greeting()}, ${firstName}` : 'Financial command'}
           </h1>
           <p className={ACADEMIC_UI.pageDesc}>
-            PSF obligations, census lock, and owner approvals for{' '}
-            <span className="font-semibold text-foreground">{termLabel}</span>. Financial integrity
-            starts at census — not at parent payment.
+            Platform fee and school balances for{' '}
+            <span className="font-semibold text-foreground">{termLabel}</span>. Loomis bills your
+            school automatically each term — separate from parent school fees.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <span
@@ -210,18 +210,16 @@ export function SchoolOwnerDashboard({ tenantId, displayName }: SchoolOwnerDashb
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-brand-100/40 px-4 py-3 sm:px-6">
           <p className="flex items-center gap-2 text-[13px] text-neutral-500">
             <ClipboardCheck aria-hidden className="size-4 shrink-0 text-neutral-400" />
-            {census.label === 'Billing snapshot due'
-              ? 'Lock census to create PSF obligations for this term.'
-              : 'Obligations are immutable after census lock.'}
+            {census.label === 'Platform fee pending'
+              ? 'Platform fee records automatically on the billing date.'
+              : 'Platform fee is recorded separately from school fee balances.'}
           </p>
           <div className="flex flex-wrap gap-2">
-            {census.label === 'Billing snapshot due' ? (
-              <Link href={census.href} className={ACADEMIC_UI.btnPrimary}>
-                Start census lock
-              </Link>
-            ) : null}
+            <Link href="/school/finance/platform-fee" className={ACADEMIC_UI.btnSecondary}>
+              Platform fee
+            </Link>
             <Link href="/school/finance/balances" className={ACADEMIC_UI.btnSecondary}>
-              Open balances & PSF
+              School balances
             </Link>
           </div>
         </div>

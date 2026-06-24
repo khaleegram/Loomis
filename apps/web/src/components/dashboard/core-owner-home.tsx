@@ -65,7 +65,7 @@ export function CoreOwnerHome({ tenantId, displayName }: CoreOwnerHomeProps) {
             {firstName ? `${greeting()}, ${firstName}` : 'Financial oversight'}
           </h1>
           <p className={ACADEMIC_UI.pageDesc}>
-            Platform billing snapshots, PSF obligations, and owner approvals for{' '}
+            School fee balances, platform fee, and owner approvals for{' '}
             <span className="font-semibold text-foreground">{termLabel}</span>. Approve from here
             — no workflow inbox module in Core.
           </p>
@@ -105,7 +105,7 @@ export function CoreOwnerHome({ tenantId, displayName }: CoreOwnerHomeProps) {
         <AttentionTaskList
           tasks={tasks}
           emptyTitle="School is up to date"
-          emptyDescription="Platform billing, PSF, and owner approvals are clear. Check back when admissions or refunds arrive."
+          emptyDescription="Platform fee, school balances, and owner approvals are clear. Check back when admissions or refunds arrive."
         />
       </section>
 
@@ -130,10 +130,11 @@ export function CoreOwnerHome({ tenantId, displayName }: CoreOwnerHomeProps) {
 
       <section className={ACADEMIC_UI.dataPanel}>
         <div className="border-b border-brand-100/40 px-4 py-4 sm:px-6">
-          <p className={ACADEMIC_UI.sectionLabel}>Platform service fee</p>
-          <h2 className="text-lg font-extrabold tracking-tight text-neutral-900">PSF summary</h2>
+          <p className={ACADEMIC_UI.sectionLabel}>Platform fee</p>
+          <h2 className="text-lg font-extrabold tracking-tight text-neutral-900">What you owe Loomis</h2>
           <p className="mt-1 text-sm text-neutral-500">
-            Obligations are created when the billing snapshot is taken — not when parents pay school fees.
+            Recorded automatically from enrolled students each term — separate from parent school-fee
+            payments.
           </p>
         </div>
         <div className="grid gap-4 p-4 sm:grid-cols-3 sm:p-6">
@@ -164,18 +165,16 @@ export function CoreOwnerHome({ tenantId, displayName }: CoreOwnerHomeProps) {
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-brand-100/40 px-4 py-3 sm:px-6">
           <p className="text-[13px] text-neutral-500">
-            {census.label === 'Billing snapshot due'
-              ? 'Review billable enrollment before the snapshot date.'
-              : 'View full PSF detail on the balances page.'}
+            {census.label === 'Platform fee pending'
+              ? 'Platform fee is calculated automatically on the billing date.'
+              : 'View full detail on the platform fee page.'}
           </p>
           <div className="flex flex-wrap gap-2">
-            {census.label === 'Billing snapshot due' ? (
-              <Link href={census.href} className={ACADEMIC_UI.btnPrimary}>
-                Open platform billing
-              </Link>
-            ) : null}
+            <Link href="/school/finance/platform-fee" className={ACADEMIC_UI.btnPrimary}>
+              Platform fee
+            </Link>
             <Link href="/school/finance/balances" className={ACADEMIC_UI.btnSecondary}>
-              Open balances & PSF
+              School balances
             </Link>
           </div>
         </div>

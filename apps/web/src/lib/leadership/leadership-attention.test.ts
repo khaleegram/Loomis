@@ -91,7 +91,7 @@ describe('leadership attention Sprint 4', () => {
     });
 
     expect(tasks.some((task) => task.href.includes('/school/workflows'))).toBe(false);
-    expect(tasks.some((task) => task.id === 'census')).toBe(true);
+    expect(tasks.some((task) => task.id === 'platform-fee')).toBe(true);
     expect(tasks.some((task) => task.href === '/school/finance/refunds')).toBe(true);
   });
 
