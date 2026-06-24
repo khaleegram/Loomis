@@ -8,6 +8,7 @@ import { requireStepUp } from '../../../middleware/require-step-up.js';
 import { requireTenantMatch } from '../../../middleware/require-tenant-match.js';
 import { psfObligations, ledgerEntries } from '../../../../drizzle/schema/ledger.js';
 import { db } from '../../../shared/db.js';
+import { sendSuccess } from '../../../shared/http.js';
 import { platformRevenueReadService } from '../services/platform-revenue.read-service.js';
 
 export async function ledgerRoutes(app: FastifyInstance): Promise<void> {
@@ -23,7 +24,7 @@ export async function ledgerRoutes(app: FastifyInstance): Promise<void> {
         .where(eq(psfObligations.tenantId, req.params.tenantId))
         .orderBy(desc(psfObligations.createdAt))
         .limit(200);
-      return reply.send({ obligations: rows });
+      return sendSuccess(reply, { obligations: rows });
     },
   );
 
@@ -87,7 +88,7 @@ export async function ledgerRoutes(app: FastifyInstance): Promise<void> {
         .from(ledgerEntries)
         .orderBy(desc(ledgerEntries.createdAt))
         .limit(200);
-      return reply.send({ entries: rows });
+      return sendSuccess(reply, { entries: rows });
     },
   );
 }
