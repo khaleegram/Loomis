@@ -122,12 +122,12 @@ export function TenantProfileEditDialog({
                   </FormLabel>
                   <FormControl>
                     <SmartSearchSelect
+                      variant="field"
                       value={field.value || null}
                       onValueChange={(v) => field.onChange(v ?? '')}
                       options={STATE_OPTIONS}
                       placeholder="Search state…"
-                      searchPlaceholder="Type state name…"
-                      triggerClassName={cn(inputClass, 'h-10 w-full justify-between px-3 font-normal')}
+                      searchPlaceholder="Search states (e.g. Lagos, FCT)…"
                     />
                   </FormControl>
                   <FormMessage />

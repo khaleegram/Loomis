@@ -25,6 +25,8 @@ export interface SmartSearchSelectProps {
   placeholder?: string;
   searchPlaceholder?: string;
   disabled?: boolean;
+  /** Compact toolbar chip (default) or full-width form field */
+  variant?: 'chip' | 'field';
   className?: string;
   triggerClassName?: string;
   contentClassName?: string;
@@ -56,6 +58,7 @@ export function SmartSearchSelect({
   placeholder = 'Select',
   searchPlaceholder = 'Search…',
   disabled = false,
+  variant = 'chip',
   className,
   triggerClassName,
   contentClassName,
@@ -89,20 +92,23 @@ export function SmartSearchSelect({
           type="button"
           disabled={disabled}
           className={cn(
-            'flex max-w-[14rem] items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-neutral-700 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition hover:border-neutral-300 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50',
+            variant === 'field'
+              ? 'flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-lg border border-neutral-200 bg-white px-3 text-[13px] font-normal text-neutral-900 shadow-none transition hover:border-neutral-300 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50'
+              : 'flex max-w-[14rem] items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-neutral-700 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition hover:border-neutral-300 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50',
             triggerClassName,
             className,
           )}
         >
-          <span className="truncate">{displayLabel}</span>
-          <ChevronDown aria-hidden className="size-3.5 shrink-0 text-neutral-400" />
+          <span className={cn('truncate text-left', !selected && 'text-neutral-400')}>{displayLabel}</span>
+          <ChevronDown aria-hidden className="size-4 shrink-0 text-neutral-400" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        align="end"
+        align={variant === 'field' ? 'start' : 'end'}
         sideOffset={8}
         className={cn(
-          'z-[200] w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-neutral-200 bg-white p-0 text-neutral-900 shadow-[0_12px_40px_rgba(15,23,42,0.14),0_2px_8px_rgba(15,23,42,0.06)]',
+          'z-[300] overflow-hidden rounded-xl border border-neutral-200 bg-white p-0 text-neutral-900 shadow-[0_12px_40px_rgba(15,23,42,0.14),0_2px_8px_rgba(15,23,42,0.06)]',
+          variant === 'field' ? 'w-[var(--radix-dropdown-menu-trigger-width)] min-w-[16rem]' : 'w-[min(22rem,calc(100vw-2rem))]',
           contentClassName,
         )}
         onCloseAutoFocus={(event) => event.preventDefault()}
@@ -126,7 +132,7 @@ export function SmartSearchSelect({
           </div>
         </div>
 
-        <div className="max-h-[min(16rem,42vh)] overflow-y-auto p-1.5 [scrollbar-width:thin]">
+        <div className="max-h-[min(20rem,50vh)] overflow-y-auto p-1.5 [scrollbar-width:thin]">
           {allLabel ? (
             <DropdownMenuItem
               onSelect={() => {

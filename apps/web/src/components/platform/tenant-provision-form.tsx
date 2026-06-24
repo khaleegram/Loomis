@@ -35,6 +35,7 @@ import {
 import { uuidv7 } from 'uuidv7';
 
 import { BRONZE } from '@/components/dashboard/dashboard-primitives';
+import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 
 const STEPS = [
   { id: 0, label: 'School Info', hint: 'Identity & contact' },
@@ -73,14 +74,45 @@ const DEFAULT_VALUES: ProvisionFormValues = {
   contactEmail: '',
   contactPhone: '',
   address: '',
-  goLiveDate: new Date().toISOString().split('T')[0]!,
+  goLiveDate: todayLocalIso(),
   tierCode: '',
   referralCode: undefined,
   initialPsfRateMinor: undefined,
 };
 
+function todayLocalIso(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function goLiveDateToIso(date: string): string {
   return new Date(`${date}T00:00:00.000Z`).toISOString();
+}
+
+function mapZodFieldToForm(field: string): keyof ProvisionFormValues | null {
+  if (field === 'goLiveAt') return 'goLiveDate';
+  if (field in DEFAULT_VALUES) return field as keyof ProvisionFormValues;
+  return null;
+}
+
+function applyZodErrors(
+  issues: z.ZodIssue[],
+  setError: (name: keyof ProvisionFormValues, error: { message: string }) => void,
+): string[] {
+  const messages: string[] = [];
+  for (const issue of issues) {
+    const raw = issue.path[0];
+    if (typeof raw !== 'string') continue;
+    const mapped = mapZodFieldToForm(raw);
+    if (mapped) {
+      setError(mapped, { message: issue.message });
+    }
+    messages.push(issue.message);
+  }
+  return messages;
 }
 
 const inputClass =
@@ -128,7 +160,9 @@ export function TenantProvisionForm() {
   const router = useRouter();
   const [step, setStep] = useState<0 | 1 | 2>(0);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [stepHint, setStepHint] = useState<string | null>(null);
   const idempotencyKeyRef = useRef(uuidv7());
+  const draftHydratedRef = useRef(false);
 
   const { data: tiersData, isLoading: tiersLoading, isError: tiersError } = usePlatformTiers();
   const provision = useProvisionTenant();
@@ -138,13 +172,14 @@ export function TenantProvisionForm() {
 
   const form = useForm<ProvisionFormValues>({
     defaultValues: DEFAULT_VALUES,
-    mode: 'onBlur',
+    mode: 'onTouched',
   });
 
   const values = form.watch();
 
   useEffect(() => {
-    if (!savedDraft?.payload) return;
+    if (!savedDraft?.payload || draftHydratedRef.current) return;
+    draftHydratedRef.current = true;
     const payload = savedDraft.payload;
     form.reset({
       name: payload.name ?? '',
@@ -165,23 +200,24 @@ export function TenantProvisionForm() {
   }, [savedDraft, form]);
 
   useEffect(() => {
+    if (!draftHydratedRef.current) return;
     const timer = window.setTimeout(() => {
-      const values = form.getValues();
+      const current = form.getValues();
       void upsertDraft.mutate({
         stepIndex: step,
         payload: {
-          name: values.name,
-          region: values.region,
-          contactEmail: values.contactEmail,
-          contactPhone: values.contactPhone,
-          address: values.address,
-          goLiveAt: values.goLiveDate ? goLiveDateToIso(values.goLiveDate) : undefined,
-          tierCode: values.tierCode,
-          referralCode: values.referralCode,
-          initialPsfRateMinor: values.initialPsfRateMinor,
+          name: current.name,
+          region: current.region,
+          contactEmail: current.contactEmail,
+          contactPhone: current.contactPhone,
+          address: current.address,
+          goLiveAt: current.goLiveDate ? goLiveDateToIso(current.goLiveDate) : undefined,
+          tierCode: current.tierCode,
+          referralCode: current.referralCode,
+          initialPsfRateMinor: current.initialPsfRateMinor,
         },
       });
-    }, 800);
+    }, 1000);
     return () => window.clearTimeout(timer);
   }, [values, step, upsertDraft, form]);
 
@@ -197,6 +233,7 @@ export function TenantProvisionForm() {
 
   async function handleNext() {
     setSubmitError(null);
+    setStepHint(null);
     if (step === 0) {
       const ok = await form.trigger([
         'name',
@@ -206,7 +243,10 @@ export function TenantProvisionForm() {
         'address',
         'goLiveDate',
       ]);
-      if (!ok) return;
+      if (!ok) {
+        setStepHint('Fix the highlighted fields below — state, phone (+234…), and go-live date are required.');
+        return;
+      }
       const partial = buildApiBody(form.getValues());
       const parsed = provisionTenantRequest
         .pick({
@@ -219,35 +259,30 @@ export function TenantProvisionForm() {
         })
         .safeParse(partial);
       if (!parsed.success) {
-        for (const issue of parsed.error.issues) {
-          const field = issue.path[0];
-          if (typeof field === 'string') {
-            form.setError(field as keyof ProvisionFormValues, { message: issue.message });
-          }
-        }
+        const messages = applyZodErrors(parsed.error.issues, form.setError);
+        setStepHint(messages[0] ?? 'Check the highlighted fields and try again.');
         return;
       }
       setStep(1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
     if (step === 1) {
       if (!form.getValues('tierCode')) {
         form.setError('tierCode', { message: 'Select a service tier' });
+        setStepHint('Choose a commercial tier to continue.');
         return;
       }
       const partial = buildApiBody(form.getValues());
       const parsed = provisionTenantRequest.safeParse(partial);
       if (!parsed.success) {
-        for (const issue of parsed.error.issues) {
-          const field = issue.path[0];
-          if (typeof field === 'string') {
-            form.setError(field as keyof ProvisionFormValues, { message: issue.message });
-          }
-        }
+        const messages = applyZodErrors(parsed.error.issues, form.setError);
+        setStepHint(messages[0] ?? 'Check tier and billing fields.');
         return;
       }
       setStep(2);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }
 
@@ -276,9 +311,12 @@ export function TenantProvisionForm() {
   }
 
   return (
-    <div className="card overflow-hidden rounded-2xl">
+    <div className={`${ACADEMIC_UI.dataPanel} overflow-visible`}>
       {/* Step rail */}
-      <div className="border-b border-neutral-100 bg-neutral-50/80 px-6 py-4 sm:px-8">
+      <div
+        className="border-b border-brand-100/30 px-5 py-4 sm:px-6"
+        style={{ background: 'linear-gradient(135deg, rgba(201,169,110,0.12) 0%, rgba(255,255,255,0.95) 100%)' }}
+      >
         <div className="flex items-center gap-0">
           {STEPS.map((s, i) => {
             const done = i < step;
@@ -322,8 +360,14 @@ export function TenantProvisionForm() {
         </div>
       </div>
 
-      <div className="p-5 sm:p-6">
+      <div className="overflow-visible p-5 sm:p-6">
         <StepHeader step={step} />
+
+        {stepHint ? (
+          <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <p className="text-[13px] font-semibold text-amber-900">{stepHint}</p>
+          </div>
+        ) : null}
 
         {tiersError ? (
           <div className="mb-5 rounded-xl border border-red-100 bg-red-50 p-4">
@@ -349,13 +393,13 @@ export function TenantProvisionForm() {
             }}
           >
             {step === 0 ? (
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="name"
                   rules={{ required: 'School name is required', minLength: { value: 2, message: 'Min 2 characters' } }}
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="lg:col-span-2">
                       <FieldLabel required>School name</FieldLabel>
                       <FormControl>
                         <div className="relative">
@@ -380,27 +424,23 @@ export function TenantProvisionForm() {
                   name="region"
                   rules={{ required: 'Select a state or region' }}
                   render={({ field }) => (
-                    <FormItem>
-                      <FieldLabel required>State / Region</FieldLabel>
+                    <FormItem className="lg:col-span-2">
+                      <FieldLabel required>State / region</FieldLabel>
                       <FormControl>
                         <SmartSearchSelect
+                          variant="field"
                           value={field.value || null}
                           onValueChange={(v) => {
                             field.onChange(v ?? '');
-                            const currentAddress = form.getValues('address');
-                            if (!currentAddress && v) {
-                              form.setValue('address', `${v}, Nigeria`, { shouldValidate: false });
-                            }
+                            form.clearErrors('region');
                           }}
                           options={STATE_OPTIONS}
-                          placeholder="Search Nigerian state…"
-                          searchPlaceholder="Type state name…"
-                          triggerClassName={cn(inputClass, 'h-10 w-full justify-between px-3 font-normal')}
-                          contentClassName="z-[200]"
+                          placeholder="Select state…"
+                          searchPlaceholder="Search states (e.g. Lagos, FCT, Abuja)…"
                         />
                       </FormControl>
                       <FormDescription className="text-[11px] text-neutral-400">
-                        Used for regional reporting and PSF attribution.
+                        Search all 37 states — used for regional reporting and PSF attribution.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -486,8 +526,7 @@ export function TenantProvisionForm() {
                     required: 'Go-live date is required',
                     validate: (value) => {
                       if (!value) return 'Go-live date is required';
-                      const today = new Date().toISOString().split('T')[0]!;
-                      return value >= today || 'Go-live date cannot be in the past';
+                      return value >= todayLocalIso() || 'Go-live date cannot be in the past';
                     },
                   }}
                   render={({ field }) => (
@@ -502,7 +541,7 @@ export function TenantProvisionForm() {
                           <Input
                             {...field}
                             type="date"
-                            min={new Date().toISOString().split('T')[0]}
+                            min={todayLocalIso()}
                             className={cn(inputClass, 'pl-9')}
                           />
                         </div>
@@ -520,7 +559,7 @@ export function TenantProvisionForm() {
                   name="address"
                   rules={{ required: 'Address is required', minLength: { value: 2, message: 'Min 2 characters' } }}
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="lg:col-span-2">
                       <FieldLabel required>Physical address</FieldLabel>
                       <FormControl>
                         <div className="relative">
@@ -807,7 +846,7 @@ export function TenantProvisionForm() {
               {step < 2 ? (
                 <button
                   type="submit"
-                  className="flex items-center gap-1.5 rounded-lg bg-black px-4 py-2 text-[12px] font-semibold text-white hover:bg-neutral-800 active:bg-neutral-900 transition"
+                  className={ACADEMIC_UI.btnPrimary}
                 >
                   Continue
                   <ChevronRight aria-hidden className="size-3.5" />
@@ -816,7 +855,7 @@ export function TenantProvisionForm() {
                 <button
                   type="submit"
                   disabled={provision.isPending}
-                  className="flex items-center gap-1.5 rounded-lg bg-black px-4 py-2 text-[12px] font-semibold text-white hover:bg-neutral-800 active:bg-neutral-900 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                  className={cn(ACADEMIC_UI.btnPrimary, 'disabled:cursor-not-allowed disabled:opacity-50')}
                 >
                   {provision.isPending ? 'Provisioning…' : 'Provision school'}
                 </button>
