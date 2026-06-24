@@ -1,5 +1,7 @@
 import type { CreatePsfAdjustmentRequest, PsfAdjustmentRequestResponse } from '@loomis/contracts';
+import { uuidv7 } from 'uuidv7';
 import { LoomisError } from '../../../shared/errors.js';
+import { writeAudit } from '../../../shared/audit.js';
 import { withTenantContext } from '../../../shared/tenant-context.js';
 import { academicRepository } from '../../academic/repository/academic.repository.js';
 import { attestationRepository } from '../../student/repository/attestation.repository.js';
@@ -76,6 +78,23 @@ export const adjustmentService = {
       deltaType: input.deltaType,
       studentIds: input.studentIds,
     });
+
+    await writeAudit({
+      tenantId,
+      actorUserId: actor.userId,
+      action: 'billing.adjustment.requested',
+      resourceType: 'psf_adjustment_request',
+      resourceId: row.id,
+      sensitivity: 'financial',
+      result: 'success',
+      requestId: uuidv7(),
+      metadata: {
+        termId,
+        deltaType: input.deltaType,
+        studentCount: input.studentIds.length,
+      },
+    });
+
     return toResponse(row);
   },
 
@@ -140,6 +159,23 @@ export const adjustmentService = {
     if (!updated) {
       throw new LoomisError('LEDGER_ADJUSTMENT_ALREADY_REVIEWED', 409, 'Request already reviewed');
     }
+
+    await writeAudit({
+      tenantId: request.tenantId,
+      actorUserId: actor.userId,
+      action: 'billing.adjustment.approved',
+      resourceType: 'psf_adjustment_request',
+      resourceId: requestId,
+      sensitivity: 'financial',
+      result: 'success',
+      requestId: uuidv7(),
+      metadata: {
+        termId: request.termId,
+        deltaType: request.deltaType,
+        studentCount: request.studentIds.length,
+      },
+    });
+
     return toResponse(updated);
   },
 
@@ -166,6 +202,19 @@ export const adjustmentService = {
     if (!updated) {
       throw new LoomisError('LEDGER_ADJUSTMENT_ALREADY_REVIEWED', 409, 'Request already reviewed');
     }
+
+    await writeAudit({
+      tenantId: request.tenantId,
+      actorUserId: actor.userId,
+      action: 'billing.adjustment.rejected',
+      resourceType: 'psf_adjustment_request',
+      resourceId: requestId,
+      sensitivity: 'financial',
+      result: 'success',
+      requestId: uuidv7(),
+      metadata: { termId: request.termId, rejectionReason },
+    });
+
     return toResponse(updated);
   },
 };

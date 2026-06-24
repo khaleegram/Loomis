@@ -88,8 +88,8 @@ export default function AcademicSessionsPage() {
             Session lifecycle
           </h1>
           <p className={ACADEMIC_UI.pageDesc}>
-            Shape the academic calendar — configure dates, open operations, and advance through census
-            and closure.
+            Shape the academic calendar — configure dates, open operations, billing snapshots, and
+            closure.
           </p>
         </div>
         {canManageYear ? (
@@ -238,7 +238,7 @@ export default function AcademicSessionsPage() {
                       href={`/school/academic/platform-billing?termId=${activeTerm.id}&yearId=${activeYear.id}`}
                       className={ACADEMIC_UI.btnPrimary}
                     >
-                      Lock enrollment census
+                      Platform billing
                     </Link>
                   ) : null}
                   {activeTerm.status === 'census_locked' && canManageTerm ? (

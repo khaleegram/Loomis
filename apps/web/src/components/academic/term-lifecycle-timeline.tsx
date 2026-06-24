@@ -8,7 +8,7 @@ import { cn } from '@loomis/ui-web';
 const LIFECYCLE_STEPS = [
   { key: 'draft', label: 'Configure', icon: PenLine },
   { key: 'open', label: 'Open', icon: Play },
-  { key: 'census_locked', label: 'Census', icon: Lock },
+  { key: 'census_locked', label: 'Snapshot', icon: Lock },
   { key: 'closed', label: 'Closed', icon: Check },
 ] as const;
 

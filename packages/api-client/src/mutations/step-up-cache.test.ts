@@ -13,8 +13,8 @@ afterEach(() => {
 describe('step-up cache', () => {
   it('returns a cached token before expiry', () => {
     const expiresAt = new Date(Date.now() + 5 * 60_000).toISOString();
-    setCachedStepUpToken('census_lock', 'mfa-token-1', expiresAt);
-    expect(getCachedStepUpToken('census_lock')).toBe('mfa-token-1');
+    setCachedStepUpToken('refund_approve', 'mfa-token-1', expiresAt);
+    expect(getCachedStepUpToken('refund_approve')).toBe('mfa-token-1');
   });
 
   it('expires cached tokens after the server window', () => {

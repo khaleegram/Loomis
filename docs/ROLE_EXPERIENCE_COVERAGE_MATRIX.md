@@ -69,7 +69,7 @@ Dashboard resolver: `apps/web/src/lib/auth/school-dashboard-resolver.test.ts`
 
 | Capability | Roles | UI hook / API | Status |
 |------------|-------|---------------|--------|
-| `census.lock` | Owner, Principal | `/school/academic/census-lock`; `requireCapability` on preview | ✅ |
+| `census.lock` | Owner, Principal | `/school/academic/platform-billing`; `requireCapability` on preview | ✅ |
 | `student.promote.confirm` | Owner, Principal | `useCanConfirmPromotions()` on promotions page | ✅ |
 | `audit.export` | Owner | `useCanExportAudit()`; `requireCapability` on export route | ✅ |
 | `staff.role.request` | Principal | Staff detail request UI; `can()` in staff.service | ✅ |
@@ -90,7 +90,7 @@ Valid `role ===` exceptions (not permission gates): home routing, nav labels, de
 | Fee structure amendment | Accountant: `/school/finance`; Principal: **inbox only** (Advanced) | Acct → Principal → Owner | Core inline only when inbox disabled | ✅ |
 | Staff role change | Principal: staff request; Owner: inbox + finalize | Principal → Owner | No direct PUT for Principal | ✅ |
 | Promotion confirm | `/school/academic/promotions` | Admin stages; Owner/Principal confirm | `student.promote.confirm` cap | ✅ |
-| Census lock | `/school/academic/census-lock` | Owner, Principal | No duplicate under sessions | ✅ |
+| Platform billing | `/school/academic/platform-billing` | Owner (early snapshot + adjustments), Principal (preview) | Redirects from legacy census-lock URLs | ✅ |
 | Admission decision | `/school/students/admissions` + optional workflow | Principal (+ Owner) | Dashboard count + link only | ✅ |
 | Student transfer out | Student profile + inbox | Admin → Principal | Pending approval → inbox link on submit | ✅ |
 | Held-back override | Workflow inbox (Advanced) / inline confirm (Core) | Owner (Advanced) | Promotions banner + confirm dialog | ✅ |
@@ -104,7 +104,7 @@ Deep links: `core-inline-workflow-decision.tsx` → fee amendment href `/school/
 
 | Story | Actor | Route / surface | Status | Notes |
 |-------|-------|-----------------|--------|-------|
-| US-ASM-003 | Owner, Principal | Census lock | ✅ | Principal enabled all tiers |
+| US-ASM-003 | Owner (snapshot/adjust), Principal (preview) | Platform billing | ✅ | Auto-snapshot on date; no MFA |
 | US-ASM-005 | Admin (stage), Owner/Principal (confirm) | Promotions | ✅ | `student.promote.confirm` |
 | US-HRM-004 | Principal (request), Owner (finalize) | Staff + workflows | ✅ | Capability-first API |
 | US-FIN-001 | Accountant, Principal, Owner | Finance + workflows | ✅ | Advanced: Principal inbox-only |

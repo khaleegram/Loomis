@@ -1,4 +1,5 @@
 import { LoomisError } from '../../../shared/errors.js';
+import { writeAudit } from '../../../shared/audit.js';
 import { withTenantContext } from '../../../shared/tenant-context.js';
 import { deliveryService } from '../../comms/services/delivery.service.js';
 import { transactionalEmailService } from '../../comms/services/transactional-email.service.js';
@@ -18,6 +19,7 @@ import { academicRepository } from '../repository/academic.repository.js';
 import { outboxRepository } from '../repository/outbox.repository.js';
 import type { ActorContext } from '../types.js';
 import { requireTenant, requireTerm } from './_shared.js';
+import { uuidv7 } from 'uuidv7';
 
 const MTC_CONFIG_KEY = 'minimum_term_commitment';
 const ADJUSTMENT_WINDOW_DAYS = 7;
@@ -118,6 +120,29 @@ async function notifyOwnersMtcWarning(
       snapshotDate,
     });
   }
+}
+
+async function auditBillingSnapshot(
+  tenantId: string,
+  termId: string,
+  trigger: SnapshotTrigger,
+  actorId: string | undefined,
+  systemBillableCount: number,
+): Promise<void> {
+  const action =
+    trigger === 'manual_early' ? 'billing.snapshot.manual_early' : 'billing.snapshot.scheduled';
+  await writeAudit({
+    tenantId,
+    actorUserId: actorId ?? null,
+    actorType: trigger === 'scheduled' ? 'job' : 'user',
+    action,
+    resourceType: 'academic_term',
+    resourceId: termId,
+    sensitivity: 'financial',
+    result: 'success',
+    requestId: uuidv7(),
+    metadata: { systemBillableCount, trigger },
+  });
 }
 
 export const censusService = {
@@ -320,6 +345,14 @@ export const censusService = {
       term.name,
       snapshotted.systemBillableCount,
       snapshotted.adjustmentWindowEndsAt,
+    );
+
+    await auditBillingSnapshot(
+      tenantId,
+      termId,
+      options.trigger,
+      options.actorId,
+      snapshotted.systemBillableCount,
     );
 
     return {

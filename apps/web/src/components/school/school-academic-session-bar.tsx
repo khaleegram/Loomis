@@ -14,7 +14,7 @@ function termStatusLabel(status: string): string {
     case 'open':
       return 'Open';
     case 'census_locked':
-      return 'Census locked';
+      return 'Snapshot taken';
     case 'closed':
       return 'Closed';
     default:

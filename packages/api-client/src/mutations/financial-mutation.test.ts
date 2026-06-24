@@ -58,8 +58,8 @@ describe('executeFinancialMutation', () => {
 
     await executeFinancialMutation({
       client,
-      endpoint: '/tenants/t1/census/lock',
-      action: 'census_lock',
+      endpoint: '/tenants/t1/payments/offline',
+      action: 'refund_approve',
       idempotencyKey: 'idem-1',
       ensureStepUpToken,
       body: {},
@@ -67,8 +67,8 @@ describe('executeFinancialMutation', () => {
 
     await executeFinancialMutation({
       client,
-      endpoint: '/tenants/t1/census/lock',
-      action: 'census_lock',
+      endpoint: '/tenants/t1/payments/offline',
+      action: 'refund_approve',
       idempotencyKey: 'idem-2',
       ensureStepUpToken,
       body: {},

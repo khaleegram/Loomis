@@ -50,7 +50,7 @@ Cross-check that `.cursor/rules/` aligns with role experience authority docs.
 
 - `loomis-ui-delivery.mdc` references Sprint 12 Advanced shells — update backlog section when finance mobile ships
 - Automated E2E for full pilot matrix — manual QA matrices remain source of truth until Playwright suite exists
-- **Census lock:** Principal may lock on all tiers (master plan §2.2); tier-plan “Owner only” note superseded — see [`ROLE_EXPERIENCE_COVERAGE_MATRIX.md`](./ROLE_EXPERIENCE_COVERAGE_MATRIX.md)
+- **Platform billing:** Auto-snapshot on configured date; Owner may snapshot early or request corrections during the 7-day window (Platform Ops approves). Principal may preview only — see [`ROLE_EXPERIENCE_COVERAGE_MATRIX.md`](./ROLE_EXPERIENCE_COVERAGE_MATRIX.md)
 
 ---
 

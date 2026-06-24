@@ -70,7 +70,7 @@ describe('useFinancialMutation', () => {
       () =>
         useFinancialMutation({
           endpoint: '/tenants/t1/payments/offline',
-          action: 'census_lock',
+          action: 'refund_approve',
           invalidates: [],
           ensureStepUpToken: vi.fn(),
         }),
