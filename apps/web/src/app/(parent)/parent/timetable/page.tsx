@@ -25,6 +25,7 @@ import { TimetableWeekGrid } from '@/components/academic/ops/timetable-week-grid
 import { TimetableHero } from '@/components/academic/ops/timetable-hero';
 import { PageBody } from '@/components/parent/parent-shell';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
+import { academicErrorMessage } from '@/lib/academic/academic-errors';
 import { useAuth } from '@/lib/auth/auth-context';
 import { useActiveTenantStore } from '@/lib/tenant/active-tenant-store';
 import { parentChildSelectorLabel } from '@/lib/student/parent-child-labels';
@@ -243,10 +244,9 @@ function ParentTimetableView() {
       ) : null}
 
       {timetableQuery.isError ? (
-        <Alert>
+        <Alert variant="destructive">
           <AlertDescription>
-            No timetable available for this term yet. Check back after the school publishes the
-            schedule.
+            {academicErrorMessage(timetableQuery.error)}
           </AlertDescription>
         </Alert>
       ) : (

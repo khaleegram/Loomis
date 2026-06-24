@@ -1,4 +1,5 @@
 import { hasStaffRole } from '@loomis/core';
+import type { Role } from '@loomis/contracts';
 import { LoomisError } from '../../../shared/errors.js';
 import { staffService } from '../../hrm/services/staff.service.js';
 import { studentRepository } from '../../student/repository/student.repository.js';
@@ -103,6 +104,17 @@ async function requireGradebookWriteAccess(params: {
 
 async function requireReadableGradebook(tenantId: string, input: ListGradebookInput, actor: ActorContext) {
   const roles = await actorEffectiveRoles(actor);
+
+  const schoolWideReaders: Role[] = [
+    'school_owner',
+    'principal',
+    'admin_officer',
+    'exam_officer',
+    'deputy_exam_officer',
+  ];
+  if (schoolWideReaders.some((role) => hasStaffRole(roles, role))) {
+    return;
+  }
 
   if (hasStaffRole(roles, 'teacher')) {
     if (!input.subjectId) {

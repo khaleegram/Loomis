@@ -45,6 +45,7 @@ export default function SchoolExamsPage() {
   const searchParams = useSearchParams();
   const canConfigure = useCan('grading_scheme.configure');
   const canPublishExamRole = useCan('result.publish');
+  const canViewGradebook = useCan('gradebook.read');
   const examOpsQuery = useExamOpsStatus(tenantId ?? '');
   const isPrincipal = session?.role === 'principal';
   const canEmergencyPublish =
@@ -114,7 +115,10 @@ export default function SchoolExamsPage() {
   return (
     <PageBody className={EXAMS_PAGE_CLASS}>
       <div className="space-y-5">
-        <ExamsPageHeader pendingCorrections={pendingCorrections} />
+        <ExamsPageHeader
+          pendingCorrections={pendingCorrections}
+          showGradebookLink={canViewGradebook}
+        />
 
         <DeputyExamStatusBanner
           status={examOpsQuery.data}

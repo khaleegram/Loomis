@@ -28,6 +28,7 @@ const termReaders = [
   'admin_officer',
   'timetable_officer',
   'exam_officer',
+  'deputy_exam_officer',
   'teacher',
   'class_teacher',
   'parent',

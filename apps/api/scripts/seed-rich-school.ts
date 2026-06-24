@@ -1175,6 +1175,11 @@ async function ensureJss3BParentDemo(tenantId: string): Promise<{
   });
   await studentRepository.markParentIdentityVerified(parentIdentity.id, 'email_otp');
 
+  const repairedBindings = await studentRepository.repairActiveParentIdentityUserBindings(tenantId);
+  if (repairedBindings > 0) {
+    console.log(`[seed] Repaired ${repairedBindings} parent account binding(s)`);
+  }
+
   const alreadyLinked = await studentRepository.hasActiveParentLink(
     tenantId,
     parentUser.id,

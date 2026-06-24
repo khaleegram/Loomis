@@ -4,6 +4,7 @@ import type {
   ParentLinkResponse,
 } from '@loomis/contracts';
 import { LoomisError } from '../../../shared/errors.js';
+import { userRepository } from '../../identity/repository/index.js';
 import { STUDENT_EVENT_TYPES } from '../events/types.js';
 import { studentOutboxRepository } from '../repository/outbox.repository.js';
 import { studentRepository } from '../repository/student.repository.js';
@@ -66,10 +67,12 @@ export const parentLinkService = {
     }
 
     const emailNormalized = normalizeEmail(input.parentEmail);
+    const existingParentUser = await userRepository.findByEmail(input.parentEmail);
     const parentIdentity = await studentRepository.upsertParentIdentity({
       emailNormalized,
       phoneE164: input.parentPhone,
       fullName: input.parentFullName,
+      userId: existingParentUser?.role === 'parent' ? existingParentUser.id : null,
     });
 
     const otpHash = parentOtpService.hashOtp(otp);
@@ -153,6 +156,17 @@ export const parentLinkService = {
     }
 
     await studentRepository.markParentIdentityVerified(link.parentIdentityId, 'email_otp');
+
+    const identity = await studentRepository.findParentIdentityById(link.parentIdentityId);
+    if (!identity) {
+      throw new LoomisError('STUDENT_PARENT_LINK_NOT_FOUND', 404, 'Parent identity not found');
+    }
+    await studentRepository.upsertParentIdentity({
+      emailNormalized: identity.emailNormalized,
+      phoneE164: identity.phoneE164,
+      fullName: identity.fullName,
+      userId: actor.userId,
+    });
 
     await studentOutboxRepository.publish({
       tenantId: link.tenantId,

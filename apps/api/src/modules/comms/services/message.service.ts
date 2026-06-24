@@ -114,6 +114,16 @@ export const messageService = {
       return { message: resolvedMessage, recipientIds: resolvedRecipientIds };
     });
 
+    if (recipientIds.length === 0) {
+      throw new LoomisError(
+        'COMMS_NO_RECIPIENTS',
+        422,
+        input.audience === 'all'
+          ? 'No linked parent or student accounts found for this school'
+          : 'No linked parent accounts found for this school',
+      );
+    }
+
     await deliverMessageNotifications(recipientIds, (userId) => ({
       tenantId,
       userId,

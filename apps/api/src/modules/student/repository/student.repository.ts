@@ -1,5 +1,6 @@
-import { and, asc, count, eq, inArray } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, sql } from 'drizzle-orm';
 import { classArms, classLevels } from '../../../../drizzle/schema/academic.js';
+import { users } from '../../../../drizzle/schema/identity.js';
 import {
   admissions,
   enrollments,
@@ -784,6 +785,48 @@ export const studentRepository = {
         )
         .returning();
       return row ?? null;
+    });
+  },
+
+  /**
+   * Backfill parent_identities.user_id for active links where the parent already has
+   * a login account (same email). Keeps notifications, timetable, and fee reminders
+   * aligned with the parent portal dashboard.
+   */
+  async repairActiveParentIdentityUserBindings(tenantId: string): Promise<number> {
+    return withTenantContext(tenantId, async (tx) => {
+      const orphans = await tx
+        .select({
+          identityId: parentIdentities.id,
+          emailNormalized: parentIdentities.emailNormalized,
+        })
+        .from(parentLinks)
+        .innerJoin(parentIdentities, eq(parentIdentities.id, parentLinks.parentIdentityId))
+        .where(
+          and(
+            eq(parentLinks.tenantId, tenantId),
+            eq(parentLinks.status, 'active'),
+            sql`${parentIdentities.userId} IS NULL`,
+          ),
+        );
+
+      let repaired = 0;
+      const now = new Date();
+      for (const row of orphans) {
+        const [user] = await tx
+          .select({ id: users.id })
+          .from(users)
+          .where(and(eq(users.email, row.emailNormalized), eq(users.role, 'parent')))
+          .limit(1);
+        if (!user) continue;
+
+        await tx
+          .update(parentIdentities)
+          .set({ userId: user.id, updatedAt: now })
+          .where(eq(parentIdentities.id, row.identityId));
+        repaired += 1;
+      }
+      return repaired;
     });
   },
 };

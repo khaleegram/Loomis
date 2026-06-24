@@ -35,7 +35,10 @@ export function academicErrorMessage(err: unknown): string {
     case 'IDENTITY_MFA_NOT_ENROLLED':
       return 'MFA must be enrolled before this action. Check Settings → Security.';
     case 'FORBIDDEN':
-      return 'You do not have permission to change grades on this sheet.';
+      if (err instanceof LoomisClientError && err.message.length > 0) {
+        return err.message;
+      }
+      return 'You do not have permission to perform this action.';
     case 'VALIDATION_ERROR':
       return validationErrorMessage(err);
     case 'ACADEMIC_GRADING_SCHEME_CONFLICT':
@@ -76,7 +79,7 @@ export function academicErrorMessage(err: unknown): string {
     case 'ACADEMIC_BELL_SCHEDULE_OVERLAP':
       return 'Two slots overlap. Adjust start and end times so they do not clash.';
     case 'STUDENT_ENROLLMENT_NOT_FOUND':
-      return 'No enrollment found for this term.';
+      return 'This child is not enrolled for the selected term. Choose the current term or contact the school.';
     case 'STUDENT_NOT_FOUND':
       return 'Student profile not found for your account.';
     case 'ACADEMIC_HELD_BACK_APPROVAL_PENDING':
@@ -87,6 +90,10 @@ export function academicErrorMessage(err: unknown): string {
       return 'Deputy Exam Officer is not enabled for this school tier.';
     case 'EXAM_DEPUTY_NOT_ACTIVATED':
       return 'Deputy Exam Officer activates only after 72 hours of Exam Officer inactivity.';
+    case 'COMMS_NO_RECIPIENTS':
+      return err instanceof LoomisClientError && err.message.length > 0
+        ? err.message
+        : 'No linked parent accounts found for the selected recipients.';
     case 'WORKFLOW_FORBIDDEN':
       return 'You cannot action this workflow step.';
     case 'WORKFLOW_STEP_NOT_ACTIVE':
