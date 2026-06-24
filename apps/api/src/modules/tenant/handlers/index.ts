@@ -13,6 +13,20 @@ export {
   setGlobalPsfRateHandler,
   applyTenantPsfRateHandler,
 } from './psf-rate.handler.js';
+export {
+  activateTenantHandler,
+  createTierHandler,
+  deletePlatformProvisionDraftHandler,
+  deleteRegionalProvisionDraftHandler,
+  getPlatformProvisionDraftHandler,
+  getRegionalProvisionDraftHandler,
+  getTenantPsfStatusHandler,
+  migrateProductTierHandler,
+  updateTenantContactsHandler,
+  updateTierHandler,
+  upsertPlatformProvisionDraftHandler,
+  upsertRegionalProvisionDraftHandler,
+} from './tenant-admin.handler.js';
 export { getTenantOnboardingHandler } from './onboarding.handler.js';
 export {
   getTenantHandler,

@@ -39,9 +39,31 @@ export interface TenantPsfRateChangedEvent {
   occurredAt: string;
 }
 
+export interface TenantActivatedEvent {
+  eventId: string;
+  tenantId: string;
+  activatedById: string;
+  activatedAt: string;
+  occurredAt: string;
+}
+
+export interface TenantTierMigratedEvent {
+  eventId: string;
+  tenantId: string;
+  previousTierId: string;
+  previousTierCode: string;
+  newTierId: string;
+  newTierCode: string;
+  reason: string;
+  migratedById: string;
+  occurredAt: string;
+}
+
 export const TENANT_EVENT_TYPES = {
   provisioned: 'tenant.provisioned',
   suspended: 'tenant.suspended',
   reinstated: 'tenant.reinstated',
   psfRateChanged: 'tenant.psf_rate.changed',
+  activated: 'tenant.activated',
+  tierMigrated: 'tenant.tier.migrated',
 } as const;

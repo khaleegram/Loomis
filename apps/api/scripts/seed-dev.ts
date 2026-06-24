@@ -272,6 +272,7 @@ async function ensureAdvancedFixtureTenant(platformOwnerId: string): Promise<voi
       contactPhone: '+2348020000201',
       address: '2 Advanced Close, Ikeja, Lagos',
       tierCode: 'advanced',
+      goLiveAt: new Date().toISOString(),
     },
     { userId: platformOwnerId, role: 'platform_owner' },
   );
@@ -412,6 +413,7 @@ async function ensureEnterpriseFixtureTenant(platformOwnerId: string): Promise<v
       contactPhone: '+2348020000301',
       address: '3 Enterprise Crescent, Ikeja, Lagos',
       tierCode: 'enterprise',
+      goLiveAt: new Date().toISOString(),
     },
     { userId: platformOwnerId, role: 'platform_owner' },
   );

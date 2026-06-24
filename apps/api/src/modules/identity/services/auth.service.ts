@@ -155,6 +155,11 @@ export const authService = {
       throw new LoomisError('IDENTITY_ACCOUNT_LOCKED', 423, 'Account is temporarily locked');
     }
 
+    if (user.tenantId) {
+      const { tenantAccessService } = await import('../../tenant/services/tenant-access.service.js');
+      await tenantAccessService.assertSchoolAccessAllowed(user.tenantId);
+    }
+
     await userRepository.recordLoginAttempt({
       email,
       success: true,
@@ -495,6 +500,11 @@ export const authService = {
     ctx: { platform: DevicePlatform; ipAddress?: string; userAgent?: string },
     opts: IssueOptions,
   ): Promise<AuthenticatedBundle> {
+    if (user.tenantId) {
+      const { tenantAccessService } = await import('../../tenant/services/tenant-access.service.js');
+      await tenantAccessService.assertSchoolAccessAllowed(user.tenantId);
+    }
+
     const { session, displacedSessionId } = await sessionService.createSession(user.id, {
       platform: ctx.platform,
       ...(opts.deviceId !== undefined ? { deviceId: opts.deviceId } : {}),

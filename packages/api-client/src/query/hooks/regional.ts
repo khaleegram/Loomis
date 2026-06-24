@@ -127,3 +127,41 @@ export function usePlatformTiersForRegional() {
     staleTime: 5 * 60_000,
   });
 }
+
+export function useRegionalProvisionDraft() {
+  const client = useApiClient();
+  return useQuery({
+    queryKey: queryKeys.regional.provisionDraft(),
+    queryFn: () =>
+      client.get<import('@loomis/contracts').ProvisionDraftResponse | null>(
+        '/regional/provision-drafts/me',
+      ),
+    staleTime: 10_000,
+  });
+}
+
+export function useUpsertRegionalProvisionDraft() {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: import('@loomis/contracts').UpsertProvisionDraftRequest) =>
+      client.put<import('@loomis/contracts').ProvisionDraftResponse>(
+        '/regional/provision-drafts/me',
+        body,
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.regional.provisionDraft() });
+    },
+  });
+}
+
+export function useClearRegionalProvisionDraft() {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => client.delete<{ status: 'cleared' }>('/regional/provision-drafts/me'),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.regional.provisionDraft() });
+    },
+  });
+}

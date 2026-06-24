@@ -1686,6 +1686,7 @@ async function main() {
       contactPhone: '+2348011000005',
       address: '12 Greenfield Avenue, Lekki, Lagos',
       tierCode: TIER_CODE,
+      goLiveAt: new Date().toISOString(),
     },
     { userId: platformOwner.id, role: 'platform_owner' },
   );

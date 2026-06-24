@@ -3,6 +3,7 @@ import {
   CheckSquare2,
   ClipboardList,
   FileText,
+  Layers,
   LayoutDashboard,
   Percent,
   Share2,
@@ -21,6 +22,7 @@ export interface PlatformNavItem {
 export const PLATFORM_NAV: PlatformNavItem[] = [
   { label: 'Dashboard', href: '/platform/dashboard', icon: LayoutDashboard },
   { label: 'Tenants', href: '/platform/tenants', icon: Building2 },
+  { label: 'Product tiers', href: '/platform/tiers', icon: Layers },
   { label: 'Approvals', href: '/platform/approvals', icon: CheckSquare2 },
   { label: 'Billing adjustments', href: '/platform/billing/adjustments', icon: ClipboardList },
   { label: 'Risk Cases', href: '/platform/risk', icon: ShieldAlert },

@@ -4,6 +4,7 @@ import { sessionService } from '../modules/identity/services/session.service.js'
 import { tokenService } from '../modules/identity/services/token.service.js';
 import type { DevicePlatform } from '../modules/identity/types.js';
 import { userRepository } from '../modules/identity/repository/user.repository.js';
+import { tenantAccessService } from '../modules/tenant/services/tenant-access.service.js';
 
 function extractBearer(req: FastifyRequest): string {
   const header = req.headers.authorization;
@@ -28,6 +29,11 @@ export async function authenticate(req: FastifyRequest, _reply: FastifyReply): P
   await sessionService.slideIdle(session.id, platform, session.absExpiresAt);
 
   req.authUser = verified;
+
+  if (verified.tenantId && tenantAccessService.isSchoolTenantRole(verified.role)) {
+    await tenantAccessService.activateIfDue(verified.tenantId);
+    await tenantAccessService.assertSchoolAccessAllowed(verified.tenantId);
+  }
 
   const url = req.url.split('?')[0] ?? req.url;
   if (!url.endsWith('/auth/change-password')) {

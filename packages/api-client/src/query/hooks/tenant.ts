@@ -89,3 +89,18 @@ export function useTenantOnboarding(tenantId: string, options?: QueryLiveOptions
     ...dashboardLiveQueryExtras(options?.live, DASHBOARD_CONTEXT_POLL_MS),
   });
 }
+
+export function useTenantPsfStatus(tenantId: string, options?: QueryLiveOptions) {
+  const client = useApiClient();
+  return useQuery({
+    queryKey: queryKeys.tenant.psfStatus(tenantId),
+    queryFn: () =>
+      client.get<import('@loomis/contracts').TenantPsfStatusResponse>(
+        `/tenants/${tenantId}/psf-status`,
+        { headers: { 'X-Tenant-Id': tenantId } },
+      ),
+    staleTime: 30_000,
+    enabled: Boolean(tenantId),
+    ...dashboardLiveQueryExtras(options?.live, DASHBOARD_CONTEXT_POLL_MS),
+  });
+}

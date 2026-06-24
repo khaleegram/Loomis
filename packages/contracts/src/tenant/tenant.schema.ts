@@ -33,14 +33,66 @@ export const tierSummary = z.object({
   description: z.string().nullable(),
   defaultPsfRateMinor: z.number().int(),
   maxStudents: z.number().int().nullable(),
+  isSystem: z.boolean(),
   createdAt: z.string().datetime(),
 });
 export type TierSummary = z.infer<typeof tierSummary>;
+
+export const createTierRequest = z.object({
+  code: z
+    .string()
+    .min(2)
+    .max(50)
+    .regex(/^[a-z][a-z0-9_]*$/, 'Use lowercase letters, numbers, and underscores'),
+  name: z.string().min(2).max(100),
+  description: z.string().max(500).optional(),
+  defaultPsfRateMinor: psfRateMinor,
+  maxStudents: z.number().int().positive().nullable().optional(),
+});
+export type CreateTierRequest = z.infer<typeof createTierRequest>;
+
+export const updateTierRequest = z
+  .object({
+    name: z.string().min(2).max(100).optional(),
+    description: z.string().max(500).nullable().optional(),
+    defaultPsfRateMinor: psfRateMinor.optional(),
+    maxStudents: z.number().int().positive().nullable().optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, {
+    message: 'At least one field must be provided',
+  });
+export type UpdateTierRequest = z.infer<typeof updateTierRequest>;
 
 /** Nigerian mobile in E.164 (+234XXXXXXXXXX). */
 export const nigerianMobilePhone = z
   .string()
   .regex(/^\+234[789]\d{9}$/, 'Enter a valid Nigerian mobile number (e.g. +2348012345678)');
+
+export const tenantContactRole = z.enum(['primary', 'billing', 'operations', 'proprietor']);
+export type TenantContactRole = z.infer<typeof tenantContactRole>;
+
+export const tenantContactInput = z.object({
+  role: tenantContactRole,
+  fullName: z.string().min(1).max(200).optional(),
+  email: z.string().email(),
+  phone: nigerianMobilePhone.optional(),
+  isPrimary: z.boolean().optional(),
+});
+export type TenantContactInput = z.infer<typeof tenantContactInput>;
+
+export const tenantContact = tenantContactInput.extend({
+  id: z.string().uuid(),
+});
+export type TenantContact = z.infer<typeof tenantContact>;
+
+export const updateTenantContactsRequest = z
+  .object({
+    contacts: z.array(tenantContactInput).min(1).max(10),
+  })
+  .refine((value) => value.contacts.filter((c) => c.isPrimary === true || c.role === 'primary').length === 1, {
+    message: 'Exactly one primary contact is required',
+  });
+export type UpdateTenantContactsRequest = z.infer<typeof updateTenantContactsRequest>;
 
 // ── Tenant provisioning (US-PLT-001 / FR-PLT-001) ──────────────────────────────
 
@@ -51,6 +103,9 @@ export const provisionTenantRequest = z.object({
   contactPhone: nigerianMobilePhone,
   address: z.string().min(2).max(500),
   tierCode: z.string().min(1).max(50),
+  /** When the school may begin logging in (start of day UTC). */
+  goLiveAt: z.string().datetime(),
+  contacts: z.array(tenantContactInput).min(1).max(10).optional(),
   /** Referral code used at onboarding — permanently linked (CON-009). */
   referralCode: z.string().min(1).max(64).optional(),
   /** Optional pre-approved override; otherwise the tier/global default applies. */
@@ -58,12 +113,64 @@ export const provisionTenantRequest = z.object({
 });
 export type ProvisionTenantRequest = z.infer<typeof provisionTenantRequest>;
 
+export const migrateProductTierRequest = z.object({
+  tierCode: z.string().min(1).max(50),
+  reason: z.string().min(3).max(500),
+});
+export type MigrateProductTierRequest = z.infer<typeof migrateProductTierRequest>;
+
+export const activateTenantResponse = z.object({
+  status: z.literal('active'),
+  activatedAt: z.string().datetime(),
+});
+export type ActivateTenantResponse = z.infer<typeof activateTenantResponse>;
+
+export const provisionDraftPayload = z.object({
+  name: z.string().optional(),
+  region: z.string().optional(),
+  contactEmail: z.string().email().optional(),
+  contactPhone: z.string().optional(),
+  address: z.string().optional(),
+  tierCode: z.string().optional(),
+  goLiveAt: z.string().datetime().optional(),
+  referralCode: z.string().optional(),
+  initialPsfRateMinor: z.number().int().optional(),
+  contacts: z.array(tenantContactInput).optional(),
+});
+export type ProvisionDraftPayload = z.infer<typeof provisionDraftPayload>;
+
+export const upsertProvisionDraftRequest = z.object({
+  stepIndex: z.number().int().min(0).max(10),
+  payload: provisionDraftPayload,
+});
+export type UpsertProvisionDraftRequest = z.infer<typeof upsertProvisionDraftRequest>;
+
+export const provisionDraftResponse = z.object({
+  id: z.string().uuid(),
+  source: z.enum(['platform', 'regional']),
+  stepIndex: z.number().int(),
+  payload: provisionDraftPayload,
+  updatedAt: z.string().datetime(),
+});
+export type ProvisionDraftResponse = z.infer<typeof provisionDraftResponse>;
+
+export const tenantPsfStatusResponse = z.object({
+  currentRateMinor: z.number().int().nullable(),
+  suggestedRateMinor: z.number().int().nullable(),
+  suggestionPending: z.boolean(),
+  obligationsTotal: z.number().int(),
+  obligationsOutstandingMinor: z.number().int(),
+  termLabel: z.string().nullable(),
+});
+export type TenantPsfStatusResponse = z.infer<typeof tenantPsfStatusResponse>;
+
 export const updateTenantProfileRequest = z
   .object({
     contactEmail: z.string().email().optional(),
     contactPhone: nigerianMobilePhone.optional(),
     address: z.string().min(2).max(500).optional(),
     region: z.string().min(2).max(100).optional(),
+    goLiveAt: z.string().datetime().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: 'At least one field must be provided',
@@ -147,6 +254,9 @@ export const tenantResponse = z.object({
   experienceFlags: tenantExperienceFlags,
   ownerSetup: tenantOwnerSetupStatus,
   onboarding: tenantOnboardingStatus.nullable(),
+  contacts: z.array(tenantContact),
+  goLiveAt: z.string().datetime(),
+  activatedAt: z.string().datetime().nullable(),
   suspendedReason: z.string().nullable(),
   suspendedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),

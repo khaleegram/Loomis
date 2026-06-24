@@ -1,8 +1,10 @@
 import { sql } from 'drizzle-orm';
 import {
   bigint,
+  boolean,
   check,
   index,
+  integer,
   jsonb,
   pgSchema,
   text,
@@ -31,6 +33,8 @@ export const tiers = tenantSchema.table(
     description: text('description'),
     defaultPsfRateMinor: bigint('default_psf_rate_minor', { mode: 'number' }).notNull(),
     maxStudents: bigint('max_students', { mode: 'number' }),
+    /** When true, tier-catalog bootstrap may update this row from PRODUCT_TIER_SPECS. */
+    isSystem: boolean('is_system').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -82,6 +86,10 @@ export const tenants = tenantSchema.table(
       .$type<Record<string, boolean>>()
       .notNull()
       .default({}),
+    /** Scheduled date when school actors may log in (gated go-live). */
+    goLiveAt: timestamp('go_live_at', { withTimezone: true }).notNull(),
+    /** When status flipped to active. */
+    activatedAt: timestamp('activated_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -95,6 +103,56 @@ export const tenants = tenantSchema.table(
     financeModeValid: check(
       'tenants_finance_mode_valid',
       sql`${table.financeMode} IN ('combined', 'split')`,
+    ),
+  }),
+);
+
+export const tenantContacts = tenantSchema.table(
+  'tenant_contacts',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    role: varchar('role', { length: 20 }).notNull(),
+    fullName: varchar('full_name', { length: 200 }),
+    email: varchar('email', { length: 255 }).notNull(),
+    phone: varchar('phone', { length: 20 }),
+    isPrimary: boolean('is_primary').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    tenantIdx: index('tenant_contacts_tenant_id_idx').on(table.tenantId),
+    roleValid: check(
+      'tenant_contacts_role_valid',
+      sql`${table.role} IN ('primary', 'billing', 'operations', 'proprietor')`,
+    ),
+  }),
+);
+
+export const provisionDrafts = tenantSchema.table(
+  'provision_drafts',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    createdById: uuid('created_by_id').notNull(),
+    source: varchar('source', { length: 20 }).notNull(),
+    payload: jsonb('payload').$type<Record<string, unknown>>().notNull(),
+    stepIndex: integer('step_index').notNull().default(0),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    actorSourceUnique: uniqueIndex('provision_drafts_actor_source_unique').on(
+      table.createdById,
+      table.source,
+    ),
+    sourceValid: check(
+      'provision_drafts_source_valid',
+      sql`${table.source} IN ('platform', 'regional')`,
     ),
   }),
 );

@@ -9,6 +9,9 @@ import {
   useMyReferralCode,
   usePlatformTiersForRegional,
   useRegionalProvisionTenant,
+  useRegionalProvisionDraft,
+  useUpsertRegionalProvisionDraft,
+  useClearRegionalProvisionDraft,
 } from '@loomis/api-client';
 import {
   Alert,
@@ -61,6 +64,14 @@ const NIGERIAN_STATES = [
 
 type ProvisionForm = z.infer<typeof provisionTenantRequest>;
 
+function goLiveDateToIso(date: string): string {
+  return new Date(`${date}T00:00:00.000Z`).toISOString();
+}
+
+function isoToGoLiveDate(iso: string): string {
+  return iso.slice(0, 10);
+}
+
 export default function RegionalOnboardingPage() {
   const { draft, setField, setStep, reset: resetDraft } = useOnboardingStore();
   const [success, setSuccess] = useState<{ tenantId: string; name: string } | null>(null);
@@ -70,6 +81,11 @@ export default function RegionalOnboardingPage() {
   const { data: codeSummary } = useMyReferralCode();
   const { data: tiersData, isLoading: tiersLoading } = usePlatformTiersForRegional();
   const provision = useRegionalProvisionTenant();
+  const { data: serverDraft } = useRegionalProvisionDraft();
+  const upsertDraft = useUpsertRegionalProvisionDraft();
+  const clearDraft = useClearRegionalProvisionDraft();
+
+  const defaultGoLive = goLiveDateToIso(new Date().toISOString().split('T')[0]!);
 
   const form = useForm<ProvisionForm>({
     resolver: zodResolver(provisionTenantRequest),
@@ -79,10 +95,50 @@ export default function RegionalOnboardingPage() {
       contactEmail: draft.contactEmail,
       contactPhone: draft.contactPhone,
       address: draft.address,
+      goLiveAt: defaultGoLive,
       tierCode: draft.tierCode,
       referralCode: '',
     },
   });
+
+  useEffect(() => {
+    if (!serverDraft?.payload) return;
+    const payload = serverDraft.payload;
+    form.reset({
+      name: payload.name ?? draft.name,
+      region: payload.region ?? draft.region,
+      contactEmail: payload.contactEmail ?? draft.contactEmail,
+      contactPhone: payload.contactPhone ?? draft.contactPhone,
+      address: payload.address ?? draft.address,
+      goLiveAt: payload.goLiveAt ?? defaultGoLive,
+      tierCode: payload.tierCode ?? draft.tierCode,
+      referralCode: '',
+    });
+    if (serverDraft.stepIndex <= 4) {
+      setStep(serverDraft.stepIndex as 0 | 1 | 2 | 3 | 4);
+    }
+  }, [serverDraft, draft, form, defaultGoLive, setStep]);
+
+  const watchedValues = form.watch();
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const values = form.getValues();
+      void upsertDraft.mutate({
+        stepIndex: draft.step,
+        payload: {
+          name: values.name,
+          region: values.region,
+          contactEmail: values.contactEmail,
+          contactPhone: values.contactPhone,
+          address: values.address,
+          goLiveAt: values.goLiveAt,
+          tierCode: values.tierCode,
+        },
+      });
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }, [draft.step, watchedValues, upsertDraft, form]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -105,7 +161,7 @@ export default function RegionalOnboardingPage() {
         setField('region', form.getValues('region'));
       }
     } else if (step === 1) {
-      valid = await form.trigger(['contactEmail', 'contactPhone', 'address']);
+      valid = await form.trigger(['contactEmail', 'contactPhone', 'address', 'goLiveAt']);
       if (valid) {
         setField('contactEmail', form.getValues('contactEmail'));
         setField('contactPhone', form.getValues('contactPhone'));
@@ -131,11 +187,13 @@ export default function RegionalOnboardingPage() {
           contactEmail: values.contactEmail,
           contactPhone: values.contactPhone,
           address: values.address,
+          goLiveAt: values.goLiveAt,
           tierCode: values.tierCode,
           referralCode: values.referralCode || undefined,
         },
         idempotencyKey: idempotencyKeyRef.current,
       });
+      await clearDraft.mutateAsync();
       setSuccess({ tenantId: result.id, name: result.name });
       resetDraft();
       form.reset();
@@ -325,6 +383,28 @@ export default function RegionalOnboardingPage() {
                         </FormItem>
                       )}
                     />
+                    <FormField
+                      control={form.control}
+                      name="goLiveAt"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Go-live date</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="date"
+                              min={new Date().toISOString().split('T')[0]}
+                              value={isoToGoLiveDate(field.value)}
+                              onChange={(e) => field.onChange(goLiveDateToIso(e.target.value))}
+                              className={smartInputClass}
+                            />
+                          </FormControl>
+                          <FormDescription className="text-[11px]">
+                            School logins stay blocked until this date unless platform activates early.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </>
                 ) : null}
 
@@ -399,6 +479,16 @@ export default function RegionalOnboardingPage() {
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Contact</span>
                         <span>{form.getValues('contactEmail')}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Go-live</span>
+                        <span>
+                          {new Date(form.getValues('goLiveAt')).toLocaleDateString('en-GB', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Tier</span>

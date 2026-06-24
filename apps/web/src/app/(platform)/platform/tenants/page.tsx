@@ -12,7 +12,7 @@ import {
   Zap,
 } from 'lucide-react';
 
-import { usePlatformTenants } from '@loomis/api-client';
+import { usePlatformTenants, usePlatformProvisionDraft } from '@loomis/api-client';
 import { formatKobo } from '@loomis/core';
 import type { TenantStatus } from '@loomis/contracts';
 
@@ -44,6 +44,12 @@ function tenantSetupLabel(tenant: import('@loomis/contracts').TenantResponse): {
   label: string;
   tone: 'ok' | 'warn';
 } {
+  if (
+    tenant.status === 'provisioning' &&
+    new Date(tenant.goLiveAt).getTime() > Date.now()
+  ) {
+    return { label: 'Awaiting go-live', tone: 'warn' };
+  }
   if (!tenant.ownerSetup.hasOwnerAccount) {
     return { label: 'No owner', tone: 'warn' };
   }
@@ -71,6 +77,7 @@ function statusLabel(status: TenantStatus): string {
 export default function TenantsPage() {
   const { session } = useAuth();
   const { data, isLoading, isError } = usePlatformTenants();
+  const { data: provisionDraft } = usePlatformProvisionDraft();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const allTenants = data?.tenants ?? [];
@@ -154,6 +161,26 @@ export default function TenantsPage() {
             </Link>
           </div>
         </div>
+
+        {provisionDraft?.payload?.name ? (
+          <div className="card mb-5 flex flex-col gap-3 rounded-2xl border border-brand-100/60 bg-brand-50/40 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-brand-700">
+                Draft in progress
+              </p>
+              <p className="mt-1 text-[13px] font-semibold text-neutral-900">
+                {provisionDraft.payload.name || 'Untitled school'} — step{' '}
+                {(provisionDraft.stepIndex ?? 0) + 1}
+              </p>
+            </div>
+            <Link
+              href="/platform/tenants/new"
+              className="inline-flex min-h-[44px] items-center justify-center rounded-lg bg-[#c9a96e] px-4 py-2 text-[12px] font-bold text-neutral-900 transition hover:bg-[#b89555]"
+            >
+              Resume draft
+            </Link>
+          </div>
+        ) : null}
 
         {isError ? (
           <div className="card mb-5 rounded-2xl border border-red-100 bg-red-50 p-5">

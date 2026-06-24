@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { provisionTenantRequest } from '@loomis/contracts';
@@ -18,10 +18,11 @@ import {
   Textarea,
   cn,
 } from '@loomis/ui-web';
-import { usePlatformTiers, useProvisionTenant } from '@loomis/api-client';
+import { usePlatformTiers, useProvisionTenant, usePlatformProvisionDraft, useUpsertPlatformProvisionDraft, useClearPlatformProvisionDraft } from '@loomis/api-client';
 import { formatKobo } from '@loomis/core';
 import {
   Building2,
+  Calendar,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -60,6 +61,7 @@ type ProvisionFormValues = {
   contactEmail: string;
   contactPhone: string;
   address: string;
+  goLiveDate: string;
   tierCode: string;
   referralCode?: string;
   initialPsfRateMinor?: number;
@@ -71,10 +73,15 @@ const DEFAULT_VALUES: ProvisionFormValues = {
   contactEmail: '',
   contactPhone: '',
   address: '',
+  goLiveDate: new Date().toISOString().split('T')[0]!,
   tierCode: '',
   referralCode: undefined,
   initialPsfRateMinor: undefined,
 };
+
+function goLiveDateToIso(date: string): string {
+  return new Date(`${date}T00:00:00.000Z`).toISOString();
+}
 
 const inputClass =
   'h-10 rounded-lg border-neutral-200 bg-white text-[13px] text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-300 focus:ring-1 focus:ring-neutral-200';
@@ -86,6 +93,7 @@ function buildApiBody(values: ProvisionFormValues): z.infer<typeof provisionTena
     contactEmail: values.contactEmail.trim(),
     contactPhone: values.contactPhone.trim(),
     address: values.address.trim(),
+    goLiveAt: goLiveDateToIso(values.goLiveDate),
     tierCode: values.tierCode,
     referralCode: values.referralCode?.trim() ? values.referralCode.trim() : undefined,
     initialPsfRateMinor:
@@ -124,6 +132,9 @@ export function TenantProvisionForm() {
 
   const { data: tiersData, isLoading: tiersLoading, isError: tiersError } = usePlatformTiers();
   const provision = useProvisionTenant();
+  const { data: savedDraft } = usePlatformProvisionDraft();
+  const upsertDraft = useUpsertPlatformProvisionDraft();
+  const clearDraft = useClearPlatformProvisionDraft();
 
   const form = useForm<ProvisionFormValues>({
     defaultValues: DEFAULT_VALUES,
@@ -131,6 +142,49 @@ export function TenantProvisionForm() {
   });
 
   const values = form.watch();
+
+  useEffect(() => {
+    if (!savedDraft?.payload) return;
+    const payload = savedDraft.payload;
+    form.reset({
+      name: payload.name ?? '',
+      region: payload.region ?? '',
+      contactEmail: payload.contactEmail ?? '',
+      contactPhone: payload.contactPhone ?? '',
+      address: payload.address ?? '',
+      goLiveDate: payload.goLiveAt
+        ? payload.goLiveAt.slice(0, 10)
+        : DEFAULT_VALUES.goLiveDate,
+      tierCode: payload.tierCode ?? '',
+      referralCode: payload.referralCode,
+      initialPsfRateMinor: payload.initialPsfRateMinor,
+    });
+    if (savedDraft.stepIndex <= 2) {
+      setStep(savedDraft.stepIndex as 0 | 1 | 2);
+    }
+  }, [savedDraft, form]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const values = form.getValues();
+      void upsertDraft.mutate({
+        stepIndex: step,
+        payload: {
+          name: values.name,
+          region: values.region,
+          contactEmail: values.contactEmail,
+          contactPhone: values.contactPhone,
+          address: values.address,
+          goLiveAt: values.goLiveDate ? goLiveDateToIso(values.goLiveDate) : undefined,
+          tierCode: values.tierCode,
+          referralCode: values.referralCode,
+          initialPsfRateMinor: values.initialPsfRateMinor,
+        },
+      });
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }, [values, step, upsertDraft, form]);
+
   const selectedTier = useMemo(
     () => (tiersData?.tiers ?? []).find((t) => t.code === values.tierCode),
     [tiersData?.tiers, values.tierCode],
@@ -144,11 +198,25 @@ export function TenantProvisionForm() {
   async function handleNext() {
     setSubmitError(null);
     if (step === 0) {
-      const ok = await form.trigger(['name', 'region', 'contactEmail', 'contactPhone', 'address']);
+      const ok = await form.trigger([
+        'name',
+        'region',
+        'contactEmail',
+        'contactPhone',
+        'address',
+        'goLiveDate',
+      ]);
       if (!ok) return;
       const partial = buildApiBody(form.getValues());
       const parsed = provisionTenantRequest
-        .pick({ name: true, region: true, contactEmail: true, contactPhone: true, address: true })
+        .pick({
+          name: true,
+          region: true,
+          contactEmail: true,
+          contactPhone: true,
+          address: true,
+          goLiveAt: true,
+        })
         .safeParse(partial);
       if (!parsed.success) {
         for (const issue of parsed.error.issues) {
@@ -197,6 +265,7 @@ export function TenantProvisionForm() {
         body: parsed.data,
         idempotencyKey: idempotencyKeyRef.current,
       });
+      await clearDraft.mutateAsync();
       router.push(`/platform/tenants/${tenant.id}`);
     } catch (error) {
       const message =
@@ -404,6 +473,42 @@ export function TenantProvisionForm() {
                       </FormControl>
                       <FormDescription className="text-[11px] text-neutral-400">
                         Primary mobile for the School Owner and urgent platform notices.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="goLiveDate"
+                  rules={{
+                    required: 'Go-live date is required',
+                    validate: (value) => {
+                      if (!value) return 'Go-live date is required';
+                      const today = new Date().toISOString().split('T')[0]!;
+                      return value >= today || 'Go-live date cannot be in the past';
+                    },
+                  }}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FieldLabel required>Go-live date</FieldLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Calendar
+                            aria-hidden
+                            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400"
+                          />
+                          <Input
+                            {...field}
+                            type="date"
+                            min={new Date().toISOString().split('T')[0]}
+                            className={cn(inputClass, 'pl-9')}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormDescription className="text-[11px] text-neutral-400">
+                        School logins stay blocked until this date. Platform can activate early if needed.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -640,6 +745,16 @@ export function TenantProvisionForm() {
                   {[
                     { label: 'Contact email', value: values.contactEmail || '—' },
                     { label: 'Mobile phone', value: values.contactPhone || '—' },
+                    {
+                      label: 'Go-live date',
+                      value: values.goLiveDate
+                        ? new Date(`${values.goLiveDate}T00:00:00.000Z`).toLocaleDateString('en-GB', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                        : '—',
+                    },
                     { label: 'Address', value: values.address || '—' },
                     {
                       label: 'PSF rate',
@@ -661,8 +776,8 @@ export function TenantProvisionForm() {
                 <div className="mt-4 flex items-start gap-2 rounded-lg border border-amber-100 bg-amber-50/70 px-3 py-2.5">
                   <Info aria-hidden className="mt-0.5 size-3.5 shrink-0 text-amber-500" />
                   <p className="text-[11px] leading-relaxed text-amber-700">
-                    Provisioning creates the tenant, sets PSF billing, and logs to the audit trail.
-                    Invalid referral codes block activation.
+                    Provisioning creates the tenant and sends welcome credentials. School access begins on
+                    the go-live date unless you activate early from the tenant detail page.
                   </p>
                 </div>
               </div>

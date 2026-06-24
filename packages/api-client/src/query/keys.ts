@@ -198,6 +198,7 @@ export const queryKeys = {
     branding: (tenantId: string) => ['tenant', tenantId, 'branding'] as const,
     experience: (tenantId: string) => ['tenant', tenantId, 'experience'] as const,
     onboarding: (tenantId: string) => ['tenant', tenantId, 'onboarding'] as const,
+    psfStatus: (tenantId: string) => ['tenant', tenantId, 'psf-status'] as const,
     auditLog: (tenantId: string, filters: AuditLogFilters = {}) =>
       ['tenant', tenantId, 'audit', 'events', filters] as const,
   },
@@ -209,6 +210,7 @@ export const queryKeys = {
     tenants: () => ['platform', 'tenants'] as const,
     tenant: (tenantId: string) => ['platform', 'tenants', tenantId] as const,
     tiers: () => ['platform', 'tiers'] as const,
+    provisionDraft: () => ['platform', 'provision-draft'] as const,
     psfRates: () => ['platform', 'psf-rates'] as const,
     psfRateHistory: (tenantId: string | null) =>
       ['platform', 'psf-rates', 'history', tenantId] as const,
@@ -234,6 +236,7 @@ export const queryKeys = {
     earnings: () => ['regional', 'earnings'] as const,
     earningsSummary: () => ['regional', 'earnings', 'summary'] as const,
     payoutCycles: () => ['regional', 'payout-cycles'] as const,
+    provisionDraft: () => ['regional', 'provision-draft'] as const,
   },
   /** DPO compliance — global scope (null tenant_id). */
   compliance: {

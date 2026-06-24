@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 
 import { AttentionTaskList } from '@/components/dashboard/attention-task-list';
+import { SchoolPsfWidget } from '@/components/dashboard/school-psf-widget';
 import { LoomisPlatformFootnote } from '@/components/dashboard/loomis-platform-footnote';
 import { SchoolOwnerHero } from '@/components/dashboard/school-owner-hero';
 import {
@@ -66,6 +67,7 @@ export function SchoolOwnerDashboard({ tenantId, displayName }: SchoolOwnerDashb
       />
 
       <div className="space-y-4 pt-20 sm:pt-24">
+        <SchoolPsfWidget tenantId={tenantId} />
         <SchoolOnboardingChecklist tenantId={tenantId} />
         <UnverifiedPaymentsBanner tenantId={tenantId} termId={focusTerm?.id} />
 

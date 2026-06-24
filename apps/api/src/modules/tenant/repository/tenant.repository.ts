@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq, lte } from 'drizzle-orm';
 import { tenants } from '../../../../drizzle/schema/tenant.js';
 import { db, type Executor } from '../../../shared/db.js';
 import type { ProvisionTenantInput } from '../types.js';
@@ -31,7 +31,11 @@ export const tenantRepository = {
   },
 
   async create(
-    input: ProvisionTenantInput & { tierId: string; provisionedById: string },
+    input: ProvisionTenantInput & {
+      tierId: string;
+      provisionedById: string;
+      goLiveAt: Date;
+    },
     tx?: Executor,
   ) {
     const executor = tx ?? db;
@@ -47,6 +51,7 @@ export const tenantRepository = {
         status: 'provisioning',
         referralCode: input.referralCode ?? null,
         provisionedById: input.provisionedById,
+        goLiveAt: input.goLiveAt,
       })
       .returning();
     if (!tenant) throw new Error('Failed to create tenant');
@@ -61,6 +66,38 @@ export const tenantRepository = {
       .where(eq(tenants.id, id))
       .returning();
     return tenant ?? null;
+  },
+
+  async activate(id: string, activatedAt: Date, tx?: Executor) {
+    const executor = tx ?? db;
+    const [tenant] = await executor
+      .update(tenants)
+      .set({
+        status: 'active',
+        activatedAt,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(tenants.id, id), eq(tenants.status, 'provisioning')))
+      .returning();
+    return tenant ?? null;
+  },
+
+  async updateTierId(id: string, tierId: string, tx?: Executor) {
+    const executor = tx ?? db;
+    const [tenant] = await executor
+      .update(tenants)
+      .set({ tierId, updatedAt: new Date() })
+      .where(eq(tenants.id, id))
+      .returning();
+    return tenant ?? null;
+  },
+
+  async findDueForActivation(now: Date, tx?: Executor) {
+    const executor = tx ?? db;
+    return executor
+      .select()
+      .from(tenants)
+      .where(and(eq(tenants.status, 'provisioning'), lte(tenants.goLiveAt, now)));
   },
 
   async suspend(
@@ -109,6 +146,7 @@ export const tenantRepository = {
       contactPhone?: string;
       address?: string;
       region?: string;
+      goLiveAt?: Date;
     },
     tx?: Executor,
   ) {
@@ -118,6 +156,7 @@ export const tenantRepository = {
       contactPhone?: string;
       address?: string;
       region?: string;
+      goLiveAt?: Date;
       updatedAt: Date;
     } = { updatedAt: new Date() };
 
@@ -125,6 +164,7 @@ export const tenantRepository = {
     if (patch.contactPhone !== undefined) updates.contactPhone = patch.contactPhone;
     if (patch.address !== undefined) updates.address = patch.address;
     if (patch.region !== undefined) updates.region = patch.region;
+    if (patch.goLiveAt !== undefined) updates.goLiveAt = patch.goLiveAt;
 
     const [tenant] = await executor
       .update(tenants)

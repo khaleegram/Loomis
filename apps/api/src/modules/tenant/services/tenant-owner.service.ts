@@ -55,6 +55,7 @@ export const tenantOwnerService = {
       schoolName: string;
       contactEmail: string;
       contactPhone: string;
+      goLiveAt: Date;
     },
     actor: ActorContext,
   ): Promise<{ ownerUserId: string; temporaryPassword: string; email: EmailDeliveryResult }> {
@@ -108,6 +109,7 @@ export const tenantOwnerService = {
       schoolName: input.schoolName,
       loginEmail: email,
       temporaryPassword,
+      goLiveAt: input.goLiveAt,
     });
 
     if (emailResult.sent) {
@@ -150,6 +152,7 @@ export const tenantOwnerService = {
       schoolName,
       loginEmail: ownerProfile.email,
       temporaryPassword,
+      goLiveAt: tenant?.goLiveAt ?? new Date(),
     });
 
     const sentAt = new Date();

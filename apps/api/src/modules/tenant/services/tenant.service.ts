@@ -1,7 +1,9 @@
 import type {
+  MigrateProductTierRequest,
   TenantListResponse,
   TenantResponse,
   TierSummary,
+  UpdateTenantContactsRequest,
   UpdateTenantProfileRequest,
 } from '@loomis/contracts';
 import { DEFAULT_PSF_RATE_MINOR, mergeExperienceFlags, PRODUCT_TIER_SPECS } from '@loomis/core';
@@ -16,6 +18,7 @@ import { psfSuggestionService } from './psf-suggestion.service.js';
 import { tenantOwnerService } from './tenant-owner.service.js';
 import { tierCatalogService } from './tier-catalog.service.js';
 import { tenantOnboardingService } from './tenant-onboarding.service.js';
+import { tenantContactService } from './tenant-contact.service.js';
 import { attributionService } from '../../referral/services/attribution.service.js';
 
 type TenantRow = NonNullable<Awaited<ReturnType<typeof tenantRepository.findById>>>;
@@ -57,10 +60,19 @@ export const tenantService = {
       }
     }
 
+    const goLiveAt = new Date(input.goLiveAt);
+
     const tenant = await tenantRepository.create({
       ...input,
       tierId: tier.id,
       provisionedById: actor.userId,
+      goLiveAt,
+    });
+
+    await tenantContactService.seedFromProvision(tenant.id, {
+      contactEmail: input.contactEmail,
+      contactPhone: input.contactPhone,
+      contacts: input.contacts,
     });
 
     await tenantRepository.updateExperience(tenant.id, {
@@ -91,7 +103,9 @@ export const tenantService = {
       approvedById: null,
     });
 
-    const activated = await tenantRepository.setStatus(tenant.id, 'active');
+    const activated = goLiveAt <= new Date()
+      ? await tenantRepository.activate(tenant.id, new Date())
+      : null;
     const result = activated ?? tenant;
 
     await tenantOwnerService.provisionOwner(
@@ -100,6 +114,7 @@ export const tenantService = {
         schoolName: result.name,
         contactEmail: input.contactEmail,
         contactPhone: input.contactPhone,
+        goLiveAt,
       },
       actor,
     );
@@ -135,6 +150,7 @@ export const tenantService = {
         description: tier.description ?? null,
         defaultPsfRateMinor: tier.defaultPsfRateMinor,
         maxStudents: tier.maxStudents ?? null,
+        isSystem: tier.isSystem,
         createdAt: tier.createdAt.toISOString(),
       }));
   },
@@ -145,10 +161,83 @@ export const tenantService = {
     _actor: ActorContext,
   ): Promise<TenantRow> {
     await this.getTenant(id);
-    const updated = await tenantRepository.updateProfile(id, input);
+    const updated = await tenantRepository.updateProfile(id, {
+      ...(input.contactEmail !== undefined ? { contactEmail: input.contactEmail } : {}),
+      ...(input.contactPhone !== undefined ? { contactPhone: input.contactPhone } : {}),
+      ...(input.address !== undefined ? { address: input.address } : {}),
+      ...(input.region !== undefined ? { region: input.region } : {}),
+      ...(input.goLiveAt !== undefined ? { goLiveAt: new Date(input.goLiveAt) } : {}),
+    });
     if (!updated) {
       throw new LoomisError('TENANT_NOT_FOUND', 404, 'Tenant not found');
     }
+    return updated;
+  },
+
+  async updateTenantContacts(
+    id: string,
+    input: UpdateTenantContactsRequest,
+    _actor: ActorContext,
+  ): Promise<TenantRow> {
+    await this.getTenant(id);
+    await tenantContactService.replaceContacts(id, input.contacts);
+    const tenant = await tenantRepository.findById(id);
+    if (!tenant) {
+      throw new LoomisError('TENANT_NOT_FOUND', 404, 'Tenant not found');
+    }
+    return tenant;
+  },
+
+  async activateTenantEarly(id: string, actor: ActorContext): Promise<TenantRow> {
+    const tenant = await this.getTenant(id);
+    if (tenant.status === 'active') {
+      throw new LoomisError('TENANT_ALREADY_ACTIVE', 409, 'Tenant is already active');
+    }
+    if (tenant.status === 'suspended') {
+      throw new LoomisError('TENANT_SUSPENDED', 403, 'Cannot activate a suspended tenant');
+    }
+    const activated = await tenantRepository.activate(id, new Date());
+    if (!activated) {
+      throw new LoomisError('TENANT_NOT_FOUND', 404, 'Tenant not found');
+    }
+    await tenantEvents.publishActivated({
+      tenantId: activated.id,
+      activatedById: actor.userId,
+      activatedAt: activated.activatedAt!.toISOString(),
+    });
+    return activated;
+  },
+
+  async migrateProductTier(
+    id: string,
+    input: MigrateProductTierRequest,
+    actor: ActorContext,
+  ): Promise<TenantRow> {
+    const tenant = await this.getTenant(id);
+    const tier = await tierRepository.findByCode(input.tierCode);
+    if (!tier) {
+      throw new LoomisError('TENANT_TIER_NOT_FOUND', 404, `Unknown tier '${input.tierCode}'`);
+    }
+    if (tenant.tierId === tier.id) {
+      throw new LoomisError('VALIDATION_ERROR', 422, 'Tenant is already on this product tier');
+    }
+    const previousTier = await tierRepository.findById(tenant.tierId);
+    const updated = await tenantRepository.updateTierId(id, tier.id);
+    if (!updated) {
+      throw new LoomisError('TENANT_NOT_FOUND', 404, 'Tenant not found');
+    }
+    await tenantRepository.updateExperience(id, {
+      experienceTier: resolveExperienceTierForProductTier(tier.code),
+    });
+    await tenantEvents.publishTierMigrated({
+      tenantId: id,
+      previousTierId: tenant.tierId,
+      previousTierCode: previousTier?.code ?? '',
+      newTierId: tier.id,
+      newTierCode: tier.code,
+      reason: input.reason,
+      migratedById: actor.userId,
+    });
     return updated;
   },
 
@@ -222,6 +311,7 @@ export const tenantService = {
     );
     const suggestedPsfRateMinor = await psfSuggestionService.getSuggestedRateMinor(tenant.id);
     const ownerSetup = await tenantOwnerService.getOwnerSetupStatus(tenant.id);
+    const contacts = await tenantContactService.listContacts(tenant.id);
     const onboarding = options?.includeOnboarding
       ? await tenantOnboardingService.getStatus(tenant.id)
       : null;
@@ -246,6 +336,9 @@ export const tenantService = {
       ),
       ownerSetup,
       onboarding,
+      contacts,
+      goLiveAt: tenant.goLiveAt.toISOString(),
+      activatedAt: tenant.activatedAt ? tenant.activatedAt.toISOString() : null,
       suspendedReason: tenant.suspendedReason ?? null,
       suspendedAt: tenant.suspendedAt ? tenant.suspendedAt.toISOString() : null,
       createdAt: tenant.createdAt.toISOString(),

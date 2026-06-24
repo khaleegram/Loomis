@@ -121,6 +121,7 @@ export function useProvisionTenant() {
       client.post<TenantResponse>('/platform/tenants', body, { idempotencyKey }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.platform.tenants() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.platform.provisionDraft() });
     },
   });
 }
@@ -192,6 +193,112 @@ export function useResendTenantSetupEmail(tenantId: string) {
       ),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.platform.tenant(tenantId) });
+    },
+  });
+}
+
+export function useUpdateTenantContacts(tenantId: string) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: import('@loomis/contracts').UpdateTenantContactsRequest) =>
+      client.patch<TenantResponse>(`/platform/tenants/${tenantId}/contacts`, body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.platform.tenant(tenantId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.platform.tenants() });
+    },
+  });
+}
+
+export function useActivateTenant(config: UseRequestPsfRateOverrideConfig) {
+  const { tenantId, ensureStepUpToken } = config;
+  return useFinancialMutation<Record<string, never>, import('@loomis/contracts').ActivateTenantResponse>({
+    endpoint: `/platform/tenants/${tenantId}/activate`,
+    action: 'psf_rate_change',
+    ensureStepUpToken,
+    invalidates: [
+      queryKeys.platform.tenant(tenantId),
+      queryKeys.platform.tenants(),
+      queryKeys.tenant.onboarding(tenantId),
+    ],
+  });
+}
+
+export function useMigrateProductTier(config: UseRequestPsfRateOverrideConfig) {
+  const { tenantId, ensureStepUpToken } = config;
+  return useFinancialMutation<
+    import('@loomis/contracts').MigrateProductTierRequest,
+    TenantResponse
+  >({
+    endpoint: `/platform/tenants/${tenantId}/migrate-tier`,
+    action: 'psf_rate_change',
+    ensureStepUpToken,
+    invalidates: [
+      queryKeys.platform.tenant(tenantId),
+      queryKeys.platform.tenants(),
+      queryKeys.tenant.onboarding(tenantId),
+    ],
+  });
+}
+
+export function useCreateTier() {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: import('@loomis/contracts').CreateTierRequest) =>
+      client.post<import('@loomis/contracts').TierSummary>('/platform/tiers', body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.platform.tiers() });
+    },
+  });
+}
+
+export function useUpdateTier(tierId: string) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: import('@loomis/contracts').UpdateTierRequest) =>
+      client.patch<import('@loomis/contracts').TierSummary>(`/platform/tiers/${tierId}`, body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.platform.tiers() });
+    },
+  });
+}
+
+export function usePlatformProvisionDraft() {
+  const client = useApiClient();
+  return useQuery({
+    queryKey: queryKeys.platform.provisionDraft(),
+    queryFn: () =>
+      client.get<import('@loomis/contracts').ProvisionDraftResponse | null>(
+        '/platform/provision-drafts/me',
+      ),
+    staleTime: 10_000,
+  });
+}
+
+export function useUpsertPlatformProvisionDraft() {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: import('@loomis/contracts').UpsertProvisionDraftRequest) =>
+      client.put<import('@loomis/contracts').ProvisionDraftResponse>(
+        '/platform/provision-drafts/me',
+        body,
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.platform.provisionDraft() });
+    },
+  });
+}
+
+export function useClearPlatformProvisionDraft() {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => client.delete<{ status: 'cleared' }>('/platform/provision-drafts/me'),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.platform.provisionDraft() });
     },
   });
 }

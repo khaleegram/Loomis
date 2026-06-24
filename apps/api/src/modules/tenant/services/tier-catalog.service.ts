@@ -9,6 +9,9 @@ export const tierCatalogService = {
     for (const spec of PRODUCT_TIER_SPECS) {
       const [existing] = await db.select().from(tiers).where(eq(tiers.code, spec.code)).limit(1);
       if (existing) {
+        if (!existing.isSystem) {
+          continue;
+        }
         await db
           .update(tiers)
           .set({
@@ -16,6 +19,7 @@ export const tierCatalogService = {
             description: spec.description,
             defaultPsfRateMinor: spec.defaultPsfRateMinor,
             maxStudents: spec.maxStudents,
+            isSystem: true,
             updatedAt: new Date(),
           })
           .where(eq(tiers.id, existing.id));
@@ -27,6 +31,7 @@ export const tierCatalogService = {
         description: spec.description,
         defaultPsfRateMinor: spec.defaultPsfRateMinor,
         maxStudents: spec.maxStudents,
+        isSystem: true,
       });
     }
   },

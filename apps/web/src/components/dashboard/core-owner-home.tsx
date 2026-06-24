@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 
 import { AttentionTaskList } from '@/components/dashboard/attention-task-list';
+import { SchoolPsfWidget } from '@/components/dashboard/school-psf-widget';
 import { LoomisPlatformFootnote } from '@/components/dashboard/loomis-platform-footnote';
 import { SchoolOwnerHero } from '@/components/dashboard/school-owner-hero';
 import { SCHOOL_OWNER_QUICK_ACTIONS } from '@/components/dashboard/school-owner-quick-actions';
@@ -63,6 +64,7 @@ export function CoreOwnerHome({ tenantId, displayName }: CoreOwnerHomeProps) {
       />
 
       <div className="space-y-4 pt-20 sm:pt-24">
+        <SchoolPsfWidget tenantId={tenantId} />
         <SchoolOnboardingChecklist tenantId={tenantId} />
       </div>
 

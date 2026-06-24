@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { nigerianMobilePhone, updateTenantProfileRequest } from '@loomis/contracts';
+import { updateTenantProfileRequest } from '@loomis/contracts';
 import type { TenantResponse } from '@loomis/contracts';
 import { useUpdateTenantProfile } from '@loomis/api-client';
 import {
@@ -42,8 +42,6 @@ const STATE_OPTIONS = NIGERIAN_STATES.map((state) => ({
 }));
 
 const editFormSchema = z.object({
-  contactEmail: z.string().email(),
-  contactPhone: nigerianMobilePhone,
   address: z.string().min(2).max(500),
   region: z.string().min(2).max(100),
 });
@@ -69,8 +67,6 @@ export function TenantProfileEditDialog({
   const form = useForm<FormValues>({
     resolver: zodResolver(editFormSchema),
     defaultValues: {
-      contactEmail: tenant.contactEmail,
-      contactPhone: tenant.contactPhone ?? '',
       address: tenant.address,
       region: tenant.region,
     },
@@ -79,8 +75,6 @@ export function TenantProfileEditDialog({
   useEffect(() => {
     if (!open) return;
     form.reset({
-      contactEmail: tenant.contactEmail,
-      contactPhone: tenant.contactPhone ?? '',
       address: tenant.address,
       region: tenant.region,
     });
@@ -88,12 +82,6 @@ export function TenantProfileEditDialog({
 
   async function onSubmit(values: FormValues) {
     const patch: zType.infer<typeof updateTenantProfileRequest> = {};
-    if (values.contactEmail && values.contactEmail !== tenant.contactEmail) {
-      patch.contactEmail = values.contactEmail;
-    }
-    if (values.contactPhone && values.contactPhone !== (tenant.contactPhone ?? '')) {
-      patch.contactPhone = values.contactPhone;
-    }
     if (values.address && values.address !== tenant.address) patch.address = values.address;
     if (values.region && values.region !== tenant.region) patch.region = values.region;
 
@@ -116,51 +104,14 @@ export function TenantProfileEditDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md gap-0 overflow-hidden p-0 sm:max-w-lg">
         <DialogHeader className="border-b border-neutral-100 px-5 py-4">
-          <DialogTitle className="text-[15px] font-bold">Edit school contacts</DialogTitle>
+          <DialogTitle className="text-[15px] font-bold">Edit school location</DialogTitle>
           <DialogDescription className="text-[12px]">
-            Update primary contact details for {tenant.name}.
+            Update region and physical address for {tenant.name}.
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={(e) => void form.handleSubmit(onSubmit)(e)} className="space-y-4 p-5">
-            <FormField
-              control={form.control}
-              name="contactEmail"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-[11px] font-bold uppercase tracking-[0.1em] text-neutral-400">
-                    Contact email
-                  </FormLabel>
-                  <FormControl>
-                    <Input {...field} type="email" className={inputClass} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="contactPhone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-[11px] font-bold uppercase tracking-[0.1em] text-neutral-400">
-                    Mobile phone
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      type="tel"
-                      placeholder="+2348012345678"
-                      className={inputClass}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             <FormField
               control={form.control}
               name="region"

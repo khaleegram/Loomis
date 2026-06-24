@@ -58,6 +58,9 @@ import { uuidv7 } from 'uuidv7';
 
 import { PageBody } from '@/components/platform/platform-shell';
 import { PlatformTenantExperienceCard } from '@/components/platform/platform-tenant-experience-card';
+import { TenantProductTierCard } from '@/components/platform/tenant-product-tier-card';
+import { TenantGoLiveCard } from '@/components/platform/tenant-go-live-card';
+import { TenantContactsEditDialog } from '@/components/platform/tenant-contacts-edit-dialog';
 import { PsfRateCard } from '@/components/platform/psf-rate-card';
 import { BreakGlassModal } from '@/components/platform/break-glass-modal';
 import { TenantProfileEditDialog } from '@/components/platform/tenant-profile-edit-dialog';
@@ -90,12 +93,22 @@ function statusDot(status: string): string {
   }
 }
 
-function statusLabel(status: string): string {
+function statusLabel(status: string, goLiveAt?: string): string {
   switch (status) {
-    case 'active': return 'Active';
-    case 'suspended': return 'Suspended';
-    case 'provisioning': return 'Provisioning';
-    default: return status;
+    case 'active':
+      return 'Active';
+    case 'suspended':
+      return 'Suspended';
+    case 'provisioning':
+      if (goLiveAt && new Date(goLiveAt).getTime() > Date.now()) {
+        return `Scheduled ${new Date(goLiveAt).toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'short',
+        })}`;
+      }
+      return 'Provisioning';
+    default:
+      return status;
   }
 }
 
@@ -153,6 +166,7 @@ export default function TenantDetailPage({ params }: TenantDetailPageProps) {
   const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
   const [bgModalOpen, setBgModalOpen] = useState(false);
   const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [editContactsOpen, setEditContactsOpen] = useState(false);
   const suspendIdempotencyKey = useRef(uuidv7());
   const reinstateIdempotencyKey = useRef(uuidv7());
   const resendSetupKey = useRef(uuidv7());
@@ -260,7 +274,29 @@ export default function TenantDetailPage({ params }: TenantDetailPageProps) {
   }
 
   const isSuspended = tenant.status === 'suspended';
+  const isAwaitingGoLive =
+    tenant.status === 'provisioning' && new Date(tenant.goLiveAt).getTime() > Date.now();
   const schoolInitial = tenant.name.charAt(0).toUpperCase();
+  const displayContacts =
+    tenant.contacts.length > 0
+      ? tenant.contacts
+      : [
+          {
+            id: 'legacy-primary',
+            role: 'primary' as const,
+            fullName: tenant.name,
+            email: tenant.contactEmail,
+            phone: tenant.contactPhone,
+            isPrimary: true,
+          },
+        ];
+
+  const CONTACT_ROLE_LABELS: Record<string, string> = {
+    primary: 'Primary',
+    billing: 'Billing',
+    operations: 'Operations',
+    proprietor: 'Proprietor',
+  };
 
   return (
     <PageBody className="max-w-[1200px] px-4 py-5 sm:px-6 sm:py-6 lg:px-7 lg:py-7">
@@ -324,7 +360,7 @@ export default function TenantDetailPage({ params }: TenantDetailPageProps) {
                     style={{ background: 'rgba(255,255,255,0.15)' }}
                   >
                     <span className="size-2 rounded-full" style={{ background: statusDot(tenant.status) }} />
-                    {statusLabel(tenant.status)}
+                    {statusLabel(tenant.status, tenant.goLiveAt)}
                   </span>
                 </div>
 
@@ -407,7 +443,7 @@ export default function TenantDetailPage({ params }: TenantDetailPageProps) {
       {/* ════════════════════════════════════════════════════
           STAT STRIP
           ════════════════════════════════════════════════════ */}
-      <div className="card mb-5 grid grid-cols-1 divide-y divide-neutral-100 rounded-2xl sm:grid-cols-2 lg:grid-cols-4 lg:divide-x lg:divide-y-0">
+      <div className="card mb-5 grid grid-cols-1 divide-y divide-neutral-100 rounded-2xl sm:grid-cols-2 xl:grid-cols-5 xl:divide-x xl:divide-y-0">
         <StatCard
           icon={Percent}
           label="PSF Rate"
@@ -436,10 +472,29 @@ export default function TenantDetailPage({ params }: TenantDetailPageProps) {
         />
         <StatCard
           icon={Calendar}
+          label="Go-live"
+          value={new Date(tenant.goLiveAt).toLocaleDateString('en-GB', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+          })}
+          sub={
+            isAwaitingGoLive
+              ? 'Awaiting scheduled access'
+              : tenant.activatedAt
+                ? `Activated ${formatDistanceToNow(new Date(tenant.activatedAt), { addSuffix: true }).replace('about ', '')}`
+                : tenant.status === 'active'
+                  ? 'School is live'
+                  : 'Pending activation'
+          }
+          gradient="linear-gradient(135deg,#6366f1,#4f46e5)"
+        />
+        <StatCard
+          icon={Calendar}
           label="Age"
           value={formatDistanceToNow(new Date(tenant.createdAt), { addSuffix: true }).replace('about ', '')}
           sub={new Date(tenant.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-          gradient="linear-gradient(135deg,#6366f1,#4f46e5)"
+          gradient="linear-gradient(135deg,#64748b,#475569)"
         />
       </div>
 
@@ -462,30 +517,50 @@ export default function TenantDetailPage({ params }: TenantDetailPageProps) {
                 <p className="text-[11px] text-neutral-400">Identity &amp; contact information</p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => setEditProfileOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 px-2.5 py-1.5 text-[12px] font-semibold text-neutral-700 transition hover:bg-neutral-50"
-            >
-              <Pencil aria-hidden className="size-3.5" />
-              Edit
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setEditContactsOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 px-2.5 py-1.5 text-[12px] font-semibold text-neutral-700 transition hover:bg-neutral-50"
+              >
+                <Pencil aria-hidden className="size-3.5" />
+                Edit contacts
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditProfileOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 px-2.5 py-1.5 text-[12px] font-semibold text-neutral-700 transition hover:bg-neutral-50"
+              >
+                <MapPin aria-hidden className="size-3.5" />
+                Edit location
+              </button>
+            </div>
           </div>
 
           <div className="p-5">
             <dl>
-              <InfoRow label="Contact Email">
-                <div className="flex items-center gap-2">
-                  <Mail aria-hidden className="size-3.5 text-neutral-400" />
-                  <span>{tenant.contactEmail}</span>
-                </div>
-              </InfoRow>
-              <InfoRow label="Mobile phone">
-                <div className="flex items-center gap-2">
-                  <Phone aria-hidden className="size-3.5 text-neutral-400" />
-                  <span>{tenant.contactPhone ?? '—'}</span>
-                </div>
-              </InfoRow>
+              {displayContacts.map((contact) => (
+                <InfoRow
+                  key={contact.id}
+                  label={`${CONTACT_ROLE_LABELS[contact.role] ?? contact.role}${contact.isPrimary ? ' · Primary' : ''}`}
+                >
+                  <div className="space-y-1">
+                    <p>{contact.fullName}</p>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] font-normal text-neutral-600">
+                      <span className="inline-flex items-center gap-1.5">
+                        <Mail aria-hidden className="size-3.5 text-neutral-400" />
+                        {contact.email}
+                      </span>
+                      {contact.phone ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <Phone aria-hidden className="size-3.5 text-neutral-400" />
+                          {contact.phone}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                </InfoRow>
+              ))}
               <InfoRow label="Address">
                 <span>{tenant.address}</span>
               </InfoRow>
@@ -656,6 +731,11 @@ export default function TenantDetailPage({ params }: TenantDetailPageProps) {
         <PlatformTenantExperienceCard tenantId={tenant.id} tenantName={tenant.name} />
       </div>
 
+      <div className="mb-5 grid gap-5 lg:grid-cols-2">
+        <TenantGoLiveCard tenant={tenant} />
+        <TenantProductTierCard tenant={tenant} />
+      </div>
+
       {tenant.onboarding ? (
         <div className="mb-5">
           <TenantOnboardingTimeline onboarding={tenant.onboarding} />
@@ -822,6 +902,12 @@ export default function TenantDetailPage({ params }: TenantDetailPageProps) {
         tenant={tenant}
         open={editProfileOpen}
         onOpenChange={setEditProfileOpen}
+      />
+
+      <TenantContactsEditDialog
+        tenant={tenant}
+        open={editContactsOpen}
+        onOpenChange={setEditContactsOpen}
       />
 
       <BreakGlassModal

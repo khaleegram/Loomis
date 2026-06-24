@@ -59,6 +59,15 @@ export const tenantOnboardingService = {
 
     const steps: TenantOnboardingStep[] = [
       {
+        id: 'go_live',
+        label: 'School go-live',
+        complete: tenant?.status === 'active',
+        detail:
+          tenant?.status === 'active'
+            ? tenant.activatedAt?.toISOString() ?? null
+            : tenant?.goLiveAt.toISOString() ?? null,
+      },
+      {
         id: 'owner_account',
         label: 'School Owner account',
         complete: ownerSetup.hasOwnerAccount,
@@ -96,6 +105,7 @@ export const tenantOnboardingService = {
 
     return {
       readyForOperations:
+        tenant?.status === 'active' &&
         ownerSetup.hasOwnerAccount &&
         Boolean(ownerSetup.setupEmailSentAt) &&
         feeStructuresConfigured &&

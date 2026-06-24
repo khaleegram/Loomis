@@ -70,6 +70,28 @@ export const tenantEvents = {
     };
     await dispatchEvent(TENANT_EVENT_TYPES.psfRateChanged, event);
   },
+
+  async publishActivated(
+    payload: Omit<import('./types.js').TenantActivatedEvent, 'eventId' | 'occurredAt'>,
+  ): Promise<void> {
+    const event = {
+      eventId: uuidv7(),
+      occurredAt: new Date().toISOString(),
+      ...payload,
+    };
+    await dispatchEvent(TENANT_EVENT_TYPES.activated, event);
+  },
+
+  async publishTierMigrated(
+    payload: Omit<import('./types.js').TenantTierMigratedEvent, 'eventId' | 'occurredAt'>,
+  ): Promise<void> {
+    const event = {
+      eventId: uuidv7(),
+      occurredAt: new Date().toISOString(),
+      ...payload,
+    };
+    await dispatchEvent(TENANT_EVENT_TYPES.tierMigrated, event);
+  },
 };
 
 export { TENANT_EVENT_TYPES } from './types.js';
