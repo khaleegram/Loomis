@@ -56,9 +56,9 @@ async function notifyOwnersSnapshotTaken(
   const body = `${termName}: ${systemBillableCount} billable students. You have until ${adjustmentWindowEndsAt.toISOString().slice(0, 10)} to request corrections.`;
 
   await deliveryService.createManyInApp(
-    owners.map((userId) => ({
+    owners.map((owner) => ({
       tenantId,
-      userId,
+      userId: owner.userId,
       notificationType: 'generic' as const,
       safeCopy: {
         title,
@@ -96,9 +96,9 @@ async function notifyOwnersMtcWarning(
   const body = `${termName}: ${systemBillableCount} billable students is below your minimum term commitment of ${minimumTermCommitment}. Snapshot date: ${snapshotDate}.`;
 
   await deliveryService.createManyInApp(
-    owners.map((userId) => ({
+    owners.map((owner) => ({
       tenantId,
-      userId,
+      userId: owner.userId,
       notificationType: 'generic' as const,
       safeCopy: {
         title,
