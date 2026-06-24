@@ -32,6 +32,14 @@ const envSchema = z.object({
   S3_REGION: z.string().min(1),
   AWS_ACCESS_KEY_ID: z.string().min(1),
   AWS_SECRET_ACCESS_KEY: z.string().min(1),
+  /**
+   * When true, uploads stay `upload_pending` until ClamAV publishes `storage.object.scan_completed`.
+   * Default false until the Lambda scan worker is deployed (Railway / dev without scan infra).
+   */
+  STORAGE_MALWARE_SCAN_ENABLED: z.preprocess(
+    (value) => value === true || value === 'true' || value === '1',
+    z.boolean().default(false),
+  ),
 
   /** Paystack (SRS §10.1 / System Design §9). Webhook HMAC uses secret key if webhook secret omitted. */
   PAYSTACK_SECRET_KEY: z.string().optional(),

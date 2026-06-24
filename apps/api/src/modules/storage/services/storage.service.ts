@@ -11,6 +11,7 @@ import { LoomisError } from '../../../shared/errors.js';
 import { storageEvents } from '../events/index.js';
 import { storageRepository } from '../repository/storage.repository.js';
 import type { ActorContext, CreateUploadUrlInput } from '../types.js';
+import { isStorageMalwareScanEnabled } from './storage-scan.js';
 import { PRESIGNED_URL_EXPIRY_SECONDS, s3PresignService } from './s3.client.js';
 
 /** School-scoped roles permitted to request upload/download URLs (SRS §10.5). */
@@ -225,7 +226,10 @@ export const storageService = {
     }
 
     const env = getEnv();
-    const nextStatus = env.NODE_ENV === 'development' ? 'available' : 'upload_pending';
+    const nextStatus =
+      env.NODE_ENV === 'development' || !isStorageMalwareScanEnabled()
+        ? 'available'
+        : 'upload_pending';
     if (nextStatus === 'available') {
       await storageRepository.updateStatus(actor.tenantId, storageObjectId, 'available', new Date());
     }
@@ -262,19 +266,39 @@ export const storageService = {
       throw new LoomisError('STORAGE_OBJECT_NOT_FOUND', 404, 'Storage object not found');
     }
 
-    if (record.status !== 'available') {
+    let effectiveRecord = record;
+    if (effectiveRecord.status !== 'available') {
+      if (
+        effectiveRecord.status === 'upload_pending' &&
+        !isStorageMalwareScanEnabled() &&
+        (await s3PresignService.objectExists({
+          bucket: effectiveRecord.bucket,
+          objectKey: effectiveRecord.objectKey,
+        }))
+      ) {
+        await storageRepository.updateStatus(
+          actor.tenantId,
+          storageObjectId,
+          'available',
+          new Date(),
+        );
+        effectiveRecord = { ...effectiveRecord, status: 'available' };
+      }
+    }
+
+    if (effectiveRecord.status !== 'available') {
       throw new LoomisError(
         'STORAGE_OBJECT_NOT_AVAILABLE',
         409,
-        `Object is not available for download (status: ${record.status})`,
+        `Object is not available for download (status: ${effectiveRecord.status})`,
       );
     }
 
     let downloadUrl: string;
     try {
       downloadUrl = await s3PresignService.createGetUrl({
-        bucket: record.bucket,
-        objectKey: record.objectKey,
+        bucket: effectiveRecord.bucket,
+        objectKey: effectiveRecord.objectKey,
       });
     } catch {
       throw new LoomisError('STORAGE_S3_UNAVAILABLE', 503, 'Object storage is temporarily unavailable');
@@ -312,9 +336,9 @@ export const storageService = {
     return {
       downloadUrl,
       expiresAt,
-      storageObjectId: record.id,
-      classification: record.classification,
-      status: record.status,
+      storageObjectId: effectiveRecord.id,
+      classification: effectiveRecord.classification,
+      status: effectiveRecord.status,
     };
   },
 
@@ -369,7 +393,7 @@ export const storageService = {
       throw new LoomisError('STORAGE_S3_UNAVAILABLE', 503, 'Object storage is temporarily unavailable');
     }
 
-    if (env.NODE_ENV === 'development') {
+    if (env.NODE_ENV === 'development' || !isStorageMalwareScanEnabled()) {
       await storageRepository.updateStatus(input.tenantId, storageObjectId, 'available', new Date());
     }
 

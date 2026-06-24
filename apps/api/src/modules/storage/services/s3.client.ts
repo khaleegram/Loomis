@@ -1,4 +1,4 @@
-import { PutObjectCommand, GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { HeadObjectCommand, PutObjectCommand, GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { getEnv } from '../../../config/env.js';
 
@@ -74,5 +74,20 @@ export const s3PresignService = {
       Key: input.objectKey,
     });
     return getSignedUrl(client, command, { expiresIn: PRESIGNED_URL_EXPIRY_SECONDS });
+  },
+
+  async objectExists(input: PresignedGetInput): Promise<boolean> {
+    const client = getS3Client();
+    try {
+      await client.send(
+        new HeadObjectCommand({
+          Bucket: input.bucket,
+          Key: input.objectKey,
+        }),
+      );
+      return true;
+    } catch {
+      return false;
+    }
   },
 };

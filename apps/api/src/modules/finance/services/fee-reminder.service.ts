@@ -34,7 +34,7 @@ async function notifyParentsForStudent(
     notificationType: 'fee_due_reminder' as const,
     safeCopy: SAFE_NOTIFICATION_COPY.feeDueReminder,
     resourceId: studentId,
-    eventIdempotencyKey: `fee-reminder:${trigger}:${tenantId}:${studentId}:${idempotencySuffix}`,
+    eventIdempotencyKey: `fee-reminder:${trigger}:${tenantId}:${studentId}:${userId}:${idempotencySuffix}`,
   }));
 
   const created = await deliveryService.createManyInApp(inputs);
