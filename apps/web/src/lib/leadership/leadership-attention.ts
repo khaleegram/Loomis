@@ -4,7 +4,7 @@ import type {
   WorkflowInstanceResponse,
   WorkflowType,
 } from '@loomis/contracts';
-import { CORE_OWNER_REFUND_THRESHOLD_MINOR } from '@loomis/core';
+import { CORE_OWNER_REFUND_THRESHOLD_MINOR, formatKobo } from '@loomis/core';
 
 /** Re-export for UI consumers importing from leadership-attention. */
 export { CORE_OWNER_REFUND_THRESHOLD_MINOR };
@@ -64,6 +64,114 @@ export function countRoleChangesPendingOwner(
     (instance) =>
       instance.workflowType === 'staff_role_change' && instance.status === 'pending',
   ).length;
+}
+
+export interface SchoolTermPulse {
+  termLabel: string;
+  headline: string;
+  description: string;
+  href: string;
+}
+
+/** School-language term summary for the owner dashboard hero (not platform billing copy). */
+export function resolveSchoolTermPulse(
+  term: AcademicTermResponse | null,
+  enrolledCount: number | null,
+): SchoolTermPulse {
+  if (!term) {
+    return {
+      termLabel: 'No active term',
+      headline: 'Set up your academic year',
+      description:
+        'Open a term to enroll students, issue school fees, and run daily operations.',
+      href: '/school/academic/sessions',
+    };
+  }
+
+  const termLabel = term.name ?? 'This term';
+  const enrolledHint =
+    enrolledCount != null
+      ? `${enrolledCount.toLocaleString()} students on roll`
+      : 'Student enrollment in progress';
+
+  if (term.status === 'open') {
+    return {
+      termLabel,
+      headline: `${termLabel} is open`,
+      description: `${enrolledHint}. Admissions, fee collection, and staff coverage for your school.`,
+      href: '/school/academic/sessions',
+    };
+  }
+
+  if (term.status === 'census_locked') {
+    return {
+      termLabel,
+      headline: `${termLabel} · census locked`,
+      description: `${enrolledHint}. School fees are live — track collections and owner approvals.`,
+      href: '/school/finance/balances',
+    };
+  }
+
+  if (term.status === 'closed') {
+    return {
+      termLabel,
+      headline: `${termLabel} is closed`,
+      description: 'Review promotions, outstanding balances, and prepare the next session.',
+      href: '/school/academic/sessions',
+    };
+  }
+
+  return {
+    termLabel,
+    headline: `${termLabel} in draft`,
+    description: 'Open the term when you are ready to enroll students and issue fees.',
+    href: '/school/academic/sessions',
+  };
+}
+
+export interface OwnerSchoolSnapshot {
+  enrolledCount: number;
+  pendingAdmissionCount: number;
+  familiesOwingCount: number;
+  totalFeesOwedMinor: number;
+  ownerApprovalCount: number;
+  thresholdRefundCount: number;
+  termLabel: string;
+  isLoading: boolean;
+}
+
+export function buildOwnerSchoolStripStats(snapshot: OwnerSchoolSnapshot): AttentionStripStat[] {
+  const approvalTotal = snapshot.ownerApprovalCount + snapshot.thresholdRefundCount;
+
+  return [
+    {
+      label: 'Enrolled students',
+      value: snapshot.isLoading ? '—' : snapshot.enrolledCount.toLocaleString(),
+      hint: snapshot.termLabel,
+      tone: 'ok',
+    },
+    {
+      label: 'Pending admissions',
+      value: snapshot.isLoading ? '—' : String(snapshot.pendingAdmissionCount),
+      hint: snapshot.pendingAdmissionCount > 0 ? 'Awaiting your decision' : 'Pipeline clear',
+      tone: snapshot.pendingAdmissionCount > 0 ? 'warn' : 'ok',
+    },
+    {
+      label: 'School fees owed',
+      value: snapshot.isLoading ? '—' : formatKobo(snapshot.totalFeesOwedMinor),
+      hint:
+        snapshot.familiesOwingCount > 0
+          ? `${snapshot.familiesOwingCount} famil${snapshot.familiesOwingCount === 1 ? 'y' : 'ies'} owing`
+          : 'Collections on track',
+      tone: snapshot.totalFeesOwedMinor > 0 ? 'warn' : 'ok',
+    },
+    {
+      label: 'Your approvals',
+      value: snapshot.isLoading ? '—' : String(approvalTotal),
+      hint: approvalTotal > 0 ? 'Refunds & policy sign-offs' : 'Nothing waiting on you',
+      tone: approvalTotal > 0 ? 'warn' : 'ok',
+    },
+  ];
 }
 
 export interface CensusAttention {
@@ -194,13 +302,15 @@ export function buildOwnerAttentionTasks(input: {
   const approvalHref = input.workflowInboxModule ? inboxHref : '/school/staff';
   const approvalCta = input.workflowInboxModule ? 'Open inbox' : 'Review items';
 
-  if (input.census.label === 'Platform fee pending') {
+  if (input.census.label === 'Platform fee pending' && input.census.urgency === 'attention') {
     tasks.push({
-      id: 'platform-fee',
-      title: input.census.label,
-      description: input.census.hint,
-      href: input.census.href,
-      cta: 'View platform fee',
+      id: 'term-census',
+      title: 'Enrollment census due soon',
+      description: input.census.hint
+        .replace(/platform fee/gi, 'enrollment census')
+        .replace(/billing date/gi, 'census date'),
+      href: '/school/academic/sessions',
+      cta: 'Review term',
       urgency: input.census.urgency,
     });
   }

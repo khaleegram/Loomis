@@ -5,15 +5,18 @@ import {
   useAcademicYears,
   useAdmissions,
   useCensusPreview,
+  useOutstandingBalances,
   usePsfObligations,
+  useSchoolBranding,
+  useStudents,
   useWorkflowInbox,
   useWorkflowMine,
 } from '@loomis/api-client';
-import { formatKobo } from '@loomis/core';
 import { useMemo } from 'react';
 
 import {
   buildOwnerAttentionTasks,
+  buildOwnerSchoolStripStats,
   buildPrincipalAttentionTasks,
   computePrincipalInboxBreakdown,
   countInboxForRole,
@@ -21,12 +24,14 @@ import {
   countRoleChangesPendingOwner,
   filterInboxByTypes,
   resolveCensusAttention,
+  resolveSchoolTermPulse,
   summarizePsfObligations,
   type AttentionStripStat,
   type AttentionTask,
   type CensusAttention,
   type PrincipalInboxBreakdown,
   type PsfSummary,
+  type SchoolTermPulse,
 } from '@/lib/leadership/leadership-attention';
 
 interface PsfObligationRow {
@@ -44,6 +49,8 @@ export function useLeadershipAttention(
   const mineQuery = useWorkflowMine(tenantId);
   const yearsQuery = useAcademicYears(tenantId);
   const psfQuery = usePsfObligations(tenantId);
+  const studentsQuery = useStudents(tenantId);
+  const brandingQuery = useSchoolBranding(tenantId);
 
   const activeYear = useMemo(
     () => yearsQuery.data?.academicYears?.find((year) => year.status === 'active'),
@@ -59,6 +66,8 @@ export function useLeadershipAttention(
     tenantId,
     focusTerm?.status === 'open' ? (focusTerm.id ?? '') : '',
   );
+
+  const balancesQuery = useOutstandingBalances(tenantId, focusTerm?.id ?? '', { scope: 'all' });
 
   const inboxItems = inboxQuery.data?.items ?? [];
   const initiated = mineQuery.data?.instances ?? [];
@@ -109,80 +118,53 @@ export function useLeadershipAttention(
     yearsQuery.isLoading ||
     termsQuery.isLoading ||
     psfQuery.isLoading ||
+    (role === 'school_owner' && studentsQuery.isLoading) ||
+    (role === 'school_owner' && brandingQuery.isLoading) ||
+    (role === 'school_owner' && Boolean(focusTerm?.id) && balancesQuery.isLoading) ||
     (focusTerm?.status === 'open' && censusPreviewQuery.isLoading);
 
-  const ownerStats: AttentionStripStat[] = useMemo(() => {
-    if (workflowInboxModule) {
-      return [
-        {
-          label: 'Platform fee',
-          value: isLoading ? '—' : census.label,
-          hint: census.hint,
-          tone:
-            census.urgency === 'attention' ? 'warn' : census.urgency === 'ready' ? 'ok' : 'neutral',
-        },
-        {
-          label: 'Platform fee paid',
-          value: isLoading ? '—' : String(psfSummary.settled),
-          hint:
-            psfSummary.total > 0
-              ? `${psfSummary.pending} still pending`
-              : 'Recorded when term billing runs',
-          tone: psfSummary.pending > 0 ? 'warn' : 'ok',
-        },
-        {
-          label: 'Workflow inbox',
-          value: isLoading ? '—' : String(ownerApprovalCount),
-          hint: ownerApprovalCount > 0 ? 'Awaiting owner sign-off' : 'Queue clear',
-          tone: ownerApprovalCount > 0 ? 'warn' : 'ok',
-        },
-        {
-          label: 'Platform fee due',
-          value: isLoading ? '—' : formatKobo(psfSummary.outstandingMinor),
-          hint: psfSummary.outstandingMinor > 0 ? 'Unsettled obligations' : 'All settled',
-          tone: psfSummary.outstandingMinor > 0 ? 'warn' : 'ok',
-        },
-      ];
-    }
+  const enrolledCount = useMemo(() => {
+    const billable = censusPreviewQuery.data?.systemBillableCount;
+    if (typeof billable === 'number') return billable;
+    return studentsQuery.data?.students?.length ?? null;
+  }, [censusPreviewQuery.data?.systemBillableCount, studentsQuery.data?.students]);
 
-    return [
-      {
-        label: 'Platform fee',
-        value: isLoading ? '—' : census.label,
-        hint: census.hint,
-        tone: census.urgency === 'attention' ? 'warn' : census.urgency === 'ready' ? 'ok' : 'neutral',
-      },
-      {
-        label: 'Platform fee',
-        value: isLoading ? '—' : String(psfSummary.total),
-        hint:
-          psfSummary.pending > 0
-            ? `${psfSummary.pending} pending settlement`
-            : psfSummary.total > 0
-              ? 'All settled'
-              : 'Recorded when term billing runs',
-        tone: psfSummary.pending > 0 ? 'warn' : 'ok',
-      },
-      {
-        label: 'Your approvals',
-        value: isLoading ? '—' : String(ownerApprovalCount),
-        hint: ownerApprovalCount > 0 ? 'Awaiting owner sign-off' : 'Queue clear',
-        tone: ownerApprovalCount > 0 ? 'warn' : 'ok',
-      },
-      {
-        label: 'High-value refunds',
-        value: isLoading ? '—' : String(thresholdRefundCount),
-        hint: thresholdRefundCount > 0 ? 'At or above ₦50,000' : 'None pending',
-        tone: thresholdRefundCount > 0 ? 'warn' : 'ok',
-      },
-    ];
+  const schoolTermPulse: SchoolTermPulse = useMemo(
+    () => resolveSchoolTermPulse(focusTerm, enrolledCount),
+    [enrolledCount, focusTerm],
+  );
+
+  const schoolName = brandingQuery.data?.tenantName ?? 'Your school';
+
+  const ownerStats: AttentionStripStat[] = useMemo(() => {
+    const balanceRows = balancesQuery.data?.rows ?? [];
+    const familiesOwingCount = balanceRows.filter((row) => row.balanceMinor > 0).length;
+    const totalFeesOwedMinor =
+      balancesQuery.data?.summary?.totalBalanceMinor ??
+      balanceRows.reduce((sum, row) => sum + row.balanceMinor, 0);
+
+    return buildOwnerSchoolStripStats({
+      enrolledCount: enrolledCount ?? 0,
+      pendingAdmissionCount,
+      familiesOwingCount,
+      totalFeesOwedMinor,
+      ownerApprovalCount,
+      thresholdRefundCount,
+      termLabel: schoolTermPulse.termLabel,
+      isLoading:
+        isLoading ||
+        (Boolean(focusTerm?.id) && balancesQuery.isLoading && role === 'school_owner'),
+    });
   }, [
-    census,
+    balancesQuery.data,
+    enrolledCount,
+    focusTerm?.id,
     isLoading,
     ownerApprovalCount,
-    psfSummary,
+    pendingAdmissionCount,
+    role,
+    schoolTermPulse.termLabel,
     thresholdRefundCount,
-    workflowInboxModule,
   ]);
 
   const principalStats: AttentionStripStat[] = useMemo(() => {
@@ -301,5 +283,7 @@ export function useLeadershipAttention(
     stats: role === 'school_owner' ? ownerStats : principalStats,
     actionCount,
     inboxBreakdown,
+    schoolTermPulse,
+    schoolName,
   };
 }

@@ -1,0 +1,110 @@
+import type { FastifyInstance } from 'fastify';
+import {
+  provisionTenantRequest,
+  type ProvisionTenantRequest,
+  reinstateTenantRequest,
+  suspendTenantRequest,
+  type SuspendTenantRequest,
+} from '@loomis/contracts';
+import { authenticate } from '../../../middleware/authenticate.js';
+import { requireIdempotencyKey } from '../../../middleware/require-idempotency-key.js';
+import { requireRole } from '../../../middleware/require-role.js';
+import { requireTenantMatch } from '../../../middleware/require-tenant-match.js';
+import { validateBody } from '../../../shared/validation.js';
+import {
+  getTenantHandler,
+  listTenantsHandler,
+  listTiersHandler,
+  provisionTenantHandler,
+  reinstateTenantHandler,
+  suspendTenantHandler,
+} from '../handlers/index.js';
+
+/**
+ * Platform console tenant routes (US-PLT-001/002).
+ * Paths match `packages/api-client` platform hooks (`/platform/tenants`, `/platform/tiers`).
+ */
+export async function platformTenantsRoutes(app: FastifyInstance): Promise<void> {
+  app.get(
+    '/platform/tenants',
+    {
+      preHandler: [
+        authenticate,
+        requireTenantMatch,
+        requireRole('platform_owner', 'platform_admin', 'dpo'),
+      ],
+    },
+    listTenantsHandler,
+  );
+
+  app.get(
+    '/platform/tiers',
+    {
+      preHandler: [
+        authenticate,
+        requireTenantMatch,
+        requireRole('platform_owner', 'platform_admin', 'dpo'),
+      ],
+    },
+    listTiersHandler,
+  );
+
+  app.post<{ Body: ProvisionTenantRequest }>(
+    '/platform/tenants',
+    {
+      preHandler: [
+        authenticate,
+        requireTenantMatch,
+        requireRole(
+          'platform_owner',
+          'platform_admin',
+          'regional_manager',
+          'regional_subordinate',
+        ),
+        requireIdempotencyKey,
+      ],
+      preValidation: [validateBody(provisionTenantRequest)],
+    },
+    provisionTenantHandler,
+  );
+
+  app.get<{ Params: { tenantId: string } }>(
+    '/platform/tenants/:tenantId',
+    {
+      preHandler: [
+        authenticate,
+        requireTenantMatch,
+        requireRole('platform_owner', 'platform_admin', 'dpo'),
+      ],
+    },
+    getTenantHandler,
+  );
+
+  app.post<{ Params: { tenantId: string }; Body: SuspendTenantRequest }>(
+    '/platform/tenants/:tenantId/suspend',
+    {
+      preHandler: [
+        authenticate,
+        requireTenantMatch,
+        requireRole('platform_owner', 'platform_admin'),
+        requireIdempotencyKey,
+      ],
+      preValidation: [validateBody(suspendTenantRequest)],
+    },
+    suspendTenantHandler,
+  );
+
+  app.post<{ Params: { tenantId: string } }>(
+    '/platform/tenants/:tenantId/reinstate',
+    {
+      preHandler: [
+        authenticate,
+        requireTenantMatch,
+        requireRole('platform_owner', 'platform_admin'),
+        requireIdempotencyKey,
+      ],
+      preValidation: [validateBody(reinstateTenantRequest)],
+    },
+    reinstateTenantHandler,
+  );
+}

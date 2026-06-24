@@ -1,0 +1,16 @@
+export {
+  deregisterPushSubscriptionHandler,
+  getMessageHandler,
+  getThreadHandler,
+  getWebPushConfigHandler,
+  listNotificationsHandler,
+  listPushSubscriptionsHandler,
+  listTemplatesHandler,
+  markNotificationReadHandler,
+  registerPushSubscriptionHandler,
+  replyToMessageHandler,
+  sendAnnouncementHandler,
+  sendClassMessageHandler,
+  sendStudentParentMessageHandler,
+  upsertTemplateHandler,
+} from './comms.handler.js';

@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildOwnerAttentionTasks,
+  buildOwnerSchoolStripStats,
   buildPrincipalAttentionTasks,
   computePrincipalInboxBreakdown,
   countOwnerThresholdRefunds,
   CORE_OWNER_REFUND_THRESHOLD_MINOR,
   refundAmountFromPayload,
   resolveCensusAttention,
+  resolveSchoolTermPulse,
   summarizePsfObligations,
 } from '@/lib/leadership/leadership-attention';
 import type { WorkflowInboxItemResponse } from '@loomis/contracts';
@@ -63,35 +65,19 @@ describe('leadership attention Sprint 4', () => {
 
   it('builds owner tasks without workflow inbox links', () => {
     const tasks = buildOwnerAttentionTasks({
-      census: resolveCensusAttention(
-        {
-          id: 't1',
-          academicYearId: 'y1',
-          name: 'First Term',
-          status: 'open',
-          censusSnapshotDate: '2026-07-01',
-          startDate: '2026-01-01',
-          endDate: '2026-12-31',
-          enrollmentWindowOpenDate: '2026-01-01',
-          enrollmentWindowCloseDate: '2026-06-01',
-          examStartDate: null,
-          examEndDate: null,
-          snapshotCreatedAt: null,
-          adjustmentWindowEndsAt: null,
-          systemBillableCount: null,
-          createdAt: '2026-01-01T00:00:00.000Z',
-          updatedAt: '2026-01-01T00:00:00.000Z',
-        },
-        'y1',
-        120,
-      ),
+      census: {
+        label: 'Platform fee pending',
+        hint: '120 enrolled students · 3 days until platform fee is recorded',
+        urgency: 'attention',
+        href: '/school/finance/platform-fee',
+      },
       ownerApprovalCount: 2,
       thresholdRefundCount: 1,
       pendingAdmissionCount: 3,
     });
 
     expect(tasks.some((task) => task.href.includes('/school/workflows'))).toBe(false);
-    expect(tasks.some((task) => task.id === 'platform-fee')).toBe(true);
+    expect(tasks.some((task) => task.id === 'term-census')).toBe(true);
     expect(tasks.some((task) => task.href === '/school/finance/refunds')).toBe(true);
   });
 
@@ -170,5 +156,51 @@ describe('leadership attention Sprint 4', () => {
       settled: 1,
       outstandingMinor: 750_000,
     });
+  });
+
+  it('builds school-focused owner strip stats', () => {
+    const stats = buildOwnerSchoolStripStats({
+      enrolledCount: 420,
+      pendingAdmissionCount: 5,
+      familiesOwingCount: 12,
+      totalFeesOwedMinor: 2_500_000,
+      ownerApprovalCount: 2,
+      thresholdRefundCount: 1,
+      termLabel: 'First Term',
+      isLoading: false,
+    });
+    expect(stats.map((stat) => stat.label)).toEqual([
+      'Enrolled students',
+      'Pending admissions',
+      'School fees owed',
+      'Your approvals',
+    ]);
+    expect(stats[3]?.value).toBe('3');
+  });
+
+  it('describes school term pulse without platform billing copy', () => {
+    const pulse = resolveSchoolTermPulse(
+      {
+        id: 't1',
+        academicYearId: 'y1',
+        name: 'First Term',
+        status: 'open',
+        censusSnapshotDate: '2026-07-01',
+        startDate: '2026-01-01',
+        endDate: '2026-12-31',
+        enrollmentWindowOpenDate: '2026-01-01',
+        enrollmentWindowCloseDate: '2026-06-01',
+        examStartDate: null,
+        examEndDate: null,
+        snapshotCreatedAt: null,
+        adjustmentWindowEndsAt: null,
+        systemBillableCount: null,
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      },
+      180,
+    );
+    expect(pulse.headline).toContain('First Term');
+    expect(pulse.description).not.toMatch(/platform fee/i);
   });
 });

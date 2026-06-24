@@ -1,0 +1,12 @@
+﻿  app.get<{ Params: { tenantId: string } }>(
+    '/tenants/:tenantId/exam-ops/status',
+    {
+      preHandler: [
+        authenticate,
+        requireTenantMatch,
+        requireRole(...gradingAdmins, 'admin_officer'),
+      ],
+    },
+    examOpsStatusHandler,
+  );
+}
