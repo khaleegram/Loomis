@@ -75,6 +75,7 @@ export function TenantProvisionDrawer({ open, onClose }: TenantProvisionDrawerPr
       name: '',
       region: '',
       contactEmail: '',
+      contactPhone: '',
       address: '',
       tierCode: '',
       referralCode: undefined,
@@ -93,7 +94,7 @@ export function TenantProvisionDrawer({ open, onClose }: TenantProvisionDrawerPr
   async function handleNextStep() {
     let valid = false;
     if (step === 0) {
-      valid = await form.trigger(['name', 'region', 'contactEmail', 'address']);
+      valid = await form.trigger(['name', 'region', 'contactEmail', 'contactPhone', 'address']);
     } else if (step === 1) {
       valid = await form.trigger(['tierCode']);
     }
@@ -202,6 +203,24 @@ export function TenantProvisionDrawer({ open, onClose }: TenantProvisionDrawerPr
                               type="email"
                               placeholder="principal@school.ng"
                               autoComplete="email"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="contactPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Mobile phone</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="tel"
+                              placeholder="+2348012345678"
+                              autoComplete="tel"
                             />
                           </FormControl>
                           <FormMessage />

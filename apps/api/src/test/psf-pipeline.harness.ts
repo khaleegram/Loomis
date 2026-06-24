@@ -62,6 +62,7 @@ export async function buildPsfPipelineFixture(studentCount = 2): Promise<PsfPipe
       name: `PSF Test School ${suffix}`,
       region: 'Lagos',
       contactEmail: `psf-${suffix}@example.com`,
+      contactPhone: '+2348015550101',
       address: '1 Test Street',
       tierCode,
       initialPsfRateMinor: PSF_RATE_MINOR,

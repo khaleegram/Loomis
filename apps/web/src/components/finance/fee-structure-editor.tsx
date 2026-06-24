@@ -70,6 +70,15 @@ type AmendFormValues = z.infer<typeof amendFormSchema>;
 
 const CATEGORY_OPTIONS = feeItemCategory.options;
 
+const FEE_LINE_PRESETS: ReadonlyArray<{ name: string; category: FeeItemCategory }> = [
+  { name: 'Tuition', category: 'tuition' },
+  { name: 'Development levy', category: 'development_levy' },
+  { name: 'Materials & stationery', category: 'materials' },
+  { name: 'Books', category: 'books' },
+  { name: 'ICT levy', category: 'technology' },
+  { name: 'Exam fees', category: 'exam' },
+];
+
 interface FeeStructureEditorProps {
   tenantId: string;
   termId: string;
@@ -216,6 +225,24 @@ export function FeeStructureEditor({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSave)} className="space-y-4">
+            {(canDirectEdit || canCreate) ? (
+              <div className="flex flex-wrap gap-2">
+                <span className="w-full text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-400">
+                  Quick add
+                </span>
+                {FEE_LINE_PRESETS.map((preset) => (
+                  <button
+                    key={preset.category}
+                    type="button"
+                    className={ACADEMIC_UI.btnSecondarySm}
+                    onClick={() => append({ ...preset, amountMinor: 0 })}
+                  >
+                    <Plus className="size-3.5" />
+                    {preset.name}
+                  </button>
+                ))}
+              </div>
+            ) : null}
             <div className={`${ACADEMIC_UI.dataPanel} overflow-hidden`}>
               <table className="min-w-full text-left text-[13px]">
                 <thead className={ACADEMIC_UI.tableHeader}>

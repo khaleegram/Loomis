@@ -28,6 +28,7 @@ export async function sendEmail(input: {
   to: string;
   subject: string;
   body: string;
+  html?: string;
 }): Promise<void> {
   const env = getEnv();
   if (!env.RESEND_FROM_EMAIL || !env.RESEND_API_KEY) {
@@ -43,6 +44,7 @@ export async function sendEmail(input: {
     to: input.to,
     subject: input.subject,
     text: input.body,
+    ...(input.html ? { html: input.html } : {}),
   });
 
   if (error) {

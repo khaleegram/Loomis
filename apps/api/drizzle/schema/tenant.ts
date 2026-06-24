@@ -58,6 +58,8 @@ export const tenants = tenantSchema.table(
     name: varchar('name', { length: 200 }).notNull(),
     region: varchar('region', { length: 100 }).notNull(),
     contactEmail: varchar('contact_email', { length: 255 }).notNull(),
+    /** Primary mobile contact (E.164, e.g. +2348012345678). */
+    contactPhone: varchar('contact_phone', { length: 20 }),
     address: varchar('address', { length: 500 }).notNull(),
     status: varchar('status', { length: 20 }).notNull().default('provisioning'),
     tierId: uuid('tier_id')

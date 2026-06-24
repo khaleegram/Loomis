@@ -3,7 +3,9 @@ import type {
   MarkAttendanceRequest,
   SyncOfflineAttendanceRequest,
 } from '@loomis/contracts';
+import { isPortalEnrollmentStatus } from '@loomis/core';
 import { staffRepository } from '../../hrm/repository/staff.repository.js';
+import { assertParentPortalAccess } from '../../student/services/parent-portal-access.js';
 import { studentRepository } from '../../student/repository/student.repository.js';
 import { writeAudit } from '../../../shared/audit.js';
 import { LoomisError } from '../../../shared/errors.js';
@@ -351,15 +353,7 @@ export const attendanceService = {
     termId: string,
     actor: ActorContext,
   ) {
-    if (actor.role !== 'parent') {
-      throw new LoomisError('FORBIDDEN', 403, 'Parent role required');
-    }
-
-    const linked = await studentRepository.hasActiveParentLink(tenantId, actor.userId, studentId);
-    if (!linked) {
-      throw new LoomisError('FORBIDDEN', 403, 'You are not linked to this student');
-    }
-
+    await assertParentPortalAccess(tenantId, studentId, actor, { termId });
     return this.listChildAttendance(tenantId, studentId, termId, actor);
   },
 
@@ -370,10 +364,7 @@ export const attendanceService = {
     _actor: ActorContext,
   ) {
     const enrollment = await studentRepository.findEnrollmentForTerm(tenantId, studentId, termId);
-    if (
-      !enrollment ||
-      !['active', 'active_billable', 'suspended'].includes(enrollment.status)
-    ) {
+    if (!enrollment || !isPortalEnrollmentStatus(enrollment.status)) {
       throw new LoomisError('STUDENT_ENROLLMENT_NOT_FOUND', 404, 'No active enrollment for this term');
     }
 

@@ -77,6 +77,7 @@ export default function RegionalOnboardingPage() {
       name: draft.name,
       region: draft.region,
       contactEmail: draft.contactEmail,
+      contactPhone: draft.contactPhone,
       address: draft.address,
       tierCode: draft.tierCode,
       referralCode: '',
@@ -104,9 +105,10 @@ export default function RegionalOnboardingPage() {
         setField('region', form.getValues('region'));
       }
     } else if (step === 1) {
-      valid = await form.trigger(['contactEmail', 'address']);
+      valid = await form.trigger(['contactEmail', 'contactPhone', 'address']);
       if (valid) {
         setField('contactEmail', form.getValues('contactEmail'));
+        setField('contactPhone', form.getValues('contactPhone'));
         setField('address', form.getValues('address'));
       }
     } else if (step === 2) {
@@ -127,6 +129,7 @@ export default function RegionalOnboardingPage() {
           name: values.name,
           region: values.region,
           contactEmail: values.contactEmail,
+          contactPhone: values.contactPhone,
           address: values.address,
           tierCode: values.tierCode,
           referralCode: values.referralCode || undefined,
@@ -284,6 +287,27 @@ export default function RegionalOnboardingPage() {
                           <FormControl>
                             <Input type="email" placeholder="admin@school.edu.ng" className={smartInputClass} {...field} />
                           </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="contactPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Mobile phone</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="tel"
+                              placeholder="+2348012345678"
+                              className={smartInputClass}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormDescription className="text-[11px]">
+                            Nigerian mobile in E.164 format — used for the School Owner account.
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}

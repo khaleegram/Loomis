@@ -1,4 +1,5 @@
 import type { EmailDeliveryResult } from '@loomis/contracts';
+import { formatKobo } from '@loomis/core';
 import { COMMS_EVENT_TYPES } from '@loomis/contracts';
 import { isEmailConfigured, sendEmail } from '../gateways/resend.gateway.js';
 import { commsOutboxRepository } from '../repository/outbox.repository.js';
@@ -93,17 +94,114 @@ function buildStudentPortalCredentialsEmail(input: {
   };
 }
 
+function buildSchoolOwnerWelcomeEmail(input: {
+  fullName: string;
+  schoolName: string;
+  loginEmail: string;
+  temporaryPassword: string;
+}): { subject: string; body: string; html: string } {
+  const signInUrl = loginUrl();
+  const subject = `Welcome to Loomis — ${input.schoolName} is ready`;
+  const body = [
+    `Hello ${input.fullName},`,
+    '',
+    `Your school, ${input.schoolName}, has been provisioned on Loomis.`,
+    '',
+    'Sign in here:',
+    signInUrl,
+    '',
+    'Login email:',
+    input.loginEmail,
+    '',
+    'Temporary password:',
+    input.temporaryPassword,
+    '',
+    'You must choose a new password when you sign in for the first time.',
+    '',
+    'Next steps:',
+    '- Set up your fee structure for the current term',
+    '- Invite your principal and finance team',
+    '- Open the academic year when you are ready',
+    '',
+    'If you did not expect this message, contact Loomis Platform Operations.',
+  ].join('\n');
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f5f3ef;font-family:Segoe UI,Helvetica,Arial,sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f5f3ef;padding:32px 16px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e8e4dc;">
+        <tr><td style="background:linear-gradient(135deg,#1a1a1a 0%,#2d2419 100%);padding:32px 28px;">
+          <p style="margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:#c9a96e;">Loomis Platform</p>
+          <h1 style="margin:0;font-size:24px;font-weight:800;color:#ffffff;line-height:1.25;">Welcome, ${input.fullName}</h1>
+          <p style="margin:12px 0 0;font-size:14px;color:rgba(255,255,255,0.75);">${input.schoolName} is live on Loomis.</p>
+        </td></tr>
+        <tr><td style="padding:28px;">
+          <p style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#444;">Use the credentials below to sign in and complete your school setup.</p>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#faf8f5;border:1px solid #ece6da;border-radius:12px;margin-bottom:24px;">
+            <tr><td style="padding:16px 18px;">
+              <p style="margin:0 0 4px;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#9ca3af;">Login email</p>
+              <p style="margin:0 0 14px;font-size:15px;font-weight:600;color:#111;">${input.loginEmail}</p>
+              <p style="margin:0 0 4px;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#9ca3af;">Temporary password</p>
+              <p style="margin:0;font-size:18px;font-weight:800;letter-spacing:0.08em;color:#111;font-family:ui-monospace,monospace;">${input.temporaryPassword}</p>
+            </td></tr>
+          </table>
+          <a href="${signInUrl}" style="display:inline-block;background:#c9a96e;color:#111;text-decoration:none;font-size:14px;font-weight:700;padding:14px 28px;border-radius:10px;">Sign in to Loomis</a>
+          <p style="margin:24px 0 0;font-size:12px;line-height:1.6;color:#888;">You will be asked to set a new password on first sign-in. Start by configuring your fee structure, then invite your team.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  return { subject, body, html };
+}
+
+function buildPsfSuggestionEmail(input: {
+  schoolName: string;
+  basisFeesMinor: number;
+  suggestedRateMinor: number;
+  currentRateMinor: number | null;
+}): { subject: string; body: string } {
+  const basis = formatKobo(input.basisFeesMinor);
+  const suggested = formatKobo(input.suggestedRateMinor);
+  const current = input.currentRateMinor != null ? formatKobo(input.currentRateMinor) : 'platform default';
+  return {
+    subject: `Suggested platform fee (PSF) for ${input.schoolName}`,
+    body: [
+      'Hello,',
+      '',
+      `Based on your configured school fees (${basis} per student), Loomis suggests a platform fee (PSF) of ${suggested} per billable student per term.`,
+      '',
+      `Your current PSF setting: ${current}`,
+      '',
+      'Platform Operations may apply this rate, or you can request a review if you believe a different rate applies.',
+      '',
+      `${webAppBaseUrl()}/school/finance/psf`,
+    ].join('\n'),
+  };
+}
+
 async function sendTransactionalEmail(input: {
   to: string;
   subject: string;
   body: string;
+  html?: string;
 }): Promise<EmailDeliveryResult> {
   const recipient = input.to.toLowerCase();
   if (!isEmailConfigured()) {
     return { sent: false, recipient, reason: 'EMAIL_NOT_CONFIGURED' };
   }
   try {
-    await sendEmail({ to: recipient, subject: input.subject, body: input.body });
+    await sendEmail({
+      to: recipient,
+      subject: input.subject,
+      body: input.body,
+      html: input.html,
+    });
     return { sent: true, recipient };
   } catch {
     return { sent: false, recipient, reason: 'SEND_FAILED' };
@@ -374,5 +472,71 @@ export const transactionalEmailService = {
         `${webAppBaseUrl()}/school/academic/platform-billing`,
       ].join('\n'),
     });
+  },
+
+  async sendSchoolOwnerWelcomeEmail(input: {
+    tenantId: string;
+    userId: string;
+    to: string;
+    fullName: string;
+    schoolName: string;
+    loginEmail: string;
+    temporaryPassword: string;
+  }): Promise<EmailDeliveryResult> {
+    const recipient = input.to.toLowerCase();
+    let result: EmailDeliveryResult;
+
+    if (!isEmailConfigured()) {
+      result = { sent: false, recipient, reason: 'EMAIL_NOT_CONFIGURED' };
+    } else {
+      const { subject, body, html } = buildSchoolOwnerWelcomeEmail({
+        fullName: input.fullName,
+        schoolName: input.schoolName,
+        loginEmail: input.loginEmail,
+        temporaryPassword: input.temporaryPassword,
+      });
+      try {
+        await sendEmail({ to: recipient, subject, body, html });
+        result = { sent: true, recipient };
+      } catch {
+        result = { sent: false, recipient, reason: 'SEND_FAILED' };
+      }
+    }
+
+    await recordDeliveryEvent({ tenantId: input.tenantId, userId: input.userId, result });
+    return result;
+  },
+
+  async sendPsfSuggestionEmail(input: {
+    tenantId: string;
+    userId: string;
+    to: string;
+    schoolName: string;
+    basisFeesMinor: number;
+    suggestedRateMinor: number;
+    currentRateMinor: number | null;
+  }): Promise<EmailDeliveryResult> {
+    const recipient = input.to.toLowerCase();
+    let result: EmailDeliveryResult;
+
+    if (!isEmailConfigured()) {
+      result = { sent: false, recipient, reason: 'EMAIL_NOT_CONFIGURED' };
+    } else {
+      const { subject, body } = buildPsfSuggestionEmail({
+        schoolName: input.schoolName,
+        basisFeesMinor: input.basisFeesMinor,
+        suggestedRateMinor: input.suggestedRateMinor,
+        currentRateMinor: input.currentRateMinor,
+      });
+      try {
+        await sendEmail({ to: recipient, subject, body });
+        result = { sent: true, recipient };
+      } catch {
+        result = { sent: false, recipient, reason: 'SEND_FAILED' };
+      }
+    }
+
+    await recordDeliveryEvent({ tenantId: input.tenantId, userId: input.userId, result });
+    return result;
   },
 };

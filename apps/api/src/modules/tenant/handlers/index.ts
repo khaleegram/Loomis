@@ -18,5 +18,7 @@ export {
   listTiersHandler,
   provisionTenantHandler,
   reinstateTenantHandler,
+  resendTenantSetupEmailHandler,
   suspendTenantHandler,
+  updateTenantProfileHandler,
 } from './tenant.handler.js';

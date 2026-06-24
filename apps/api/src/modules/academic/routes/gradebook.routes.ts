@@ -18,6 +18,7 @@ import {
   type UpsertGradebookEntryRequest,
 } from '@loomis/contracts';
 import { authenticate } from '../../../middleware/authenticate.js';
+import { requireDeputyExamEnabled } from '../../../middleware/require-deputy-exam-enabled.js';
 import { requireIdempotencyKey } from '../../../middleware/require-idempotency-key.js';
 import { requireOptionalStaffRoleIfApplicable } from '../../../middleware/require-optional-staff-role.js';
 import { requireRole } from '../../../middleware/require-role.js';
@@ -49,11 +50,12 @@ const gradebookReaders = [
   'teacher',
   'class_teacher',
 ] as const;
-const gradebookWriters = ['teacher', 'class_teacher', 'principal'] as const;
+const gradebookWriters = ['teacher', 'principal'] as const;
 
 /** Grading schemes, gradebook entries, corrections and result publication. */
 export async function gradebookRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', requireOptionalStaffRoleIfApplicable());
+  app.addHook('preHandler', requireDeputyExamEnabled());
 
   app.post<{ Params: { tenantId: string }; Body: CreateGradingSchemeRequest }>(
     '/tenants/:tenantId/grading-schemes',
@@ -97,7 +99,7 @@ export async function gradebookRoutes(app: FastifyInstance): Promise<void> {
   app.get<{ Params: { tenantId: string }; Querystring: ListGradebookQuery }>(
     '/tenants/:tenantId/gradebook/entries',
     {
-      preHandler: [authenticate, requireTenantMatch, requireRole(...gradebookReaders)],
+      preHandler: [authenticate, requireTenantMatch, requireStaffRole(...gradebookReaders)],
       preValidation: [validateQuery(listGradebookQuery)],
     },
     listGradebookEntriesHandler,

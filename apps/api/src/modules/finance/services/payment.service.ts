@@ -4,6 +4,7 @@ import { getEnv } from '../../../config/env.js';
 import { idempotencyService } from '../../../shared/idempotency.service.js';
 import { LoomisError } from '../../../shared/errors.js';
 import { studentRepository } from '../../student/repository/student.repository.js';
+import { assertParentPortalAccess } from '../../student/services/parent-portal-access.js';
 import { FINANCE_EVENT_TYPES } from '../events/types.js';
 import { gatewayAbstractionLayer } from '../gateway/index.js';
 import { financeRepository, paymentRepository, type PaymentWithReceipt } from '../repository/index.js';
@@ -487,15 +488,7 @@ export const paymentService = {
     termId: string,
     actor: ActorContext,
   ): Promise<PaymentWithReceipt[]> {
-    if (actor.role !== 'parent') {
-      throw new LoomisError('FORBIDDEN', 403, 'Parent role required');
-    }
-
-    const linked = await studentRepository.hasActiveParentLink(tenantId, actor.userId, studentId);
-    if (!linked) {
-      throw new LoomisError('FORBIDDEN', 403, 'You are not linked to this student');
-    }
-
+    await assertParentPortalAccess(tenantId, studentId, actor, { termId });
     return paymentRepository.listPayments(tenantId, { studentId, termId });
   },
 

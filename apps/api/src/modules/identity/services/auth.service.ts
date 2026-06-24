@@ -10,6 +10,8 @@ import {
   stepUpUsesSms,
 } from '@loomis/core';
 import { resolveStaffEffectiveRoles } from '../../hrm/services/staff-role-resolver.js';
+import { readModelProjectionService } from '../../read-models/services/projection.service.js';
+import { studentRepository } from '../../student/repository/student.repository.js';
 import { transactionalEmailService } from '../../comms/services/transactional-email.service.js';
 import { isEmailConfigured } from '../../comms/gateways/resend.gateway.js';
 import { isTermiiConfigured, sendSms } from '../../comms/gateways/termii.gateway.js';
@@ -533,6 +535,13 @@ export const authService = {
     });
 
     const staffExtensionRoles = await loadStaffExtensionRoles(user);
+
+    if (user.role === 'parent') {
+      void studentRepository
+        .bindParentUserToIdentities(user.id, user.email)
+        .then(() => readModelProjectionService.syncParentDashboardCardsForUser(user.id))
+        .catch(() => undefined);
+    }
 
     return {
       accessToken,

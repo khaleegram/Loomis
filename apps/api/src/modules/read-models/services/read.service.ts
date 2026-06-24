@@ -78,8 +78,31 @@ export const parentDashboardReadService = {
     }
 
     const cards = await parentDashboardRepository.listForParent(actor.userId);
+    const activeCards = [];
+
+    for (const card of cards) {
+      const linked = await studentRepository.hasActiveParentLink(
+        card.tenantId,
+        actor.userId,
+        card.studentId,
+      );
+      if (!linked) {
+        await withTenantContext(null, async (tx) => {
+          await parentDashboardRepository.setLinkStatus(
+            tx,
+            actor.userId,
+            card.tenantId,
+            card.studentId,
+            'revoked',
+          );
+        });
+        continue;
+      }
+      activeCards.push(card);
+    }
+
     return Promise.all(
-      cards.map(async (card) => {
+      activeCards.map(async (card) => {
         const student = await studentRepository.findStudentById(card.tenantId, card.studentId);
         const studentLastName = student?.lastName ?? '';
         const studentDisplayName = `${card.studentFirstName} ${studentLastName}`.trim();

@@ -1,5 +1,9 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import type { ProvisionTenantRequest, SuspendTenantRequest } from '@loomis/contracts';
+import type {
+  ProvisionTenantRequest,
+  SuspendTenantRequest,
+  UpdateTenantProfileRequest,
+} from '@loomis/contracts';
 import { sendSuccess } from '../../../shared/http.js';
 import { tenantService } from '../services/tenant.service.js';
 import { requireActor } from './_context.js';
@@ -63,4 +67,31 @@ export async function reinstateTenantHandler(
   const actor = requireActor(req);
   const tenant = await tenantService.reinstateTenant(req.params.tenantId, actor);
   return sendSuccess(reply, await tenantService.toResponse(tenant));
+}
+
+/** PATCH /platform/tenants/:tenantId — update school contact profile. */
+export async function updateTenantProfileHandler(
+  req: FastifyRequest<{ Params: TenantParams; Body: UpdateTenantProfileRequest }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const actor = requireActor(req);
+  const tenant = await tenantService.updateTenantProfile(req.params.tenantId, req.body, actor);
+  return sendSuccess(reply, await tenantService.toResponse(tenant));
+}
+
+/** POST /platform/tenants/:tenantId/resend-setup-email — resend School Owner welcome email. */
+export async function resendTenantSetupEmailHandler(
+  req: FastifyRequest<{ Params: TenantParams }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const actor = requireActor(req);
+  const result = await tenantService.resendOwnerSetupEmail(req.params.tenantId, actor);
+  return sendSuccess(reply, {
+    status: 'resent' as const,
+    setupEmailSentAt: result.setupEmailSentAt,
+    emailDelivery: {
+      sent: result.email.sent,
+      ...(result.email.reason ? { reason: result.email.reason } : {}),
+    },
+  });
 }

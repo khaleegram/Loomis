@@ -31,12 +31,13 @@ import {
   schoolContactEmail,
   schoolDevEmail,
 } from './seed-email.js';
+import { ensureProductTiers } from './ensure-product-tiers.js';
 
 const DEV_PASSWORD = 'LoomisDev2026!';
 /** Fixed dev TOTP secret — add to any authenticator app as "Loomis Dev" (base32). */
 const DEV_TOTP_BASE32 = 'JBSWY3DPEHPK3PXP';
-const TIER_CODE = 'demo';
-const PSF_RATE_MINOR = 500_000;
+const TIER_CODE = 'core';
+const PSF_RATE_MINOR = 100_000;
 
 interface PlatformDemoAccountSpec {
   email: string;
@@ -91,19 +92,11 @@ interface DemoAccountSpec {
   classTeacher?: boolean;
 }
 
-async function ensureTier(code: string) {
+async function ensureTier(_code: string) {
+  await ensureProductTiers();
   return withTenantContext(null, async (tx) => {
-    const [existing] = await tx.select().from(tiers).where(eq(tiers.code, code)).limit(1);
-    if (existing) return existing;
-    const [tier] = await tx
-      .insert(tiers)
-      .values({
-        code,
-        name: 'Demo Tier',
-        defaultPsfRateMinor: PSF_RATE_MINOR,
-      })
-      .returning();
-    if (!tier) throw new Error('Failed to create demo tier');
+    const [tier] = await tx.select().from(tiers).where(eq(tiers.code, TIER_CODE)).limit(1);
+    if (!tier) throw new Error(`Product tier '${TIER_CODE}' missing — run ensureProductTiers`);
     return tier;
   });
 }
@@ -276,9 +269,9 @@ async function ensureAdvancedFixtureTenant(platformOwnerId: string): Promise<voi
       name: 'Advanced QA School Lagos',
       region: 'Lagos',
       contactEmail: schoolContactEmail(ADVANCED_SCHOOL_SLUG),
+      contactPhone: '+2348020000201',
       address: '2 Advanced Close, Ikeja, Lagos',
-      tierCode: TIER_CODE,
-      initialPsfRateMinor: PSF_RATE_MINOR,
+      tierCode: 'advanced',
     },
     { userId: platformOwnerId, role: 'platform_owner' },
   );
@@ -416,9 +409,9 @@ async function ensureEnterpriseFixtureTenant(platformOwnerId: string): Promise<v
       name: 'Enterprise QA School Lagos',
       region: 'Lagos',
       contactEmail: schoolContactEmail(ENTERPRISE_SCHOOL_SLUG),
+      contactPhone: '+2348020000301',
       address: '3 Enterprise Crescent, Ikeja, Lagos',
-      tierCode: TIER_CODE,
-      initialPsfRateMinor: PSF_RATE_MINOR,
+      tierCode: 'enterprise',
     },
     { userId: platformOwnerId, role: 'platform_owner' },
   );
@@ -526,6 +519,7 @@ async function main() {
   if (!platformOwner) throw new Error('Platform owner seed failed');
 
   await ensureTier(TIER_CODE);
+  await ensureProductTiers();
   await ensureDevPsfRate(platformOwner.id);
   await ensureAdvancedFixtureTenant(platformOwner.id);
   await ensureAdvancedSplitFinanceFixture(platformOwner.id);

@@ -1,3 +1,4 @@
+import { isBillableEnrollmentStatus } from '@loomis/core';
 import { eq } from 'drizzle-orm';
 import { messages } from '../../../../drizzle/schema/comms.js';
 import { studentRepository } from '../../student/repository/student.repository.js';
@@ -289,7 +290,7 @@ export const messageService = {
       input.studentId,
       input.termId,
     );
-    if (!enrollment || !['active', 'active_billable'].includes(enrollment.status)) {
+    if (!enrollment || !isBillableEnrollmentStatus(enrollment.status)) {
       throw new LoomisError(
         'COMMS_STUDENT_NOT_ENROLLED',
         422,

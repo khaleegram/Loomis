@@ -65,6 +65,21 @@ export const userRepository = {
     return user ?? null;
   },
 
+  async resetToTemporaryPassword(userId: string, passwordHash: string, tx?: Executor) {
+    const executor = tx ?? db;
+    const [user] = await executor
+      .update(users)
+      .set({
+        passwordHash,
+        mustChangePassword: true,
+        userVer: sql`${users.userVer} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return user ?? null;
+  },
+
   async activatePendingUser(userId: string, passwordHash: string, tx?: Executor) {
     const executor = tx ?? db;
     const [user] = await executor

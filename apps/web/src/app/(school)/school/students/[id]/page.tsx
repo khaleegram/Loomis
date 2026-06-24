@@ -50,7 +50,7 @@ import {
   formatDateTime,
   maskEmail,
   maskPhone,
-  parentLinkStatusLabel,
+  parentPortalReadinessLabel,
   relationshipLabel,
   studentDisplayName,
 } from '@/lib/student/student-labels';
@@ -404,9 +404,13 @@ export default function StudentProfilePage({ params }: StudentProfilePageProps) 
                             </p>
                           </div>
                           <Badge
-                            variant={link.status === 'active' ? 'default' : 'secondary'}
+                            variant={
+                              link.status === 'active' && link.parentIdentity.userId
+                                ? 'default'
+                                : 'secondary'
+                            }
                           >
-                            {parentLinkStatusLabel(link.status)}
+                            {parentPortalReadinessLabel(link.status, link.parentIdentity.userId)}
                           </Badge>
                         </div>
                       </div>

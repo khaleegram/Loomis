@@ -37,12 +37,18 @@ export const tierSummary = z.object({
 });
 export type TierSummary = z.infer<typeof tierSummary>;
 
+/** Nigerian mobile in E.164 (+234XXXXXXXXXX). */
+export const nigerianMobilePhone = z
+  .string()
+  .regex(/^\+234[789]\d{9}$/, 'Enter a valid Nigerian mobile number (e.g. +2348012345678)');
+
 // ── Tenant provisioning (US-PLT-001 / FR-PLT-001) ──────────────────────────────
 
 export const provisionTenantRequest = z.object({
   name: z.string().min(2).max(200),
   region: z.string().min(2).max(100),
   contactEmail: z.string().email(),
+  contactPhone: nigerianMobilePhone,
   address: z.string().min(2).max(500),
   tierCode: z.string().min(1).max(50),
   /** Referral code used at onboarding — permanently linked (CON-009). */
@@ -52,20 +58,60 @@ export const provisionTenantRequest = z.object({
 });
 export type ProvisionTenantRequest = z.infer<typeof provisionTenantRequest>;
 
+export const updateTenantProfileRequest = z
+  .object({
+    contactEmail: z.string().email().optional(),
+    contactPhone: nigerianMobilePhone.optional(),
+    address: z.string().min(2).max(500).optional(),
+    region: z.string().min(2).max(100).optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, {
+    message: 'At least one field must be provided',
+  });
+export type UpdateTenantProfileRequest = z.infer<typeof updateTenantProfileRequest>;
+
+export const tenantOwnerSetupStatus = z.object({
+  hasOwnerAccount: z.boolean(),
+  ownerEmail: z.string().email().nullable(),
+  setupEmailSentAt: z.string().datetime().nullable(),
+});
+export type TenantOwnerSetupStatus = z.infer<typeof tenantOwnerSetupStatus>;
+
+export const resendTenantSetupResponse = z.object({
+  status: z.literal('resent'),
+  setupEmailSentAt: z.string().datetime(),
+  emailDelivery: z.object({
+    sent: z.boolean(),
+    reason: z.string().optional(),
+  }),
+});
+export type ResendTenantSetupResponse = z.infer<typeof resendTenantSetupResponse>;
+
+export const psfSuggestionResponse = z.object({
+  suggestedRateMinor: z.number().int(),
+  basisFeesMinor: z.number().int(),
+  currentRateMinor: z.number().int().nullable(),
+  message: z.string(),
+});
+export type PsfSuggestionResponse = z.infer<typeof psfSuggestionResponse>;
+
 export const tenantResponse = z.object({
   id: z.string().uuid(),
   name: z.string(),
   region: z.string(),
   contactEmail: z.string().email(),
+  contactPhone: z.string().nullable(),
   address: z.string(),
   status: tenantStatus,
   tierId: z.string().uuid(),
   tierCode: z.string(),
   referralCode: z.string().nullable(),
   currentPsfRateMinor: z.number().int().nullable(),
+  suggestedPsfRateMinor: z.number().int().nullable(),
   experienceTier: experienceTier,
   financeMode: financeMode,
   experienceFlags: tenantExperienceFlags,
+  ownerSetup: tenantOwnerSetupStatus,
   suspendedReason: z.string().nullable(),
   suspendedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),

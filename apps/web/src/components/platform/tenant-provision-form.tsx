@@ -29,6 +29,7 @@ import {
   Mail,
   MapPin,
   Percent,
+  Phone,
 } from 'lucide-react';
 import { uuidv7 } from 'uuidv7';
 
@@ -57,6 +58,7 @@ type ProvisionFormValues = {
   name: string;
   region: string;
   contactEmail: string;
+  contactPhone: string;
   address: string;
   tierCode: string;
   referralCode?: string;
@@ -67,6 +69,7 @@ const DEFAULT_VALUES: ProvisionFormValues = {
   name: '',
   region: '',
   contactEmail: '',
+  contactPhone: '',
   address: '',
   tierCode: '',
   referralCode: undefined,
@@ -81,6 +84,7 @@ function buildApiBody(values: ProvisionFormValues): z.infer<typeof provisionTena
     name: values.name.trim(),
     region: values.region.trim(),
     contactEmail: values.contactEmail.trim(),
+    contactPhone: values.contactPhone.trim(),
     address: values.address.trim(),
     tierCode: values.tierCode,
     referralCode: values.referralCode?.trim() ? values.referralCode.trim() : undefined,
@@ -140,11 +144,11 @@ export function TenantProvisionForm() {
   async function handleNext() {
     setSubmitError(null);
     if (step === 0) {
-      const ok = await form.trigger(['name', 'region', 'contactEmail', 'address']);
+      const ok = await form.trigger(['name', 'region', 'contactEmail', 'contactPhone', 'address']);
       if (!ok) return;
       const partial = buildApiBody(form.getValues());
       const parsed = provisionTenantRequest
-        .pick({ name: true, region: true, contactEmail: true, address: true })
+        .pick({ name: true, region: true, contactEmail: true, contactPhone: true, address: true })
         .safeParse(partial);
       if (!parsed.success) {
         for (const issue of parsed.error.issues) {
@@ -363,7 +367,43 @@ export function TenantProvisionForm() {
                         </div>
                       </FormControl>
                       <FormDescription className="text-[11px] text-neutral-400">
-                        School Owner invitation is sent here after provisioning.
+                        School Owner account and welcome email are sent here after provisioning.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="contactPhone"
+                  rules={{
+                    required: 'Mobile phone is required',
+                    pattern: {
+                      value: /^\+234[789]\d{9}$/,
+                      message: 'Use Nigerian format: +2348012345678',
+                    },
+                  }}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FieldLabel required>Mobile phone</FieldLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Phone
+                            aria-hidden
+                            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400"
+                          />
+                          <Input
+                            {...field}
+                            type="tel"
+                            className={cn(inputClass, 'pl-9')}
+                            placeholder="+2348012345678"
+                            autoComplete="tel"
+                          />
+                        </div>
+                      </FormControl>
+                      <FormDescription className="text-[11px] text-neutral-400">
+                        Primary mobile for the School Owner and urgent platform notices.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -523,8 +563,8 @@ export function TenantProvisionForm() {
                       <FormControl>
                         <div className="rounded-xl border border-neutral-200 bg-neutral-50/60 p-4">
                           <p className="mb-3 text-[12px] leading-relaxed text-neutral-500">
-                            Leave empty to bill at the tier default. Overrides apply from the first
-                            billing term only.
+                            Leave empty to start at the platform default of ₦1,000 per student.
+                            Recalculated automatically when the school sets fee structures.
                           </p>
                           <div className="flex flex-wrap items-end gap-3">
                             <div className="min-w-[180px] flex-1">
@@ -598,16 +638,15 @@ export function TenantProvisionForm() {
                 </div>
                 <dl className="grid grid-cols-1 gap-3 border-t border-neutral-100 pt-4 sm:grid-cols-2">
                   {[
-                    { label: 'Contact', value: values.contactEmail || '—' },
+                    { label: 'Contact email', value: values.contactEmail || '—' },
+                    { label: 'Mobile phone', value: values.contactPhone || '—' },
                     { label: 'Address', value: values.address || '—' },
                     {
                       label: 'PSF rate',
                       value:
                         values.initialPsfRateMinor && values.initialPsfRateMinor > 0
                           ? `${formatKobo(values.initialPsfRateMinor)} (override)`
-                          : selectedTier
-                            ? `${formatKobo(selectedTier.defaultPsfRateMinor)} (tier default)`
-                            : 'Tier default',
+                          : '₦1,000.00 (platform default)',
                     },
                     { label: 'Referral', value: values.referralCode || 'None' },
                   ].map(({ label, value }) => (

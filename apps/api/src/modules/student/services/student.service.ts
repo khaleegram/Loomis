@@ -96,6 +96,7 @@ export const studentService = {
           phoneE164: identity.phoneE164,
           fullName: identity.fullName,
           status: identity.status as 'unverified' | 'verified' | 'recovery_locked' | 'suspended',
+          userId: identity.userId,
         },
       };
     });

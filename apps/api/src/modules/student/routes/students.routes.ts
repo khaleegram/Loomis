@@ -43,6 +43,9 @@ const studentReaders = [
   'admin_officer',
   'exam_officer',
   'deputy_exam_officer',
+  'teacher',
+  'accountant',
+  'cashier',
 ] as const;
 const studentWriters = ['school_owner', 'principal', 'admin_officer'] as const;
 const transferApprovers = ['school_owner', 'principal', 'admin_officer'] as const;
@@ -51,6 +54,7 @@ const promotionRosterReaders = [
   'principal',
   'admin_officer',
   'class_teacher',
+  'teacher',
   'exam_officer',
   'deputy_exam_officer',
 ] as const;

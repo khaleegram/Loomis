@@ -167,6 +167,35 @@ export function useReinstateTenant(tenantId: string) {
   });
 }
 
+export function useUpdateTenantProfile(tenantId: string) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: import('@loomis/contracts').UpdateTenantProfileRequest) =>
+      client.patch<TenantResponse>(`/platform/tenants/${tenantId}`, body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.platform.tenants() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.platform.tenant(tenantId) });
+    },
+  });
+}
+
+export function useResendTenantSetupEmail(tenantId: string) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (idempotencyKey: string) =>
+      client.post<import('@loomis/contracts').ResendTenantSetupResponse>(
+        `/platform/tenants/${tenantId}/resend-setup-email`,
+        {},
+        { idempotencyKey },
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.platform.tenant(tenantId) });
+    },
+  });
+}
+
 // ── PSF rates ──────────────────────────────────────────────────────────────────
 
 export function usePlatformPsfRates() {

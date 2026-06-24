@@ -3,6 +3,7 @@ import type { Role } from '@loomis/contracts';
 import { LoomisError } from '../../../shared/errors.js';
 import { staffService } from '../../hrm/services/staff.service.js';
 import { studentRepository } from '../../student/repository/student.repository.js';
+import { assertParentPortalAccess } from '../../student/services/parent-portal-access.js';
 import { workflowService } from '../../workflow/index.js';
 import type { WorkflowCompletedEvent } from '../../workflow/events/types.js';
 import { academicRepository } from '../repository/academic.repository.js';
@@ -519,15 +520,7 @@ export const gradebookService = {
     termId: string,
     actor: ActorContext,
   ) {
-    if (actor.role !== 'parent') {
-      throw new LoomisError('FORBIDDEN', 403, 'Parent role required');
-    }
-
-    const linked = await studentRepository.hasActiveParentLink(tenantId, actor.userId, studentId);
-    if (!linked) {
-      throw new LoomisError('FORBIDDEN', 403, 'You are not linked to this student');
-    }
-
+    await assertParentPortalAccess(tenantId, studentId, actor, { termId });
     return this.getChildPublishedResults(tenantId, studentId, termId);
   },
 

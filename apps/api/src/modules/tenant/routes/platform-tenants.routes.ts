@@ -5,6 +5,8 @@ import {
   reinstateTenantRequest,
   suspendTenantRequest,
   type SuspendTenantRequest,
+  updateTenantProfileRequest,
+  type UpdateTenantProfileRequest,
 } from '@loomis/contracts';
 import { authenticate } from '../../../middleware/authenticate.js';
 import { requireIdempotencyKey } from '../../../middleware/require-idempotency-key.js';
@@ -17,7 +19,9 @@ import {
   listTiersHandler,
   provisionTenantHandler,
   reinstateTenantHandler,
+  resendTenantSetupEmailHandler,
   suspendTenantHandler,
+  updateTenantProfileHandler,
 } from '../handlers/index.js';
 
 /**
@@ -78,6 +82,32 @@ export async function platformTenantsRoutes(app: FastifyInstance): Promise<void>
       ],
     },
     getTenantHandler,
+  );
+
+  app.patch<{ Params: { tenantId: string }; Body: UpdateTenantProfileRequest }>(
+    '/platform/tenants/:tenantId',
+    {
+      preHandler: [
+        authenticate,
+        requireTenantMatch,
+        requireRole('platform_owner', 'platform_admin'),
+      ],
+      preValidation: [validateBody(updateTenantProfileRequest)],
+    },
+    updateTenantProfileHandler,
+  );
+
+  app.post<{ Params: { tenantId: string } }>(
+    '/platform/tenants/:tenantId/resend-setup-email',
+    {
+      preHandler: [
+        authenticate,
+        requireTenantMatch,
+        requireRole('platform_owner', 'platform_admin'),
+        requireIdempotencyKey,
+      ],
+    },
+    resendTenantSetupEmailHandler,
   );
 
   app.post<{ Params: { tenantId: string }; Body: SuspendTenantRequest }>(

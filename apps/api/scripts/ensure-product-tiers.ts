@@ -1,0 +1,33 @@
+import { eq } from 'drizzle-orm';
+import { PRODUCT_TIER_SPECS } from '@loomis/core';
+import { tiers } from '../drizzle/schema/tenant.js';
+import { withTenantContext } from '../src/shared/tenant-context.js';
+
+/** Ensures Core / Advanced / Enterprise pricing tiers exist (idempotent). */
+export async function ensureProductTiers() {
+  return withTenantContext(null, async (tx) => {
+    for (const spec of PRODUCT_TIER_SPECS) {
+      const [existing] = await tx.select().from(tiers).where(eq(tiers.code, spec.code)).limit(1);
+      if (existing) {
+        await tx
+          .update(tiers)
+          .set({
+            name: spec.name,
+            description: spec.description,
+            defaultPsfRateMinor: spec.defaultPsfRateMinor,
+            maxStudents: spec.maxStudents,
+            updatedAt: new Date(),
+          })
+          .where(eq(tiers.id, existing.id));
+        continue;
+      }
+      await tx.insert(tiers).values({
+        code: spec.code,
+        name: spec.name,
+        description: spec.description,
+        defaultPsfRateMinor: spec.defaultPsfRateMinor,
+        maxStudents: spec.maxStudents,
+      });
+    }
+  });
+}

@@ -1,3 +1,4 @@
+import { BILLABLE_ENROLLMENT_STATUSES } from '@loomis/core';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { classTeacherAssignments, staffProfiles } from '../../../../drizzle/schema/hrm.js';
 import { users } from '../../../../drizzle/schema/identity.js';
@@ -21,7 +22,7 @@ export const recipientRepository = {
           eq(enrollments.tenantId, tenantId),
           eq(enrollments.termId, termId),
           eq(enrollments.classArmId, classArmId),
-          inArray(enrollments.status, ['active', 'active_billable']),
+          inArray(enrollments.status, [...BILLABLE_ENROLLMENT_STATUSES]),
           eq(parentLinks.tenantId, tenantId),
           eq(parentLinks.status, 'active'),
           sql`${parentIdentities.userId} IS NOT NULL`,
@@ -45,7 +46,7 @@ export const recipientRepository = {
         and(
           eq(enrollments.tenantId, tenantId),
           eq(enrollments.classArmId, classArmId),
-          inArray(enrollments.status, ['active', 'active_billable']),
+          inArray(enrollments.status, [...BILLABLE_ENROLLMENT_STATUSES]),
           eq(parentLinks.tenantId, tenantId),
           eq(parentLinks.status, 'active'),
           sql`${parentIdentities.userId} IS NOT NULL`,
@@ -75,7 +76,7 @@ export const recipientRepository = {
           eq(enrollments.termId, termId),
           eq(enrollments.classArmId, classArmId),
           inArray(enrollments.studentId, studentIds),
-          inArray(enrollments.status, ['active', 'active_billable']),
+          inArray(enrollments.status, [...BILLABLE_ENROLLMENT_STATUSES]),
           eq(parentLinks.tenantId, tenantId),
           eq(parentLinks.status, 'active'),
           sql`${parentIdentities.userId} IS NOT NULL`,
@@ -103,7 +104,7 @@ export const recipientRepository = {
           eq(enrollments.termId, termId),
           eq(enrollments.classArmId, classArmId),
           inArray(enrollments.studentId, studentIds),
-          inArray(enrollments.status, ['active', 'active_billable']),
+          inArray(enrollments.status, [...BILLABLE_ENROLLMENT_STATUSES]),
         ),
       );
 

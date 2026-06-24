@@ -33,6 +33,7 @@ import {
   classArmOptions,
   useAcademicOpsContext,
 } from '@/lib/academic/use-academic-ops-context';
+import { useDeputyExamRouteGuard } from '@/lib/academic/use-deputy-exam-route-guard';
 import { useCan, useCanAny, useRole } from '@/lib/auth/use-capability';
 import { isExamOfficerRole } from '@/lib/auth/is-exam-officer';
 import { isClassTeacherRole, isTeachingStaffRole } from '@/lib/timetable/is-teaching-staff';
@@ -73,6 +74,7 @@ function rosterStudentFromEnrollment(
 }
 
 export default function GradebookPage() {
+  useDeputyExamRouteGuard();
   const tenantId = useTenantId();
   const router = useRouter();
   const role = useRole();

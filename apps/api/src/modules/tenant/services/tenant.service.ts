@@ -1,5 +1,10 @@
-import type { TenantListResponse, TenantResponse, TierSummary } from '@loomis/contracts';
-import { mergeExperienceFlags } from '@loomis/core';
+import type {
+  TenantListResponse,
+  TenantResponse,
+  TierSummary,
+  UpdateTenantProfileRequest,
+} from '@loomis/contracts';
+import { DEFAULT_PSF_RATE_MINOR, mergeExperienceFlags, PRODUCT_TIER_SPECS } from '@loomis/core';
 import { LoomisError } from '../../../shared/errors.js';
 import { tenantEvents } from '../events/index.js';
 import { psfRateSnapshotRepository } from '../repository/psf-rate.repository.js';
@@ -7,9 +12,16 @@ import { tenantRepository } from '../repository/tenant.repository.js';
 import { tierRepository } from '../repository/tier.repository.js';
 import type { ActorContext, ProvisionTenantInput, SuspendTenantInput } from '../types.js';
 import { psfRateService } from './psf-rate.service.js';
+import { psfSuggestionService } from './psf-suggestion.service.js';
+import { tenantOwnerService } from './tenant-owner.service.js';
 import { attributionService } from '../../referral/services/attribution.service.js';
 
 type TenantRow = NonNullable<Awaited<ReturnType<typeof tenantRepository.findById>>>;
+
+function resolveExperienceTierForProductTier(tierCode: string): 'core' | 'advanced' | 'enterprise' {
+  const spec = PRODUCT_TIER_SPECS.find((entry) => entry.code === tierCode);
+  return spec?.experienceTier ?? 'core';
+}
 
 export const tenantService = {
   /**
@@ -49,33 +61,46 @@ export const tenantService = {
       provisionedById: actor.userId,
     });
 
-    // Admin-set initial rate (US-PLT-001 allows setting the initial PSF rate at
-    // provisioning). Recorded as an immutable snapshot. If omitted, the tenant
-    // bills at the global default / tier default resolved at census time.
-    if (input.initialPsfRateMinor !== undefined) {
-      const snapshot = await psfRateSnapshotRepository.create({
-        scope: 'tenant',
-        tenantId: tenant.id,
-        rateMinor: input.initialPsfRateMinor,
-        previousRateMinor: null,
-        effectiveFrom: new Date(),
-        reason: 'Initial PSF rate set at provisioning',
-        changedById: actor.userId,
-      });
-      await tenantEvents.publishPsfRateChanged({
-        snapshotId: snapshot.id,
-        scope: 'tenant',
-        tenantId: tenant.id,
-        rateMinor: snapshot.rateMinor,
-        previousRateMinor: null,
-        effectiveFrom: snapshot.effectiveFrom.toISOString(),
-        changedById: actor.userId,
-        approvedById: null,
-      });
-    }
+    await tenantRepository.updateExperience(tenant.id, {
+      experienceTier: resolveExperienceTierForProductTier(tier.code),
+    });
+
+    const initialRateMinor = input.initialPsfRateMinor ?? DEFAULT_PSF_RATE_MINOR;
+    const snapshot = await psfRateSnapshotRepository.create({
+      scope: 'tenant',
+      tenantId: tenant.id,
+      rateMinor: initialRateMinor,
+      previousRateMinor: null,
+      effectiveFrom: new Date(),
+      reason:
+        input.initialPsfRateMinor !== undefined
+          ? 'Initial PSF rate set at provisioning'
+          : 'Default PSF rate at provisioning (₦1,000)',
+      changedById: actor.userId,
+    });
+    await tenantEvents.publishPsfRateChanged({
+      snapshotId: snapshot.id,
+      scope: 'tenant',
+      tenantId: tenant.id,
+      rateMinor: snapshot.rateMinor,
+      previousRateMinor: null,
+      effectiveFrom: snapshot.effectiveFrom.toISOString(),
+      changedById: actor.userId,
+      approvedById: null,
+    });
 
     const activated = await tenantRepository.setStatus(tenant.id, 'active');
     const result = activated ?? tenant;
+
+    await tenantOwnerService.provisionOwner(
+      {
+        tenantId: result.id,
+        schoolName: result.name,
+        contactEmail: input.contactEmail,
+        contactPhone: input.contactPhone,
+      },
+      actor,
+    );
 
     await tenantEvents.publishProvisioned({
       tenantId: result.id,
@@ -98,15 +123,35 @@ export const tenantService = {
 
   async listTiers(): Promise<TierSummary[]> {
     const rows = await tierRepository.list();
-    return rows.map((tier) => ({
-      id: tier.id,
-      code: tier.code,
-      name: tier.name,
-      description: tier.description ?? null,
-      defaultPsfRateMinor: tier.defaultPsfRateMinor,
-      maxStudents: tier.maxStudents ?? null,
-      createdAt: tier.createdAt.toISOString(),
-    }));
+    return rows
+      .filter((tier) => tier.code !== 'demo')
+      .map((tier) => ({
+        id: tier.id,
+        code: tier.code,
+        name: tier.name,
+        description: tier.description ?? null,
+        defaultPsfRateMinor: tier.defaultPsfRateMinor,
+        maxStudents: tier.maxStudents ?? null,
+        createdAt: tier.createdAt.toISOString(),
+      }));
+  },
+
+  async updateTenantProfile(
+    id: string,
+    input: UpdateTenantProfileRequest,
+    _actor: ActorContext,
+  ): Promise<TenantRow> {
+    await this.getTenant(id);
+    const updated = await tenantRepository.updateProfile(id, input);
+    if (!updated) {
+      throw new LoomisError('TENANT_NOT_FOUND', 404, 'Tenant not found');
+    }
+    return updated;
+  },
+
+  async resendOwnerSetupEmail(id: string, actor: ActorContext) {
+    await this.getTenant(id);
+    return tenantOwnerService.resendSetupEmail(id, actor);
   },
 
   async getTenant(id: string): Promise<TenantRow> {
@@ -169,23 +214,28 @@ export const tenantService = {
       tenant.id,
       tenant.tierId,
     );
+    const suggestedPsfRateMinor = await psfSuggestionService.getSuggestedRateMinor(tenant.id);
+    const ownerSetup = await tenantOwnerService.getOwnerSetupStatus(tenant.id);
 
     return {
       id: tenant.id,
       name: tenant.name,
       region: tenant.region,
       contactEmail: tenant.contactEmail,
+      contactPhone: tenant.contactPhone ?? null,
       address: tenant.address,
       status: tenant.status as TenantResponse['status'],
       tierId: tenant.tierId,
       tierCode: tier?.code ?? '',
       referralCode: tenant.referralCode ?? null,
       currentPsfRateMinor,
+      suggestedPsfRateMinor,
       experienceTier: tenant.experienceTier as TenantResponse['experienceTier'],
       financeMode: tenant.financeMode as TenantResponse['financeMode'],
       experienceFlags: mergeExperienceFlags(
         tenant.experienceFlags as TenantResponse['experienceFlags'],
       ),
+      ownerSetup,
       suspendedReason: tenant.suspendedReason ?? null,
       suspendedAt: tenant.suspendedAt ? tenant.suspendedAt.toISOString() : null,
       createdAt: tenant.createdAt.toISOString(),

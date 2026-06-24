@@ -30,16 +30,20 @@ export function homePathForRole(role: Role, ctx?: HomePathContext): string {
   if (role === 'parent' || role === 'student') {
     return `${GROUP_PREFIX.parent}/dashboard`;
   }
-  if (role === 'exam_officer' || role === 'deputy_exam_officer') {
+  if (role === 'exam_officer') {
+    return '/school/exams';
+  }
+  if (role === 'deputy_exam_officer') {
+    if (isCoreTier(tier) && !flags?.deputyExamEnabled) {
+      return '/school/settings';
+    }
     return '/school/exams';
   }
   if (role === 'accountant') {
-    return '/school/finance/payments/verify';
+    return financeMode === 'combined' ? '/school/finance/desk' : '/school/finance/payments/verify';
   }
   if (role === 'cashier') {
-    return financeMode === 'combined'
-      ? '/school/finance/payments/verify'
-      : '/school/finance/payments/log';
+    return financeMode === 'combined' ? '/school/finance/desk' : '/school/finance/payments/log';
   }
   if (role === 'timetable_officer') {
     if (isCoreTier(tier) && !flags?.timetableDedicatedOfficer) {

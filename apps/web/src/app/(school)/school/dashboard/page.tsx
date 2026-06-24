@@ -33,6 +33,10 @@ export default function SchoolDashboardPage() {
       router.replace('/school/exams');
       return;
     }
+    if (!experienceLoading && (role === 'accountant' || role === 'cashier')) {
+      router.replace(homePathForRole(role, { financeMode, experienceTier, flags }));
+      return;
+    }
     if (!experienceLoading && !isCore) {
       const financeHome = homePathForRole(role, { financeMode, experienceTier, flags });
       if (financeHome !== '/school/dashboard') {
@@ -42,6 +46,10 @@ export default function SchoolDashboardPage() {
   }, [role, router, experienceLoading, isCore, financeMode, experienceTier, flags]);
 
   if (role && isExamOfficerRole(role)) {
+    return null;
+  }
+
+  if (!experienceLoading && (role === 'accountant' || role === 'cashier')) {
     return null;
   }
 

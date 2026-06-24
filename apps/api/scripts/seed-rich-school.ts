@@ -44,12 +44,13 @@ import {
   schoolContactEmail,
   schoolDevEmail,
 } from './seed-email.js';
+import { ensureProductTiers } from './ensure-product-tiers.js';
 
 const PLATFORM_OWNER_EMAIL = platformDevEmail('owner');
 const DEV_PASSWORD = 'LoomisDev2026!';
 const DEV_TOTP_BASE32 = 'JBSWY3DPEHPK3PXP';
-const TIER_CODE = 'demo';
-const PSF_RATE_MINOR = 500_000;
+const TIER_CODE = 'core';
+const PSF_RATE_MINOR = 100_000;
 const MARKER_EMAIL = schoolDevEmail('principal', GREENFIELD_SCHOOL_SLUG);
 
 function seedEmail(local: string): string {
@@ -114,13 +115,6 @@ interface StaffSpec {
 /** Additional school roles not in the original rich seed — idempotent via ensureRichExtendedRoleAccounts. */
 const RICH_EXTENDED_ROLE_SPECS: StaffSpec[] = [
   {
-    email: seedEmail('owner'),
-    role: 'school_owner',
-    fullName: 'Ngozi Eze',
-    primaryRole: 'school_owner',
-    phone: '+2348011000005',
-  },
-  {
     email: seedEmail('accountant'),
     role: 'accountant',
     fullName: 'Kemi Adebayo',
@@ -177,15 +171,11 @@ function buildStaffSpecs(): StaffSpec[] {
   return specs;
 }
 
-async function ensureTier(code: string) {
+async function ensureTier(_code: string) {
+  await ensureProductTiers();
   return withTenantContext(null, async (tx) => {
-    const [existing] = await tx.select().from(tiers).where(eq(tiers.code, code)).limit(1);
-    if (existing) return existing;
-    const [tier] = await tx
-      .insert(tiers)
-      .values({ code, name: 'Demo Tier', defaultPsfRateMinor: PSF_RATE_MINOR })
-      .returning();
-    if (!tier) throw new Error('Failed to create demo tier');
+    const [tier] = await tx.select().from(tiers).where(eq(tiers.code, TIER_CODE)).limit(1);
+    if (!tier) throw new Error(`Product tier '${TIER_CODE}' missing`);
     return tier;
   });
 }
@@ -1692,10 +1682,10 @@ async function main() {
     {
       name: 'Greenfield Academy Lagos',
       region: 'Lagos',
-      contactEmail: schoolContactEmail(GREENFIELD_SCHOOL_SLUG),
+      contactEmail: seedEmail('owner'),
+      contactPhone: '+2348011000005',
       address: '12 Greenfield Avenue, Lekki, Lagos',
       tierCode: TIER_CODE,
-      initialPsfRateMinor: PSF_RATE_MINOR,
     },
     { userId: platformOwner.id, role: 'platform_owner' },
   );

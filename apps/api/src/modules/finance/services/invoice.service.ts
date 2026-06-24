@@ -6,6 +6,7 @@ import { getEnv } from '../../../config/env.js';
 import { academicRepository } from '../../academic/repository/index.js';
 import { termService } from '../../academic/index.js';
 import { studentRepository } from '../../student/repository/index.js';
+import { assertParentPortalAccess } from '../../student/services/parent-portal-access.js';
 import { FINANCE_EVENT_TYPES } from '../events/types.js';
 import { financeRepository, type InvoiceWithItems } from '../repository/index.js';
 import type {
@@ -368,14 +369,7 @@ export const invoiceService = {
     termId: string,
     actor: ActorContext,
   ) {
-    if (actor.role !== 'parent') {
-      throw new LoomisError('FORBIDDEN', 403, 'Parent role required');
-    }
-
-    const linked = await studentRepository.hasActiveParentLink(tenantId, actor.userId, studentId);
-    if (!linked) {
-      throw new LoomisError('FORBIDDEN', 403, 'You are not linked to this student');
-    }
+    await assertParentPortalAccess(tenantId, studentId, actor, { termId });
 
     const classArmLabel = await resolveClassArmLabel(tenantId, studentId, termId);
     const env = getEnv();

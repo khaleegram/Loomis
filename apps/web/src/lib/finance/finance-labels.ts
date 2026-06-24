@@ -15,6 +15,7 @@ const FEE_CATEGORY_LABELS: Record<FeeItemCategory, string> = {
   development_levy: 'Development levy',
   uniform: 'Uniform',
   books: 'Books',
+  materials: 'Materials & stationery',
   exam: 'Exam fees',
   transport: 'Transport',
   feeding: 'Feeding',

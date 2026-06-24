@@ -65,6 +65,10 @@ export default function CommsPage() {
   const isStaffBroadcaster = usesStaffClassComposer(role);
 
   const teacherCtx = useTeachingStaffScope(tenantId ?? '', { mode: 'classTeacherClass' });
+  const classTeacherMessagingTermId =
+    teacherCtx.isHistoricalView && teacherCtx.openTerm?.id
+      ? teacherCtx.openTerm.id
+      : teacherCtx.termId;
 
   const [section, setSection] = useState<CommsSection>(() =>
     defaultSection(canAnnounce, canMessageParents),
@@ -124,7 +128,21 @@ export default function CommsPage() {
 
             {section === 'parents' && canMessageParents ? (
               isClassTeacher ? (
-                <CommsComposeClassMessage tenantId={tenantId} ctx={teacherCtx} />
+                <div className="space-y-4">
+                  {teacherCtx.isHistoricalView ? (
+                    <Alert>
+                      <AlertDescription>
+                        You are viewing a past term in the session bar. Parent messages use the{' '}
+                        <strong>{teacherCtx.openTerm?.name ?? 'current'}</strong> term so families
+                        with active enrollments receive them.
+                      </AlertDescription>
+                    </Alert>
+                  ) : null}
+                  <CommsComposeClassMessage
+                    tenantId={tenantId}
+                    ctx={{ ...teacherCtx, termId: classTeacherMessagingTermId }}
+                  />
+                </div>
               ) : isStaffBroadcaster ? (
                 <CommsComposeStaffClassMessage tenantId={tenantId} />
               ) : (

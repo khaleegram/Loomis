@@ -69,7 +69,11 @@ export async function invoicesRoutes(app: FastifyInstance): Promise<void> {
   app.get<{ Params: { tenantId: string; termId: string } }>(
     '/tenants/:tenantId/terms/:termId/invoices',
     {
-      preHandler: [authenticate, requireTenantMatch, requireRole('accountant', 'principal')],
+      preHandler: [
+        authenticate,
+        requireTenantMatch,
+        requireRole('accountant', 'cashier', 'principal', 'school_owner'),
+      ],
     },
     listInvoicesHandler,
   );

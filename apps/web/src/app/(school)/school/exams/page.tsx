@@ -21,6 +21,7 @@ import { PageBody } from '@/components/school/school-shell';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { academicErrorMessage } from '@/lib/academic/academic-errors';
 import { EXAMS_PAGE_CLASS } from '@/lib/academic/exams-ui';
+import { useDeputyExamRouteGuard } from '@/lib/academic/use-deputy-exam-route-guard';
 import { useCan, useCanAny } from '@/lib/auth/use-capability';
 import { useAuth } from '@/lib/auth/auth-context';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
@@ -39,6 +40,7 @@ function parseSection(
 }
 
 export default function SchoolExamsPage() {
+  useDeputyExamRouteGuard();
   const tenantId = useTenantId();
   const { session } = useAuth();
   const router = useRouter();

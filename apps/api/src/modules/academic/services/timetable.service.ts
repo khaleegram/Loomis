@@ -2,6 +2,7 @@ import type { CreateTimetableEntryRequest } from '@loomis/contracts';
 import { writeAudit } from '../../../shared/audit.js';
 import { LoomisError } from '../../../shared/errors.js';
 import { staffRepository } from '../../hrm/repository/staff.repository.js';
+import { assertParentPortalAccess } from '../../student/services/parent-portal-access.js';
 import { studentRepository } from '../../student/repository/student.repository.js';
 import { academicOpsEvents } from '../events/ops-events.js';
 import { academicRepository } from '../repository/academic.repository.js';
@@ -235,20 +236,10 @@ export const timetableService = {
     termId: string,
     actor: ActorContext,
   ) {
-    if (actor.role !== 'parent') {
-      throw new LoomisError('FORBIDDEN', 403, 'Parent role required');
-    }
-
-    const linked = await studentRepository.hasActiveParentLink(tenantId, actor.userId, studentId);
-    if (!linked) {
-      throw new LoomisError('FORBIDDEN', 403, 'You are not linked to this student');
-    }
+    await assertParentPortalAccess(tenantId, studentId, actor, { termId });
 
     const enrollment = await studentRepository.findEnrollmentForTerm(tenantId, studentId, termId);
-    if (
-      !enrollment ||
-      !['active', 'active_billable', 'suspended'].includes(enrollment.status)
-    ) {
+    if (!enrollment) {
       throw new LoomisError('STUDENT_ENROLLMENT_NOT_FOUND', 404, 'No active enrollment for this term');
     }
 

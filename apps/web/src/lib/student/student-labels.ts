@@ -80,6 +80,15 @@ export function parentLinkStatusLabel(status: ParentLinkStatus): string {
   }
 }
 
+/** Whether the parent can receive portal notifications and log in to view this child. */
+export function parentPortalReadinessLabel(
+  linkStatus: ParentLinkStatus,
+  parentUserId: string | null | undefined,
+): string {
+  if (linkStatus !== 'active') return parentLinkStatusLabel(linkStatus);
+  return parentUserId ? 'Portal ready' : 'Awaiting parent login';
+}
+
 export function genderLabel(gender: StudentGender): string {
   switch (gender) {
     case 'male':

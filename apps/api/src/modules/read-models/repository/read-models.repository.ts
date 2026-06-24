@@ -99,12 +99,36 @@ export const parentDashboardRepository = {
       );
   },
 
+  async setLinkStatus(
+    tx: Executor,
+    parentUserId: string,
+    tenantId: string,
+    studentId: string,
+    linkStatus: string,
+  ) {
+    await tx
+      .update(parentChildCards)
+      .set({ linkStatus, lastRefreshedAt: new Date(), updatedAt: new Date() })
+      .where(
+        and(
+          eq(parentChildCards.parentUserId, parentUserId),
+          eq(parentChildCards.tenantId, tenantId),
+          eq(parentChildCards.studentId, studentId),
+        ),
+      );
+  },
+
   async listForParent(parentUserId: string) {
     return withTenantContext(null, async (tx) =>
       tx
         .select()
         .from(parentChildCards)
-        .where(eq(parentChildCards.parentUserId, parentUserId))
+        .where(
+          and(
+            eq(parentChildCards.parentUserId, parentUserId),
+            eq(parentChildCards.linkStatus, 'active'),
+          ),
+        )
         .orderBy(parentChildCards.schoolName, parentChildCards.studentFirstName),
     );
   },

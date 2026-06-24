@@ -48,7 +48,7 @@ const TERM_OPTIONS = [
 export default function ParentDashboardPage() {
   const { session } = useAuth();
   const isStudent = session?.role === 'student';
-  const { data, isLoading } = useParentDashboard({ live: true });
+  const { data, isLoading } = useParentDashboard({ enabled: !isStudent, live: !isStudent });
   const [selectedTerm, setSelectedTerm] = useState<string>('this-term');
   const [selectedPeriod, setSelectedPeriod] = useState('This Term');
 
@@ -159,7 +159,42 @@ export default function ParentDashboardPage() {
         ]}
       />
 
-      {isLoading ? (
+      {isStudent ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Link
+            href="/parent/timetable"
+            className="card flex flex-col rounded-2xl p-5 transition hover:border-brand-200"
+          >
+            <Calendar aria-hidden className="mb-3 size-8 text-brand-500" />
+            <p className="text-sm font-semibold text-neutral-800">Timetable</p>
+            <p className="mt-1 text-xs text-neutral-400">Your class schedule for this term</p>
+          </Link>
+          <Link
+            href="/parent/attendance"
+            className="card flex flex-col rounded-2xl p-5 transition hover:border-brand-200"
+          >
+            <Calendar aria-hidden className="mb-3 size-8 text-brand-500" />
+            <p className="text-sm font-semibold text-neutral-800">Attendance</p>
+            <p className="mt-1 text-xs text-neutral-400">Day-by-day attendance record</p>
+          </Link>
+          <Link
+            href="/parent/results"
+            className="card flex flex-col rounded-2xl p-5 transition hover:border-brand-200"
+          >
+            <BookOpen aria-hidden className="mb-3 size-8 text-brand-500" />
+            <p className="text-sm font-semibold text-neutral-800">Results</p>
+            <p className="mt-1 text-xs text-neutral-400">Published report cards</p>
+          </Link>
+          <Link
+            href="/parent/assignments"
+            className="card flex flex-col rounded-2xl p-5 transition hover:border-brand-200"
+          >
+            <GraduationCap aria-hidden className="mb-3 size-8 text-brand-500" />
+            <p className="text-sm font-semibold text-neutral-800">Assignments</p>
+            <p className="mt-1 text-xs text-neutral-400">Homework and submissions</p>
+          </Link>
+        </div>
+      ) : isLoading ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} className="h-48 rounded-2xl" />

@@ -28,6 +28,7 @@ export const feeItemCategory = z.enum([
   'development_levy',
   'uniform',
   'books',
+  'materials',
   'exam',
   'transport',
   'feeding',

@@ -14,7 +14,10 @@ import {
   History,
   Mail,
   MapPin,
+  Pencil,
   Percent,
+  Phone,
+  Send,
   Shield,
   ShieldAlert,
   Zap,
@@ -44,6 +47,7 @@ import {
   usePlatformRiskCases,
   useSuspendTenant,
   useReinstateTenant,
+  useResendTenantSetupEmail,
 } from '@loomis/api-client';
 import { suspendTenantRequest } from '@loomis/contracts';
 import { formatKobo } from '@loomis/core';
@@ -56,6 +60,7 @@ import { PageBody } from '@/components/platform/platform-shell';
 import { PlatformTenantExperienceCard } from '@/components/platform/platform-tenant-experience-card';
 import { PsfRateCard } from '@/components/platform/psf-rate-card';
 import { BreakGlassModal } from '@/components/platform/break-glass-modal';
+import { TenantProfileEditDialog } from '@/components/platform/tenant-profile-edit-dialog';
 import { BRONZE } from '@/components/dashboard/dashboard-primitives';
 import { useAuth } from '@/lib/auth/auth-context';
 
@@ -146,11 +151,14 @@ export default function TenantDetailPage({ params }: TenantDetailPageProps) {
   const { session } = useAuth();
   const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
   const [bgModalOpen, setBgModalOpen] = useState(false);
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
   const suspendIdempotencyKey = useRef(uuidv7());
   const reinstateIdempotencyKey = useRef(uuidv7());
+  const resendSetupKey = useRef(uuidv7());
 
   const suspend = useSuspendTenant(tenantId);
   const reinstate = useReinstateTenant(tenantId);
+  const resendSetup = useResendTenantSetupEmail(tenantId);
 
   const suspendForm = useForm<SuspendFormValues>({
     resolver: zodResolver(suspendFormSchema),
@@ -403,7 +411,12 @@ export default function TenantDetailPage({ params }: TenantDetailPageProps) {
           icon={Percent}
           label="PSF Rate"
           value={tenant.currentPsfRateMinor != null ? formatKobo(tenant.currentPsfRateMinor) : 'Tier default'}
-          sub="Per student / term"
+          sub={
+            tenant.suggestedPsfRateMinor != null &&
+            tenant.suggestedPsfRateMinor !== tenant.currentPsfRateMinor
+              ? `Suggested ${formatKobo(tenant.suggestedPsfRateMinor)} from fees`
+              : 'Per student / term'
+          }
           gradient={BRONZE.gradients.g1}
         />
         <StatCard
@@ -435,17 +448,27 @@ export default function TenantDetailPage({ params }: TenantDetailPageProps) {
       <div className="mb-5 grid grid-cols-12 gap-5">
         {/* Left: School details */}
         <div className="card col-span-12 overflow-hidden rounded-2xl lg:col-span-8">
-          <div className="flex items-center gap-2.5 border-b border-neutral-100 px-5 py-4">
-            <span
-              className="flex size-8 shrink-0 items-center justify-center rounded-xl text-white"
-              style={{ background: BRONZE.gradients.g1 }}
-            >
-              <Building2 aria-hidden className="size-4" />
-            </span>
-            <div>
-              <p className="text-[12px] font-bold text-neutral-900">School Details</p>
-              <p className="text-[11px] text-neutral-400">Identity &amp; contact information</p>
+          <div className="flex items-center justify-between gap-2.5 border-b border-neutral-100 px-5 py-4">
+            <div className="flex items-center gap-2.5">
+              <span
+                className="flex size-8 shrink-0 items-center justify-center rounded-xl text-white"
+                style={{ background: BRONZE.gradients.g1 }}
+              >
+                <Building2 aria-hidden className="size-4" />
+              </span>
+              <div>
+                <p className="text-[12px] font-bold text-neutral-900">School Details</p>
+                <p className="text-[11px] text-neutral-400">Identity &amp; contact information</p>
+              </div>
             </div>
+            <button
+              type="button"
+              onClick={() => setEditProfileOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 px-2.5 py-1.5 text-[12px] font-semibold text-neutral-700 transition hover:bg-neutral-50"
+            >
+              <Pencil aria-hidden className="size-3.5" />
+              Edit
+            </button>
           </div>
 
           <div className="p-5">
@@ -456,8 +479,48 @@ export default function TenantDetailPage({ params }: TenantDetailPageProps) {
                   <span>{tenant.contactEmail}</span>
                 </div>
               </InfoRow>
+              <InfoRow label="Mobile phone">
+                <div className="flex items-center gap-2">
+                  <Phone aria-hidden className="size-3.5 text-neutral-400" />
+                  <span>{tenant.contactPhone ?? '—'}</span>
+                </div>
+              </InfoRow>
               <InfoRow label="Address">
                 <span>{tenant.address}</span>
+              </InfoRow>
+              <InfoRow label="Owner setup">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-[13px] text-neutral-800">
+                      {tenant.ownerSetup.hasOwnerAccount
+                        ? tenant.ownerSetup.ownerEmail
+                        : 'No owner account yet'}
+                    </p>
+                    <p className="text-[11px] text-neutral-400">
+                      {tenant.ownerSetup.setupEmailSentAt
+                        ? `Welcome email sent ${formatDistanceToNow(new Date(tenant.ownerSetup.setupEmailSentAt), { addSuffix: true })}`
+                        : 'Welcome email not sent yet'}
+                    </p>
+                  </div>
+                  {tenant.ownerSetup.hasOwnerAccount ? (
+                    <button
+                      type="button"
+                      disabled={resendSetup.isPending}
+                      onClick={() => {
+                        void resendSetup
+                          .mutateAsync(resendSetupKey.current)
+                          .then(() => {
+                            resendSetupKey.current = uuidv7();
+                          })
+                          .catch(() => undefined);
+                      }}
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-[#c9a96e] px-3 py-2 text-[12px] font-bold text-neutral-900 transition hover:bg-[#b89555] disabled:opacity-50"
+                    >
+                      <Send aria-hidden className="size-3.5" />
+                      {resendSetup.isPending ? 'Sending…' : 'Resend setup email'}
+                    </button>
+                  ) : null}
+                </div>
               </InfoRow>
               <InfoRow label="Support reference">
                 <div className="flex items-center gap-2">
@@ -747,6 +810,12 @@ export default function TenantDetailPage({ params }: TenantDetailPageProps) {
       {/* ════════════════════════════════════════════════════
           BREAK-GLASS MODAL
           ════════════════════════════════════════════════════ */}
+      <TenantProfileEditDialog
+        tenant={tenant}
+        open={editProfileOpen}
+        onOpenChange={setEditProfileOpen}
+      />
+
       <BreakGlassModal
         open={bgModalOpen}
         tenantId={tenant.id}

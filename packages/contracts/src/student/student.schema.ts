@@ -244,6 +244,8 @@ export const parentIdentitySummary = z.object({
   phoneE164: z.string().nullable(),
   fullName: z.string(),
   status: z.enum(['unverified', 'verified', 'recovery_locked', 'suspended']),
+  /** Set when the parent has logged in — required for notifications and portal access. */
+  userId: z.string().uuid().nullable(),
 });
 export type ParentIdentitySummary = z.infer<typeof parentIdentitySummary>;
 

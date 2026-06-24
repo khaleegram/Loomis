@@ -1,4 +1,4 @@
-import { and, asc, count, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, or, sql } from 'drizzle-orm';
 import { classArms, classLevels } from '../../../../drizzle/schema/academic.js';
 import { users } from '../../../../drizzle/schema/identity.js';
 import {
@@ -709,13 +709,25 @@ export const studentRepository = {
   /** True when the parent user has an active link to the student in this tenant. */
   async hasActiveParentLink(tenantId: string, parentUserId: string, studentId: string) {
     return withTenantContext(tenantId, async (tx) => {
-      const [identity] = await tx
+      const [user] = await tx
+        .select({ email: users.email })
+        .from(users)
+        .where(eq(users.id, parentUserId))
+        .limit(1);
+      const emailNormalized = user ? normalizeEmail(user.email) : null;
+
+      const identities = await tx
         .select({ id: parentIdentities.id })
         .from(parentIdentities)
-        .where(eq(parentIdentities.userId, parentUserId))
-        .limit(1);
-      if (!identity) return false;
+        .where(
+          or(
+            eq(parentIdentities.userId, parentUserId),
+            emailNormalized ? eq(parentIdentities.emailNormalized, emailNormalized) : sql`false`,
+          ),
+        );
+      if (identities.length === 0) return false;
 
+      const identityIds = identities.map((row) => row.id);
       const [link] = await tx
         .select({ id: parentLinks.id })
         .from(parentLinks)
@@ -723,7 +735,7 @@ export const studentRepository = {
           and(
             eq(parentLinks.tenantId, tenantId),
             eq(parentLinks.studentId, studentId),
-            eq(parentLinks.parentIdentityId, identity.id),
+            inArray(parentLinks.parentIdentityId, identityIds),
             eq(parentLinks.status, 'active'),
           ),
         )
@@ -827,6 +839,28 @@ export const studentRepository = {
         repaired += 1;
       }
       return repaired;
+    });
+  },
+
+  /**
+   * Bind a logged-in parent account to all matching parent_identities (by email).
+   * Runs without tenant scope — parent identities are global per email.
+   */
+  async bindParentUserToIdentities(parentUserId: string, email: string): Promise<number> {
+    const emailNormalized = normalizeEmail(email);
+    return withTenantContext(null, async (tx) => {
+      const now = new Date();
+      const updated = await tx
+        .update(parentIdentities)
+        .set({ userId: parentUserId, updatedAt: now })
+        .where(
+          and(
+            eq(parentIdentities.emailNormalized, emailNormalized),
+            sql`${parentIdentities.userId} IS NULL`,
+          ),
+        )
+        .returning({ id: parentIdentities.id });
+      return updated.length;
     });
   },
 };

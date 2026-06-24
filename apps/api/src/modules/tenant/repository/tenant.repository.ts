@@ -41,6 +41,7 @@ export const tenantRepository = {
         name: input.name,
         region: input.region,
         contactEmail: input.contactEmail,
+        contactPhone: input.contactPhone ?? null,
         address: input.address,
         tierId: input.tierId,
         status: 'provisioning',
@@ -96,6 +97,38 @@ export const tenantRepository = {
         reinstatedById,
         updatedAt: new Date(),
       })
+      .where(eq(tenants.id, id))
+      .returning();
+    return tenant ?? null;
+  },
+
+  async updateProfile(
+    id: string,
+    patch: {
+      contactEmail?: string;
+      contactPhone?: string;
+      address?: string;
+      region?: string;
+    },
+    tx?: Executor,
+  ) {
+    const executor = tx ?? db;
+    const updates: {
+      contactEmail?: string;
+      contactPhone?: string;
+      address?: string;
+      region?: string;
+      updatedAt: Date;
+    } = { updatedAt: new Date() };
+
+    if (patch.contactEmail !== undefined) updates.contactEmail = patch.contactEmail;
+    if (patch.contactPhone !== undefined) updates.contactPhone = patch.contactPhone;
+    if (patch.address !== undefined) updates.address = patch.address;
+    if (patch.region !== undefined) updates.region = patch.region;
+
+    const [tenant] = await executor
+      .update(tenants)
+      .set(updates)
       .where(eq(tenants.id, id))
       .returning();
     return tenant ?? null;

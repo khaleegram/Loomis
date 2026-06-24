@@ -2,6 +2,7 @@ import type { FeeItemInput } from '@loomis/contracts';
 import { uuidv7 } from 'uuidv7';
 import { LoomisError } from '../../../shared/errors.js';
 import { termService } from '../../academic/index.js';
+import { psfSuggestionService } from '../../tenant/services/psf-suggestion.service.js';
 import { workflowService } from '../../workflow/index.js';
 import { FINANCE_EVENT_TYPES } from '../events/types.js';
 import { financeRepository, type FeeStructureWithItems } from '../repository/index.js';
@@ -105,6 +106,8 @@ export const feeStructureService = {
       },
     });
 
+    void psfSuggestionService.evaluateAfterFeeStructureChange(tenantId, input.termId);
+
     return result;
   },
 
@@ -185,6 +188,8 @@ export const feeStructureService = {
       audit,
       metadata: { itemCount: input.items.length },
     });
+
+    void psfSuggestionService.evaluateAfterFeeStructureChange(tenantId, structure.termId);
 
     return result;
   },

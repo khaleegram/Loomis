@@ -8,6 +8,7 @@ export interface OnboardingDraft {
   name: string;
   region: string;
   contactEmail: string;
+  contactPhone: string;
   address: string;
   lga: string;
   schoolType: string;
@@ -23,6 +24,7 @@ const INITIAL: OnboardingDraft = {
   name: '',
   region: '',
   contactEmail: '',
+  contactPhone: '',
   address: '',
   lga: '',
   schoolType: '',

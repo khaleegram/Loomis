@@ -126,7 +126,7 @@ export const SCHOOL_NAV: SchoolNavItem[] = [
   {
     id: 'finance-desk',
     label: 'Finance',
-    href: '/school/finance/payments/verify',
+    href: '/school/finance/desk',
     icon: Wallet,
     section: 'ledger',
     capabilities: ['payment.log', 'payment.verify', 'fee.configure'],
@@ -379,8 +379,10 @@ export function financeHomePath(role: Role, financeMode: FinanceMode): string {
     return '/school/finance/balances';
   }
   if (role === 'cashier') {
-    return financeMode === 'combined' ? '/school/finance/payments/verify' : '/school/finance/payments/log';
+    return financeMode === 'combined' ? '/school/finance/desk' : '/school/finance/payments/log';
   }
-  if (role === 'accountant') return '/school/finance/payments/verify';
+  if (role === 'accountant') {
+    return financeMode === 'combined' ? '/school/finance/desk' : '/school/finance/payments/verify';
+  }
   return '/school/finance/balances';
 }

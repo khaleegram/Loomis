@@ -29,6 +29,8 @@ const structureReaders = [
   'timetable_officer',
   'exam_officer',
   'deputy_exam_officer',
+  'teacher',
+  'class_teacher',
 ] as const;
 
 /** Class structure & progression routes (FR-ASM-009). All under /api/v1. */

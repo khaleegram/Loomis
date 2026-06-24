@@ -225,4 +225,54 @@ export const readModelProjectionService = {
       });
     });
   },
+
+  /** Upsert dashboard cards for every active link bound to this parent account. */
+  async syncParentDashboardCardsForUser(parentUserId: string): Promise<void> {
+    const linkRows = await withTenantContext(null, async (tx) =>
+      tx
+        .select({
+          tenantId: parentLinks.tenantId,
+          studentId: parentLinks.studentId,
+          parentIdentityId: parentLinks.parentIdentityId,
+        })
+        .from(parentLinks)
+        .innerJoin(parentIdentities, eq(parentIdentities.id, parentLinks.parentIdentityId))
+        .where(
+          and(eq(parentIdentities.userId, parentUserId), eq(parentLinks.status, 'active')),
+        ),
+    );
+
+    for (const link of linkRows) {
+      await withTenantContext(link.tenantId, async (tx) => {
+        const [student] = await tx
+          .select({ firstName: students.firstName })
+          .from(students)
+          .where(eq(students.id, link.studentId))
+          .limit(1);
+        if (!student) return;
+
+        const tenant = await loadTenantRegion(link.tenantId);
+        if (!tenant) return;
+
+        const [balanceRow] = await tx
+          .select({
+            total: sql<number>`coalesce(sum(${invoices.balanceMinor}), 0)::int`,
+          })
+          .from(invoices)
+          .where(
+            and(eq(invoices.tenantId, link.tenantId), eq(invoices.studentId, link.studentId)),
+          );
+
+        await parentDashboardRepository.upsertCard(tx, {
+          parentUserId,
+          tenantId: link.tenantId,
+          studentId: link.studentId,
+          schoolName: tenant.name,
+          studentFirstName: student.firstName,
+          linkStatus: 'active',
+          outstandingBalanceMinor: balanceRow?.total ?? 0,
+        });
+      });
+    }
+  },
 };
