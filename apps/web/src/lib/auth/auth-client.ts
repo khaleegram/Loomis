@@ -169,8 +169,22 @@ export async function requestPasswordReset(
   if (!res.ok) throw toAuthError(res.status, json);
   const data = (json as { data?: unknown } | null)?.data ?? json;
   const parsed = passwordResetResponse.safeParse(data);
-  if (!parsed.success) throw new AuthError('INTERNAL_ERROR', 'Malformed reset response', 500);
-  return parsed.data;
+  if (parsed.success) return parsed.data;
+
+  const loose = data as { otpId?: unknown; channel?: unknown; expiresAt?: unknown } | null;
+  if (
+    typeof loose?.otpId === 'string' &&
+    (loose.channel === 'email' || loose.channel === 'phone')
+  ) {
+    return {
+      otpId: loose.otpId,
+      channel: loose.channel,
+      expiresAt:
+        typeof loose.expiresAt === 'string' ? loose.expiresAt : new Date().toISOString(),
+    };
+  }
+
+  throw new AuthError('INTERNAL_ERROR', 'Malformed reset response', 500);
 }
 
 /** Confirm the OTP and set a new password (US-XC-003). */

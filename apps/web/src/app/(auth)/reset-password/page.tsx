@@ -20,7 +20,7 @@ import {
 } from '@loomis/ui-web';
 import { CheckCircle2, Eye, EyeOff, Loader2, Lock, Mail } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -31,14 +31,68 @@ import { authErrorMessage } from '@/lib/auth/auth-errors';
 const confirmForm = passwordResetConfirmRequest.pick({ otp: true, newPassword: true });
 type ConfirmForm = z.infer<typeof confirmForm>;
 
+const RESET_STORAGE_KEY = 'loomis:password-reset';
+const RESET_TTL_MS = 15 * 60 * 1000;
+
+type ResetDraft = {
+  otpId: string;
+  channel: 'email' | 'phone';
+  email: string;
+  savedAt: number;
+};
+
+function saveResetDraft(draft: Omit<ResetDraft, 'savedAt'>): void {
+  if (typeof window === 'undefined') return;
+  const payload: ResetDraft = { ...draft, savedAt: Date.now() };
+  sessionStorage.setItem(RESET_STORAGE_KEY, JSON.stringify(payload));
+}
+
+function loadResetDraft(): ResetDraft | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(RESET_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as ResetDraft;
+    if (!parsed.otpId || !parsed.channel || !parsed.email) return null;
+    if (Date.now() - parsed.savedAt > RESET_TTL_MS) {
+      sessionStorage.removeItem(RESET_STORAGE_KEY);
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function clearResetDraft(): void {
+  if (typeof window === 'undefined') return;
+  sessionStorage.removeItem(RESET_STORAGE_KEY);
+}
+
+function normalizeOtpInput(value: string): string {
+  return value.replace(/\D/g, '').slice(0, 6);
+}
+
 export default function ResetPasswordPage() {
   const [otpId, setOtpId] = useState<string | null>(null);
   const [channel, setChannel] = useState<'email' | 'phone' | null>(null);
+  const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [isRequesting, setIsRequesting] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    const draft = loadResetDraft();
+    if (draft) {
+      setOtpId(draft.otpId);
+      setChannel(draft.channel);
+      setSubmittedEmail(draft.email);
+    }
+    setHydrated(true);
+  }, []);
 
   const requestForm = useForm<PasswordResetRequest>({
     resolver: zodResolver(passwordResetRequest),
@@ -57,6 +111,13 @@ export default function ResetPasswordPage() {
       const result = await requestPasswordReset(values);
       setOtpId(result.otpId);
       setChannel(result.channel);
+      setSubmittedEmail(values.email);
+      saveResetDraft({
+        otpId: result.otpId,
+        channel: result.channel,
+        email: values.email,
+      });
+      confirmFormState.reset({ otp: '', newPassword: '' });
     } catch (err) {
       setFormError(authErrorMessage(err));
     } finally {
@@ -70,6 +131,7 @@ export default function ResetPasswordPage() {
     setIsConfirming(true);
     try {
       await confirmPasswordReset({ otpId, ...values });
+      clearResetDraft();
       setDone(true);
     } catch (err) {
       setFormError(authErrorMessage(err));
@@ -77,6 +139,26 @@ export default function ResetPasswordPage() {
       setIsConfirming(false);
     }
   });
+
+  function startOver() {
+    clearResetDraft();
+    setOtpId(null);
+    setChannel(null);
+    setSubmittedEmail(null);
+    setFormError(null);
+    confirmFormState.reset({ otp: '', newPassword: '' });
+    requestForm.reset({ email: submittedEmail ?? '' });
+  }
+
+  if (!hydrated) {
+    return (
+      <AuthFormCard title="Reset your password" subtitle="Loading…">
+        <div className="flex justify-center py-8">
+          <Loader2 aria-hidden className="size-8 animate-spin text-gold-400" />
+        </div>
+      </AuthFormCard>
+    );
+  }
 
   if (done) {
     return (
@@ -97,7 +179,22 @@ export default function ResetPasswordPage() {
     return (
       <AuthFormCard
         title="Enter reset code"
-        subtitle={`We sent a 6-digit code to your ${channel ?? 'contact'}.`}
+        subtitle={
+          submittedEmail
+            ? `We sent a 6-digit code to ${submittedEmail} (${channel ?? 'email'}).`
+            : `We sent a 6-digit code to your ${channel ?? 'contact'}.`
+        }
+        footer={
+          <p className="w-full py-4 text-center text-sm text-neutral-400">
+            <button
+              type="button"
+              onClick={startOver}
+              className="text-gold-400 hover:text-gold-300 transition-colors"
+            >
+              Use a different email or resend
+            </button>
+          </p>
+        }
       >
         <Form {...confirmFormState}>
           <form onSubmit={onConfirm} noValidate className="space-y-5">
@@ -117,12 +214,18 @@ export default function ResetPasswordPage() {
                   </FormLabel>
                   <FormControl>
                     <Input
+                      type="tel"
                       inputMode="numeric"
                       autoComplete="one-time-code"
+                      autoFocus
                       maxLength={6}
-                      placeholder="000000"
-                      className="h-14 text-center font-mono text-2xl tracking-[0.5em] bg-white/5 border-white/10 text-white placeholder:text-neutral-600 focus:border-gold-400/50 focus:ring-1 focus:ring-gold-400/30"
-                      {...field}
+                      placeholder="123456"
+                      className="h-14 text-center font-mono text-2xl tracking-widest bg-white/5 border-white/10 text-white placeholder:text-neutral-600 focus:border-gold-400/50 focus:ring-1 focus:ring-gold-400/30"
+                      name={field.name}
+                      ref={field.ref}
+                      onBlur={field.onBlur}
+                      value={field.value}
+                      onChange={(event) => field.onChange(normalizeOtpInput(event.target.value))}
                     />
                   </FormControl>
                   <FormMessage />

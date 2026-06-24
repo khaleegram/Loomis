@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, type ReactNode, type MouseEvent } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type MouseEvent } from 'react';
 
 interface TiltContainerProps {
   children: ReactNode;
@@ -9,9 +9,15 @@ interface TiltContainerProps {
 
 export function TiltContainer({ children, className }: TiltContainerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [enableTilt, setEnableTilt] = useState(false);
   const [transform, setTransform] = useState('perspective(1000px) rotateX(0deg) rotateY(0deg)');
 
+  useEffect(() => {
+    setEnableTilt(window.matchMedia('(pointer: fine)').matches);
+  }, []);
+
   const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
+    if (!enableTilt) return;
     const el = containerRef.current;
     if (!el) return;
 
