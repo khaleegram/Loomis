@@ -197,6 +197,7 @@ export const queryKeys = {
   tenant: {
     branding: (tenantId: string) => ['tenant', tenantId, 'branding'] as const,
     experience: (tenantId: string) => ['tenant', tenantId, 'experience'] as const,
+    onboarding: (tenantId: string) => ['tenant', tenantId, 'onboarding'] as const,
     auditLog: (tenantId: string, filters: AuditLogFilters = {}) =>
       ['tenant', tenantId, 'audit', 'events', filters] as const,
   },

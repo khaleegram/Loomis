@@ -1,10 +1,13 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import type {
+  ApplyTenantPsfRateRequest,
   RequestPsfRateOverrideRequest,
   SetGlobalPsfRateRequest,
 } from '@loomis/contracts';
+import { LoomisError } from '../../../shared/errors.js';
 import { sendSuccess } from '../../../shared/http.js';
 import { psfRateService } from '../services/psf-rate.service.js';
+import { psfSuggestionService } from '../services/psf-suggestion.service.js';
 import { psfRateSnapshotToResponse } from './_serializers.js';
 import { requireActor } from './_context.js';
 
@@ -62,4 +65,49 @@ export async function getTenantPsfHistoryHandler(
 ): Promise<FastifyReply> {
   const snapshots = await psfRateService.getTenantHistory(req.params.tenantId);
   return sendSuccess(reply, { snapshots: snapshots.map(psfRateSnapshotToResponse) });
+}
+
+/** POST /platform/tenants/:tenantId/psf-rate/apply — apply suggested or explicit PSF rate. */
+export async function applyTenantPsfRateHandler(
+  req: FastifyRequest<{ Params: TenantParams; Body: ApplyTenantPsfRateRequest }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const actor = requireActor(req);
+  const { tenantId } = req.params;
+  let rateMinor = req.body.rateMinor;
+
+  if (req.body.useSuggested) {
+    const suggested = await psfSuggestionService.getSuggestedRateMinor(tenantId);
+    if (suggested == null) {
+      throw new LoomisError(
+        'TENANT_PSF_SUGGESTION_UNAVAILABLE',
+        422,
+        'No fee-based PSF suggestion yet — configure fee structures first',
+      );
+    }
+    rateMinor = suggested;
+  }
+
+  if (rateMinor == null) {
+    throw new LoomisError('VALIDATION_ERROR', 422, 'Provide rateMinor or set useSuggested to true');
+  }
+
+  const snapshot = await psfRateService.setTenantPsfRateDirect(
+    {
+      tenantId,
+      rateMinor,
+      reason:
+        req.body.reason ??
+        (req.body.useSuggested
+          ? 'Applied fee-structure PSF suggestion (platform)'
+          : 'Platform PSF rate update'),
+    },
+    actor,
+  );
+
+  return sendSuccess(
+    reply,
+    { rateMinor: snapshot.rateMinor, snapshotId: snapshot.id },
+    201,
+  );
 }

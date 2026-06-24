@@ -74,3 +74,18 @@ export function useUpdateSchoolBranding(tenantId: string) {
     },
   });
 }
+
+export function useTenantOnboarding(tenantId: string, options?: QueryLiveOptions) {
+  const client = useApiClient();
+  return useQuery({
+    queryKey: queryKeys.tenant.onboarding(tenantId),
+    queryFn: () =>
+      client.get<import('@loomis/contracts').TenantOnboardingStatus>(
+        `/tenants/${tenantId}/onboarding`,
+        { headers: { 'X-Tenant-Id': tenantId } },
+      ),
+    staleTime: 30_000,
+    enabled: Boolean(tenantId),
+    ...dashboardLiveQueryExtras(options?.live, DASHBOARD_CONTEXT_POLL_MS),
+  });
+}

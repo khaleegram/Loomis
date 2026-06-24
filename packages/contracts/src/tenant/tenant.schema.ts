@@ -95,6 +95,40 @@ export const psfSuggestionResponse = z.object({
 });
 export type PsfSuggestionResponse = z.infer<typeof psfSuggestionResponse>;
 
+export const tenantOnboardingStep = z.object({
+  id: z.string(),
+  label: z.string(),
+  complete: z.boolean(),
+  detail: z.string().nullable(),
+});
+export type TenantOnboardingStep = z.infer<typeof tenantOnboardingStep>;
+
+export const tenantOnboardingStatus = z.object({
+  readyForOperations: z.boolean(),
+  completedStepCount: z.number().int(),
+  totalStepCount: z.number().int(),
+  steps: z.array(tenantOnboardingStep),
+  suggestedPsfBasisMinor: z.number().int().nullable(),
+});
+export type TenantOnboardingStatus = z.infer<typeof tenantOnboardingStatus>;
+
+export const applyTenantPsfRateRequest = z
+  .object({
+    rateMinor: psfRateMinor.optional(),
+    useSuggested: z.boolean().optional(),
+    reason: z.string().min(3).max(500).optional(),
+  })
+  .refine((value) => value.useSuggested === true || value.rateMinor != null, {
+    message: 'Provide rateMinor or set useSuggested to true',
+  });
+export type ApplyTenantPsfRateRequest = z.infer<typeof applyTenantPsfRateRequest>;
+
+export const applyTenantPsfRateResponse = z.object({
+  rateMinor: z.number().int(),
+  snapshotId: z.string().uuid(),
+});
+export type ApplyTenantPsfRateResponse = z.infer<typeof applyTenantPsfRateResponse>;
+
 export const tenantResponse = z.object({
   id: z.string().uuid(),
   name: z.string(),
@@ -112,6 +146,7 @@ export const tenantResponse = z.object({
   financeMode: financeMode,
   experienceFlags: tenantExperienceFlags,
   ownerSetup: tenantOwnerSetupStatus,
+  onboarding: tenantOnboardingStatus.nullable(),
   suspendedReason: z.string().nullable(),
   suspendedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),

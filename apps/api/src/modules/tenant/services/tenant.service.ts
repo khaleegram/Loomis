@@ -14,6 +14,8 @@ import type { ActorContext, ProvisionTenantInput, SuspendTenantInput } from '../
 import { psfRateService } from './psf-rate.service.js';
 import { psfSuggestionService } from './psf-suggestion.service.js';
 import { tenantOwnerService } from './tenant-owner.service.js';
+import { tierCatalogService } from './tier-catalog.service.js';
+import { tenantOnboardingService } from './tenant-onboarding.service.js';
 import { attributionService } from '../../referral/services/attribution.service.js';
 
 type TenantRow = NonNullable<Awaited<ReturnType<typeof tenantRepository.findById>>>;
@@ -122,6 +124,7 @@ export const tenantService = {
   },
 
   async listTiers(): Promise<TierSummary[]> {
+    await tierCatalogService.ensureProductTiers();
     const rows = await tierRepository.list();
     return rows
       .filter((tier) => tier.code !== 'demo')
@@ -208,7 +211,10 @@ export const tenantService = {
   },
 
   /** Serialises a tenant row into the public response shape (effective rate included). */
-  async toResponse(tenant: TenantRow): Promise<TenantResponse> {
+  async toResponse(
+    tenant: TenantRow,
+    options?: { includeOnboarding?: boolean },
+  ): Promise<TenantResponse> {
     const tier = await tierRepository.findById(tenant.tierId);
     const currentPsfRateMinor = await psfRateService.resolveEffectiveRateMinor(
       tenant.id,
@@ -216,6 +222,9 @@ export const tenantService = {
     );
     const suggestedPsfRateMinor = await psfSuggestionService.getSuggestedRateMinor(tenant.id);
     const ownerSetup = await tenantOwnerService.getOwnerSetupStatus(tenant.id);
+    const onboarding = options?.includeOnboarding
+      ? await tenantOnboardingService.getStatus(tenant.id)
+      : null;
 
     return {
       id: tenant.id,
@@ -236,6 +245,7 @@ export const tenantService = {
         tenant.experienceFlags as TenantResponse['experienceFlags'],
       ),
       ownerSetup,
+      onboarding,
       suspendedReason: tenant.suspendedReason ?? null,
       suspendedAt: tenant.suspendedAt ? tenant.suspendedAt.toISOString() : null,
       createdAt: tenant.createdAt.toISOString(),

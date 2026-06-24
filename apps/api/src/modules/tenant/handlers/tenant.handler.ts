@@ -46,7 +46,7 @@ export async function getTenantHandler(
   reply: FastifyReply,
 ): Promise<FastifyReply> {
   const tenant = await tenantService.getTenant(req.params.tenantId);
-  return sendSuccess(reply, await tenantService.toResponse(tenant));
+  return sendSuccess(reply, await tenantService.toResponse(tenant, { includeOnboarding: true }));
 }
 
 /** POST /tenants/:tenantId/suspend — suspend a tenant (US-PLT-002). */

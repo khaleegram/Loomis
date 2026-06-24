@@ -40,6 +40,26 @@ function statusDot(status: TenantStatus): string {
   }
 }
 
+function tenantSetupLabel(tenant: import('@loomis/contracts').TenantResponse): {
+  label: string;
+  tone: 'ok' | 'warn';
+} {
+  if (!tenant.ownerSetup.hasOwnerAccount) {
+    return { label: 'No owner', tone: 'warn' };
+  }
+  if (!tenant.ownerSetup.setupEmailSentAt) {
+    return { label: 'Email pending', tone: 'warn' };
+  }
+  if (
+    tenant.suggestedPsfRateMinor != null &&
+    tenant.currentPsfRateMinor != null &&
+    tenant.suggestedPsfRateMinor !== tenant.currentPsfRateMinor
+  ) {
+    return { label: 'PSF review', tone: 'warn' };
+  }
+  return { label: 'On track', tone: 'ok' };
+}
+
 function statusLabel(status: TenantStatus): string {
   switch (status) {
     case 'active': return 'Active';
@@ -146,8 +166,8 @@ export default function TenantsPage() {
         {/* ── Tenant list ────────────────────────────────── */}
         <div className="card overflow-hidden rounded-2xl">
           <div className="overflow-x-auto">
-          <div className="grid min-w-[720px] grid-cols-[1fr_120px_100px_110px_100px_48px] items-center gap-4 border-b border-neutral-100 bg-neutral-50 px-4 py-3 sm:px-6">
-            {['School', 'Tier', 'Region', 'Status', 'PSF Rate', ''].map((h) => (
+          <div className="grid min-w-[820px] grid-cols-[1fr_120px_100px_110px_100px_100px_48px] items-center gap-4 border-b border-neutral-100 bg-neutral-50 px-4 py-3 sm:px-6">
+            {['School', 'Tier', 'Region', 'Status', 'Setup', 'PSF Rate', ''].map((h) => (
               <p key={h} className="text-[10px] font-bold uppercase tracking-[0.15em] text-neutral-400">
                 {h}
               </p>
@@ -159,7 +179,7 @@ export default function TenantsPage() {
               Array.from({ length: 8 }).map((_, i) => (
                 <div
                   key={i}
-                  className="grid min-w-[720px] grid-cols-[1fr_120px_100px_110px_100px_48px] items-center gap-4 px-4 py-4 animate-pulse sm:px-6"
+                  className="grid min-w-[820px] grid-cols-[1fr_120px_100px_110px_100px_100px_48px] items-center gap-4 px-4 py-4 animate-pulse sm:px-6"
                 >
                   <div className="flex items-center gap-3">
                     <div className="size-8 rounded-lg bg-neutral-100 shrink-0" />
@@ -203,11 +223,13 @@ export default function TenantsPage() {
                 ) : null}
               </div>
             ) : (
-              filtered.map((tenant) => (
+              filtered.map((tenant) => {
+                const setup = tenantSetupLabel(tenant);
+                return (
                 <Link
                   key={tenant.id}
                   href={`/platform/tenants/${tenant.id}`}
-                  className="grid min-w-[720px] grid-cols-[1fr_120px_100px_110px_100px_48px] items-center gap-4 px-4 py-3.5 transition-colors hover:bg-neutral-50 group sm:px-6"
+                  className="grid min-w-[820px] grid-cols-[1fr_120px_100px_110px_100px_100px_48px] items-center gap-4 px-4 py-3.5 transition-colors hover:bg-neutral-50 group sm:px-6"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span
@@ -250,6 +272,16 @@ export default function TenantsPage() {
                     </span>
                   </div>
 
+                  <span
+                    className={`inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] ${
+                      setup.tone === 'ok'
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : 'bg-amber-50 text-amber-700'
+                    }`}
+                  >
+                    {setup.label}
+                  </span>
+
                   <span className="text-[13px] font-bold tabular-nums text-neutral-900">
                     {tenant.currentPsfRateMinor != null ? formatKobo(tenant.currentPsfRateMinor) : '—'}
                   </span>
@@ -259,7 +291,8 @@ export default function TenantsPage() {
                     className="size-4 shrink-0 text-neutral-300 group-hover:text-neutral-600 transition-colors justify-self-end"
                   />
                 </Link>
-              ))
+                );
+              })
             )}
           </div>
 

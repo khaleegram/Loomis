@@ -11,7 +11,9 @@ export {
   getTenantPsfHistoryHandler,
   requestPsfRateOverrideHandler,
   setGlobalPsfRateHandler,
+  applyTenantPsfRateHandler,
 } from './psf-rate.handler.js';
+export { getTenantOnboardingHandler } from './onboarding.handler.js';
 export {
   getTenantHandler,
   listTenantsHandler,

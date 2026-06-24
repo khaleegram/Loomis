@@ -61,6 +61,7 @@ import { PlatformTenantExperienceCard } from '@/components/platform/platform-ten
 import { PsfRateCard } from '@/components/platform/psf-rate-card';
 import { BreakGlassModal } from '@/components/platform/break-glass-modal';
 import { TenantProfileEditDialog } from '@/components/platform/tenant-profile-edit-dialog';
+import { TenantOnboardingTimeline } from '@/components/platform/tenant-onboarding-timeline';
 import { BRONZE } from '@/components/dashboard/dashboard-primitives';
 import { useAuth } from '@/lib/auth/auth-context';
 
@@ -650,9 +651,16 @@ export default function TenantDetailPage({ params }: TenantDetailPageProps) {
           tenantId={tenant.id}
           tenantName={tenant.name}
           currentRateMinor={tenant.currentPsfRateMinor}
+          suggestedRateMinor={tenant.suggestedPsfRateMinor}
         />
         <PlatformTenantExperienceCard tenantId={tenant.id} tenantName={tenant.name} />
       </div>
+
+      {tenant.onboarding ? (
+        <div className="mb-5">
+          <TenantOnboardingTimeline onboarding={tenant.onboarding} />
+        </div>
+      ) : null}
 
       {/* ════════════════════════════════════════════════════
           TIMELINE

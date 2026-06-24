@@ -228,10 +228,29 @@ export interface UseRequestPsfRateOverrideConfig {
   ensureStepUpToken: (action: StepUpAction) => Promise<StepUpTokenResult>;
 }
 
+export function useApplyTenantPsfRate(config: UseRequestPsfRateOverrideConfig) {
+  const { tenantId, ensureStepUpToken } = config;
+  return useFinancialMutation<
+    import('@loomis/contracts').ApplyTenantPsfRateRequest,
+    import('@loomis/contracts').ApplyTenantPsfRateResponse
+  >({
+    endpoint: `/platform/tenants/${tenantId}/psf-rate/apply`,
+    action: 'psf_rate_change',
+    ensureStepUpToken,
+    invalidates: [
+      queryKeys.platform.psfRates(),
+      queryKeys.platform.psfRateHistory(tenantId),
+      queryKeys.platform.tenant(tenantId),
+      queryKeys.platform.tenants(),
+      queryKeys.tenant.onboarding(tenantId),
+    ],
+  });
+}
+
 export function useRequestPsfRateOverride(config: UseRequestPsfRateOverrideConfig) {
   const { tenantId, ensureStepUpToken } = config;
   return useFinancialMutation<RequestPsfRateOverrideRequest, { id: string }>({
-    endpoint: `/platform/tenants/${tenantId}/psf-rate/override-requests`,
+    endpoint: `/platform/tenants/${tenantId}/psf-rate/override`,
     action: 'psf_rate_change',
     ensureStepUpToken,
     invalidates: [

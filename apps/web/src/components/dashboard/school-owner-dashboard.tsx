@@ -16,6 +16,7 @@ import {
   SCHOOL_OWNER_WORKFLOW_ACTION,
 } from '@/components/dashboard/school-owner-quick-actions';
 import { UnverifiedPaymentsBanner } from '@/components/dashboard/unverified-payments-banner';
+import { SchoolOnboardingChecklist } from '@/components/school/school-onboarding-checklist';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { SURFACES } from '@/lib/design/surfaces';
 import { useLeadershipAttention } from '@/lib/leadership/use-leadership-attention';
@@ -65,6 +66,7 @@ export function SchoolOwnerDashboard({ tenantId, displayName }: SchoolOwnerDashb
       />
 
       <div className="space-y-4 pt-20 sm:pt-24">
+        <SchoolOnboardingChecklist tenantId={tenantId} />
         <UnverifiedPaymentsBanner tenantId={tenantId} termId={focusTerm?.id} />
 
         <section className="space-y-4">

@@ -14,6 +14,7 @@ import { LoomisPlatformFootnote } from '@/components/dashboard/loomis-platform-f
 import { SchoolOwnerHero } from '@/components/dashboard/school-owner-hero';
 import { SCHOOL_OWNER_QUICK_ACTIONS } from '@/components/dashboard/school-owner-quick-actions';
 import { CorePendingApprovals } from '@/components/workflow/core-inline-workflow-decision';
+import { SchoolOnboardingChecklist } from '@/components/school/school-onboarding-checklist';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { SURFACES } from '@/lib/design/surfaces';
 import { filterInboxByTypes } from '@/lib/leadership/leadership-attention';
@@ -61,7 +62,11 @@ export function CoreOwnerHome({ tenantId, displayName }: CoreOwnerHomeProps) {
         stripItems={stripItems}
       />
 
-      <section className="space-y-4 pt-20 sm:pt-24">
+      <div className="space-y-4 pt-20 sm:pt-24">
+        <SchoolOnboardingChecklist tenantId={tenantId} />
+      </div>
+
+      <section className="space-y-4 pt-6">
         <div>
           <p className={ACADEMIC_UI.sectionLabel}>Today</p>
           <h2 className="text-lg font-extrabold tracking-tight text-neutral-900">

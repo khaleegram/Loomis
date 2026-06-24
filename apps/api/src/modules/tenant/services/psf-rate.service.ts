@@ -243,4 +243,51 @@ export const psfRateService = {
     }
     return psfRateSnapshotRepository.listTenantHistory(tenantId);
   },
+
+  /**
+   * Applies a per-school PSF rate directly (platform operations).
+   * Used when aligning to a fee-structure suggestion without dual approval.
+   */
+  async setTenantPsfRateDirect(
+    input: {
+      tenantId: string;
+      rateMinor: number;
+      reason: string;
+      effectiveFrom?: Date;
+    },
+    actor: ActorContext,
+  ): Promise<PsfRateSnapshot> {
+    assertRateNonZero(input.rateMinor);
+
+    const tenant = await tenantRepository.findById(input.tenantId);
+    if (!tenant) {
+      throw new LoomisError('TENANT_NOT_FOUND', 404, 'Tenant not found');
+    }
+
+    const current = await psfRateSnapshotRepository.findLatestForTenant(input.tenantId);
+    const previousRateMinor = current?.rateMinor ?? null;
+
+    const snapshot = await psfRateSnapshotRepository.create({
+      scope: 'tenant',
+      tenantId: input.tenantId,
+      rateMinor: input.rateMinor,
+      previousRateMinor,
+      effectiveFrom: input.effectiveFrom ?? new Date(),
+      reason: input.reason,
+      changedById: actor.userId,
+    });
+
+    await tenantEvents.publishPsfRateChanged({
+      snapshotId: snapshot.id,
+      scope: 'tenant',
+      tenantId: input.tenantId,
+      rateMinor: snapshot.rateMinor,
+      previousRateMinor,
+      effectiveFrom: snapshot.effectiveFrom.toISOString(),
+      changedById: actor.userId,
+      approvedById: null,
+    });
+
+    return snapshot;
+  },
 };

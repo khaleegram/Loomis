@@ -24,7 +24,12 @@ import {
   cn,
 } from '@loomis/ui-web';
 import { requestPsfRateOverrideRequest } from '@loomis/contracts';
-import { useRequestPsfRateOverride, usePsfRateHistory, useStepUpMfa } from '@loomis/api-client';
+import {
+  useApplyTenantPsfRate,
+  useRequestPsfRateOverride,
+  usePsfRateHistory,
+  useStepUpMfa,
+} from '@loomis/api-client';
 import { formatKobo } from '@loomis/core';
 
 import { BRONZE } from '@/components/dashboard/dashboard-primitives';
@@ -40,18 +45,38 @@ interface PsfRateCardProps {
   tenantId: string;
   tenantName: string;
   currentRateMinor: number | null;
+  suggestedRateMinor?: number | null;
 }
 
 const inputClass =
   'h-10 rounded-lg border-neutral-200 bg-white text-[13px] placeholder:text-neutral-400 focus:border-neutral-300 focus:ring-1 focus:ring-neutral-200';
 
-export function PsfRateCard({ tenantId, tenantName, currentRateMinor }: PsfRateCardProps) {
+export function PsfRateCard({
+  tenantId,
+  tenantName,
+  currentRateMinor,
+  suggestedRateMinor = null,
+}: PsfRateCardProps) {
   const [showForm, setShowForm] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [applyMfaCode, setApplyMfaCode] = useState('');
   const mfaCodeRef = useRef('');
   const stepUp = useStepUpMfa();
 
   const { data: historyData, isLoading: historyLoading } = usePsfRateHistory(tenantId);
+
+  const ensureStepUpToken = useCallback(
+    async (action: import('@loomis/contracts').StepUpAction) => {
+      const code = mfaCodeRef.current || applyMfaCode;
+      if (!code || code.length !== 6) {
+        throw new Error('Enter your 6-digit authenticator code.');
+      }
+      return stepUp.mutateAsync({ action, code });
+    },
+    [applyMfaCode, stepUp],
+  );
+
+  const applySuggested = useApplyTenantPsfRate({ tenantId, ensureStepUpToken });
 
   const requestOverride = useRequestPsfRateOverride({
     tenantId,
@@ -66,6 +91,11 @@ export function PsfRateCard({ tenantId, tenantName, currentRateMinor }: PsfRateC
       [stepUp],
     ),
   });
+
+  const psfMismatch =
+    suggestedRateMinor != null &&
+    currentRateMinor != null &&
+    suggestedRateMinor !== currentRateMinor;
 
   const form = useForm<OverrideFormValues>({
     resolver: zodResolver(overrideFormSchema),
@@ -180,6 +210,55 @@ export function PsfRateCard({ tenantId, tenantName, currentRateMinor }: PsfRateC
             )}
           </div>
         </div>
+
+        {psfMismatch ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-4">
+            <p className="text-[12px] font-bold text-amber-900">
+              Suggested rate from school fees: {formatKobo(suggestedRateMinor!)}
+            </p>
+            <p className="mt-1 text-[11px] text-amber-800/80">
+              Current rate differs. Apply the suggestion after reviewing fee structures.
+            </p>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
+              <div className="flex-1">
+                <label htmlFor={`apply-mfa-${tenantId}`} className="text-[10px] font-bold uppercase tracking-[0.12em] text-amber-900/70">
+                  Authenticator code
+                </label>
+                <Input
+                  id={`apply-mfa-${tenantId}`}
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={applyMfaCode}
+                  onChange={(event) => {
+                    setApplyMfaCode(event.target.value);
+                    mfaCodeRef.current = event.target.value;
+                  }}
+                  className="mt-1 h-10 rounded-lg border-amber-200 bg-white text-[13px]"
+                  placeholder="000000"
+                />
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                disabled={applySuggested.isSubmitting || applyMfaCode.length !== 6}
+                className="min-h-[44px] bg-[#c9a96e] text-neutral-900 hover:bg-[#b89555]"
+                onClick={() => {
+                  mfaCodeRef.current = applyMfaCode;
+                  void applySuggested
+                    .mutateFinancialAsync({ useSuggested: true })
+                    .then(() => {
+                      setApplyMfaCode('');
+                      mfaCodeRef.current = '';
+                      applySuggested.regenerateIdempotencyKey();
+                    })
+                    .catch(() => undefined);
+                }}
+              >
+                {applySuggested.isSubmitting ? 'Applying…' : 'Apply suggested rate'}
+              </Button>
+            </div>
+          </div>
+        ) : null}
 
         {/* Rate change request form */}
         {showForm ? (
