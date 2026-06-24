@@ -351,6 +351,41 @@
       "when": 1780838300000,
       "tag": "0049_student_fee_credits",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1780838400000,
+      "tag": "0050_tenant_contact_phone",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1780838500000,
+      "tag": "0051_product_tiers",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1780838600000,
+      "tag": "0052_tenant_go_live_and_contacts",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1780838700000,
+      "tag": "0053_provision_drafts",
+      "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1780838800000,
+      "tag": "0054_tier_admin",
+      "breakpoints": true
     }
   ]
 }
