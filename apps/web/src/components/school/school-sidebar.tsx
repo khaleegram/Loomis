@@ -76,9 +76,9 @@ export function SchoolTopBar() {
   const effectiveRoles = useMemo(
     () =>
       role
-        ? resolveEffectiveStaffRoles(role, session.staffExtensionRoles, teaching)
+        ? resolveEffectiveStaffRoles(role, session?.staffExtensionRoles, teaching)
         : undefined,
-    [role, session.staffExtensionRoles, teaching],
+    [role, session?.staffExtensionRoles, teaching],
   );
   const navContext: SchoolNavContext = useMemo(
     () => ({
