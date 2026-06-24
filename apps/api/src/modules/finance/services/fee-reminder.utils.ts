@@ -26,15 +26,23 @@ function diffDaysUtc(fromIso: string, toIso: string): number {
   return Math.round((to - from) / (1000 * 60 * 60 * 24));
 }
 
-/** Standard preset triggers for school fee reminders (no per-school config in v1). */
+/** Standard preset triggers for school fee reminders. */
+export type FeeReminderPreset = 'standard' | 'due_date_only' | 'minimal';
+
 export function evaluateFeeReminderTriggers(input: {
   today: string;
   termStartDate: string | null;
   dueDate: string | null;
+  preset?: FeeReminderPreset;
 }): FeeReminderTrigger[] {
+  const preset = input.preset ?? 'standard';
+  if (preset === 'minimal') {
+    return [];
+  }
+
   const triggers: FeeReminderTrigger[] = [];
 
-  if (input.termStartDate) {
+  if (preset === 'standard' && input.termStartDate) {
     const monthPlusWeek = addDaysUtc(input.termStartDate, 28);
     if (monthPlusWeek === input.today) {
       triggers.push('month_plus_week');

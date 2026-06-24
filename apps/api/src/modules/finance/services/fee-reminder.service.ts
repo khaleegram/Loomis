@@ -8,6 +8,7 @@ import { tenantRepository } from '../../tenant/repository/tenant.repository.js';
 import { financeRepository } from '../repository/finance.repository.js';
 import type { ActorContext } from '../types.js';
 import { requireTenant } from './_shared.js';
+import { feeReminderSettingsService } from './fee-reminder-settings.service.js';
 import {
   evaluateFeeReminderTriggers,
   reminderChannelsForTrigger,
@@ -116,6 +117,7 @@ export const feeReminderService = {
     let skipped = 0;
 
     for (const tenant of tenants) {
+      const { preset } = await feeReminderSettingsService.getSettings(tenant.id);
       const slices = await financeRepository.listOutstandingInvoicesWithTerm(tenant.id);
       const seen = new Set<string>();
 
@@ -125,6 +127,7 @@ export const feeReminderService = {
           today,
           termStartDate: term?.startDate ?? slice.termStartDate,
           dueDate: slice.dueDate,
+          preset,
         });
 
         for (const trigger of triggers) {

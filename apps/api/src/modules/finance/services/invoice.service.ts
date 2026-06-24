@@ -78,7 +78,7 @@ async function createInvoiceFromStructure(params: {
   structure: ResolvedFeeStructure;
 }): Promise<InvoiceWithItems> {
   const invoiceId = uuidv7();
-  return financeRepository.createInvoiceWithItems({
+  const created = await financeRepository.createInvoiceWithItems({
     id: invoiceId,
     tenantId: params.tenantId,
     academicYearId: params.academicYearId,
@@ -107,6 +107,15 @@ async function createInvoiceFromStructure(params: {
       },
     },
   });
+
+  await financeRepository.applyStudentCreditToInvoice(
+    params.tenantId,
+    params.studentId,
+    invoiceId,
+  );
+
+  const refreshed = await financeRepository.findInvoiceById(params.tenantId, invoiceId);
+  return refreshed ?? created;
 }
 
 function allocatePaidToLineItems(
@@ -371,6 +380,10 @@ export const invoiceService = {
     const classArmLabel = await resolveClassArmLabel(tenantId, studentId, termId);
     const env = getEnv();
     const onlinePaymentEnabled = Boolean(env.PAYSTACK_SECRET_KEY);
+    const creditBalanceMinor = await financeRepository.getStudentCreditBalanceMinor(
+      tenantId,
+      studentId,
+    );
 
     const referenceTerm = await academicRepository.findTermById(tenantId, termId);
     const slices = (await financeRepository.listOutstandingInvoicesWithTerm(tenantId)).filter(
@@ -415,6 +428,7 @@ export const invoiceService = {
         arrearsBalanceMinor,
         totalBalanceMinor,
         primaryInvoiceId,
+        creditBalanceMinor,
         dueDate: null,
         lineItems: [],
         onlinePaymentEnabled,
@@ -447,6 +461,7 @@ export const invoiceService = {
       arrearsBalanceMinor,
       totalBalanceMinor: invoice.invoice.balanceMinor + arrearsBalanceMinor,
       primaryInvoiceId,
+      creditBalanceMinor,
       dueDate: invoice.invoice.dueDate,
       lineItems: allocatePaidToLineItems(invoice.items, invoice.invoice.amountPaidMinor),
       onlinePaymentEnabled,

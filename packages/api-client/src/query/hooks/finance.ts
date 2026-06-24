@@ -24,6 +24,8 @@ import type {
   RefundRequestListResponse,
   RefundRequestResponse,
   SendFeeReminderResponse,
+  FeeReminderSettingsResponse,
+  UpdateFeeReminderSettingsRequest,
   StepUpAction,
   UpdateFeeStructureRequest,
   VerifyOfflinePaymentRequest,
@@ -260,6 +262,35 @@ export function useBulkFeeReminder(tenantId: string, termId: string) {
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: queryKeys.finance.outstandingBalances(tenantId, termId),
+      });
+    },
+  });
+}
+
+export function useFeeReminderSettings(tenantId: string) {
+  const client = useApiClient();
+  return useQuery({
+    queryKey: queryKeys.finance.feeReminderSettings(tenantId),
+    queryFn: () =>
+      client.get<FeeReminderSettingsResponse>(
+        `/tenants/${tenantId}/finance/fee-reminder-settings`,
+      ),
+    enabled: Boolean(tenantId),
+  });
+}
+
+export function useUpdateFeeReminderSettings(tenantId: string) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: UpdateFeeReminderSettingsRequest) =>
+      client.put<FeeReminderSettingsResponse>(
+        `/tenants/${tenantId}/finance/fee-reminder-settings`,
+        body,
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.finance.feeReminderSettings(tenantId),
       });
     },
   });

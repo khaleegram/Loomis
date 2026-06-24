@@ -3,13 +3,15 @@ import {
   invoices,
   payments,
   receipts,
+  studentFeeCredits,
   webhookEvents,
 } from '../../../../drizzle/schema/finance.js';
 import { db, type DbTransaction } from '../../../shared/db.js';
 import { withTenantContext } from '../../../shared/tenant-context.js';
 import type { OutboxEventInput } from '../types.js';
 import { financeOutboxRepository } from './outbox.repository.js';
-import { parsePaymentAllocations } from '../services/payment-allocation.utils.js';
+import { parseCreditMinor, parsePaymentAllocations } from '../services/payment-allocation.utils.js';
+import { applyAmountToInvoice } from './invoice-balance.js';
 
 type PaymentRow = typeof payments.$inferSelect;
 type ReceiptRow = typeof receipts.$inferSelect;
@@ -20,38 +22,28 @@ export interface PaymentWithReceipt {
   receipt: ReceiptRow | null;
 }
 
-function deriveInvoiceStatus(amountChargedMinor: number, amountPaidMinor: number): string {
-  if (amountPaidMinor <= 0) return 'issued';
-  if (amountPaidMinor >= amountChargedMinor) return 'paid';
-  return 'partially_paid';
-}
-
-async function applyAmountToInvoice(
+async function addStudentCreditInTx(
   tx: DbTransaction,
   tenantId: string,
-  invoiceId: string,
+  studentId: string,
   amountMinor: number,
 ): Promise<void> {
-  const [invoice] = await tx
-    .select()
-    .from(invoices)
-    .where(and(eq(invoices.tenantId, tenantId), eq(invoices.id, invoiceId)))
-    .limit(1);
-  if (!invoice) throw new Error('Invoice not found');
-
-  const newPaid = invoice.amountPaidMinor + amountMinor;
-  const newBalance = invoice.amountChargedMinor - newPaid;
-  const invoiceStatus = deriveInvoiceStatus(invoice.amountChargedMinor, newPaid);
-
+  if (amountMinor <= 0) return;
   await tx
-    .update(invoices)
-    .set({
-      amountPaidMinor: newPaid,
-      balanceMinor: newBalance,
-      status: invoiceStatus,
+    .insert(studentFeeCredits)
+    .values({
+      tenantId,
+      studentId,
+      balanceMinor: amountMinor,
       updatedAt: new Date(),
     })
-    .where(and(eq(invoices.tenantId, tenantId), eq(invoices.id, invoice.id)));
+    .onConflictDoUpdate({
+      target: [studentFeeCredits.tenantId, studentFeeCredits.studentId],
+      set: {
+        balanceMinor: sql`${studentFeeCredits.balanceMinor} + ${amountMinor}`,
+        updatedAt: new Date(),
+      },
+    });
 }
 
 async function nextReceiptSequence(tx: DbTransaction, tenantId: string, termId: string): Promise<number> {
@@ -273,21 +265,27 @@ export const paymentRepository = {
         .limit(1);
       if (!payment) throw new Error('Payment not found');
 
-      const allocations = parsePaymentAllocations(payment.metadata as Record<string, unknown> | null);
-      if (allocations && allocations.length > 0) {
-        const allocatedTotal = allocations.reduce((sum, row) => sum + row.amountMinor, 0);
-        if (allocatedTotal !== payment.amountMinor) {
-          throw new Error('Payment allocation total mismatch');
-        }
-        for (const allocation of allocations) {
-          await applyAmountToInvoice(
-            tx,
-            params.tenantId,
-            allocation.invoiceId,
-            allocation.amountMinor,
-          );
-        }
-      } else {
+      const allocations = parsePaymentAllocations(payment.metadata as Record<string, unknown> | null) ?? [];
+      const creditMinor = parseCreditMinor(payment.metadata as Record<string, unknown> | null) ?? 0;
+      const allocatedTotal = allocations.reduce((sum, row) => sum + row.amountMinor, 0);
+      if (allocatedTotal + creditMinor !== payment.amountMinor) {
+        throw new Error('Payment allocation total mismatch');
+      }
+
+      for (const allocation of allocations) {
+        await applyAmountToInvoice(
+          tx,
+          params.tenantId,
+          allocation.invoiceId,
+          allocation.amountMinor,
+        );
+      }
+
+      if (creditMinor > 0) {
+        await addStudentCreditInTx(tx, params.tenantId, payment.studentId, creditMinor);
+      }
+
+      if (allocations.length === 0 && creditMinor === 0) {
         await applyAmountToInvoice(tx, params.tenantId, payment.invoiceId, payment.amountMinor);
       }
 

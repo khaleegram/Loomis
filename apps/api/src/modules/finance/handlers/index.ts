@@ -15,6 +15,8 @@ export {
   outstandingBalancesHandler,
   sendFeeReminderHandler,
   bulkFeeReminderHandler,
+  getFeeReminderSettingsHandler,
+  updateFeeReminderSettingsHandler,
   updateFeeStructureHandler,
   verifyOfflinePaymentHandler,
 } from './finance.handler.js';

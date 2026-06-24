@@ -10,6 +10,11 @@ const SETTINGS_LINKS = [
   { label: 'Profile', href: '/school/settings/profile' },
   { label: 'Appearance', href: '/school/settings/appearance' },
   { label: 'Security', href: '/school/settings/security' },
+  {
+    label: 'Fee reminders',
+    href: '/school/settings/finance-reminders',
+    capability: 'finance.balances.view' as const,
+  },
   { label: 'Audit log', href: '/school/settings/audit', capability: 'audit.view' as const },
   { label: 'Experience', href: '/school/settings/experience', ownerOnly: true },
 ] as const;
@@ -18,6 +23,7 @@ export function SettingsSubNav() {
   const pathname = usePathname();
   const isOwner = useCan('census.lock');
   const canAudit = useCan('audit.view');
+  const canFinance = useCan('finance.balances.view');
 
   return (
     <nav
@@ -28,7 +34,9 @@ export function SettingsSubNav() {
     >
       {SETTINGS_LINKS.filter((link) => {
         if ('ownerOnly' in link && link.ownerOnly && !isOwner) return false;
-        if ('capability' in link && link.capability && !canAudit) return false;
+        if ('capability' in link && link.capability === 'audit.view' && !canAudit) return false;
+        if ('capability' in link && link.capability === 'finance.balances.view' && !canFinance)
+          return false;
         return true;
       }).map((link) => {
         const active = pathname === link.href;

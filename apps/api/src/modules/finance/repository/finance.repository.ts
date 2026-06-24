@@ -5,9 +5,11 @@ import {
   feeStructures,
   invoiceItems,
   invoices,
+  studentFeeCredits,
 } from '../../../../drizzle/schema/finance.js';
 import { withTenantContext } from '../../../shared/tenant-context.js';
 import type { DbTransaction } from '../../../shared/db.js';
+import { applyAmountToInvoice } from './invoice-balance.js';
 import type { FeeItemInputDto, OutboxEventInput } from '../types.js';
 import { financeOutboxRepository } from './outbox.repository.js';
 
@@ -407,6 +409,80 @@ export const financeRepository = {
         .from(invoices)
         .where(and(eq(invoices.tenantId, tenantId), eq(invoices.studentId, studentId)));
       return row?.total ?? 0;
+    });
+  },
+
+  async getStudentCreditBalanceMinor(tenantId: string, studentId: string): Promise<number> {
+    return withTenantContext(tenantId, async (tx) => {
+      const [row] = await tx
+        .select({ balanceMinor: studentFeeCredits.balanceMinor })
+        .from(studentFeeCredits)
+        .where(
+          and(eq(studentFeeCredits.tenantId, tenantId), eq(studentFeeCredits.studentId, studentId)),
+        )
+        .limit(1);
+      return row?.balanceMinor ?? 0;
+    });
+  },
+
+  async findLatestInvoiceForStudent(
+    tenantId: string,
+    studentId: string,
+  ): Promise<{ invoiceId: string; termId: string } | null> {
+    return withTenantContext(tenantId, async (tx) => {
+      const [row] = await tx
+        .select({
+          invoiceId: invoices.id,
+          termId: invoices.termId,
+        })
+        .from(invoices)
+        .innerJoin(
+          academicTerms,
+          and(eq(invoices.termId, academicTerms.id), eq(academicTerms.tenantId, tenantId)),
+        )
+        .where(and(eq(invoices.tenantId, tenantId), eq(invoices.studentId, studentId)))
+        .orderBy(desc(academicTerms.startDate))
+        .limit(1);
+      return row ?? null;
+    });
+  },
+
+  /** Apply stored pay-ahead credit to a newly issued or open invoice. */
+  async applyStudentCreditToInvoice(
+    tenantId: string,
+    studentId: string,
+    invoiceId: string,
+  ): Promise<number> {
+    return withTenantContext(tenantId, async (tx) => {
+      const [creditRow] = await tx
+        .select()
+        .from(studentFeeCredits)
+        .where(
+          and(eq(studentFeeCredits.tenantId, tenantId), eq(studentFeeCredits.studentId, studentId)),
+        )
+        .limit(1);
+      if (!creditRow || creditRow.balanceMinor <= 0) return 0;
+
+      const [invoice] = await tx
+        .select()
+        .from(invoices)
+        .where(and(eq(invoices.tenantId, tenantId), eq(invoices.id, invoiceId)))
+        .limit(1);
+      if (!invoice || invoice.balanceMinor <= 0) return 0;
+
+      const applyMinor = Math.min(creditRow.balanceMinor, invoice.balanceMinor);
+      await applyAmountToInvoice(tx, tenantId, invoiceId, applyMinor);
+      await tx
+        .update(studentFeeCredits)
+        .set({
+          balanceMinor: creditRow.balanceMinor - applyMinor,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(eq(studentFeeCredits.tenantId, tenantId), eq(studentFeeCredits.studentId, studentId)),
+        );
+
+      return applyMinor;
     });
   },
 };

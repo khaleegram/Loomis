@@ -9,13 +9,14 @@ import type {
   LogOfflinePaymentRequest,
   OutstandingBalancesQuery,
   PaymentsQuery,
+  UpdateFeeReminderSettingsRequest,
   UpdateFeeStructureRequest,
   VerifyOfflinePaymentRequest,
 } from '@loomis/contracts';
 import { LoomisError } from '../../../shared/errors.js';
 import { getEnv } from '../../../config/env.js';
 import { sendSuccess } from '../../../shared/http.js';
-import { feeStructureService, feeReminderService, invoiceService, paymentService } from '../services/index.js';
+import { feeStructureService, feeReminderService, feeReminderSettingsService, invoiceService, paymentService } from '../services/index.js';
 import { auditContext, requireParentActor, requireSchoolFinanceActor, requireTenantActor } from './_context.js';
 import {
   feeStructureToResponse,
@@ -296,5 +297,21 @@ export async function bulkFeeReminderHandler(
     req.body.studentIds,
     requireTenantActor(req),
   );
+  return sendSuccess(reply, result);
+}
+
+export async function getFeeReminderSettingsHandler(
+  req: FastifyRequest<{ Params: { tenantId: string } }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const result = await feeReminderSettingsService.getSettings(req.params.tenantId);
+  return sendSuccess(reply, result);
+}
+
+export async function updateFeeReminderSettingsHandler(
+  req: FastifyRequest<{ Params: { tenantId: string }; Body: UpdateFeeReminderSettingsRequest }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const result = await feeReminderSettingsService.updateSettings(req.params.tenantId, req.body);
   return sendSuccess(reply, result);
 }

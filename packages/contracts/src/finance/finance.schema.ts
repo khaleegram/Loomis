@@ -245,6 +245,21 @@ export const bulkFeeReminderResponse = z.object({
 });
 export type BulkFeeReminderResponse = z.infer<typeof bulkFeeReminderResponse>;
 
+export const FEE_REMINDER_PRESET_CONFIG_KEY = 'finance.fee_reminder_preset';
+
+export const feeReminderPreset = z.enum(['standard', 'due_date_only', 'minimal']);
+export type FeeReminderPreset = z.infer<typeof feeReminderPreset>;
+
+export const feeReminderSettingsResponse = z.object({
+  preset: feeReminderPreset,
+});
+export type FeeReminderSettingsResponse = z.infer<typeof feeReminderSettingsResponse>;
+
+export const updateFeeReminderSettingsRequest = z.object({
+  preset: feeReminderPreset,
+});
+export type UpdateFeeReminderSettingsRequest = z.infer<typeof updateFeeReminderSettingsRequest>;
+
 export const outstandingBalancesResponse = z.object({
   termId: z.string().uuid(),
   summary: z.object({
@@ -311,6 +326,8 @@ export const initializeOnlinePaymentRequest = z
     studentId: z.string().uuid().optional(),
     /** Apply payment oldest-invoice-first across all open balances for the student. */
     payAllOwed: z.boolean().optional(),
+    /** Allow amount above total owed; surplus is stored as pay-ahead credit. */
+    payAhead: z.boolean().optional(),
     amountMinor: positiveKoboAmount,
     /** Only Paystack is supported; field kept for forward-compatible clients. */
     provider: paymentGatewayProvider.default('paystack'),
@@ -437,6 +454,8 @@ export const parentFeeStatusResponse = z.object({
   totalBalanceMinor: koboAmount,
   /** Oldest open invoice — use for single-term pay; omit when payAllOwed. */
   primaryInvoiceId: z.string().uuid().nullable(),
+  /** Prepaid surplus from pay-ahead payments; auto-applies to new invoices. */
+  creditBalanceMinor: koboAmount,
   dueDate: calendarDate.nullable(),
   lineItems: z.array(parentFeeLineItem),
   onlinePaymentEnabled: z.boolean(),

@@ -60,7 +60,8 @@ export function parsePaymentAllocations(
   metadata: Record<string, unknown> | null | undefined,
 ): PaymentAllocation[] | null {
   const raw = metadata?.allocations;
-  if (!Array.isArray(raw) || raw.length === 0) return null;
+  if (!Array.isArray(raw)) return null;
+  if (raw.length === 0) return [];
   const allocations: PaymentAllocation[] = [];
   for (const entry of raw) {
     if (!entry || typeof entry !== 'object') return null;
@@ -79,4 +80,13 @@ export function parsePaymentAllocations(
     });
   }
   return allocations;
+}
+
+export function parseCreditMinor(
+  metadata: Record<string, unknown> | null | undefined,
+): number | null {
+  const raw = metadata?.creditMinor;
+  if (raw == null) return null;
+  if (typeof raw !== 'number' || !Number.isInteger(raw) || raw < 0) return null;
+  return raw;
 }

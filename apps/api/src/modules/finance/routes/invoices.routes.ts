@@ -4,10 +4,12 @@ import {
   bulkFeeReminderRequest,
   issueInvoiceRequest,
   outstandingBalancesQuery,
+  updateFeeReminderSettingsRequest,
   type BatchIssueInvoicesRequest,
   type BulkFeeReminderRequest,
   type IssueInvoiceRequest,
   type OutstandingBalancesQuery,
+  type UpdateFeeReminderSettingsRequest,
 } from '@loomis/contracts';
 import { authenticate } from '../../../middleware/authenticate.js';
 import { requireAuditAvailable } from '../../../middleware/require-audit-available.js';
@@ -24,6 +26,8 @@ import {
   outstandingBalancesHandler,
   sendFeeReminderHandler,
   bulkFeeReminderHandler,
+  getFeeReminderSettingsHandler,
+  updateFeeReminderSettingsHandler,
 } from '../handlers/index.js';
 
 /**
@@ -119,5 +123,32 @@ export async function invoicesRoutes(app: FastifyInstance): Promise<void> {
       preValidation: [validateBody(bulkFeeReminderRequest)],
     },
     bulkFeeReminderHandler,
+  );
+
+  app.get<{ Params: { tenantId: string } }>(
+    '/tenants/:tenantId/finance/fee-reminder-settings',
+    {
+      preHandler: [
+        authenticate,
+        requireTenantMatch,
+        requireCapability('finance.balances.view'),
+        requireRole('accountant', 'principal', 'school_owner'),
+      ],
+    },
+    getFeeReminderSettingsHandler,
+  );
+
+  app.put<{ Params: { tenantId: string }; Body: UpdateFeeReminderSettingsRequest }>(
+    '/tenants/:tenantId/finance/fee-reminder-settings',
+    {
+      preHandler: [
+        authenticate,
+        requireTenantMatch,
+        requireCapability('finance.balances.view'),
+        requireRole('accountant', 'principal', 'school_owner'),
+      ],
+      preValidation: [validateBody(updateFeeReminderSettingsRequest)],
+    },
+    updateFeeReminderSettingsHandler,
   );
 }

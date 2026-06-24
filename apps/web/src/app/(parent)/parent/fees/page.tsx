@@ -51,6 +51,7 @@ function ParentFeesView() {
   const [payError, setPayError] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
   const [payAmountMinor, setPayAmountMinor] = useState(0);
+  const [payAhead, setPayAhead] = useState(false);
   const [payMethod, setPayMethod] = useState<OnlinePaymentMethod>('card');
 
   const dashboardQuery = useParentDashboard();
@@ -92,10 +93,11 @@ function ParentFeesView() {
 
   const fees = feesQuery.data;
   const isLoading = dashboardQuery.isLoading || feesQuery.isLoading;
-  const totalOwed = fees?.totalBalanceMinor ?? fees?.balanceMinor ?? 0;
-  const hasTermInvoice = Boolean(fees?.invoiceId);
-
   const payerEmail = profileQuery.data?.email ?? '';
+  const totalOwed = fees?.totalBalanceMinor ?? fees?.balanceMinor ?? 0;
+  const creditBalanceMinor = fees?.creditBalanceMinor ?? 0;
+  const hasTermInvoice = Boolean(fees?.invoiceId);
+  const payAheadActive = payAhead || payAmountMinor > totalOwed;
 
   useEffect(() => {
     if (fees && totalOwed > 0) {
@@ -106,14 +108,16 @@ function ParentFeesView() {
   }, [fees?.invoiceId, fees?.balanceMinor, fees?.totalBalanceMinor, totalOwed]);
 
   async function handlePayOnline() {
-    if (!activeCard?.studentId || !payerEmail || payAmountMinor <= 0 || totalOwed <= 0) return;
-    if (payAmountMinor > totalOwed) return;
+    if (!activeCard?.studentId || !payerEmail || payAmountMinor <= 0) return;
+    if (totalOwed <= 0 && !payAheadActive) return;
+    if (!payAheadActive && payAmountMinor > totalOwed) return;
     setPayError(null);
     setPaying(true);
     try {
       const result = await initializePayment.mutateAsync({
         studentId: activeCard.studentId,
         payAllOwed: true,
+        payAhead: payAheadActive,
         amountMinor: payAmountMinor,
         payerEmail,
         provider: 'paystack',
@@ -159,8 +163,18 @@ function ParentFeesView() {
         balanceMinor={fees?.balanceMinor ?? 0}
         arrearsBalanceMinor={fees?.arrearsBalanceMinor ?? 0}
         totalBalanceMinor={fees?.totalBalanceMinor ?? fees?.balanceMinor ?? activeCard?.outstandingBalanceMinor ?? 0}
+        creditBalanceMinor={creditBalanceMinor}
         isLoading={isLoading}
       />
+
+      {creditBalanceMinor > 0 ? (
+        <Alert>
+          <AlertDescription>
+            {formatKobo(creditBalanceMinor)} credit on account — it will apply automatically when the
+            school issues the next invoice.
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       {(fees?.arrearsBalanceMinor ?? 0) > 0 ? (
         <Alert>
@@ -221,13 +235,24 @@ function ParentFeesView() {
 
       {feesQuery.isLoading ? (
         <Skeleton className="h-64 w-full rounded-2xl" />
-      ) : !hasTermInvoice && totalOwed <= 0 ? (
+      ) : !hasTermInvoice && totalOwed <= 0 && !payAhead ? (
         <div className={`${ACADEMIC_UI.dataPanel} p-10 text-center`}>
           <p className="text-[15px] font-semibold text-neutral-800">No invoice for this term yet</p>
           <p className="mt-2 text-[13px] text-neutral-500">
             The school has not issued a fee invoice for {activeCard?.studentFirstName ?? 'your child'} this term.
-            Contact the bursar if you expected one.
+            {creditBalanceMinor > 0
+              ? ` You have ${formatKobo(creditBalanceMinor)} pay-ahead credit ready for when fees are issued.`
+              : ' Contact the bursar if you expected one.'}
           </p>
+          {fees?.onlinePaymentEnabled ? (
+            <button
+              type="button"
+              className={`${ACADEMIC_UI.btnSecondary} mt-6`}
+              onClick={() => setPayAhead(true)}
+            >
+              Prepay for future terms
+            </button>
+          ) : null}
         </div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-2">
@@ -268,7 +293,7 @@ function ParentFeesView() {
               ))}
             </div>
           </div>
-          ) : (
+          ) : totalOwed > 0 ? (
             <div className={`${ACADEMIC_UI.dataPanel} p-8`}>
               <p className="text-[14px] font-bold text-neutral-900">Earlier term balances</p>
               <p className="mt-2 text-[13px] text-neutral-600">
@@ -276,7 +301,15 @@ function ParentFeesView() {
                 <span className="font-semibold">{formatKobo(totalOwed)}</span> from previous terms.
               </p>
             </div>
-          )}
+          ) : payAhead ? (
+            <div className={`${ACADEMIC_UI.dataPanel} p-8`}>
+              <p className="text-[14px] font-bold text-neutral-900">Pay ahead</p>
+              <p className="mt-2 text-[13px] text-neutral-600">
+                Prepay school fees before the next invoice is issued. Surplus is saved as credit on{' '}
+                {activeCard?.studentFirstName ?? 'your child'}&apos;s account.
+              </p>
+            </div>
+          ) : null}
 
           <div className={ACADEMIC_UI.dataPanel}>
             <div className="border-b border-border bg-gradient-to-r from-neutral-50 to-brand-50/30 px-4 py-4 sm:px-5">
@@ -291,16 +324,34 @@ function ParentFeesView() {
                 <div className="mt-2">
                   <CurrencyInput
                     valueKobo={payAmountMinor}
-                    onChangeKobo={(kobo) => setPayAmountMinor(Math.min(kobo, totalOwed))}
+                    onChangeKobo={(kobo) =>
+                      setPayAmountMinor(payAhead ? kobo : Math.min(kobo, totalOwed || kobo))
+                    }
                     disabled={paying || initializePayment.isPending}
                   />
                 </div>
                 <p className="mt-2 text-[11px] text-neutral-500">
-                  Total owed {formatKobo(totalOwed)}
-                  {(fees?.arrearsBalanceMinor ?? 0) > 0
-                    ? ` · includes ${formatKobo(fees!.arrearsBalanceMinor)} arrears`
-                    : null}
+                  {totalOwed > 0 ? (
+                    <>
+                      Total owed {formatKobo(totalOwed)}
+                      {(fees?.arrearsBalanceMinor ?? 0) > 0
+                        ? ` · includes ${formatKobo(fees!.arrearsBalanceMinor)} arrears`
+                        : null}
+                    </>
+                  ) : (
+                    'No balance due — enable pay ahead below to prepay for future terms.'
+                  )}
                 </p>
+                <label className="mt-3 flex cursor-pointer items-start gap-2 text-[12px] text-neutral-700">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={payAhead}
+                    onChange={(event) => setPayAhead(event.target.checked)}
+                    disabled={paying || initializePayment.isPending}
+                  />
+                  <span>Pay extra for future terms (surplus is saved as credit on this child&apos;s account)</span>
+                </label>
               </div>
 
               <div className="space-y-2">
@@ -331,9 +382,9 @@ function ParentFeesView() {
                     or at the school office.
                   </AlertDescription>
                 </Alert>
-              ) : totalOwed <= 0 ? (
+              ) : totalOwed <= 0 && !payAheadActive ? (
                 <Alert>
-                  <AlertDescription>All fees are paid. No payment required.</AlertDescription>
+                  <AlertDescription>All fees are paid. Enable pay ahead to prepay for future terms.</AlertDescription>
                 </Alert>
               ) : !payerEmail ? (
                 <Alert>

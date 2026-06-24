@@ -311,34 +311,71 @@ export const paymentService = {
             }));
 
           const openTotal = totalOpenBalance(slices);
+          const payAhead = input.payAhead === true;
+
           if (openTotal <= 0) {
-            throw new LoomisError('VALIDATION_ERROR', 422, 'No outstanding balance to pay');
-          }
-          if (input.amountMinor > openTotal) {
-            throw new LoomisError(
-              'FINANCE_PAYMENT_AMOUNT_EXCEEDS_BALANCE',
-              422,
-              'Payment amount exceeds the total outstanding balance',
-              { balanceMinor: openTotal },
+            if (!payAhead) {
+              throw new LoomisError('VALIDATION_ERROR', 422, 'No outstanding balance to pay');
+            }
+            const anchor = await financeRepository.findLatestInvoiceForStudent(
+              tenantId,
+              input.studentId,
             );
-          }
+            if (!anchor) {
+              throw new LoomisError(
+                'VALIDATION_ERROR',
+                422,
+                'No fee invoice on record yet — pay ahead is available after the school issues fees',
+              );
+            }
+            invoiceId = anchor.invoiceId;
+            termId = anchor.termId;
+            studentId = input.studentId;
+            paymentMetadata = { ...paymentMetadata, creditMinor: input.amountMinor };
+          } else {
+            if (!payAhead && input.amountMinor > openTotal) {
+              throw new LoomisError(
+                'FINANCE_PAYMENT_AMOUNT_EXCEEDS_BALANCE',
+                422,
+                'Payment amount exceeds the total outstanding balance',
+                { balanceMinor: openTotal },
+              );
+            }
 
-          let allocations;
-          try {
-            allocations = buildFifoAllocations(slices, input.amountMinor);
-          } catch {
-            throw new LoomisError(
-              'FINANCE_PAYMENT_AMOUNT_EXCEEDS_BALANCE',
-              422,
-              'Payment amount exceeds the total outstanding balance',
-              { balanceMinor: openTotal },
-            );
-          }
+            const allocateAmount = Math.min(input.amountMinor, openTotal);
+            let allocations: ReturnType<typeof buildFifoAllocations> = [];
+            if (allocateAmount > 0) {
+              try {
+                allocations = buildFifoAllocations(slices, allocateAmount);
+              } catch {
+                throw new LoomisError(
+                  'FINANCE_PAYMENT_AMOUNT_EXCEEDS_BALANCE',
+                  422,
+                  'Payment amount exceeds the total outstanding balance',
+                  { balanceMinor: openTotal },
+                );
+              }
+            }
 
-          invoiceId = allocations[0]!.invoiceId;
-          termId = allocations[0]!.termId;
-          studentId = input.studentId;
-          paymentMetadata = { ...paymentMetadata, allocations };
+            const creditMinor = payAhead ? input.amountMinor - allocateAmount : 0;
+            if (creditMinor > 0 && !payAhead) {
+              throw new LoomisError(
+                'FINANCE_PAYMENT_AMOUNT_EXCEEDS_BALANCE',
+                422,
+                'Payment amount exceeds the total outstanding balance',
+                { balanceMinor: openTotal },
+              );
+            }
+
+            invoiceId = allocations[0]!.invoiceId;
+            termId = allocations[0]!.termId;
+            studentId = input.studentId;
+            paymentMetadata = {
+              ...paymentMetadata,
+              allocations,
+              ...(creditMinor > 0 ? { creditMinor } : {}),
+            };
+          }
         } else {
           const invoice = await assertInvoicePayable(tenantId, input.invoiceId!, input.amountMinor);
           await assertParentLinkedToStudent(tenantId, invoice.invoice.studentId, actor.userId);

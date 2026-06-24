@@ -181,6 +181,8 @@ export const queryKeys = {
       ['finance', tenantId, 'invoices', 'detail', invoiceId] as const,
     outstandingBalances: (tenantId: string, termId: string, filters: OutstandingBalancesFilters = {}) =>
       ['finance', tenantId, 'outstanding-balances', termId, filters] as const,
+    feeReminderSettings: (tenantId: string) =>
+      ['finance', tenantId, 'fee-reminder-settings'] as const,
     payments: (tenantId: string, filters: PaymentsListFilters = {}) =>
       ['finance', tenantId, 'payments', filters] as const,
     payment: (tenantId: string, paymentId: string) =>

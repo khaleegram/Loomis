@@ -32,4 +32,25 @@ describe('evaluateFeeReminderTriggers', () => {
       }),
     ).toContain('overdue');
   });
+
+  it('returns no triggers for minimal preset', () => {
+    expect(
+      evaluateFeeReminderTriggers({
+        today: '2025-10-29',
+        termStartDate: '2025-10-01',
+        dueDate: '2025-11-15',
+        preset: 'minimal',
+      }),
+    ).toEqual([]);
+  });
+
+  it('skips month_plus_week for due_date_only preset', () => {
+    const triggers = evaluateFeeReminderTriggers({
+      today: '2025-10-29',
+      termStartDate: '2025-10-01',
+      dueDate: '2025-11-15',
+      preset: 'due_date_only',
+    });
+    expect(triggers).not.toContain('month_plus_week');
+  });
 });

@@ -55,13 +55,16 @@ function FeesPanel({
   );
 
   const fees = feesQuery.data;
+  const totalOwed = fees?.totalBalanceMinor ?? fees?.balanceMinor ?? 0;
+  const creditBalanceMinor = fees?.creditBalanceMinor ?? 0;
+  const arrearsBalanceMinor = fees?.arrearsBalanceMinor ?? 0;
 
   async function handlePay() {
-    if (!fees?.invoiceId || fees.balanceMinor <= 0 || !payerEmail) {
-      setPayError('Cannot start payment — missing invoice or payer email.');
+    if (!payerEmail || totalOwed <= 0) {
+      setPayError('Cannot start payment — missing payer email or nothing owed.');
       return;
     }
-    if (!fees.onlinePaymentEnabled) {
+    if (!fees?.onlinePaymentEnabled) {
       setPayError(
         'Online payment is not configured for this school yet. Pay at the school office.',
       );
@@ -70,8 +73,9 @@ function FeesPanel({
     setPayError(null);
     try {
       const result = await initializePayment.mutateAsync({
-        invoiceId: fees.invoiceId,
-        amountMinor: fees.balanceMinor,
+        studentId,
+        payAllOwed: true,
+        amountMinor: totalOwed,
         payerEmail,
         provider: 'paystack',
         method: 'card',
@@ -103,15 +107,28 @@ function FeesPanel({
   return (
     <SummaryDetail
       title={termLabel ? `Fees · ${termLabel}` : 'Fee status'}
-      summaryLabel="Outstanding balance"
-      summaryValue={fees && fees.balanceMinor <= 0 ? 'None' : '—'}
-      summaryMinor={fees && fees.balanceMinor > 0 ? fees.balanceMinor : undefined}
+      summaryLabel="Total owed"
+      summaryValue={fees && totalOwed <= 0 ? 'None' : '—'}
+      summaryMinor={fees && totalOwed > 0 ? totalOwed : undefined}
       rows={rows}
       loading={termLoading || feesQuery.isLoading}
       errorMessage={feesQuery.isError ? 'Could not load fee status.' : undefined}
-      emptyTitle={!fees?.invoiceId ? 'No fee invoice for this term' : undefined}
+      emptyTitle={
+        !fees?.invoiceId && totalOwed <= 0 ? 'No fee invoice for this term' : undefined
+      }
       footer={
         <>
+          {arrearsBalanceMinor > 0 ? (
+            <Alert tone="warning" className="mb-3">
+              {formatKobo(arrearsBalanceMinor)} is from earlier terms. One payment clears oldest
+              balances first.
+            </Alert>
+          ) : null}
+          {creditBalanceMinor > 0 ? (
+            <Alert tone="info" className="mb-3">
+              {formatKobo(creditBalanceMinor)} credit on account for future invoices.
+            </Alert>
+          ) : null}
           {fees && fees.amountPaidMinor > 0 ? (
             <Alert tone="info" className="mb-3">
               {formatKobo(fees.amountPaidMinor)} paid this term
@@ -125,11 +142,11 @@ function FeesPanel({
           ) : null}
           <Button
             loading={initializePayment.isPending}
-            disabled={!fees || fees.balanceMinor <= 0 || !fees.onlinePaymentEnabled}
+            disabled={!fees || totalOwed <= 0 || !fees.onlinePaymentEnabled}
             onPress={() => void handlePay()}
           >
-            {fees && fees.balanceMinor > 0
-              ? `Pay ${formatKobo(fees.balanceMinor)} with Paystack`
+            {fees && totalOwed > 0
+              ? `Pay ${formatKobo(totalOwed)} with Paystack`
               : 'Nothing due'}
           </Button>
         </>

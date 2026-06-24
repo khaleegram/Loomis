@@ -466,3 +466,26 @@ export const reconciliationExceptions = financeSchema.table(
     ),
   }),
 );
+
+/**
+ * Prepaid fee credit per student (pay-ahead surplus). Applied automatically when
+ * new term invoices are issued.
+ */
+export const studentFeeCredits = financeSchema.table(
+  'student_fee_credits',
+  {
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id),
+    studentId: uuid('student_id').notNull(),
+    balanceMinor: bigint('balance_minor', { mode: 'number' }).notNull().default(0),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    pk: uniqueIndex('student_fee_credits_pk').on(table.tenantId, table.studentId),
+    balanceNonNegative: check(
+      'student_fee_credits_balance_non_negative',
+      sql`${table.balanceMinor} >= 0`,
+    ),
+  }),
+);

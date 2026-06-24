@@ -16,6 +16,7 @@ interface ParentFeesHeroProps {
   balanceMinor: number;
   arrearsBalanceMinor?: number;
   totalBalanceMinor?: number;
+  creditBalanceMinor?: number;
   isLoading?: boolean;
 }
 
@@ -29,6 +30,7 @@ export function ParentFeesHero({
   balanceMinor,
   arrearsBalanceMinor = 0,
   totalBalanceMinor,
+  creditBalanceMinor = 0,
   isLoading,
 }: ParentFeesHeroProps) {
   const owedMinor = totalBalanceMinor ?? balanceMinor + arrearsBalanceMinor;
@@ -53,9 +55,11 @@ export function ParentFeesHero({
       hint:
         arrearsBalanceMinor > 0
           ? `${formatKobo(balanceMinor)} this term · ${formatKobo(arrearsBalanceMinor)} arrears`
-          : owedMinor > 0
-            ? 'Tap Pay below'
-            : 'All clear',
+          : creditBalanceMinor > 0
+            ? `${formatKobo(creditBalanceMinor)} pay-ahead credit`
+            : owedMinor > 0
+              ? 'Tap Pay below'
+              : 'All clear',
       icon: Wallet,
       gradient: owedMinor > 0 ? SURFACES.kpi.g4 : SURFACES.kpi.g2,
     },
