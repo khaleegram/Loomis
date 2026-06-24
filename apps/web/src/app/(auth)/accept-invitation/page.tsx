@@ -17,7 +17,7 @@ import {
 import { CheckCircle2, Eye, EyeOff, Loader2, Lock } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -33,7 +33,17 @@ const acceptForm = acceptStaffInvitationRequest
 
 type AcceptForm = z.infer<typeof acceptForm>;
 
-export default function AcceptInvitationPage() {
+function AcceptInvitationFallback() {
+  return (
+    <AuthFormCard title="Loading invitation" subtitle="Please wait…">
+      <div className="flex justify-center py-8">
+        <Loader2 aria-hidden className="size-8 animate-spin text-gold-400" />
+      </div>
+    </AuthFormCard>
+  );
+}
+
+function AcceptInvitationContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token') ?? '';
   const tenantId = searchParams.get('tenant') ?? '';
@@ -189,5 +199,13 @@ export default function AcceptInvitationPage() {
         </form>
       </Form>
     </AuthFormCard>
+  );
+}
+
+export default function AcceptInvitationPage() {
+  return (
+    <Suspense fallback={<AcceptInvitationFallback />}>
+      <AcceptInvitationContent />
+    </Suspense>
   );
 }
