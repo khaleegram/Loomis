@@ -20,18 +20,6 @@ export const tenantAccessService = {
     return SCHOOL_TENANT_ROLES.has(role);
   },
 
-  async activateIfDue(tenantId: string): Promise<boolean> {
-    const tenant = await tenantRepository.findById(tenantId);
-    if (!tenant || tenant.status !== 'provisioning') {
-      return false;
-    }
-    if (tenant.goLiveAt > new Date()) {
-      return false;
-    }
-    const activated = await tenantRepository.activate(tenantId, new Date());
-    return activated != null;
-  },
-
   async assertSchoolAccessAllowed(tenantId: string): Promise<void> {
     const tenant = await tenantRepository.findById(tenantId);
     if (!tenant) {
@@ -41,15 +29,7 @@ export const tenantAccessService = {
       throw new LoomisError('TENANT_SUSPENDED', 403, 'This school is suspended');
     }
     if (tenant.status === 'provisioning') {
-      if (tenant.goLiveAt > new Date()) {
-        throw new LoomisError(
-          'TENANT_NOT_YET_LIVE',
-          403,
-          'This school is not live yet — log in is available from the scheduled go-live date',
-          { goLiveAt: tenant.goLiveAt.toISOString() },
-        );
-      }
-      await this.activateIfDue(tenantId);
+      await tenantRepository.activate(tenantId, new Date());
     }
   },
 };

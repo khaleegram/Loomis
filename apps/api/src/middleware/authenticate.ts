@@ -31,7 +31,6 @@ export async function authenticate(req: FastifyRequest, _reply: FastifyReply): P
   req.authUser = verified;
 
   if (verified.tenantId && tenantAccessService.isSchoolTenantRole(verified.role)) {
-    await tenantAccessService.activateIfDue(verified.tenantId);
     await tenantAccessService.assertSchoolAccessAllowed(verified.tenantId);
   }
 

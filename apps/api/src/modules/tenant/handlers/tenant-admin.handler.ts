@@ -21,18 +21,6 @@ interface TierParams {
   tierId: string;
 }
 
-export async function activateTenantHandler(
-  req: FastifyRequest<{ Params: TenantParams }>,
-  reply: FastifyReply,
-): Promise<FastifyReply> {
-  const actor = requireActor(req);
-  const tenant = await tenantService.activateTenantEarly(req.params.tenantId, actor);
-  return sendSuccess(reply, {
-    status: 'active' as const,
-    activatedAt: tenant.activatedAt!.toISOString(),
-  });
-}
-
 export async function updateTenantContactsHandler(
   req: FastifyRequest<{ Params: TenantParams; Body: UpdateTenantContactsRequest }>,
   reply: FastifyReply,

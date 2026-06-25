@@ -14,7 +14,6 @@ export {
   applyTenantPsfRateHandler,
 } from './psf-rate.handler.js';
 export {
-  activateTenantHandler,
   createTierHandler,
   deletePlatformProvisionDraftHandler,
   deleteRegionalProvisionDraftHandler,

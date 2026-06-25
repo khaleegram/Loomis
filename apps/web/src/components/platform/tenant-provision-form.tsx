@@ -22,7 +22,6 @@ import { usePlatformTiers, useProvisionTenant, usePlatformProvisionDraft, useUps
 import { formatKobo } from '@loomis/core';
 import {
   Building2,
-  Calendar,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -62,7 +61,6 @@ type ProvisionFormValues = {
   contactEmail: string;
   contactPhone: string;
   address: string;
-  goLiveDate: string;
   tierCode: string;
   referralCode?: string;
   initialPsfRateMinor?: number;
@@ -74,26 +72,12 @@ const DEFAULT_VALUES: ProvisionFormValues = {
   contactEmail: '',
   contactPhone: '',
   address: '',
-  goLiveDate: todayLocalIso(),
   tierCode: '',
   referralCode: undefined,
   initialPsfRateMinor: undefined,
 };
 
-function todayLocalIso(): string {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-function goLiveDateToIso(date: string): string {
-  return new Date(`${date}T00:00:00.000Z`).toISOString();
-}
-
 function mapZodFieldToForm(field: string): keyof ProvisionFormValues | null {
-  if (field === 'goLiveAt') return 'goLiveDate';
   if (field in DEFAULT_VALUES) return field as keyof ProvisionFormValues;
   return null;
 }
@@ -125,7 +109,6 @@ function buildApiBody(values: ProvisionFormValues): z.infer<typeof provisionTena
     contactEmail: values.contactEmail.trim(),
     contactPhone: values.contactPhone.trim(),
     address: values.address.trim(),
-    goLiveAt: goLiveDateToIso(values.goLiveDate),
     tierCode: values.tierCode,
     referralCode: values.referralCode?.trim() ? values.referralCode.trim() : undefined,
     initialPsfRateMinor:
@@ -187,9 +170,6 @@ export function TenantProvisionForm() {
       contactEmail: payload.contactEmail ?? '',
       contactPhone: payload.contactPhone ?? '',
       address: payload.address ?? '',
-      goLiveDate: payload.goLiveAt
-        ? payload.goLiveAt.slice(0, 10)
-        : DEFAULT_VALUES.goLiveDate,
       tierCode: payload.tierCode ?? '',
       referralCode: payload.referralCode,
       initialPsfRateMinor: payload.initialPsfRateMinor,
@@ -211,7 +191,6 @@ export function TenantProvisionForm() {
           contactEmail: current.contactEmail,
           contactPhone: current.contactPhone,
           address: current.address,
-          goLiveAt: current.goLiveDate ? goLiveDateToIso(current.goLiveDate) : undefined,
           tierCode: current.tierCode,
           referralCode: current.referralCode,
           initialPsfRateMinor: current.initialPsfRateMinor,
@@ -241,10 +220,9 @@ export function TenantProvisionForm() {
         'contactEmail',
         'contactPhone',
         'address',
-        'goLiveDate',
       ]);
       if (!ok) {
-        setStepHint('Fix the highlighted fields below — state, phone (+234…), and go-live date are required.');
+        setStepHint('Fix the highlighted fields below — state and phone (+234…) are required.');
         return;
       }
       const partial = buildApiBody(form.getValues());
@@ -255,7 +233,6 @@ export function TenantProvisionForm() {
           contactEmail: true,
           contactPhone: true,
           address: true,
-          goLiveAt: true,
         })
         .safeParse(partial);
       if (!parsed.success) {
@@ -521,41 +498,6 @@ export function TenantProvisionForm() {
 
                 <FormField
                   control={form.control}
-                  name="goLiveDate"
-                  rules={{
-                    required: 'Go-live date is required',
-                    validate: (value) => {
-                      if (!value) return 'Go-live date is required';
-                      return value >= todayLocalIso() || 'Go-live date cannot be in the past';
-                    },
-                  }}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FieldLabel required>Go-live date</FieldLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Calendar
-                            aria-hidden
-                            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400"
-                          />
-                          <Input
-                            {...field}
-                            type="date"
-                            min={todayLocalIso()}
-                            className={cn(inputClass, 'pl-9')}
-                          />
-                        </div>
-                      </FormControl>
-                      <FormDescription className="text-[11px] text-neutral-400">
-                        School logins stay blocked until this date. Platform can activate early if needed.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
                   name="address"
                   rules={{ required: 'Address is required', minLength: { value: 2, message: 'Min 2 characters' } }}
                   render={({ field }) => (
@@ -784,16 +726,6 @@ export function TenantProvisionForm() {
                   {[
                     { label: 'Contact email', value: values.contactEmail || '—' },
                     { label: 'Mobile phone', value: values.contactPhone || '—' },
-                    {
-                      label: 'Go-live date',
-                      value: values.goLiveDate
-                        ? new Date(`${values.goLiveDate}T00:00:00.000Z`).toLocaleDateString('en-GB', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                          })
-                        : '—',
-                    },
                     { label: 'Address', value: values.address || '—' },
                     {
                       label: 'PSF rate',
@@ -815,8 +747,8 @@ export function TenantProvisionForm() {
                 <div className="mt-4 flex items-start gap-2 rounded-lg border border-amber-100 bg-amber-50/70 px-3 py-2.5">
                   <Info aria-hidden className="mt-0.5 size-3.5 shrink-0 text-amber-500" />
                   <p className="text-[11px] leading-relaxed text-amber-700">
-                    Provisioning creates the tenant and sends welcome credentials. School access begins on
-                    the go-live date unless you activate early from the tenant detail page.
+                    Provisioning creates the tenant, activates it immediately, and sends welcome credentials to
+                    the School Owner.
                   </p>
                 </div>
               </div>

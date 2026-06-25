@@ -210,20 +210,6 @@ export function useUpdateTenantContacts(tenantId: string) {
   });
 }
 
-export function useActivateTenant(config: UseRequestPsfRateOverrideConfig) {
-  const { tenantId, ensureStepUpToken } = config;
-  return useFinancialMutation<Record<string, never>, import('@loomis/contracts').ActivateTenantResponse>({
-    endpoint: `/platform/tenants/${tenantId}/activate`,
-    action: 'psf_rate_change',
-    ensureStepUpToken,
-    invalidates: [
-      queryKeys.platform.tenant(tenantId),
-      queryKeys.platform.tenants(),
-      queryKeys.tenant.onboarding(tenantId),
-    ],
-  });
-}
-
 export function useMigrateProductTier(config: UseRequestPsfRateOverrideConfig) {
   const { tenantId, ensureStepUpToken } = config;
   return useFinancialMutation<

@@ -59,7 +59,6 @@ import { uuidv7 } from 'uuidv7';
 import { PageBody } from '@/components/platform/platform-shell';
 import { PlatformTenantExperienceCard } from '@/components/platform/platform-tenant-experience-card';
 import { TenantProductTierCard } from '@/components/platform/tenant-product-tier-card';
-import { TenantGoLiveCard } from '@/components/platform/tenant-go-live-card';
 import { TenantContactsEditDialog } from '@/components/platform/tenant-contacts-edit-dialog';
 import { PsfRateCard } from '@/components/platform/psf-rate-card';
 import { BreakGlassModal } from '@/components/platform/break-glass-modal';
@@ -93,19 +92,13 @@ function statusDot(status: string): string {
   }
 }
 
-function statusLabel(status: string, goLiveAt?: string): string {
+function statusLabel(status: string): string {
   switch (status) {
     case 'active':
       return 'Active';
     case 'suspended':
       return 'Suspended';
     case 'provisioning':
-      if (goLiveAt && new Date(goLiveAt).getTime() > Date.now()) {
-        return `Scheduled ${new Date(goLiveAt).toLocaleDateString('en-GB', {
-          day: 'numeric',
-          month: 'short',
-        })}`;
-      }
       return 'Provisioning';
     default:
       return status;
@@ -274,8 +267,6 @@ export default function TenantDetailPage({ params }: TenantDetailPageProps) {
   }
 
   const isSuspended = tenant.status === 'suspended';
-  const isAwaitingGoLive =
-    tenant.status === 'provisioning' && new Date(tenant.goLiveAt).getTime() > Date.now();
   const schoolInitial = tenant.name.charAt(0).toUpperCase();
   const displayContacts =
     tenant.contacts.length > 0
@@ -360,7 +351,7 @@ export default function TenantDetailPage({ params }: TenantDetailPageProps) {
                     style={{ background: 'rgba(255,255,255,0.15)' }}
                   >
                     <span className="size-2 rounded-full" style={{ background: statusDot(tenant.status) }} />
-                    {statusLabel(tenant.status, tenant.goLiveAt)}
+                    {statusLabel(tenant.status)}
                   </span>
                 </div>
 
@@ -472,20 +463,24 @@ export default function TenantDetailPage({ params }: TenantDetailPageProps) {
         />
         <StatCard
           icon={Calendar}
-          label="Go-live"
-          value={new Date(tenant.goLiveAt).toLocaleDateString('en-GB', {
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric',
-          })}
+          label="Activated"
+          value={
+            tenant.activatedAt
+              ? new Date(tenant.activatedAt).toLocaleDateString('en-GB', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                })
+              : tenant.status === 'active'
+                ? 'Live'
+                : 'Pending'
+          }
           sub={
-            isAwaitingGoLive
-              ? 'Awaiting scheduled access'
-              : tenant.activatedAt
-                ? `Activated ${formatDistanceToNow(new Date(tenant.activatedAt), { addSuffix: true }).replace('about ', '')}`
-                : tenant.status === 'active'
-                  ? 'School is live'
-                  : 'Pending activation'
+            tenant.activatedAt
+              ? formatDistanceToNow(new Date(tenant.activatedAt), { addSuffix: true }).replace('about ', '')
+              : tenant.status === 'active'
+                ? 'School is live'
+                : 'Finishing setup'
           }
           gradient="linear-gradient(135deg,#6366f1,#4f46e5)"
         />
@@ -731,8 +726,7 @@ export default function TenantDetailPage({ params }: TenantDetailPageProps) {
         <PlatformTenantExperienceCard tenantId={tenant.id} tenantName={tenant.name} />
       </div>
 
-      <div className="mb-5 grid gap-5 lg:grid-cols-2">
-        <TenantGoLiveCard tenant={tenant} />
+      <div className="mb-5">
         <TenantProductTierCard tenant={tenant} />
       </div>
 

@@ -103,8 +103,6 @@ export const provisionTenantRequest = z.object({
   contactPhone: nigerianMobilePhone,
   address: z.string().min(2).max(500),
   tierCode: z.string().min(1).max(50),
-  /** When the school may begin logging in (start of day UTC). */
-  goLiveAt: z.string().datetime(),
   contacts: z.array(tenantContactInput).min(1).max(10).optional(),
   /** Referral code used at onboarding — permanently linked (CON-009). */
   referralCode: z.string().min(1).max(64).optional(),
@@ -119,12 +117,6 @@ export const migrateProductTierRequest = z.object({
 });
 export type MigrateProductTierRequest = z.infer<typeof migrateProductTierRequest>;
 
-export const activateTenantResponse = z.object({
-  status: z.literal('active'),
-  activatedAt: z.string().datetime(),
-});
-export type ActivateTenantResponse = z.infer<typeof activateTenantResponse>;
-
 export const provisionDraftPayload = z.object({
   name: z.string().optional(),
   region: z.string().optional(),
@@ -132,7 +124,6 @@ export const provisionDraftPayload = z.object({
   contactPhone: z.string().optional(),
   address: z.string().optional(),
   tierCode: z.string().optional(),
-  goLiveAt: z.string().datetime().optional(),
   referralCode: z.string().optional(),
   initialPsfRateMinor: z.number().int().optional(),
   contacts: z.array(tenantContactInput).optional(),
@@ -170,7 +161,6 @@ export const updateTenantProfileRequest = z
     contactPhone: nigerianMobilePhone.optional(),
     address: z.string().min(2).max(500).optional(),
     region: z.string().min(2).max(100).optional(),
-    goLiveAt: z.string().datetime().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: 'At least one field must be provided',

@@ -37,6 +37,16 @@ export const passwordService = {
     }
   },
 
+  /** Login verify — trims input and accepts common temp-password copy variants. */
+  async verifyLoginPassword(plain: string, hash: string): Promise<boolean> {
+    const trimmed = plain.trim();
+    if (await this.verify(trimmed, hash)) return true;
+    if (/^[0-9a-fA-F]{8}$/.test(trimmed)) {
+      return this.verify(trimmed.toUpperCase(), hash);
+    }
+    return false;
+  },
+
   /** Hash without complexity check — used for OTPs and backup codes. */
   async hashSecret(secret: string): Promise<string> {
     return argon2.hash(secret, ARGON2_OPTIONS);

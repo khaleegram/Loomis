@@ -86,7 +86,7 @@ export const tenants = tenantSchema.table(
       .$type<Record<string, boolean>>()
       .notNull()
       .default({}),
-    /** Scheduled date when school actors may log in (gated go-live). */
+    /** Legacy provision timestamp — schools are active immediately on create. */
     goLiveAt: timestamp('go_live_at', { withTimezone: true }).notNull(),
     /** When status flipped to active. */
     activatedAt: timestamp('activated_at', { withTimezone: true }),

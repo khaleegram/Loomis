@@ -59,13 +59,10 @@ export const tenantOnboardingService = {
 
     const steps: TenantOnboardingStep[] = [
       {
-        id: 'go_live',
-        label: 'School go-live',
+        id: 'provisioned',
+        label: 'School provisioned',
         complete: tenant?.status === 'active',
-        detail:
-          tenant?.status === 'active'
-            ? tenant.activatedAt?.toISOString() ?? null
-            : tenant?.goLiveAt.toISOString() ?? null,
+        detail: tenant?.activatedAt?.toISOString() ?? null,
       },
       {
         id: 'owner_account',

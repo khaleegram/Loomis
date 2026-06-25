@@ -19,7 +19,6 @@ import { requireStepUp } from '../../../middleware/require-step-up.js';
 import { requireTenantMatch } from '../../../middleware/require-tenant-match.js';
 import { validateBody } from '../../../shared/validation.js';
 import {
-  activateTenantHandler,
   getTenantHandler,
   listTenantsHandler,
   listTiersHandler,
@@ -116,20 +115,6 @@ export async function platformTenantsRoutes(app: FastifyInstance): Promise<void>
       preValidation: [validateBody(updateTenantContactsRequest)],
     },
     updateTenantContactsHandler,
-  );
-
-  app.post<{ Params: { tenantId: string } }>(
-    '/platform/tenants/:tenantId/activate',
-    {
-      preHandler: [
-        authenticate,
-        requireTenantMatch,
-        requireRole('platform_owner', 'platform_admin'),
-        requireStepUp('psf_rate_change'),
-        requireIdempotencyKey,
-      ],
-    },
-    activateTenantHandler,
   );
 
   app.post<{ Params: { tenantId: string }; Body: MigrateProductTierRequest }>(

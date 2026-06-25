@@ -126,22 +126,26 @@ export const authService = {
    *                               until enrolled (SEC-AUTH-002/003).
    */
   async login(email: string, password: string, ctx: LoginContext): Promise<LoginResult> {
-    if (await userRepository.isAccountLocked(email)) {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (await userRepository.isAccountLocked(normalizedEmail)) {
       throw new LoomisError('IDENTITY_ACCOUNT_LOCKED', 423, 'Account is temporarily locked');
     }
 
-    const user = await userRepository.findByEmail(email);
-    const validPassword = user ? await passwordService.verify(password, user.passwordHash) : false;
+    const user = await userRepository.findByEmail(normalizedEmail);
+    const validPassword = user
+      ? await passwordService.verifyLoginPassword(password, user.passwordHash)
+      : false;
 
     if (!user || !validPassword) {
       await userRepository.recordLoginAttempt({
-        email,
+        email: normalizedEmail,
         success: false,
         failureReason: user ? 'bad_password' : 'unknown_user',
         ...(ctx.ipAddress !== undefined ? { ipAddress: ctx.ipAddress } : {}),
         ...(ctx.userAgent !== undefined ? { userAgent: ctx.userAgent } : {}),
       });
-      await this.enforceLockoutThreshold(email, user);
+      await this.enforceLockoutThreshold(normalizedEmail, user);
       throw new LoomisError('IDENTITY_INVALID_CREDENTIALS', 401, 'Invalid email or password');
     }
 
@@ -161,7 +165,7 @@ export const authService = {
     }
 
     await userRepository.recordLoginAttempt({
-      email,
+      email: normalizedEmail,
       success: true,
       ...(ctx.ipAddress !== undefined ? { ipAddress: ctx.ipAddress } : {}),
       ...(ctx.userAgent !== undefined ? { userAgent: ctx.userAgent } : {}),

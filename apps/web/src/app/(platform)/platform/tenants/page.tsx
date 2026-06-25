@@ -44,11 +44,8 @@ function tenantSetupLabel(tenant: import('@loomis/contracts').TenantResponse): {
   label: string;
   tone: 'ok' | 'warn';
 } {
-  if (
-    tenant.status === 'provisioning' &&
-    new Date(tenant.goLiveAt).getTime() > Date.now()
-  ) {
-    return { label: 'Awaiting go-live', tone: 'warn' };
+  if (tenant.status === 'provisioning') {
+    return { label: 'Finishing setup', tone: 'warn' };
   }
   if (!tenant.ownerSetup.hasOwnerAccount) {
     return { label: 'No owner', tone: 'warn' };

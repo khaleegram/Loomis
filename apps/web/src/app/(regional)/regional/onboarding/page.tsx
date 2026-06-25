@@ -64,14 +64,6 @@ const NIGERIAN_STATES = [
 
 type ProvisionForm = z.infer<typeof provisionTenantRequest>;
 
-function goLiveDateToIso(date: string): string {
-  return new Date(`${date}T00:00:00.000Z`).toISOString();
-}
-
-function isoToGoLiveDate(iso: string): string {
-  return iso.slice(0, 10);
-}
-
 export default function RegionalOnboardingPage() {
   const { draft, setField, setStep, reset: resetDraft } = useOnboardingStore();
   const [success, setSuccess] = useState<{ tenantId: string; name: string } | null>(null);
@@ -85,8 +77,6 @@ export default function RegionalOnboardingPage() {
   const upsertDraft = useUpsertRegionalProvisionDraft();
   const clearDraft = useClearRegionalProvisionDraft();
 
-  const defaultGoLive = goLiveDateToIso(new Date().toISOString().split('T')[0]!);
-
   const form = useForm<ProvisionForm>({
     resolver: zodResolver(provisionTenantRequest),
     defaultValues: {
@@ -95,7 +85,6 @@ export default function RegionalOnboardingPage() {
       contactEmail: draft.contactEmail,
       contactPhone: draft.contactPhone,
       address: draft.address,
-      goLiveAt: defaultGoLive,
       tierCode: draft.tierCode,
       referralCode: '',
     },
@@ -110,14 +99,13 @@ export default function RegionalOnboardingPage() {
       contactEmail: payload.contactEmail ?? draft.contactEmail,
       contactPhone: payload.contactPhone ?? draft.contactPhone,
       address: payload.address ?? draft.address,
-      goLiveAt: payload.goLiveAt ?? defaultGoLive,
       tierCode: payload.tierCode ?? draft.tierCode,
       referralCode: '',
     });
     if (serverDraft.stepIndex <= 4) {
       setStep(serverDraft.stepIndex as 0 | 1 | 2 | 3 | 4);
     }
-  }, [serverDraft, draft, form, defaultGoLive, setStep]);
+  }, [serverDraft, draft, form, setStep]);
 
   const watchedValues = form.watch();
 
@@ -132,7 +120,6 @@ export default function RegionalOnboardingPage() {
           contactEmail: values.contactEmail,
           contactPhone: values.contactPhone,
           address: values.address,
-          goLiveAt: values.goLiveAt,
           tierCode: values.tierCode,
         },
       });
@@ -161,7 +148,7 @@ export default function RegionalOnboardingPage() {
         setField('region', form.getValues('region'));
       }
     } else if (step === 1) {
-      valid = await form.trigger(['contactEmail', 'contactPhone', 'address', 'goLiveAt']);
+      valid = await form.trigger(['contactEmail', 'contactPhone', 'address']);
       if (valid) {
         setField('contactEmail', form.getValues('contactEmail'));
         setField('contactPhone', form.getValues('contactPhone'));
@@ -187,7 +174,6 @@ export default function RegionalOnboardingPage() {
           contactEmail: values.contactEmail,
           contactPhone: values.contactPhone,
           address: values.address,
-          goLiveAt: values.goLiveAt,
           tierCode: values.tierCode,
           referralCode: values.referralCode || undefined,
         },
@@ -218,7 +204,7 @@ export default function RegionalOnboardingPage() {
             <CheckCircle2 aria-hidden className="mx-auto size-12 text-accent-green-600" />
             <p className="mt-4 text-xl font-extrabold text-neutral-900">{success.name}</p>
             <p className="mt-4 text-[13px] text-neutral-500">
-              We&apos;ll notify you when the school goes live and attribution is confirmed.
+              The school is live now. The School Owner can sign in with the welcome email credentials.
             </p>
             <button
               type="button"
@@ -383,28 +369,7 @@ export default function RegionalOnboardingPage() {
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={form.control}
-                      name="goLiveAt"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Go-live date</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="date"
-                              min={new Date().toISOString().split('T')[0]}
-                              value={isoToGoLiveDate(field.value)}
-                              onChange={(e) => field.onChange(goLiveDateToIso(e.target.value))}
-                              className={smartInputClass}
-                            />
-                          </FormControl>
-                          <FormDescription className="text-[11px]">
-                            School logins stay blocked until this date unless platform activates early.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+
                   </>
                 ) : null}
 
@@ -479,16 +444,6 @@ export default function RegionalOnboardingPage() {
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Contact</span>
                         <span>{form.getValues('contactEmail')}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Go-live</span>
-                        <span>
-                          {new Date(form.getValues('goLiveAt')).toLocaleDateString('en-GB', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                          })}
-                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Tier</span>

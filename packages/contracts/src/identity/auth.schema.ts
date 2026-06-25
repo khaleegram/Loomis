@@ -2,8 +2,8 @@ import { z } from 'zod';
 import { role } from '../common/roles.js';
 
 export const loginRequest = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
+  email: z.string().trim().email().transform((v) => v.toLowerCase()),
+  password: z.string().trim().min(8),
 });
 export type LoginRequest = z.infer<typeof loginRequest>;
 

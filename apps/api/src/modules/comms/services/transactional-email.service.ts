@@ -99,24 +99,15 @@ function buildSchoolOwnerWelcomeEmail(input: {
   schoolName: string;
   loginEmail: string;
   temporaryPassword: string;
-  goLiveAt: Date;
 }): { subject: string; body: string; html: string } {
   const signInUrl = loginUrl();
-  const goLiveLabel = input.goLiveAt.toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-  const loginAvailableNow = input.goLiveAt <= new Date();
   const subject = `Welcome to Loomis — ${input.schoolName} is ready`;
   const body = [
     `Hello ${input.fullName},`,
     '',
     `Your school, ${input.schoolName}, has been provisioned on Loomis.`,
     '',
-    loginAvailableNow
-      ? 'You can sign in now using the credentials below.'
-      : `Your login will be available from ${goLiveLabel}. Save these credentials for that date.`,
+    'You can sign in now using the credentials below.',
     '',
     'Sign in here:',
     signInUrl,
@@ -150,11 +141,7 @@ function buildSchoolOwnerWelcomeEmail(input: {
           <p style="margin:12px 0 0;font-size:14px;color:rgba(255,255,255,0.75);">${input.schoolName} is ready on Loomis.</p>
         </td></tr>
         <tr><td style="padding:28px;">
-          <p style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#444;">${
-            loginAvailableNow
-              ? 'Use the credentials below to sign in and complete your school setup.'
-              : `Login opens on ${goLiveLabel}. Save these credentials for that date.`
-          }</p>
+          <p style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#444;">Use the credentials below to sign in and complete your school setup.</p>
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#faf8f5;border:1px solid #ece6da;border-radius:12px;margin-bottom:24px;">
             <tr><td style="padding:16px 18px;">
               <p style="margin:0 0 4px;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#9ca3af;">Login email</p>
@@ -497,7 +484,6 @@ export const transactionalEmailService = {
     schoolName: string;
     loginEmail: string;
     temporaryPassword: string;
-    goLiveAt: Date;
   }): Promise<EmailDeliveryResult> {
     const recipient = input.to.toLowerCase();
     let result: EmailDeliveryResult;
@@ -510,7 +496,6 @@ export const transactionalEmailService = {
         schoolName: input.schoolName,
         loginEmail: input.loginEmail,
         temporaryPassword: input.temporaryPassword,
-        goLiveAt: input.goLiveAt,
       });
       try {
         await sendEmail({ to: recipient, subject, body, html: html ?? undefined });

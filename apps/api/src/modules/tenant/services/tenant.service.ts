@@ -60,13 +60,12 @@ export const tenantService = {
       }
     }
 
-    const goLiveAt = new Date(input.goLiveAt);
+    const now = new Date();
 
     const tenant = await tenantRepository.create({
       ...input,
       tierId: tier.id,
       provisionedById: actor.userId,
-      goLiveAt,
     });
 
     await tenantContactService.seedFromProvision(tenant.id, {
@@ -85,7 +84,7 @@ export const tenantService = {
       tenantId: tenant.id,
       rateMinor: initialRateMinor,
       previousRateMinor: null,
-      effectiveFrom: new Date(),
+      effectiveFrom: now,
       reason:
         input.initialPsfRateMinor !== undefined
           ? 'Initial PSF rate set at provisioning'
@@ -103,32 +102,34 @@ export const tenantService = {
       approvedById: null,
     });
 
-    const activated = goLiveAt <= new Date()
-      ? await tenantRepository.activate(tenant.id, new Date())
-      : null;
-    const result = activated ?? tenant;
+    if (tenant.activatedAt) {
+      await tenantEvents.publishActivated({
+        tenantId: tenant.id,
+        activatedById: actor.userId,
+        activatedAt: tenant.activatedAt.toISOString(),
+      });
+    }
 
     await tenantOwnerService.provisionOwner(
       {
-        tenantId: result.id,
-        schoolName: result.name,
+        tenantId: tenant.id,
+        schoolName: tenant.name,
         contactEmail: input.contactEmail,
         contactPhone: input.contactPhone,
-        goLiveAt,
       },
       actor,
     );
 
     await tenantEvents.publishProvisioned({
-      tenantId: result.id,
-      name: result.name,
-      region: result.region,
-      tierId: result.tierId,
-      referralCode: result.referralCode,
+      tenantId: tenant.id,
+      name: tenant.name,
+      region: tenant.region,
+      tierId: tenant.tierId,
+      referralCode: tenant.referralCode,
       provisionedById: actor.userId,
     });
 
-    return result;
+    return tenant;
   },
 
   /** Lists all tenants for the platform console (US-PLT-001). */
@@ -166,7 +167,6 @@ export const tenantService = {
       ...(input.contactPhone !== undefined ? { contactPhone: input.contactPhone } : {}),
       ...(input.address !== undefined ? { address: input.address } : {}),
       ...(input.region !== undefined ? { region: input.region } : {}),
-      ...(input.goLiveAt !== undefined ? { goLiveAt: new Date(input.goLiveAt) } : {}),
     });
     if (!updated) {
       throw new LoomisError('TENANT_NOT_FOUND', 404, 'Tenant not found');
@@ -186,26 +186,6 @@ export const tenantService = {
       throw new LoomisError('TENANT_NOT_FOUND', 404, 'Tenant not found');
     }
     return tenant;
-  },
-
-  async activateTenantEarly(id: string, actor: ActorContext): Promise<TenantRow> {
-    const tenant = await this.getTenant(id);
-    if (tenant.status === 'active') {
-      throw new LoomisError('TENANT_ALREADY_ACTIVE', 409, 'Tenant is already active');
-    }
-    if (tenant.status === 'suspended') {
-      throw new LoomisError('TENANT_SUSPENDED', 403, 'Cannot activate a suspended tenant');
-    }
-    const activated = await tenantRepository.activate(id, new Date());
-    if (!activated) {
-      throw new LoomisError('TENANT_NOT_FOUND', 404, 'Tenant not found');
-    }
-    await tenantEvents.publishActivated({
-      tenantId: activated.id,
-      activatedById: actor.userId,
-      activatedAt: activated.activatedAt!.toISOString(),
-    });
-    return activated;
   },
 
   async migrateProductTier(
