@@ -20,6 +20,10 @@ import type {
   ProgressionMapResponse,
   ProgressionResponse,
   PromotionListResponse,
+  SetupClassArmsRequest,
+  SetupClassArmsResponse,
+  SetupClassLevelsRequest,
+  SetupClassLevelsResponse,
   CloseTermRequest,
   ConfigureTermRequest,
   CreateAcademicYearRequest,
@@ -437,6 +441,41 @@ export function useCreateClassLevel(tenantId: string) {
       client.post<ClassLevelResponse>(`/tenants/${tenantId}/class-levels`, body),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.academic.classLevels(tenantId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.academic.all(tenantId) });
+    },
+  });
+}
+
+/**
+ * Question-based setup: create the whole class ladder + progression map in one call.
+ */
+export function useSetupClassLevels(tenantId: string) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: SetupClassLevelsRequest) =>
+      client.post<SetupClassLevelsResponse>(`/tenants/${tenantId}/class-levels/setup`, body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.academic.classLevels(tenantId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.academic.progressions(tenantId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.academic.all(tenantId) });
+    },
+  });
+}
+
+/**
+ * Question-based setup: create the selected arms for one level in one academic year.
+ */
+export function useSetupClassArms(tenantId: string) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: SetupClassArmsRequest) =>
+      client.post<SetupClassArmsResponse>(`/tenants/${tenantId}/class-arms/setup`, body),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.academic.classStructure(tenantId, variables.academicYearId),
+      });
       void queryClient.invalidateQueries({ queryKey: queryKeys.academic.all(tenantId) });
     },
   });

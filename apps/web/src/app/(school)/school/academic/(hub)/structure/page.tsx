@@ -1,5 +1,8 @@
 'use client';
 
+import Link from 'next/link';
+import { Sparkles } from 'lucide-react';
+
 import { ClassStructureManager } from '@/components/academic/class-structure-manager';
 import { useCan } from '@/lib/auth/use-capability';
 import { ACADEMIC_PAGE_TITLE_STYLE, ACADEMIC_UI } from '@/lib/academic/academic-ui';
@@ -33,6 +36,24 @@ export default function AcademicStructurePage() {
           year-end promotions (FR-ASM-009).
         </p>
       </header>
+
+      <Link
+        href="/school/academic/setup"
+        className="flex items-center justify-between gap-3 rounded-2xl border border-brand-200/60 bg-brand-50/50 px-5 py-4 transition hover:bg-brand-50"
+      >
+        <div className="flex items-center gap-3">
+          <span className="flex size-9 items-center justify-center rounded-xl bg-brand-100 text-brand-700">
+            <Sparkles aria-hidden className="size-4" />
+          </span>
+          <div>
+            <p className="text-[13px] font-bold text-neutral-900">New here? Use guided setup</p>
+            <p className="text-[12px] text-neutral-500">
+              Answer a few questions and we&apos;ll build your classes and arms for you.
+            </p>
+          </div>
+        </div>
+        <span className="text-[12px] font-semibold text-brand-700">Start</span>
+      </Link>
 
       <ClassStructureManager tenantId={tenantId} />
     </div>

@@ -345,6 +345,46 @@ export const progressionMapResponse = z.object({
 });
 export type ProgressionMapResponse = z.infer<typeof progressionMapResponse>;
 
+/**
+ * Batch class-ladder setup (question-based academic setup). Creates the school's
+ * class levels in one call and auto-builds the progression map by rank order, with
+ * the last level marked terminal (graduation). Create-missing by code — safe to re-run.
+ */
+export const setupClassLevelItem = z.object({
+  code: z.string().min(1).max(30),
+  name: z.string().min(1).max(100),
+  rank: z.number().int().min(1).max(100),
+  isTerminal: z.boolean().default(false),
+});
+export type SetupClassLevelItem = z.infer<typeof setupClassLevelItem>;
+
+export const setupClassLevelsRequest = z.object({
+  levels: z.array(setupClassLevelItem).min(1).max(40),
+});
+export type SetupClassLevelsRequest = z.infer<typeof setupClassLevelsRequest>;
+
+export const setupClassLevelsResponse = z.object({
+  levels: z.array(classLevelResponse),
+  progressions: z.array(progressionResponse),
+});
+export type SetupClassLevelsResponse = z.infer<typeof setupClassLevelsResponse>;
+
+/**
+ * Batch arms setup for one class level in one academic year. Create-missing by
+ * name (e.g. selecting A and B). Existing arms are preserved.
+ */
+export const setupClassArmsRequest = z.object({
+  academicYearId: z.string().uuid(),
+  classLevelId: z.string().uuid(),
+  armNames: z.array(z.string().min(1).max(30)).max(26),
+});
+export type SetupClassArmsRequest = z.infer<typeof setupClassArmsRequest>;
+
+export const setupClassArmsResponse = z.object({
+  arms: z.array(classArmResponse),
+});
+export type SetupClassArmsResponse = z.infer<typeof setupClassArmsResponse>;
+
 // ── Promotion & Graduation (FR-ASM-007/008) ──────────────────────────────────────
 
 export const promotionOutcome = z.enum(['promoted', 'held_back', 'graduated']);

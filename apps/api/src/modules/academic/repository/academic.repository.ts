@@ -501,6 +501,150 @@ export const academicRepository = {
     });
   },
 
+  /**
+   * Creates the school's class ladder in one transaction and builds the progression
+   * map by rank order (each level -> next; last level -> terminal). Create-missing
+   * by code, so re-running with a changed ladder only adds new levels.
+   */
+  async setupClassLevelsWithProgression(
+    tenantId: string,
+    levels: Array<{ code: string; name: string; rank: number; isTerminal: boolean }>,
+    actorUserId: string,
+  ) {
+    return withTenantContext(tenantId, async (tx) => {
+      const now = new Date();
+      const existing = await tx
+        .select()
+        .from(classLevels)
+        .where(eq(classLevels.tenantId, tenantId));
+      const byCode = new Map(existing.map((l) => [l.code, l]));
+
+      for (const level of levels) {
+        const found = byCode.get(level.code);
+        if (found) {
+          const [updated] = await tx
+            .update(classLevels)
+            .set({ name: level.name, rank: level.rank, isTerminal: level.isTerminal })
+            .where(and(eq(classLevels.tenantId, tenantId), eq(classLevels.id, found.id)))
+            .returning();
+          if (updated) byCode.set(level.code, updated);
+        } else {
+          const [created] = await tx
+            .insert(classLevels)
+            .values({
+              tenantId,
+              code: level.code,
+              name: level.name,
+              rank: level.rank,
+              isTerminal: level.isTerminal,
+              createdById: actorUserId,
+            })
+            .returning();
+          if (created) byCode.set(level.code, created);
+        }
+      }
+
+      const ordered = levels
+        .map((l) => byCode.get(l.code))
+        .filter((l): l is NonNullable<typeof l> => Boolean(l));
+
+      for (let i = 0; i < ordered.length; i++) {
+        const from = ordered[i]!;
+        const isLast = i === ordered.length - 1;
+        const toClassLevelId = isLast ? null : ordered[i + 1]!.id;
+        const isTerminal = isLast;
+
+        const [existingProg] = await tx
+          .select()
+          .from(classProgressionMap)
+          .where(
+            and(
+              eq(classProgressionMap.tenantId, tenantId),
+              eq(classProgressionMap.fromClassLevelId, from.id),
+            ),
+          )
+          .limit(1);
+
+        if (existingProg) {
+          await tx
+            .update(classProgressionMap)
+            .set({ toClassLevelId, isTerminal, updatedAt: now })
+            .where(eq(classProgressionMap.id, existingProg.id));
+        } else {
+          await tx.insert(classProgressionMap).values({
+            tenantId,
+            fromClassLevelId: from.id,
+            toClassLevelId,
+            isTerminal,
+            createdById: actorUserId,
+          });
+        }
+      }
+
+      const finalLevels = await tx
+        .select()
+        .from(classLevels)
+        .where(eq(classLevels.tenantId, tenantId))
+        .orderBy(asc(classLevels.rank));
+      const finalProgressions = await tx
+        .select()
+        .from(classProgressionMap)
+        .where(eq(classProgressionMap.tenantId, tenantId));
+
+      return { levels: finalLevels, progressions: finalProgressions };
+    });
+  },
+
+  /**
+   * Creates the selected arms for one level in one year (create-missing by name).
+   * Existing arms are kept so enrolled classes are never disturbed.
+   */
+  async setupClassArmsForLevel(
+    tenantId: string,
+    academicYearId: string,
+    classLevelId: string,
+    armNames: string[],
+    actorUserId: string,
+  ) {
+    return withTenantContext(tenantId, async (tx) => {
+      const existing = await tx
+        .select()
+        .from(classArms)
+        .where(
+          and(
+            eq(classArms.tenantId, tenantId),
+            eq(classArms.academicYearId, academicYearId),
+            eq(classArms.classLevelId, classLevelId),
+          ),
+        );
+      const existingNames = new Set(existing.map((a) => a.name));
+
+      const toCreate = armNames.filter((name) => !existingNames.has(name));
+      if (toCreate.length > 0) {
+        await tx.insert(classArms).values(
+          toCreate.map((name) => ({
+            tenantId,
+            academicYearId,
+            classLevelId,
+            name,
+            createdById: actorUserId,
+          })),
+        );
+      }
+
+      return tx
+        .select()
+        .from(classArms)
+        .where(
+          and(
+            eq(classArms.tenantId, tenantId),
+            eq(classArms.academicYearId, academicYearId),
+            eq(classArms.classLevelId, classLevelId),
+          ),
+        );
+    });
+  },
+
   async listClassArms(tenantId: string, academicYearId: string) {
     return withTenantContext(tenantId, async (tx) =>
       tx

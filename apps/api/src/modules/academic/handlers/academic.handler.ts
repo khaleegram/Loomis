@@ -14,6 +14,8 @@ import type {
   MyResultsQuery,
   PublishResultsRequest,
   RequestGradeCorrectionRequest,
+  SetupClassArmsRequest,
+  SetupClassLevelsRequest,
   SnapshotNowRequest,
   StagePromotionRequest,
   SetupSchoolYearRequest,
@@ -295,6 +297,37 @@ export async function listClassLevelsHandler(
 ): Promise<FastifyReply> {
   const levels = await classStructureService.listClassLevels(req.params.tenantId, requireActor(req));
   return sendSuccess(reply, { levels: levels.map(classLevelToResponse) });
+}
+
+export async function setupClassLevelsHandler(
+  req: FastifyRequest<{ Params: TenantParams; Body: SetupClassLevelsRequest }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const { levels, progressions } = await classStructureService.setupClassLevels(
+    req.params.tenantId,
+    req.body,
+    requireActor(req),
+  );
+  return sendSuccess(
+    reply,
+    {
+      levels: levels.map(classLevelToResponse),
+      progressions: progressions.map(progressionToResponse),
+    },
+    201,
+  );
+}
+
+export async function setupClassArmsHandler(
+  req: FastifyRequest<{ Params: TenantParams; Body: SetupClassArmsRequest }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const { arms } = await classStructureService.setupClassArms(
+    req.params.tenantId,
+    req.body,
+    requireActor(req),
+  );
+  return sendSuccess(reply, { arms: arms.map(classArmToResponse) }, 201);
 }
 
 export async function createClassArmHandler(

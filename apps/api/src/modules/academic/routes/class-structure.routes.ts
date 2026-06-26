@@ -2,9 +2,13 @@ import type { FastifyInstance } from 'fastify';
 import {
   createClassArmRequest,
   createClassLevelRequest,
+  setupClassArmsRequest,
+  setupClassLevelsRequest,
   upsertProgressionRequest,
   type CreateClassArmRequest,
   type CreateClassLevelRequest,
+  type SetupClassArmsRequest,
+  type SetupClassLevelsRequest,
   type UpsertProgressionRequest,
 } from '@loomis/contracts';
 import { authenticate } from '../../../middleware/authenticate.js';
@@ -17,6 +21,8 @@ import {
   getClassStructureHandler,
   listClassLevelsHandler,
   listProgressionsHandler,
+  setupClassArmsHandler,
+  setupClassLevelsHandler,
   upsertProgressionHandler,
 } from '../handlers/index.js';
 
@@ -48,6 +54,26 @@ export async function classStructureRoutes(app: FastifyInstance): Promise<void> 
     '/tenants/:tenantId/class-levels',
     { preHandler: [authenticate, requireTenantMatch, requireRole(...structureReaders)] },
     listClassLevelsHandler,
+  );
+
+  // Question-based setup wizard: create the whole class ladder + progression in one call.
+  app.post<{ Params: { tenantId: string }; Body: SetupClassLevelsRequest }>(
+    '/tenants/:tenantId/class-levels/setup',
+    {
+      preHandler: [authenticate, requireTenantMatch, requireRole(...structureAdmins)],
+      preValidation: [validateBody(setupClassLevelsRequest)],
+    },
+    setupClassLevelsHandler,
+  );
+
+  // Question-based setup wizard: create the selected arms for one level in one year.
+  app.post<{ Params: { tenantId: string }; Body: SetupClassArmsRequest }>(
+    '/tenants/:tenantId/class-arms/setup',
+    {
+      preHandler: [authenticate, requireTenantMatch, requireRole(...structureAdmins)],
+      preValidation: [validateBody(setupClassArmsRequest)],
+    },
+    setupClassArmsHandler,
   );
 
   app.post<{ Params: { tenantId: string }; Body: CreateClassArmRequest }>(

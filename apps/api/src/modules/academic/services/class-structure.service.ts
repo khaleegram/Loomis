@@ -1,5 +1,6 @@
 import { LoomisError } from '../../../shared/errors.js';
 import { academicRepository } from '../repository/academic.repository.js';
+import type { SetupClassArmsRequest, SetupClassLevelsRequest } from '@loomis/contracts';
 import type {
   ActorContext,
   CreateClassArmInput,
@@ -33,6 +34,64 @@ export const classStructureService = {
   async listClassLevels(tenantId: string, actor: ActorContext) {
     requireTenant(actor, tenantId);
     return academicRepository.listClassLevels(tenantId);
+  },
+
+  /**
+   * Batch class-ladder setup from the question-based wizard. Creates the levels and
+   * auto-builds the progression map (last level is terminal). Create-missing by code.
+   */
+  async setupClassLevels(tenantId: string, input: SetupClassLevelsRequest, actor: ActorContext) {
+    requireTenant(actor, tenantId);
+
+    const seenCodes = new Set<string>();
+    const seenRanks = new Set<number>();
+    for (const level of input.levels) {
+      if (seenCodes.has(level.code)) {
+        throw new LoomisError('ACADEMIC_CLASS_LEVEL_CONFLICT', 422, `Duplicate class code ${level.code}`);
+      }
+      if (seenRanks.has(level.rank)) {
+        throw new LoomisError('ACADEMIC_CLASS_LEVEL_CONFLICT', 422, `Duplicate rank ${level.rank}`);
+      }
+      seenCodes.add(level.code);
+      seenRanks.add(level.rank);
+    }
+
+    try {
+      return await academicRepository.setupClassLevelsWithProgression(
+        tenantId,
+        input.levels,
+        actor.userId,
+      );
+    } catch (err) {
+      if (isUniqueViolation(err)) {
+        throw new LoomisError(
+          'ACADEMIC_CLASS_LEVEL_CONFLICT',
+          409,
+          'A class level with this code or rank already exists',
+        );
+      }
+      throw err;
+    }
+  },
+
+  /** Batch arms setup for one level in one year (create-missing by name). */
+  async setupClassArms(tenantId: string, input: SetupClassArmsRequest, actor: ActorContext) {
+    requireTenant(actor, tenantId);
+    await requireYear(tenantId, input.academicYearId);
+
+    const level = await academicRepository.findClassLevelById(tenantId, input.classLevelId);
+    if (!level) {
+      throw new LoomisError('ACADEMIC_CLASS_LEVEL_NOT_FOUND', 404, 'Class level not found');
+    }
+
+    const arms = await academicRepository.setupClassArmsForLevel(
+      tenantId,
+      input.academicYearId,
+      input.classLevelId,
+      input.armNames,
+      actor.userId,
+    );
+    return { arms };
   },
 
   async createClassArm(tenantId: string, input: CreateClassArmInput, actor: ActorContext) {
