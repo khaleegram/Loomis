@@ -1,5 +1,7 @@
 import { createHmac } from 'node:crypto';
 import type {
+  ConvertWebsiteInquiryToAdmissionRequest,
+  ConvertWebsiteInquiryToAdmissionResponse,
   SubmitWebsiteInquiryRequest,
   SubmitWebsiteInquiryResponse,
   UpdateWebsiteInquiryRequest,
@@ -9,6 +11,8 @@ import type {
 import { getEnv } from '../../../config/env.js';
 import { LoomisError } from '../../../shared/errors.js';
 import { transactionalEmailService } from '../../comms/services/transactional-email.service.js';
+import { admissionService } from '../../student/services/admission.service.js';
+import type { ActorContext } from '../../student/types.js';
 import { tenantRepository } from '../../tenant/repository/tenant.repository.js';
 import { websiteInquiryRepository } from '../repository/inquiry.repository.js';
 import { websiteRepository } from '../repository/website.repository.js';
@@ -129,6 +133,63 @@ export const websiteInquiryService = {
       throw new LoomisError('NOT_FOUND', 404, 'Enquiry not found');
     }
     return serializeInquiry(updated);
+  },
+
+  async convertToAdmission(
+    tenantId: string,
+    inquiryId: string,
+    input: ConvertWebsiteInquiryToAdmissionRequest,
+    actor: ActorContext,
+  ): Promise<ConvertWebsiteInquiryToAdmissionResponse> {
+    const inquiry = await websiteInquiryRepository.findById(tenantId, inquiryId);
+    if (!inquiry) {
+      throw new LoomisError('NOT_FOUND', 404, 'Enquiry not found');
+    }
+    if (inquiry.type !== 'admission_interest') {
+      throw new LoomisError(
+        'VALIDATION_ERROR',
+        422,
+        'Only admission interest enquiries can be converted to admissions',
+      );
+    }
+    if (inquiry.admissionId) {
+      throw new LoomisError(
+        'VALIDATION_ERROR',
+        409,
+        'This enquiry is already linked to an admission record',
+      );
+    }
+
+    const created = await admissionService.createAdmission(
+      tenantId,
+      {
+        firstName: input.firstName,
+        lastName: input.lastName,
+        dateOfBirth: input.dateOfBirth,
+        gender: input.gender,
+        intendedClassLevelId: input.intendedClassLevelId,
+        guardianName: inquiry.submitterName,
+        guardianEmail: inquiry.submitterEmail,
+        guardianPhone: input.guardianPhone,
+        guardianRelationship: input.guardianRelationship,
+      },
+      actor,
+    );
+
+    const linked = await websiteInquiryRepository.linkAdmission(
+      tenantId,
+      inquiryId,
+      created.admission.id,
+    );
+    if (!linked) {
+      throw new LoomisError('NOT_FOUND', 404, 'Enquiry not found');
+    }
+
+    return {
+      inquiry: serializeInquiry(linked),
+      admissionId: created.admission.id,
+      referenceNumber: created.admission.referenceNumber,
+    };
   },
 
   async countNewInquiries(tenantId: string): Promise<number> {

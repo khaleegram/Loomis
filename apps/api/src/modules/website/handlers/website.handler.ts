@@ -1,5 +1,6 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import type {
+  ConvertWebsiteInquiryToAdmissionRequest,
   SubmitWebsiteInquiryRequest,
   UpdateWebsiteInquiryRequest,
   UpdateWebsiteSiteRequest,
@@ -116,4 +117,21 @@ export async function updateWebsiteInquiryHandler(
     req.body,
   );
   return sendSuccess(reply, result);
+}
+
+export async function convertWebsiteInquiryToAdmissionHandler(
+  req: FastifyRequest<{
+    Params: TenantParams & { inquiryId: string };
+    Body: ConvertWebsiteInquiryToAdmissionRequest;
+  }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const actor = requireWebsiteActor(req);
+  const result = await websiteInquiryService.convertToAdmission(
+    req.params.tenantId,
+    req.params.inquiryId,
+    req.body,
+    actor,
+  );
+  return sendSuccess(reply, result, 201);
 }

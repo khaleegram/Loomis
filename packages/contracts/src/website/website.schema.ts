@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { calendarDate } from '../academic/academic.schema.js';
 
 /** Template identifiers for school public websites. */
 export const websiteTemplateId = z.enum(['prestige', 'bright_start', 'academic_trust']);
@@ -186,3 +187,25 @@ export const updateWebsiteInquiryRequest = z.object({
   status: websiteInquiryStatus,
 });
 export type UpdateWebsiteInquiryRequest = z.infer<typeof updateWebsiteInquiryRequest>;
+
+export const convertWebsiteInquiryToAdmissionRequest = z.object({
+  firstName: z.string().min(1).max(100),
+  lastName: z.string().min(1).max(100),
+  dateOfBirth: calendarDate,
+  gender: z.enum(['male', 'female', 'other', 'unknown']).default('unknown'),
+  intendedClassLevelId: z.string().uuid(),
+  guardianRelationship: z.enum(['mother', 'father', 'guardian', 'sponsor', 'other']),
+  guardianPhone: z.string().min(7).max(20),
+});
+export type ConvertWebsiteInquiryToAdmissionRequest = z.infer<
+  typeof convertWebsiteInquiryToAdmissionRequest
+>;
+
+export const convertWebsiteInquiryToAdmissionResponse = z.object({
+  inquiry: websiteInquiryResponse,
+  admissionId: z.string().uuid(),
+  referenceNumber: z.string(),
+});
+export type ConvertWebsiteInquiryToAdmissionResponse = z.infer<
+  typeof convertWebsiteInquiryToAdmissionResponse
+>;

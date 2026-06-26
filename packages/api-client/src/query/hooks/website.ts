@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   CheckWebsiteSlugResponse,
+  ConvertWebsiteInquiryToAdmissionRequest,
+  ConvertWebsiteInquiryToAdmissionResponse,
   PublicWebsiteSiteResponse,
   SubmitWebsiteInquiryRequest,
   SubmitWebsiteInquiryResponse,
@@ -150,6 +152,30 @@ export function useUpdateWebsiteInquiry(tenantId: string) {
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['website', tenantId, 'inquiries'] });
+    },
+  });
+}
+
+export function useConvertWebsiteInquiryToAdmission(tenantId: string) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      inquiryId,
+      body,
+    }: {
+      inquiryId: string;
+      body: ConvertWebsiteInquiryToAdmissionRequest;
+    }) =>
+      client.post<ConvertWebsiteInquiryToAdmissionResponse>(
+        `/tenants/${tenantId}/website/inquiries/${inquiryId}/convert-admission`,
+        body,
+        { headers: { 'X-Tenant-Id': tenantId } },
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['website', tenantId, 'inquiries'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.admissions.all(tenantId) });
     },
   });
 }

@@ -1,13 +1,35 @@
 'use client';
 
 import {
+  useClassLevels,
+  useConvertWebsiteInquiryToAdmission,
   useUpdateWebsiteInquiry,
   useWebsiteInquiries,
 } from '@loomis/api-client';
-import type { WebsiteInquiryResponse } from '@loomis/contracts';
-import { Alert, AlertDescription, Badge, Button, Skeleton } from '@loomis/ui-web';
-import { Archive, CheckCircle2, Mail, Phone } from 'lucide-react';
+import {
+  convertWebsiteInquiryToAdmissionRequest,
+  type ConvertWebsiteInquiryToAdmissionRequest,
+  type WebsiteInquiryResponse,
+} from '@loomis/contracts';
+import { zodResolver } from '@hookform/resolvers/zod';
+import {
+  Alert,
+  AlertDescription,
+  Badge,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  Label,
+  Skeleton,
+} from '@loomis/ui-web';
+import { Archive, CheckCircle2, Mail, Phone, UserPlus } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { useForm, type Resolver } from 'react-hook-form';
 
 import { PageBody } from '@/components/school/school-shell';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
@@ -45,11 +67,15 @@ function InquiryCard({
   inquiry,
   onMarkRead,
   onArchive,
+  onConvert,
+  canConvert,
   isUpdating,
 }: {
   inquiry: WebsiteInquiryResponse;
   onMarkRead: (inquiryId: string) => void;
   onArchive: (inquiryId: string) => void;
+  onConvert: (inquiry: WebsiteInquiryResponse) => void;
+  canConvert: boolean;
   isUpdating: boolean;
 }) {
   const child = childSummary(inquiry.metadata);
@@ -98,6 +124,22 @@ function InquiryCard({
               Archive
             </Button>
           ) : null}
+          {canConvert && inquiry.type === 'admission_interest' && !inquiry.admissionId ? (
+            <Button
+              type="button"
+              size="sm"
+              disabled={isUpdating}
+              onClick={() => onConvert(inquiry)}
+              className="min-h-[40px]"
+            >
+              <UserPlus className="mr-1 size-4" aria-hidden />
+              Create admission
+            </Button>
+          ) : inquiry.admissionId ? (
+            <Badge variant="outline" className="border-accent-green-200 bg-accent-green-50 text-accent-green-700">
+              Linked to admission
+            </Badge>
+          ) : null}
         </div>
       </div>
 
@@ -122,10 +164,169 @@ function InquiryCard({
   );
 }
 
+function ConvertInquiryDialog({
+  inquiry,
+  tenantId,
+  open,
+  onOpenChange,
+}: {
+  inquiry: WebsiteInquiryResponse | null;
+  tenantId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const classLevelsQuery = useClassLevels(tenantId);
+  const convert = useConvertWebsiteInquiryToAdmission(tenantId);
+  const metadata = inquiry?.metadata ?? {};
+  const suggestedFirstName =
+    typeof metadata.childFirstName === 'string' ? metadata.childFirstName : '';
+
+  const form = useForm<ConvertWebsiteInquiryToAdmissionRequest>({
+    resolver: zodResolver(convertWebsiteInquiryToAdmissionRequest) as Resolver<ConvertWebsiteInquiryToAdmissionRequest>,
+    values: {
+      firstName: suggestedFirstName,
+      lastName: '',
+      dateOfBirth: '',
+      gender: 'unknown',
+      intendedClassLevelId: '',
+      guardianRelationship: 'guardian',
+      guardianPhone: inquiry?.submitterPhone ?? '',
+    },
+  });
+
+  if (!inquiry) return null;
+
+  async function onSubmit(values: ConvertWebsiteInquiryToAdmissionRequest) {
+    if (!inquiry) return;
+    await convert.mutateAsync({ inquiryId: inquiry.id, body: values });
+    onOpenChange(false);
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Create admission from enquiry</DialogTitle>
+          <DialogDescription>
+            Confirm required student details before adding this parent enquiry to the official
+            admissions pipeline.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="firstName">Student first name</Label>
+              <Input id="firstName" className="mt-1" {...form.register('firstName')} />
+              {form.formState.errors.firstName ? (
+                <p className="mt-1 text-xs text-danger">{form.formState.errors.firstName.message}</p>
+              ) : null}
+            </div>
+            <div>
+              <Label htmlFor="lastName">Student last name</Label>
+              <Input id="lastName" className="mt-1" {...form.register('lastName')} />
+              {form.formState.errors.lastName ? (
+                <p className="mt-1 text-xs text-danger">{form.formState.errors.lastName.message}</p>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="dateOfBirth">Date of birth</Label>
+              <Input id="dateOfBirth" type="date" className="mt-1" {...form.register('dateOfBirth')} />
+              {form.formState.errors.dateOfBirth ? (
+                <p className="mt-1 text-xs text-danger">{form.formState.errors.dateOfBirth.message}</p>
+              ) : null}
+            </div>
+            <div>
+              <Label htmlFor="gender">Gender</Label>
+              <select
+                id="gender"
+                className="mt-1 min-h-[44px] w-full rounded-xl border border-neutral-200 bg-white px-3 text-sm"
+                {...form.register('gender')}
+              >
+                <option value="unknown">Unknown</option>
+                <option value="female">Female</option>
+                <option value="male">Male</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="classLevel">Intended class</Label>
+            <select
+              id="classLevel"
+              className="mt-1 min-h-[44px] w-full rounded-xl border border-neutral-200 bg-white px-3 text-sm"
+              {...form.register('intendedClassLevelId')}
+            >
+              <option value="">Select class</option>
+              {(classLevelsQuery.data?.levels ?? []).map((level) => (
+                <option key={level.id} value={level.id}>
+                  {level.name}
+                </option>
+              ))}
+            </select>
+            {form.formState.errors.intendedClassLevelId ? (
+              <p className="mt-1 text-xs text-danger">
+                {form.formState.errors.intendedClassLevelId.message}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="guardianPhone">Guardian phone</Label>
+              <Input id="guardianPhone" className="mt-1" {...form.register('guardianPhone')} />
+              {form.formState.errors.guardianPhone ? (
+                <p className="mt-1 text-xs text-danger">{form.formState.errors.guardianPhone.message}</p>
+              ) : null}
+            </div>
+            <div>
+              <Label htmlFor="guardianRelationship">Relationship</Label>
+              <select
+                id="guardianRelationship"
+                className="mt-1 min-h-[44px] w-full rounded-xl border border-neutral-200 bg-white px-3 text-sm"
+                {...form.register('guardianRelationship')}
+              >
+                <option value="guardian">Guardian</option>
+                <option value="mother">Mother</option>
+                <option value="father">Father</option>
+                <option value="sponsor">Sponsor</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+
+          {convert.error ? (
+            <Alert variant="destructive">
+              <AlertDescription>
+                Could not create the admission record. Check required fields and try again.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={convert.isPending || classLevelsQuery.isLoading}>
+              {convert.isPending ? 'Creating…' : 'Create admission'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function WebsiteInquiriesPage() {
   const tenantId = useTenantId() ?? '';
   const canViewInquiries = useCan('website.inquiries.view');
+  const canConvertToAdmission = useCan('admissions.manage');
   const [status, setStatus] = useState<string | undefined>(undefined);
+  const [convertInquiry, setConvertInquiry] = useState<WebsiteInquiryResponse | null>(null);
   const { data, isLoading, error } = useWebsiteInquiries(tenantId, status);
   const updateInquiry = useUpdateWebsiteInquiry(tenantId);
 
@@ -221,6 +422,8 @@ export default function WebsiteInquiriesPage() {
               isUpdating={updateInquiry.isPending}
               onMarkRead={(inquiryId) => updateInquiry.mutate({ inquiryId, status: 'read' })}
               onArchive={(inquiryId) => updateInquiry.mutate({ inquiryId, status: 'archived' })}
+              onConvert={setConvertInquiry}
+              canConvert={canConvertToAdmission}
             />
           ))
         ) : (
@@ -232,6 +435,15 @@ export default function WebsiteInquiriesPage() {
           </div>
         )}
       </div>
+
+      <ConvertInquiryDialog
+        tenantId={tenantId}
+        inquiry={convertInquiry}
+        open={convertInquiry !== null}
+        onOpenChange={(open) => {
+          if (!open) setConvertInquiry(null);
+        }}
+      />
     </PageBody>
   );
 }

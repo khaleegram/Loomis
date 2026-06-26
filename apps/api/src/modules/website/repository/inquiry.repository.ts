@@ -86,6 +86,27 @@ export const websiteInquiryRepository = {
     });
   },
 
+  async linkAdmission(
+    tenantId: string,
+    inquiryId: string,
+    admissionId: string,
+  ): Promise<WebsiteInquiryRow | null> {
+    return withTenantContext(tenantId, async (tx) => {
+      const [row] = await tx
+        .update(websiteInquiries)
+        .set({
+          admissionId,
+          status: 'read',
+          updatedAt: new Date(),
+        })
+        .where(
+          and(eq(websiteInquiries.id, inquiryId), eq(websiteInquiries.tenantId, tenantId)),
+        )
+        .returning();
+      return row ?? null;
+    });
+  },
+
   async countNew(tenantId: string): Promise<number> {
     return withTenantContext(tenantId, async (tx) => {
       const [row] = await tx

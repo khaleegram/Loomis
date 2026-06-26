@@ -1,8 +1,10 @@
 import type { FastifyInstance } from 'fastify';
 import {
+  convertWebsiteInquiryToAdmissionRequest,
   submitWebsiteInquiryRequest,
   updateWebsiteSiteRequest,
   updateWebsiteInquiryRequest,
+  type ConvertWebsiteInquiryToAdmissionRequest,
   type SubmitWebsiteInquiryRequest,
   type UpdateWebsiteInquiryRequest,
   type UpdateWebsiteSiteRequest,
@@ -16,6 +18,7 @@ import { validateBody } from '../../../shared/validation.js';
 import { websiteInquiryRateLimiter } from '../middleware/website-inquiry-rate-limiter.js';
 import {
   checkWebsiteSlugHandler,
+  convertWebsiteInquiryToAdmissionHandler,
   getPublicWebsiteHandler,
   getWebsiteSiteHandler,
   listWebsiteInquiriesHandler,
@@ -118,6 +121,24 @@ export async function websiteRoutes(app: FastifyInstance): Promise<void> {
       preValidation: [validateBody(updateWebsiteInquiryRequest)],
     },
     updateWebsiteInquiryHandler,
+  );
+
+  app.post<{
+    Params: { tenantId: string; inquiryId: string };
+    Body: ConvertWebsiteInquiryToAdmissionRequest;
+  }>(
+    '/tenants/:tenantId/website/inquiries/:inquiryId/convert-admission',
+    {
+      preHandler: [
+        authenticate,
+        requireTenantMatch,
+        requireRole(...WEBSITE_EDITORS),
+        requireCapability('website.inquiries.view'),
+        requireCapability('admissions.manage'),
+      ],
+      preValidation: [validateBody(convertWebsiteInquiryToAdmissionRequest)],
+    },
+    convertWebsiteInquiryToAdmissionHandler,
   );
 }
 
