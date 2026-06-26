@@ -263,6 +263,12 @@ export const queryKeys = {
     downloadUrl: (storageObjectId: string) =>
       ['storage', 'download-url', storageObjectId] as const,
   },
+  /** School public website builder */
+  website: {
+    site: (tenantId: string) => ['website', tenantId, 'site'] as const,
+  },
+  /** Public school site (no tenant in key — slug is globally unique) */
+  publicSite: (slug: string) => ['public-site', slug] as const,
   parent: {
     dashboard: () => ['parent', 'dashboard'] as const,
     timetable: (tenantId: string, studentId: string, termId: string) =>

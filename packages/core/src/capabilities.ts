@@ -44,7 +44,10 @@ export type Capability =
   | 'parent.message'
   | 'dsar.manage'
   | 'audit.view'
-  | 'audit.export';
+  | 'audit.export'
+  | 'website.view'
+  | 'website.edit'
+  | 'website.publish';
 
 const C = <T extends Capability[]>(...caps: T): ReadonlySet<Capability> => new Set(caps);
 
@@ -89,6 +92,9 @@ export const roleCapabilities: Record<Role, ReadonlySet<Capability>> = {
     'audit.view',
     'audit.export',
     'parent.message',
+    'website.view',
+    'website.edit',
+    'website.publish',
   ),
   principal: C(
     'staff.onboard',
@@ -112,6 +118,9 @@ export const roleCapabilities: Record<Role, ReadonlySet<Capability>> = {
     'finance.balances.view',
     'audit.view',
     'parent.message',
+    'website.view',
+    'website.edit',
+    'website.publish',
   ),
   admin_officer: C(
     'staff.onboard',
@@ -124,6 +133,8 @@ export const roleCapabilities: Record<Role, ReadonlySet<Capability>> = {
     'timetable.view',
     'attendance.view',
     'parent.message',
+    'website.view',
+    'website.edit',
   ),
   accountant: C('fee.configure', 'payment.verify', 'refund.approve', 'finance.balances.view', 'ledger.view'),
   cashier: C('payment.log', 'refund.initiate'),

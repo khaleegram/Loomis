@@ -20,6 +20,7 @@ import { tierCatalogService } from './tier-catalog.service.js';
 import { tenantOnboardingService } from './tenant-onboarding.service.js';
 import { tenantContactService } from './tenant-contact.service.js';
 import { attributionService } from '../../referral/services/attribution.service.js';
+import { websiteService } from '../../website/services/website.service.js';
 
 type TenantRow = NonNullable<Awaited<ReturnType<typeof tenantRepository.findById>>>;
 
@@ -128,6 +129,8 @@ export const tenantService = {
       referralCode: tenant.referralCode,
       provisionedById: actor.userId,
     });
+
+    await websiteService.ensureSite(tenant.id);
 
     return tenant;
   },

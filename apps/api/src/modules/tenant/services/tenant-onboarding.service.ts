@@ -1,6 +1,7 @@
 import { academicRepository } from '../../academic/repository/academic.repository.js';
 import { financeRepository } from '../../finance/repository/index.js';
 import { configurationRepository } from '../repository/configuration.repository.js';
+import { websiteRepository } from '../../website/repository/website.repository.js';
 import { tenantOwnerService } from './tenant-owner.service.js';
 import { psfSuggestionService } from './psf-suggestion.service.js';
 import { psfRateService } from './psf-rate.service.js';
@@ -30,6 +31,7 @@ export const tenantOnboardingService = {
       tenantId,
       TENANT_PSF_SUGGESTION_BASIS_KEY,
     );
+    const websiteSite = await websiteRepository.findByTenantId(tenantId);
     const suggestedPsfBasisMinor =
       basisConfig?.value != null && typeof basisConfig.value === 'number'
         ? basisConfig.value
@@ -87,6 +89,12 @@ export const tenantOnboardingService = {
         label: 'Fee structures configured',
         complete: feeStructuresConfigured,
         detail: feeStructuresConfigured ? 'At least one class level' : null,
+      },
+      {
+        id: 'website',
+        label: 'Publish school website',
+        complete: websiteSite?.status === 'published',
+        detail: websiteSite?.slug ? `loomis.digital/s/${websiteSite.slug}` : null,
       },
       {
         id: 'psf_review',

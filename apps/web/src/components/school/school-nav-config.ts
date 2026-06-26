@@ -1,6 +1,7 @@
 import {
   BookOpen,
   GraduationCap,
+  Globe,
   LayoutDashboard,
   Percent,
   ScrollText,
@@ -255,6 +256,19 @@ export const SCHOOL_NAV: SchoolNavItem[] = [
     hideForRoles: [...EXAM_OFFICER_ROLES, ...TEACHING_STAFF_ROLES, ...ADMIN_OFFICER_ROLES],
     hideInCore: true,
     requiresWorkflowsInbox: true,
+  },
+  {
+    id: 'website',
+    label: 'Website',
+    href: '/school/website',
+    icon: Globe,
+    capabilities: ['website.view', 'website.edit', 'website.publish'],
+    hideForRoles: [
+      ...TEACHING_STAFF_ROLES,
+      ...EXAM_OFFICER_ROLES,
+      ...FINANCE_ROLES,
+      'timetable_officer',
+    ],
   },
   {
     id: 'comms',

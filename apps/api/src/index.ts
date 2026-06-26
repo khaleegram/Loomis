@@ -19,6 +19,7 @@ import { commsModule } from './modules/comms/index.js';
 import { complianceModule } from './modules/compliance/index.js';
 import { readModelsModule } from './modules/read-models/index.js';
 import { auditModule } from './modules/audit/index.js';
+import { websiteModule } from './modules/website/index.js';
 
 /**
  * Fastify bootstrap. Domain modules register as plugins under /api/v1
@@ -61,6 +62,7 @@ async function buildServer() {
   await app.register(commsModule, { prefix: '/api/v1' });
   await app.register(complianceModule, { prefix: '/api/v1' });
   await app.register(auditModule, { prefix: '/api/v1' });
+  await app.register(websiteModule, { prefix: '/api/v1' });
 
   return app;
 }

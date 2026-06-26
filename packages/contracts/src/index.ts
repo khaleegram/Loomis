@@ -54,3 +54,6 @@ export * from './read-models/read-models.schema.js';
 
 // Audit
 export * from './audit/audit.schema.js';
+
+// Website
+export * from './website/website.schema.js';

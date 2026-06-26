@@ -54,6 +54,9 @@ const envSchema = z.object({
   /** Public web app origin for links in transactional emails (defaults to http://localhost:3000 in dev). */
   WEB_APP_BASE_URL: z.string().url().optional(),
 
+  /** Base URL for path-based school public sites (e.g. https://www.loomis.digital). */
+  PUBLIC_SITE_BASE_URL: z.string().url().default('https://www.loomis.digital'),
+
   /** Resend (SRS §10.3). Required for email delivery when email channel is used. */
   RESEND_API_KEY: z.string().min(1).optional(),
   RESEND_FROM_EMAIL: z.string().email().optional(),
