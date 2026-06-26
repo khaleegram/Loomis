@@ -1,7 +1,8 @@
 import type { PublicWebsiteSiteResponse, WebsiteSection } from '@loomis/contracts';
 import { cn } from '@loomis/ui-web';
 import { Mail, MapPin, Phone } from 'lucide-react';
-import Link from 'next/link';
+
+import { getAppLoginUrl } from '@/lib/website/public-site-url';
 
 function assetUrl(
   resolvedAssets: Record<string, string>,
@@ -154,12 +155,12 @@ function SectionBlock({
               {(props.title as string) || 'Parents'}
             </h2>
             <p className="mt-2 text-neutral-600">{(props.body as string) || ''}</p>
-            <Link
-              href="/login"
+            <a
+              href={getAppLoginUrl()}
               className="mt-5 inline-flex min-h-[44px] items-center rounded-full border border-neutral-300 bg-white px-6 py-3 text-sm font-semibold text-neutral-800 hover:bg-neutral-50"
             >
               Parent portal login
-            </Link>
+            </a>
           </div>
         </section>
       );

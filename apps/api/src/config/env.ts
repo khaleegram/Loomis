@@ -57,6 +57,12 @@ const envSchema = z.object({
   /** Base URL for path-based school public sites (e.g. https://www.loomis.digital). */
   PUBLIC_SITE_BASE_URL: z.string().url().default('https://www.loomis.digital'),
 
+  /** Apex domain for per-school subdomains (e.g. loomis.digital → grace.loomis.digital). */
+  PUBLIC_SITE_APEX_DOMAIN: z.string().min(1).default('loomis.digital'),
+
+  /** Public site URL form: 'subdomain' (default) or 'path' (local dev / no wildcard DNS). */
+  PUBLIC_SITE_URL_MODE: z.enum(['subdomain', 'path']).default('subdomain'),
+
   /** Resend (SRS §10.3). Required for email delivery when email channel is used. */
   RESEND_API_KEY: z.string().min(1).optional(),
   RESEND_FROM_EMAIL: z.string().email().optional(),

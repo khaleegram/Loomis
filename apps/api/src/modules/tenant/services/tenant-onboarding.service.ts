@@ -1,3 +1,5 @@
+import { publicSchoolSiteUrl } from '@loomis/core';
+import { getEnv } from '../../../config/env.js';
 import { academicRepository } from '../../academic/repository/academic.repository.js';
 import { financeRepository } from '../../finance/repository/index.js';
 import { configurationRepository } from '../repository/configuration.repository.js';
@@ -32,6 +34,7 @@ export const tenantOnboardingService = {
       TENANT_PSF_SUGGESTION_BASIS_KEY,
     );
     const websiteSite = await websiteRepository.findByTenantId(tenantId);
+    const env = getEnv();
     const suggestedPsfBasisMinor =
       basisConfig?.value != null && typeof basisConfig.value === 'number'
         ? basisConfig.value
@@ -94,7 +97,13 @@ export const tenantOnboardingService = {
         id: 'website',
         label: 'Publish school website',
         complete: websiteSite?.status === 'published',
-        detail: websiteSite?.slug ? `loomis.digital/s/${websiteSite.slug}` : null,
+        detail: websiteSite?.slug
+          ? publicSchoolSiteUrl(websiteSite.slug, {
+              mode: env.PUBLIC_SITE_URL_MODE,
+              apexDomain: env.PUBLIC_SITE_APEX_DOMAIN,
+              pathBaseUrl: env.PUBLIC_SITE_BASE_URL,
+            }).replace(/^https?:\/\//, '')
+          : null,
       },
       {
         id: 'psf_review',

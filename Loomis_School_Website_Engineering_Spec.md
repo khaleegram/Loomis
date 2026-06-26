@@ -158,18 +158,22 @@ The website feature gets its own DB schema (`website`), service layer, and API r
 
 ### 4.2 Public URL Strategy
 
-**MVP (Phase 1):** path-based on main web app
-
-```
-https://www.loomis.digital/s/{slug}
-```
-
-Example: `https://www.loomis.digital/s/grace-academy-lagos`
-
-**Phase 2:** subdomain support
+**Phase 1 (implemented):** per-school subdomain on the Next.js web app
 
 ```
 https://{slug}.loomis.digital
+```
+
+Example: `https://grace-academy-lagos.loomis.digital`
+
+The edge middleware resolves the `Host` header to a slug
+(`extractSchoolSlugFromHost`) and rewrites to the `/s/[slug]` renderer.
+Reserved labels (`www`, `api`, `app`, …) are never treated as schools.
+
+**Path fallback (no wildcard DNS):** set `PUBLIC_SITE_URL_MODE=path`
+
+```
+https://www.loomis.digital/s/{slug}
 ```
 
 **Phase 3:** custom domain

@@ -178,7 +178,11 @@ function toSiteResponse(row: WebsiteSiteRow, publishedVersion: number | null): W
     seo: parseSeo(row.seo),
     publishedAt: row.publishedAt?.toISOString() ?? null,
     publishedVersion,
-    publicUrl: publicSchoolSiteUrl(row.slug, env.PUBLIC_SITE_BASE_URL),
+    publicUrl: publicSchoolSiteUrl(row.slug, {
+      mode: env.PUBLIC_SITE_URL_MODE,
+      apexDomain: env.PUBLIC_SITE_APEX_DOMAIN,
+      pathBaseUrl: env.PUBLIC_SITE_BASE_URL,
+    }),
     updatedAt: row.updatedAt.toISOString(),
   };
 }

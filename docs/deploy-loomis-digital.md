@@ -106,6 +106,9 @@ On the **API service** (not the DB plugins), set:
 | `AWS_ACCESS_KEY_ID` | IAM user for S3/SES |
 | `AWS_SECRET_ACCESS_KEY` | |
 | `WEB_APP_BASE_URL` | `https://www.loomis.digital` |
+| `PUBLIC_SITE_APEX_DOMAIN` | `loomis.digital` (school sites at `{slug}.loomis.digital`) |
+| `PUBLIC_SITE_URL_MODE` | `subdomain` (use `path` only if wildcard DNS is unavailable) |
+| `PUBLIC_SITE_BASE_URL` | `https://www.loomis.digital` (path-mode fallback) |
 
 **Recommended**
 
@@ -135,6 +138,39 @@ Railway sets `PORT` automatically; the API uses it when `API_PORT` is unset.
 4. On **Vercel**, set `LOOMIS_API_CUSTOM_DOMAIN_READY=true` and redeploy so the web app uses `api.loomis.digital` instead of the Railway fallback URL.
 
 **Until DNS is live:** the web app automatically uses `https://loomis-api-production.up.railway.app/api/v1` when env vars point at `api.loomis.digital` and `LOOMIS_API_CUSTOM_DOMAIN_READY` is unset. No Vercel change required for the interim fix.
+
+### 2.5b School website subdomains (`{slug}.loomis.digital`)
+
+Public school sites are served on per-school subdomains by the Next.js web app
+(Vercel), e.g. `https://grace-academy-lagos.loomis.digital`.
+
+**Vercel**
+
+1. Project → **Settings → Domains** → add a **wildcard domain**: `*.loomis.digital`.
+2. Add these env vars (Production):
+
+| Variable | Value |
+|----------|--------|
+| `NEXT_PUBLIC_PUBLIC_SITE_APEX_DOMAIN` | `loomis.digital` |
+| `NEXT_PUBLIC_PUBLIC_SITE_URL_MODE` | `subdomain` |
+| `NEXT_PUBLIC_PUBLIC_SITE_BASE_URL` | `https://www.loomis.digital` |
+
+**DNS** (at the `loomis.digital` registrar)
+
+| Type | Name | Value |
+|------|------|--------|
+| CNAME | `*` | `cname.vercel-dns.com` (value Vercel shows for the wildcard) |
+
+Notes:
+- TLS for `*.loomis.digital` is issued automatically by Vercel once the wildcard
+  domain verifies.
+- The session cookie is host-only (no `Domain` attribute), so auth never leaks to
+  school subdomains — public sites stay fully unauthenticated.
+- `api`, `www`, `app`, and other reserved labels are never treated as schools
+  (see `RESERVED_SUBDOMAINS` in `packages/core/src/public-site.ts`).
+- No wildcard DNS yet? Set `PUBLIC_SITE_URL_MODE=path` (API) and
+  `NEXT_PUBLIC_PUBLIC_SITE_URL_MODE=path` (web) to fall back to
+  `https://www.loomis.digital/s/{slug}` until DNS is ready.
 
 ### 2.6 Run migrations
 
