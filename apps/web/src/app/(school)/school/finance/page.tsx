@@ -7,6 +7,7 @@ import { Alert, AlertDescription, Skeleton } from '@loomis/ui-web';
 import { useEffect, useMemo, useState } from 'react';
 
 import { FeeStructureEditor } from '@/components/finance/fee-structure-editor';
+import { FeeStructureQuickSetup } from '@/components/finance/fee-structure-quick-setup';
 import { FinanceFeeStructuresHero } from '@/components/finance/finance-fee-structures-hero';
 import { CorePendingApprovals } from '@/components/workflow/core-inline-workflow-decision';
 import { PageBody } from '@/components/school/school-shell';
@@ -125,6 +126,18 @@ export default function FinanceFeeStructuresPage() {
 
         {termId && classLevels.length > 0 ? (
           <>
+            {yearId && canConfigure ? (
+              <FeeStructureQuickSetup
+                tenantId={tenantId}
+                termId={termId}
+                yearId={yearId}
+                classLevels={classLevels}
+                structures={structures}
+                termOpen={activeTerm?.status === 'open'}
+                canEdit={canConfigure}
+              />
+            ) : null}
+
             <div className="flex flex-wrap gap-2">
               {classLevels.map((level) => (
                 <button
