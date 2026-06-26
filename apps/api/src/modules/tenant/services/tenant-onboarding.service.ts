@@ -83,7 +83,7 @@ export const tenantOnboardingService = {
       },
       {
         id: 'academic_year',
-        label: 'Academic year activated',
+        label: 'School year started',
         complete: Boolean(activeYear),
         detail: activeYear?.label ?? null,
       },

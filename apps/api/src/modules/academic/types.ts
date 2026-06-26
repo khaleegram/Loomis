@@ -2,6 +2,7 @@ import type {
   CloseTermRequest,
   ConfigureTermRequest,
   CreateAcademicYearRequest,
+  SetupSchoolYearRequest,
   CreateClassArmRequest,
   CreateClassLevelRequest,
   PromotionDecision,
@@ -24,6 +25,7 @@ export interface ActorContext {
 }
 
 export type CreateAcademicYearInput = CreateAcademicYearRequest;
+export type SetupSchoolYearInput = SetupSchoolYearRequest;
 export type ConfigureTermInput = ConfigureTermRequest;
 export type CloseTermInput = CloseTermRequest;
 export type CreateClassLevelInput = CreateClassLevelRequest;

@@ -34,6 +34,37 @@ export function termStatusLabel(status: AcademicTermStatus): string {
   }
 }
 
+/** Plain-language status for school staff (no internal lifecycle jargon). */
+export function termUserStatusLabel(status: AcademicTermStatus, isCurrent: boolean): string {
+  if (isCurrent && status === 'open') return 'Current';
+  if (isCurrent && status === 'census_locked') return 'Current';
+  switch (status) {
+    case 'draft':
+      return 'Upcoming';
+    case 'open':
+      return 'Live';
+    case 'census_locked':
+      return 'Billing recorded';
+    case 'closed':
+      return 'Completed';
+    default:
+      return termStatusLabel(status);
+  }
+}
+
+export function yearUserStatusLabel(status: AcademicYearStatus): string {
+  switch (status) {
+    case 'draft':
+      return 'Not started';
+    case 'active':
+      return 'In progress';
+    case 'closed':
+      return 'Completed';
+    default:
+      return yearStatusLabel(status);
+  }
+}
+
 export function formatCalendarDate(iso: string | null | undefined): string {
   if (!iso) return '—';
   const [y, m, d] = iso.split('-');

@@ -23,6 +23,8 @@ import type {
   CloseTermRequest,
   ConfigureTermRequest,
   CreateAcademicYearRequest,
+  SetupSchoolYearRequest,
+  SetupSchoolYearResponse,
   StagePromotionRequest,
   TermClosurePreviewResponse,
   StepUpAction,
@@ -272,6 +274,30 @@ export function useSendStepUpSms() {
   return useMutation({
     mutationFn: (body: StepUpSendSmsRequest) =>
       client.post<StepUpSendSmsResponse>('/auth/stepup/sms/send', body),
+  });
+}
+
+/** Creates a school year in one step — active year, terms, current term live (US-ASM-001/002). */
+export function useSetupSchoolYear(tenantId: string) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: SetupSchoolYearRequest) =>
+      client.post<SetupSchoolYearResponse>(`/tenants/${tenantId}/academic-years/setup`, body),
+    onSuccess: () => invalidateAcademicQueries(queryClient, tenantId),
+  });
+}
+
+/** Finishes a legacy draft school year with auto-configured terms. */
+export function useFinalizeSchoolYear(tenantId: string, yearId: string) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      client.post<SetupSchoolYearResponse>(
+        `/tenants/${tenantId}/academic-years/${yearId}/finalize`,
+      ),
+    onSuccess: () => invalidateAcademicQueries(queryClient, tenantId, yearId),
   });
 }
 

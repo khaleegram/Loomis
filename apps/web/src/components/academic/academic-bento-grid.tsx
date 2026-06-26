@@ -48,12 +48,12 @@ export function AcademicBentoGrid({ metrics, yearId, termId }: AcademicBentoGrid
   const tiles: BentoTile[] = [
     {
       id: 'sessions',
-      title: 'Session studio',
-      subtitle: 'Years, terms & lifecycle',
+      title: 'School year',
+      subtitle: 'Terms & calendar',
       href: '/school/academic/sessions',
       icon: Settings2,
       gradient: BRONZE.gradients.g1,
-      stat: metrics.openTermName ?? 'No open term',
+      stat: metrics.openTermName ?? 'Not set up',
       span: 'hero',
     },
     {
@@ -192,7 +192,7 @@ export function AcademicBentoGrid({ metrics, yearId, termId }: AcademicBentoGrid
                 </p>
                 {tile.span === 'hero' ? (
                   <p className="mt-2 max-w-xs text-[12px] leading-relaxed text-neutral-500">
-                    Configure academic years, open terms, and close when the term ends.
+                    Set your school year once — terms and billing dates are handled for you.
                   </p>
                 ) : null}
                 <p className="mt-2.5 text-[11px] font-semibold text-brand-700/90">{tile.stat}</p>

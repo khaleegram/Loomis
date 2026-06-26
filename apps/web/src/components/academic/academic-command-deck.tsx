@@ -67,7 +67,7 @@ export function AcademicCommandDeck({
                 <Sparkles aria-hidden className="size-2.5 text-white" />
               </span>
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-neutral-400">
-                Academic command deck
+                School year
               </p>
             </div>
             <h1
@@ -91,7 +91,7 @@ export function AcademicCommandDeck({
                 </>
               ) : (
                 <span className="text-[13px] text-neutral-500">
-                  Configure a term to begin the session lifecycle
+                  Start your school year to begin admissions and fees
                 </span>
               )}
             </div>
@@ -106,7 +106,7 @@ export function AcademicCommandDeck({
         <div className="mt-6 rounded-2xl border border-white/70 bg-white/75 p-4 shadow-xs backdrop-blur-sm">
           <div className="mb-4 flex items-center justify-between gap-2">
             <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-neutral-400">
-              Session lifecycle
+              Term progress
             </p>
             {focusTerm ? (
               <p className="text-[10px] font-medium text-neutral-400">

@@ -33,6 +33,17 @@ export function YearStatusBadge({ status }: { status: AcademicYearStatus }) {
   return <StatusPill label={yearStatusLabel(status)} className={YEAR_STYLES[status]} />;
 }
 
-export function TermStatusBadge({ status }: { status: AcademicTermStatus }) {
-  return <StatusPill label={termStatusLabel(status)} className={TERM_STYLES[status]} />;
+export function TermStatusBadge({
+  status,
+  userLabel,
+}: {
+  status: AcademicTermStatus;
+  userLabel?: string;
+}) {
+  return (
+    <StatusPill
+      label={userLabel ?? termStatusLabel(status)}
+      className={TERM_STYLES[status]}
+    />
+  );
 }

@@ -3,10 +3,10 @@ import type { AcademicTermResponse, AcademicTermStatus } from '@loomis/contracts
 import type { AcademicHubMetrics } from './academic-metrics';
 
 export const LIFECYCLE_PHASES = [
-  { key: 'draft' as const, label: 'Configure', short: 'Setup' },
-  { key: 'open' as const, label: 'Open', short: 'Live' },
-  { key: 'census_locked' as const, label: 'Platform fee recorded', short: 'Recorded' },
-  { key: 'closed' as const, label: 'Close', short: 'Done' },
+  { key: 'draft' as const, label: 'Upcoming', short: 'Next' },
+  { key: 'open' as const, label: 'Current term', short: 'Live' },
+  { key: 'census_locked' as const, label: 'Billing recorded', short: 'Billing' },
+  { key: 'closed' as const, label: 'Completed', short: 'Done' },
 ];
 
 const STATUS_INDEX: Record<AcademicTermStatus, number> = {
@@ -52,58 +52,37 @@ export function resolveNextAcademicAction(
 
   if (focusTerm?.status === 'open' && yearId && termId) {
     return {
-      title: 'Term is live',
-      description: 'Platform fee is recorded automatically on the billing date. Manage school fee balances under Finance.',
-      href: '/school/finance/balances',
-      cta: 'View balances',
+      title: `${focusTerm.name} is live`,
+      description: 'Enroll students, take attendance, and collect fees. Platform billing runs automatically on the scheduled date.',
+      href: '/school/students',
+      cta: 'Go to students',
       urgency: 'normal',
     };
   }
 
   if (focusTerm?.status === 'census_locked') {
     return {
-      title: 'Close the term',
-      description: 'Platform fee is recorded. Resolve gate checks and close the term when ready.',
+      title: `End ${focusTerm.name} when ready`,
+      description: 'After results are published, end the term. The next term opens on its start date automatically.',
       href: '/school/academic/sessions',
-      cta: 'Go to sessions',
+      cta: 'School year',
       urgency: 'attention',
-    };
-  }
-
-  if (focusTerm?.status === 'draft') {
-    return {
-      title: 'Configure and open the term',
-      description: 'Set dates, enrollment window, and exam periods — then open the term for school operations.',
-      href: '/school/academic/sessions',
-      cta: 'Open term studio',
-      urgency: 'normal',
-    };
-  }
-
-  const draftTerm = terms.find((t) => t.status === 'draft');
-  if (draftTerm) {
-    return {
-      title: `Prepare ${draftTerm.name}`,
-      description: 'A draft term is waiting for configuration before the school calendar can go live.',
-      href: '/school/academic/sessions',
-      cta: 'Configure term',
-      urgency: 'normal',
     };
   }
 
   if (!metrics.activeYearLabel) {
     return {
-      title: 'Create your first academic year',
-      description: 'Start the session lifecycle by defining the school calendar period.',
+      title: 'Start your school year',
+      description: 'Name your year and pick the dates — Loomis creates three terms and opens the current one for you.',
       href: '/school/academic/sessions',
-      cta: 'Create year',
-      urgency: 'normal',
+      cta: 'Set up now',
+      urgency: 'attention',
     };
   }
 
   return {
-    title: 'Review the academic calendar',
-    description: 'Key dates for enrollment, exams, and platform fee billing are visible to staff once configured.',
+    title: 'Your school calendar',
+    description: 'Term dates and platform billing are set. Staff and parents see the calendar automatically.',
     href: '/school/academic/calendar',
     cta: 'View calendar',
     urgency: 'normal',

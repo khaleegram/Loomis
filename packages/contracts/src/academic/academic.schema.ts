@@ -36,6 +36,27 @@ export const createAcademicYearRequest = z
   });
 export type CreateAcademicYearRequest = z.infer<typeof createAcademicYearRequest>;
 
+/**
+ * One-step school year setup (US-ASM-001/002). Creates an active year, all terms with
+ * smart dates, and opens the current term — no separate activate/open ceremony.
+ */
+export const setupSchoolYearRequest = z
+  .object({
+    label: z
+      .string()
+      .min(4)
+      .max(50)
+      .regex(/^\S.*\S$/, 'Label cannot have leading/trailing whitespace'),
+    startDate: calendarDate,
+    endDate: calendarDate,
+    termCount: z.number().int().min(1).max(6).default(3),
+  })
+  .refine((v) => v.endDate > v.startDate, {
+    message: 'endDate must be after startDate',
+    path: ['endDate'],
+  });
+export type SetupSchoolYearRequest = z.infer<typeof setupSchoolYearRequest>;
+
 export const academicYearResponse = z.object({
   id: z.string().uuid(),
   tenantId: z.string().uuid(),
@@ -152,6 +173,13 @@ export const academicTermListResponse = z.object({
   terms: z.array(academicTermResponse),
 });
 export type AcademicTermListResponse = z.infer<typeof academicTermListResponse>;
+
+export const setupSchoolYearResponse = z.object({
+  academicYear: academicYearResponse,
+  terms: z.array(academicTermResponse),
+  openTermId: z.string().uuid(),
+});
+export type SetupSchoolYearResponse = z.infer<typeof setupSchoolYearResponse>;
 
 // ── Platform Billing (Revenue Integrity) ─────────────────────────────────────────
 

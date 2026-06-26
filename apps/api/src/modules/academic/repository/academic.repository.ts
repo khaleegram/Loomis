@@ -54,6 +54,54 @@ export const academicRepository = {
     });
   },
 
+  /**
+   * Creates an active academic year with fully configured term rows in one transaction.
+   * Terms are inserted with dates; opening the live term is done by the service layer.
+   */
+  async createActiveYearWithConfiguredTerms(
+    tenantId: string,
+    input: CreateAcademicYearInput,
+    termConfigs: ConfigureTermInput[],
+    actorUserId: string,
+  ) {
+    return withTenantContext(tenantId, async (tx) => {
+      const now = new Date();
+      const [year] = await tx
+        .insert(academicYears)
+        .values({
+          tenantId,
+          label: input.label,
+          startDate: input.startDate,
+          endDate: input.endDate,
+          termCount: input.termCount,
+          status: 'active',
+          activatedAt: now,
+          activatedById: actorUserId,
+          createdById: actorUserId,
+        })
+        .returning();
+      if (!year) throw new Error('Failed to create academic year');
+
+      const termRows = termConfigs.map((config, index) => ({
+        tenantId,
+        academicYearId: year.id,
+        name: config.name,
+        sequence: index + 1,
+        startDate: config.startDate,
+        endDate: config.endDate,
+        enrollmentWindowOpenDate: config.enrollmentWindowOpenDate,
+        enrollmentWindowCloseDate: config.enrollmentWindowCloseDate,
+        censusSnapshotDate: config.censusSnapshotDate,
+        examStartDate: config.examStartDate ?? null,
+        examEndDate: config.examEndDate ?? null,
+        createdById: actorUserId,
+      }));
+
+      const terms = await tx.insert(academicTerms).values(termRows).returning();
+      return { year, terms };
+    });
+  },
+
   async findYearById(tenantId: string, yearId: string) {
     return withTenantContext(tenantId, async (tx) => {
       const [year] = await tx

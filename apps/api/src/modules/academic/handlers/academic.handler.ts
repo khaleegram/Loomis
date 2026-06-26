@@ -16,6 +16,7 @@ import type {
   RequestGradeCorrectionRequest,
   SnapshotNowRequest,
   StagePromotionRequest,
+  SetupSchoolYearRequest,
   UpsertProgressionRequest,
   UpsertGradebookEntryRequest,
 } from '@loomis/contracts';
@@ -66,6 +67,42 @@ export async function createAcademicYearHandler(
 ): Promise<FastifyReply> {
   const year = await academicYearService.createYear(req.params.tenantId, req.body, requireActor(req));
   return sendSuccess(reply, academicYearToResponse(year), 201);
+}
+
+export async function setupSchoolYearHandler(
+  req: FastifyRequest<{ Params: TenantParams; Body: SetupSchoolYearRequest }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const result = await academicYearService.setupSchoolYear(
+    req.params.tenantId,
+    req.body,
+    requireActor(req),
+  );
+  return sendSuccess(
+    reply,
+    {
+      academicYear: academicYearToResponse(result.academicYear),
+      terms: result.terms.map(academicTermToResponse),
+      openTermId: result.openTermId,
+    },
+    201,
+  );
+}
+
+export async function finalizeSchoolYearHandler(
+  req: FastifyRequest<{ Params: YearParams }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const result = await academicYearService.finalizeDraftYear(
+    req.params.tenantId,
+    req.params.yearId,
+    requireActor(req),
+  );
+  return sendSuccess(reply, {
+    academicYear: academicYearToResponse(result.academicYear),
+    terms: result.terms.map(academicTermToResponse),
+    openTermId: result.openTermId,
+  });
 }
 
 export async function listAcademicYearsHandler(

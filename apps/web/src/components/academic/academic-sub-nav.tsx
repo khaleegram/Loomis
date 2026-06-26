@@ -37,7 +37,7 @@ const ACADEMIC_LINKS: {
     ],
   },
   {
-    label: 'Sessions',
+    label: 'School year',
     href: '/school/academic/sessions',
     icon: Settings2,
     capabilities: ['academic_year.manage', 'term.manage', 'census.lock'],

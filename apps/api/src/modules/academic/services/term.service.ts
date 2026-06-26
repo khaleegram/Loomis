@@ -5,10 +5,44 @@ import type { ActorContext, CloseTermInput, ConfigureTermInput } from '../types.
 import { requireTenant, requireTerm } from './_shared.js';
 import { gradebookService } from './gradebook.service.js';
 import { termClosureGate } from './term-closure-gate.js';
+import { todayCalDate } from './term-schedule.utils.js';
+
+async function maybeAutoOpenCurrentTerm(
+  tenantId: string,
+  yearId: string,
+  actor: ActorContext,
+): Promise<void> {
+  const terms = await academicRepository.listTermsByYear(tenantId, yearId);
+  if (terms.length === 0) return;
+
+  const today = todayCalDate();
+  const hasLive = terms.some((t) => t.status === 'open' || t.status === 'census_locked');
+  if (hasLive) return;
+
+  const sorted = [...terms].sort((a, b) => a.sequence - b.sequence);
+
+  for (const term of sorted) {
+    if (term.status !== 'draft') continue;
+    if (!term.startDate || !term.endDate || !term.censusSnapshotDate) continue;
+    if (today < term.startDate) continue;
+
+    if (term.sequence > 1) {
+      const previous = sorted.find((t) => t.sequence === term.sequence - 1);
+      if (previous && previous.status !== 'closed') continue;
+    }
+
+    await termService.openTerm(tenantId, term.id, actor);
+    return;
+  }
+}
 
 export const termService = {
   async listTerms(tenantId: string, yearId: string, actor: ActorContext) {
     requireTenant(actor, tenantId);
+    const year = await academicRepository.findYearById(tenantId, yearId);
+    if (year?.status === 'active') {
+      await maybeAutoOpenCurrentTerm(tenantId, yearId, actor);
+    }
     return academicRepository.listTermsByYear(tenantId, yearId);
   },
 

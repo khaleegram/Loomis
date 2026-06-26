@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { createAcademicYearRequest, type CreateAcademicYearRequest } from '@loomis/contracts';
+import { createAcademicYearRequest, setupSchoolYearRequest, type CreateAcademicYearRequest, type SetupSchoolYearRequest } from '@loomis/contracts';
 import { authenticate } from '../../../middleware/authenticate.js';
 import { requireRole } from '../../../middleware/require-role.js';
 import { requireTenantMatch } from '../../../middleware/require-tenant-match.js';
@@ -8,8 +8,10 @@ import {
   activateAcademicYearHandler,
   closeAcademicYearHandler,
   createAcademicYearHandler,
+  finalizeSchoolYearHandler,
   getAcademicYearHandler,
   listAcademicYearsHandler,
+  setupSchoolYearHandler,
 } from '../handlers/index.js';
 
 const yearAdmins = ['school_owner', 'principal'] as const;
@@ -39,6 +41,15 @@ export async function academicYearsRoutes(app: FastifyInstance): Promise<void> {
     createAcademicYearHandler,
   );
 
+  app.post<{ Params: { tenantId: string }; Body: SetupSchoolYearRequest }>(
+    '/tenants/:tenantId/academic-years/setup',
+    {
+      preHandler: [authenticate, requireTenantMatch, requireRole(...yearAdmins)],
+      preValidation: [validateBody(setupSchoolYearRequest)],
+    },
+    setupSchoolYearHandler,
+  );
+
   app.get<{ Params: { tenantId: string } }>(
     '/tenants/:tenantId/academic-years',
     { preHandler: [authenticate, requireTenantMatch, requireRole(...yearReaders)] },
@@ -56,6 +67,12 @@ export async function academicYearsRoutes(app: FastifyInstance): Promise<void> {
     '/tenants/:tenantId/academic-years/:yearId/activate',
     { preHandler: [authenticate, requireTenantMatch, requireRole(...yearAdmins)] },
     activateAcademicYearHandler,
+  );
+
+  app.post<{ Params: { tenantId: string; yearId: string } }>(
+    '/tenants/:tenantId/academic-years/:yearId/finalize',
+    { preHandler: [authenticate, requireTenantMatch, requireRole(...yearAdmins)] },
+    finalizeSchoolYearHandler,
   );
 
   app.post<{ Params: { tenantId: string; yearId: string } }>(

@@ -81,9 +81,9 @@ export default function AcademicHubPage() {
       )}
 
       <AcademicSectionHeader
-        label="Workflow modules"
+        label="School modules"
         title="Everything in one place"
-        description="Jump into sessions, census, calendar, promotions, or graduation — each tile reflects live status from your active year."
+        description="School year, calendar, promotions, graduation, and class structure — each tile shows live status."
       />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
