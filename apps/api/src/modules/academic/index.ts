@@ -19,7 +19,15 @@ import { startEnrollmentSnapshotJob } from './jobs/enrollment-snapshot.job.js';
  */
 export async function academicModule(app: FastifyInstance): Promise<void> {
   registerAcademicEventConsumers();
-  await startEnrollmentSnapshotJob();
+  // Fire-and-forget: the daily snapshot scheduler must never block (or time out)
+  // route registration if Redis is slow/unreachable. Routes stay available; the
+  // job simply retries scheduling in the background.
+  void startEnrollmentSnapshotJob().catch((err) => {
+    app.log.error(
+      { err: err instanceof Error ? err.message : String(err) },
+      'academic.enrollment_snapshot.schedule_failed',
+    );
+  });
   await app.register(academicYearsRoutes);
   await app.register(termsRoutes);
   await app.register(billingRoutes);

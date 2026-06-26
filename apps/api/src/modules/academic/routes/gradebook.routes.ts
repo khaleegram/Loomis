@@ -129,7 +129,7 @@ export async function gradebookRoutes(app: FastifyInstance): Promise<void> {
       preHandler: [
         authenticate,
         requireTenantMatch,
-        requireRole('exam_officer', 'deputy_exam_officer', 'principal'),
+        requireRole('exam_officer', 'deputy_exam_officer', 'principal', 'school_owner'),
         requireStepUpForPrincipal('result_publish'),
         requireIdempotencyKey,
       ],

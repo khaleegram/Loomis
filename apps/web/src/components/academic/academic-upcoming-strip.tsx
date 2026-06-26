@@ -15,6 +15,7 @@ const CATEGORY_DOT: Record<CalendarEvent['category'], string> = {
   enrollment: 'bg-accent-teal-500',
   census: 'bg-gold-500',
   exam: 'bg-accent-purple-500',
+  custom: 'bg-rose-500',
 };
 
 interface AcademicUpcomingStripProps {

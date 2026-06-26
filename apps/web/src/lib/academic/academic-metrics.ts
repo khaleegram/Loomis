@@ -1,4 +1,9 @@
-import type { AcademicTermResponse, AcademicYearResponse, PromotionRecordResponse } from '@loomis/contracts';
+import type {
+  AcademicTermResponse,
+  AcademicYearResponse,
+  CalendarEventResponse,
+  PromotionRecordResponse,
+} from '@loomis/contracts';
 
 import { pickActiveYear, pickOpenTerm } from '@/lib/academic/academic-session-utils';
 import {
@@ -49,8 +54,29 @@ export interface CalendarEvent {
   id: string;
   label: string;
   date: string;
-  category: 'term' | 'enrollment' | 'census' | 'exam';
+  category: 'term' | 'enrollment' | 'census' | 'exam' | 'custom';
   description?: string;
+  /** Set for school-added events so the UI can offer a delete action. */
+  eventDbId?: string;
+}
+
+/**
+ * Maps school-added calendar events into the timeline `CalendarEvent` shape.
+ * Multi-day events note their range in the description; the start date drives
+ * placement on the timeline.
+ */
+export function mapCustomCalendarEvents(events: CalendarEventResponse[]): CalendarEvent[] {
+  return events.map((event) => ({
+    id: `custom-${event.id}`,
+    eventDbId: event.id,
+    label: event.title,
+    date: event.startDate,
+    category: 'custom' as const,
+    description:
+      event.endDate && event.endDate !== event.startDate
+        ? `${event.description ? `${event.description} ` : ''}(until ${event.endDate})`.trim()
+        : event.description ?? undefined,
+  }));
 }
 
 export function buildTermCalendarEvents(

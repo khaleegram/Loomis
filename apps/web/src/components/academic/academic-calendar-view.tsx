@@ -8,7 +8,7 @@ import { daysUntil } from '@/lib/academic/academic-lifecycle-utils';
 import { formatCalendarDate } from '@/lib/academic/term-labels';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { cn } from '@loomis/ui-web';
-import { CalendarDays } from 'lucide-react';
+import { CalendarDays, Trash2 } from 'lucide-react';
 
 const CATEGORY_STYLES: Record<
   CalendarEvent['category'],
@@ -38,12 +38,21 @@ const CATEGORY_STYLES: Record<
     label: 'Exams',
     bar: 'from-accent-purple-400 to-accent-purple-600',
   },
+  custom: {
+    dot: 'bg-rose-500',
+    badge: 'bg-rose-50 text-rose-700 border-rose-100',
+    label: 'School',
+    bar: 'from-rose-400 to-rose-600',
+  },
 };
 
 interface AcademicCalendarViewProps {
   events: CalendarEvent[];
   termName?: string;
   emptyMessage?: string;
+  /** When provided, school-added events show a delete button wired to this. */
+  onDeleteEvent?: (eventDbId: string) => void;
+  deletingEventId?: string | null;
 }
 
 /** Horizontal milestone strip + vertical timeline. */
@@ -51,6 +60,8 @@ export function AcademicCalendarView({
   events,
   termName,
   emptyMessage = 'Configure term dates in Sessions to populate the calendar.',
+  onDeleteEvent,
+  deletingEventId,
 }: AcademicCalendarViewProps) {
   if (events.length === 0) {
     return (
@@ -177,14 +188,27 @@ export function AcademicCalendarView({
                   </div>
                   <p className="mt-0.5 text-[13px] text-neutral-500">{formatCalendarDate(event.date)}</p>
                 </div>
-                <span
-                  className={cn(
-                    'rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
-                    styles.badge,
-                  )}
-                >
-                  {styles.label}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className={cn(
+                      'rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+                      styles.badge,
+                    )}
+                  >
+                    {styles.label}
+                  </span>
+                  {onDeleteEvent && event.eventDbId ? (
+                    <button
+                      type="button"
+                      onClick={() => onDeleteEvent(event.eventDbId as string)}
+                      disabled={deletingEventId === event.eventDbId}
+                      aria-label={`Delete ${event.label}`}
+                      className="rounded-lg p-1 text-neutral-300 transition hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
+                    >
+                      <Trash2 aria-hidden className="size-3.5" />
+                    </button>
+                  ) : null}
+                </div>
               </div>
               {event.description ? (
                 <p className="mt-2 text-[12px] text-neutral-400">{event.description}</p>

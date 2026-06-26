@@ -3,15 +3,13 @@
 import { useMemo, useState } from 'react';
 import { useAcademicTerms, useAcademicYears } from '@loomis/api-client';
 import type { AcademicTermResponse } from '@loomis/contracts';
-import { CalendarRange, Plus } from 'lucide-react';
-import { Skeleton } from '@loomis/ui-web';
+import Link from 'next/link';
+import { CalendarRange, Plus, Sparkles } from 'lucide-react';
+import { Skeleton, cn } from '@loomis/ui-web';
 
 import { AcademicEmptyState } from '@/components/academic/academic-empty-state';
 import { CloseTermDialog } from '@/components/academic/close-term-dialog';
-import {
-  FinalizeSchoolYearButton,
-  SetupSchoolYearSheet,
-} from '@/components/academic/setup-school-year-sheet';
+import { SetupSchoolYearSheet } from '@/components/academic/setup-school-year-sheet';
 import { SchoolYearTermsGrid } from '@/components/academic/school-year-terms-grid';
 import { YearStatusBadge } from '@/components/academic/term-status-badge';
 import { useCan, useCanAny } from '@/lib/auth/use-capability';
@@ -70,10 +68,10 @@ export default function SchoolYearPage() {
           </p>
         </div>
         {canManageYear && !activeYear && !draftYear ? (
-          <button type="button" onClick={() => setSetupOpen(true)} className={ACADEMIC_UI.btnPrimary}>
+          <Link href="/school/academic/setup" className={ACADEMIC_UI.btnPrimary}>
             <Plus aria-hidden className="size-4" />
-            Start school year
-          </button>
+            Setup guide
+          </Link>
         ) : null}
       </header>
 
@@ -89,12 +87,12 @@ export default function SchoolYearPage() {
         <AcademicEmptyState
           icon={CalendarRange}
           title="No school year yet"
-          description="Most schools need less than a minute — name your year, pick the start and end dates, and you are ready for admissions and fees."
+          description="Use the setup guide to name your year, create terms, and open the current one — all in one flow."
           action={
             canManageYear ? (
-              <button type="button" onClick={() => setSetupOpen(true)} className={ACADEMIC_UI.btnPrimary}>
-                Start school year
-              </button>
+              <Link href="/school/academic/setup" className={ACADEMIC_UI.btnPrimary}>
+                Open setup guide
+              </Link>
             ) : undefined
           }
         />
@@ -102,15 +100,23 @@ export default function SchoolYearPage() {
 
       {!isLoading && draftYear && !activeYear ? (
         <div className={`rounded-2xl border p-6 ${SEMANTIC.warning.surfaceSubtle}`}>
-          <p className="text-[14px] font-bold text-neutral-900">{draftYear.label} is almost ready</p>
-          <p className="mt-1 text-[13px] text-neutral-600">
-            One tap will create your terms and open the current one — no separate activate or open steps.
-          </p>
-          {canManageYear ? (
-            <div className="mt-4">
-              <FinalizeSchoolYearButton tenantId={tenantId} yearId={draftYear.id} yearLabel={draftYear.label} />
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-[14px] font-bold text-neutral-900">{draftYear.label} needs its terms</p>
+              <p className="mt-1 text-[13px] text-neutral-600">
+                Open the setup guide and tap one button to create terms and go live.
+              </p>
             </div>
-          ) : null}
+            {canManageYear ? (
+              <Link
+                href="/school/academic/setup"
+                className={cn(ACADEMIC_UI.btnPrimary, 'shrink-0 justify-center')}
+              >
+                <Sparkles aria-hidden className="size-4" />
+                Finish in setup guide
+              </Link>
+            ) : null}
+          </div>
         </div>
       ) : null}
 

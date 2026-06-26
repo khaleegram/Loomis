@@ -46,13 +46,13 @@ export default function AcademicStructurePage() {
             <Sparkles aria-hidden className="size-4" />
           </span>
           <div>
-            <p className="text-[13px] font-bold text-neutral-900">New here? Use guided setup</p>
+            <p className="text-[13px] font-bold text-neutral-900">Academic setup guide</p>
             <p className="text-[12px] text-neutral-500">
-              Answer a few questions and we&apos;ll build your classes and arms for you.
+              Whole year flow: terms, classes, arms, and calendar — start or resume here.
             </p>
           </div>
         </div>
-        <span className="text-[12px] font-semibold text-brand-700">Start</span>
+        <span className="text-[12px] font-semibold text-brand-700">Open</span>
       </Link>
 
       <ClassStructureManager tenantId={tenantId} />

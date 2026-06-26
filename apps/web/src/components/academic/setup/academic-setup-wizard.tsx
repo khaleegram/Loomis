@@ -1,15 +1,16 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
+  useAcademicTerms,
   useAcademicYears,
   useClassLevels,
   useClassStructure,
   useSetupClassArms,
   useSetupClassLevels,
 } from '@loomis/api-client';
-import { cn } from '@loomis/ui-web';
+import { cn, Skeleton } from '@loomis/ui-web';
 import {
   ArrowLeft,
   ArrowRight,
@@ -24,7 +25,15 @@ import { ArmLetterDialog } from '@/components/academic/setup/arm-letter-dialog';
 import { SetupCalendarStep } from '@/components/academic/setup/setup-calendar-step';
 import { SetupSchoolYearStep } from '@/components/academic/setup/setup-school-year-step';
 import { academicErrorMessage } from '@/lib/academic/academic-errors';
-import { pickActiveYear } from '@/lib/academic/academic-session-utils';
+import { pickOpenTerm } from '@/lib/academic/academic-session-utils';
+import {
+  pickDraftYear,
+  pickStrictActiveYear,
+  pickWorkingYear,
+  resolveInitialSetupStep,
+  resolveSchoolYearStepMode,
+  type AcademicSetupWizardStep,
+} from '@/lib/academic/academic-setup-utils';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import {
   ARM_LETTERS,
@@ -35,7 +44,7 @@ import {
 } from '@/lib/academic/default-class-ladder';
 import { SEMANTIC } from '@/lib/design/surfaces';
 
-type Step = 'school-year' | 'levels' | 'arms-question' | 'arms-picker' | 'calendar' | 'done';
+type Step = AcademicSetupWizardStep;
 
 interface AcademicSetupWizardProps {
   tenantId: string;
@@ -46,22 +55,42 @@ export function AcademicSetupWizard({ tenantId }: AcademicSetupWizardProps) {
 
   const yearsQuery = useAcademicYears(tenantId);
   const years = yearsQuery.data?.academicYears ?? [];
-  const activeYear = useMemo(
-    () => pickActiveYear(years) ?? years.find((y) => y.status === 'draft') ?? years[0] ?? null,
-    [years],
-  );
+  const activeYear = useMemo(() => pickStrictActiveYear(years), [years]);
+  const draftYear = useMemo(() => pickDraftYear(years), [years]);
+  const workingYear = useMemo(() => pickWorkingYear(years), [years]);
+
+  const termsQuery = useAcademicTerms(tenantId, workingYear?.id ?? '');
+  const terms = termsQuery.data?.terms ?? [];
+  const openTerm = useMemo(() => pickOpenTerm(terms), [terms]);
 
   const levelsQuery = useClassLevels(tenantId);
   const existingLevels = levelsQuery.data?.levels ?? [];
 
   const setupLevels = useSetupClassLevels(tenantId);
 
-  const needsSchoolYear = !activeYear && years.length === 0;
+  const schoolYearMode = resolveSchoolYearStepMode(activeYear, draftYear, terms);
+  const setupDataReady =
+    !yearsQuery.isLoading &&
+    !levelsQuery.isLoading &&
+    (!workingYear || !termsQuery.isLoading);
+  const resolvedInitialStep = resolveInitialSetupStep({
+    years,
+    terms,
+    classLevelCount: existingLevels.length,
+  });
 
   // Step state ----------------------------------------------------------------
-  const [step, setStep] = useState<Step>(() => (needsSchoolYear ? 'school-year' : 'levels'));
+  const [step, setStep] = useState<Step>('school-year');
+  const [stepBootstrapped, setStepBootstrapped] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [setupYearId, setSetupYearId] = useState<string | null>(activeYear?.id ?? null);
+  const [setupYearId, setSetupYearId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!setupDataReady || stepBootstrapped) return;
+    setStep(resolvedInitialStep);
+    setSetupYearId(workingYear?.id ?? null);
+    setStepBootstrapped(true);
+  }, [setupDataReady, stepBootstrapped, resolvedInitialStep, workingYear?.id]);
 
   // Pre-select: matching existing ladder codes if a school already started, else all.
   const [selectedCodes, setSelectedCodes] = useState<Set<string>>(() => {
@@ -69,7 +98,7 @@ export function AcademicSetupWizard({ tenantId }: AcademicSetupWizardProps) {
     const matched = DEFAULT_CLASS_LADDER.filter((l) => existingCodes.has(l.code)).map((l) => l.code);
     return matched.length > 0
       ? new Set(matched)
-      : new Set(DEFAULT_CLASS_LADDER.map((l) => l.code));
+      : new Set(DEFAULT_CLASS_LADDER.filter((l) => !l.defaultOff).map((l) => l.code));
   });
 
   const orderedSelected = useMemo(
@@ -114,8 +143,28 @@ export function AcademicSetupWizard({ tenantId }: AcademicSetupWizardProps) {
     }
   }
 
+  if (!stepBootstrapped) {
+    return (
+      <div className="mx-auto w-full max-w-3xl space-y-4">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-4 w-full max-w-md" />
+        <Skeleton className="mt-6 h-48 w-full rounded-2xl" />
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto w-full max-w-3xl">
+      <div className="mb-6">
+        <p className={ACADEMIC_UI.sectionLabel}>Academic setup guide</p>
+        <h1 className="text-xl font-extrabold tracking-tight text-neutral-900 sm:text-2xl">
+          Set up your whole school year
+        </h1>
+        <p className="mt-1 text-[14px] text-neutral-500">
+          School year and terms, then classes, arms, and calendar — about five minutes.
+        </p>
+      </div>
+
       <WizardProgress step={step} />
 
       <div className="mt-6">
@@ -126,6 +175,10 @@ export function AcademicSetupWizard({ tenantId }: AcademicSetupWizardProps) {
         {step === 'school-year' ? (
           <SetupSchoolYearStep
             tenantId={tenantId}
+            mode={schoolYearMode}
+            draftYear={draftYear}
+            activeYear={activeYear}
+            openTermName={openTerm?.name ?? null}
             onComplete={(yearId) => {
               setSetupYearId(yearId);
               setStep('levels');
@@ -157,8 +210,8 @@ export function AcademicSetupWizard({ tenantId }: AcademicSetupWizardProps) {
         {step === 'arms-picker' ? (
           <ArmsPickerStep
             tenantId={tenantId}
-            academicYearId={setupYearId ?? activeYear?.id ?? null}
-            yearLabel={activeYear?.label ?? null}
+            academicYearId={setupYearId ?? workingYear?.id ?? null}
+            yearLabel={workingYear?.label ?? null}
             onBack={() => setStep('arms-question')}
             onDone={() => setStep('calendar')}
           />
@@ -699,22 +752,22 @@ function DoneStep({ levelCount, onFinish }: { levelCount: number; onFinish: () =
       </div>
       <div>
         <h2 className="text-2xl font-extrabold tracking-tight text-neutral-900">
-          Your classes are set
+          Your school is set up
         </h2>
-          <p className="mx-auto mt-1.5 max-w-md text-[14px] leading-relaxed text-neutral-500">
-            {levelCount > 0
-              ? `${levelCount} class${levelCount > 1 ? 'es' : ''} ready. Set up results next, then admit students.`
-              : 'Set up results next, then admit students.'}
-          </p>
-        </div>
-        <div className="flex flex-wrap justify-center gap-2">
-          <button type="button" onClick={() => router.push('/school/academic/setup/results')} className={cn(ACADEMIC_UI.btnPrimary, 'justify-center')}>
-            Set up results
-          </button>
-          <button type="button" onClick={onFinish} className={cn(ACADEMIC_UI.btnSecondary, 'justify-center')}>
-            Go to Academic
-          </button>
-        </div>
+        <p className="mx-auto mt-1.5 max-w-md text-[14px] leading-relaxed text-neutral-500">
+          {levelCount > 0
+            ? `${levelCount} class${levelCount > 1 ? 'es' : ''} ready. Admit students, then publish results when the term ends - parents see them immediately.`
+            : 'Admit students, then publish results when the term ends - parents see them immediately.'}
+        </p>
+      </div>
+      <div className="flex flex-wrap justify-center gap-2">
+        <button type="button" onClick={() => router.push('/school/students/admissions')} className={cn(ACADEMIC_UI.btnPrimary, 'justify-center')}>
+          Admit students
+        </button>
+        <button type="button" onClick={onFinish} className={cn(ACADEMIC_UI.btnSecondary, 'justify-center')}>
+          Go to Academic
+        </button>
+      </div>
     </div>
   );
 }

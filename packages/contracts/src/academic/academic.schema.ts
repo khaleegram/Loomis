@@ -429,6 +429,57 @@ export type UpsertAcademicSetupPreferencesRequest = z.infer<
   typeof upsertAcademicSetupPreferencesRequest
 >;
 
+// ── School calendar events ──────────────────────────────────────────────────────
+
+export const calendarEventType = z.enum([
+  'holiday',
+  'exam',
+  'meeting',
+  'activity',
+  'resumption',
+  'other',
+]);
+export type CalendarEventType = z.infer<typeof calendarEventType>;
+
+export const calendarEventResponse = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
+  academicYearId: z.string().uuid(),
+  termId: z.string().uuid().nullable(),
+  title: z.string(),
+  description: z.string().nullable(),
+  eventType: calendarEventType,
+  startDate: z.string(),
+  endDate: z.string().nullable(),
+  createdAt: z.string().datetime(),
+});
+export type CalendarEventResponse = z.infer<typeof calendarEventResponse>;
+
+export const listCalendarEventsResponse = z.object({
+  events: z.array(calendarEventResponse),
+});
+export type ListCalendarEventsResponse = z.infer<typeof listCalendarEventsResponse>;
+
+const isoDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use a YYYY-MM-DD date');
+
+export const createCalendarEventRequest = z
+  .object({
+    academicYearId: z.string().uuid(),
+    termId: z.string().uuid().nullable().default(null),
+    title: z.string().min(1).max(200),
+    description: z.string().max(1000).nullable().default(null),
+    eventType: calendarEventType.default('other'),
+    startDate: isoDate,
+    endDate: isoDate.nullable().default(null),
+  })
+  .refine((v) => v.endDate === null || v.endDate >= v.startDate, {
+    message: 'End date cannot be before the start date',
+    path: ['endDate'],
+  });
+export type CreateCalendarEventRequest = z.infer<typeof createCalendarEventRequest>;
+
 // ── Promotion & Graduation (FR-ASM-007/008) ──────────────────────────────────────
 
 export const promotionOutcome = z.enum(['promoted', 'held_back', 'graduated']);

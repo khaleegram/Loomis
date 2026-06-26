@@ -4,30 +4,28 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
 import { AcademicSetupWizard } from '@/components/academic/setup/academic-setup-wizard';
-import { useCan } from '@/lib/auth/use-capability';
+import { useCanAny } from '@/lib/auth/use-capability';
 import { SEMANTIC } from '@/lib/design/surfaces';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 
 export default function AcademicSetupPage() {
   const tenantId = useTenantId();
-  const canManage = useCan('class_structure.manage');
+  const canSetup = useCanAny(['academic_year.manage', 'class_structure.manage']);
 
   if (!tenantId) {
     return (
-      <div className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-2xl px-4 py-10">
         <div className={`rounded-xl border p-4 text-sm ${SEMANTIC.danger.surface}`}>
-          No tenant context. Sign in again.
+          No tenant context.
         </div>
       </div>
     );
   }
 
-  if (!canManage) {
+  if (!canSetup) {
     return (
-      <div className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
-        <p className="text-sm text-neutral-500">
-          You do not have permission to set up classes.
-        </p>
+      <div className="mx-auto max-w-2xl px-4 py-10">
+        <p className="text-sm text-neutral-500">You do not have permission to run academic setup.</p>
       </div>
     );
   }

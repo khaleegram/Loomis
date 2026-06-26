@@ -129,6 +129,8 @@ export const queryKeys = {
     classLevels: (tenantId: string) => ['academic', tenantId, 'class-levels'] as const,
     classStructure: (tenantId: string, yearId: string) =>
       ['academic', tenantId, 'years', yearId, 'class-structure'] as const,
+    calendarEvents: (tenantId: string, yearId: string) =>
+      ['academic', tenantId, 'years', yearId, 'calendar-events'] as const,
     gradingSchemes: (tenantId: string) =>
       ['academic', tenantId, 'grading-schemes'] as const,
     examConfigs: (tenantId: string, termId: string) =>

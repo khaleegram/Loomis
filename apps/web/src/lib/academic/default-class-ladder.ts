@@ -17,6 +17,11 @@ export interface LadderLevel {
   /** Short label used on chips. */
   short: string;
   stage: LadderStage;
+  /**
+   * Less common levels (e.g. Pre-Nursery, Nursery 3) that are offered as options
+   * but left unchecked in the smart default. Schools opt in if they run them.
+   */
+  defaultOff?: boolean;
 }
 
 export const LADDER_STAGES: { id: LadderStage; label: string; question: string }[] = [
@@ -28,8 +33,10 @@ export const LADDER_STAGES: { id: LadderStage; label: string; question: string }
 
 /** Full default ladder in progression order (rank is assigned from this order). */
 export const DEFAULT_CLASS_LADDER: LadderLevel[] = [
+  { code: 'PRENUR', name: 'Pre-Nursery', short: 'Pre-Nursery', stage: 'nursery', defaultOff: true },
   { code: 'NUR1', name: 'Nursery 1', short: 'Nursery 1', stage: 'nursery' },
   { code: 'NUR2', name: 'Nursery 2', short: 'Nursery 2', stage: 'nursery' },
+  { code: 'NUR3', name: 'Nursery 3', short: 'Nursery 3', stage: 'nursery', defaultOff: true },
   { code: 'PRY1', name: 'Primary 1', short: 'Primary 1', stage: 'primary' },
   { code: 'PRY2', name: 'Primary 2', short: 'Primary 2', stage: 'primary' },
   { code: 'PRY3', name: 'Primary 3', short: 'Primary 3', stage: 'primary' },

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo } from 'react';
-import { useAcademicTerms, useAcademicYears, usePromotions } from '@loomis/api-client';
+import { useAcademicTerms, useAcademicYears, useClassLevels, usePromotions } from '@loomis/api-client';
 import type { LucideIcon } from 'lucide-react';
 import {
   ArrowRight,
@@ -10,13 +10,18 @@ import {
   GraduationCap,
   Layers,
   Settings2,
+  Sparkles,
   Users,
-  ClipboardList,
 } from 'lucide-react';
 import { Skeleton, cn } from '@loomis/ui-web';
 
 import { useCan, useCanAny } from '@/lib/auth/use-capability';
-import { computeAcademicMetrics, pickActiveYear, pickOpenTerm } from '@/lib/academic/academic-metrics';
+import { computeAcademicMetrics, pickOpenTerm } from '@/lib/academic/academic-metrics';
+import {
+  isAcademicSetupIncomplete,
+  pickDraftYear,
+  pickStrictActiveYear,
+} from '@/lib/academic/academic-setup-utils';
 import { ACADEMIC_PAGE_TITLE_STYLE, ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { useTenantId } from '@/lib/tenant/use-tenant-id';
 
@@ -41,15 +46,19 @@ export default function AcademicHubPage() {
   ]);
   const canManageYear = useCanAny(['academic_year.manage', 'term.manage']);
   const canStructure = useCan('class_structure.manage');
-  const canConfigureResults = useCan('grading_scheme.configure');
+  const canSetupGuide = useCanAny(['academic_year.manage', 'class_structure.manage']);
   const canPromote = useCan('student.promote');
   const canGraduate = useCan('student.graduate');
 
   const yearsQuery = useAcademicYears(tenantId ?? '');
   const years = yearsQuery.data?.academicYears ?? [];
-  const activeYear = useMemo(() => pickActiveYear(years), [years]);
+  const activeYear = useMemo(() => pickStrictActiveYear(years), [years]);
+  const draftYear = useMemo(() => pickDraftYear(years), [years]);
 
-  const termsQuery = useAcademicTerms(tenantId ?? '', activeYear?.id ?? '');
+  const levelsQuery = useClassLevels(tenantId ?? '');
+  const classLevelCount = levelsQuery.data?.levels.length ?? 0;
+
+  const termsQuery = useAcademicTerms(tenantId ?? '', activeYear?.id ?? draftYear?.id ?? '');
   const terms = termsQuery.data?.terms ?? [];
   const focusTerm = useMemo(() => pickOpenTerm(terms), [terms]);
 
@@ -61,8 +70,12 @@ export default function AcademicHubPage() {
     [years, terms, promotions],
   );
 
-  const isLoading = yearsQuery.isLoading || termsQuery.isLoading;
-  const hasYear = Boolean(activeYear);
+  const isLoading = yearsQuery.isLoading || termsQuery.isLoading || levelsQuery.isLoading;
+  const setupIncomplete = isAcademicSetupIncomplete({
+    years,
+    terms,
+    classLevelCount,
+  });
 
   if (!tenantId) {
     return <p className="text-sm font-medium text-red-600">No tenant context. Sign in again.</p>;
@@ -76,9 +89,17 @@ export default function AcademicHubPage() {
 
   const cards: ActionCard[] = [
     {
+      id: 'setup-guide',
+      title: 'Setup guide',
+      description: 'Whole year in one flow: terms, classes, arms, and calendar.',
+      href: '/school/academic/setup',
+      icon: Sparkles,
+      show: canSetupGuide,
+    },
+    {
       id: 'sessions',
       title: 'School year',
-      description: 'Your year, terms and billing dates — set once, runs itself.',
+      description: 'View terms, billing dates, and end-of-term actions.',
       href: '/school/academic/sessions',
       icon: Settings2,
       show: canManageYear,
@@ -94,18 +115,10 @@ export default function AcademicHubPage() {
     {
       id: 'structure',
       title: 'Classes',
-      description: 'Set up your classes and arms — a few quick questions.',
-      href: '/school/academic/setup',
+      description: 'Edit class levels, arms, and progression after setup.',
+      href: '/school/academic/structure',
       icon: Layers,
       show: canStructure,
-    },
-    {
-      id: 'results-setup',
-      title: 'Result setup',
-      description: 'CA + Exam scoring, grades, and position — answer 3 questions.',
-      href: '/school/academic/setup/results',
-      icon: ClipboardList,
-      show: canConfigureResults,
     },
     {
       id: 'promotions',
@@ -136,13 +149,33 @@ export default function AcademicHubPage() {
           Academic
         </h1>
         <p className={ACADEMIC_UI.pageDesc}>
-          Your school year and class setup in one place.
+          Setup guide for your whole school year, then day-to-day tools here.
         </p>
       </header>
 
       {isLoading ? (
         <Skeleton className="h-28 w-full rounded-2xl" />
-      ) : hasYear ? (
+      ) : setupIncomplete && canSetupGuide ? (
+        <div className="card flex flex-col items-start gap-3 rounded-2xl border border-brand-200/60 bg-brand-50/40 p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-[15px] font-bold text-neutral-900">Finish academic setup</p>
+            <p className="mt-1 max-w-md text-[13px] text-neutral-500">
+              {draftYear && !activeYear
+                ? `${draftYear.label} needs its terms — then classes and calendar.`
+                : !activeYear
+                  ? 'Start your school year, pick classes, and add calendar events in one guided flow.'
+                  : 'Pick your classes and finish calendar setup to go live.'}
+            </p>
+          </div>
+          <Link
+            href="/school/academic/setup"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-[#c9a96e] px-5 text-[14px] font-semibold text-neutral-900 shadow-sm transition hover:bg-[#b8956a]"
+          >
+            Open setup guide
+            <ArrowRight aria-hidden className="size-4" />
+          </Link>
+        </div>
+      ) : activeYear ? (
         <div className="card flex flex-wrap items-center justify-between gap-4 rounded-2xl p-5 sm:p-6">
           <div className="min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-neutral-400">
@@ -168,17 +201,18 @@ export default function AcademicHubPage() {
       ) : (
         <div className="card flex flex-col items-start gap-3 rounded-2xl p-6">
           <div>
-            <p className="text-[15px] font-bold text-neutral-900">No school year yet</p>
+            <p className="text-[15px] font-bold text-neutral-900">New school? Start here</p>
             <p className="mt-1 max-w-md text-[13px] text-neutral-500">
-              Set it up in under a minute. Loomis creates your terms and opens the current one — no extra steps.
+              The setup guide walks you through your school year, terms, classes, arms, and calendar
+              in one flow — about five minutes.
             </p>
           </div>
-          {canManageYear ? (
+          {canSetupGuide ? (
             <Link
-              href="/school/academic/sessions"
+              href="/school/academic/setup"
               className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-[#c9a96e] px-5 text-[14px] font-semibold text-neutral-900 shadow-sm transition hover:bg-[#b8956a]"
             >
-              Start school year
+              Open setup guide
               <ArrowRight aria-hidden className="size-4" />
             </Link>
           ) : null}

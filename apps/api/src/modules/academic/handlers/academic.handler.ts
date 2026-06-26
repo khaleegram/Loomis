@@ -4,6 +4,7 @@ import type {
   ConfigureTermRequest,
   ConfirmPromotionRequest,
   CreateAcademicYearRequest,
+  CreateCalendarEventRequest,
   CreateClassArmRequest,
   CreateClassLevelRequest,
   CreateExamConfigRequest,
@@ -28,6 +29,7 @@ import { adjustmentService } from '../../ledger/services/adjustment.service.js';
 import {
   academicSetupPreferencesService,
   academicYearService,
+  calendarEventService,
   censusService,
   classStructureService,
   gradebookService,
@@ -38,6 +40,7 @@ import { requireActor } from './_context.js';
 import {
   academicTermToResponse,
   academicYearToResponse,
+  calendarEventToResponse,
   enrollmentSnapshotToResponse,
   classArmToResponse,
   classLevelToResponse,
@@ -61,6 +64,9 @@ interface TermParams extends TenantParams {
 }
 interface EntryParams extends TenantParams {
   entryId: string;
+}
+interface EventParams extends TenantParams {
+  eventId: string;
 }
 
 // ── Academic years ───────────────────────────────────────────────────────────
@@ -353,6 +359,42 @@ export async function upsertAcademicSetupPreferencesHandler(
     requireActor(req),
   );
   return sendSuccess(reply, preferences);
+}
+
+export async function listCalendarEventsHandler(
+  req: FastifyRequest<{ Params: YearParams }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const events = await calendarEventService.listEvents(
+    req.params.tenantId,
+    req.params.yearId,
+    requireActor(req),
+  );
+  return sendSuccess(reply, { events: events.map(calendarEventToResponse) });
+}
+
+export async function createCalendarEventHandler(
+  req: FastifyRequest<{ Params: TenantParams; Body: CreateCalendarEventRequest }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const event = await calendarEventService.createEvent(
+    req.params.tenantId,
+    req.body,
+    requireActor(req),
+  );
+  return sendSuccess(reply, calendarEventToResponse(event), 201);
+}
+
+export async function deleteCalendarEventHandler(
+  req: FastifyRequest<{ Params: EventParams }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  await calendarEventService.deleteEvent(
+    req.params.tenantId,
+    req.params.eventId,
+    requireActor(req),
+  );
+  return sendSuccess(reply, { deleted: true });
 }
 
 export async function createClassArmHandler(

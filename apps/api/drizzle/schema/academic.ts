@@ -737,6 +737,52 @@ export const bellSchedules = academicSchema.table(
 );
 
 /**
+ * School calendar events. Schools add their own dated entries (holidays, PTA
+ * meetings, sports day, resumption, exams) on top of the term dates the system
+ * derives automatically. Scoped to an academic year; an optional term link lets
+ * an event show under a specific term. Multi-day events set `end_date`.
+ */
+export const calendarEvents = academicSchema.table(
+  'calendar_events',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id),
+    academicYearId: uuid('academic_year_id')
+      .notNull()
+      .references(() => academicYears.id),
+    termId: uuid('term_id').references(() => academicTerms.id),
+    title: varchar('title', { length: 200 }).notNull(),
+    description: varchar('description', { length: 1000 }),
+    eventType: varchar('event_type', { length: 30 }).notNull().default('other'),
+    startDate: date('start_date').notNull(),
+    endDate: date('end_date'),
+    createdById: uuid('created_by_id').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    tenantYearDateIdx: index('calendar_events_tenant_year_date_idx').on(
+      table.tenantId,
+      table.academicYearId,
+      table.startDate,
+    ),
+    tenantTermIdx: index('calendar_events_tenant_term_idx').on(table.tenantId, table.termId),
+    eventTypeValid: check(
+      'calendar_events_type_valid',
+      sql`${table.eventType} IN ('holiday', 'exam', 'meeting', 'activity', 'resumption', 'other')`,
+    ),
+    datesValid: check(
+      'calendar_events_dates_valid',
+      sql`${table.endDate} IS NULL OR ${table.endDate} >= ${table.startDate}`,
+    ),
+  }),
+);
+
+/**
  * Assignments (SRS §4.5 FR-ACA-003; US-ACA-007). A Teacher creates an assignment
  * for their own assigned subject/class (verified at the service layer against the
  * HRM subject assignment). `instructions` is stored as a long varchar to avoid a

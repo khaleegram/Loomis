@@ -428,6 +428,13 @@
       "when": 1780839400000,
       "tag": "0060_website_page_views",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1780839500000,
+      "tag": "0061_academic_calendar_events",
+      "breakpoints": true
     }
   ]
 }

@@ -15,6 +15,9 @@ import type {
   ClassLevelResponse,
   ClassStructureResponse,
   ConfirmPromotionRequest,
+  CalendarEventResponse,
+  CreateCalendarEventRequest,
+  ListCalendarEventsResponse,
   CreateClassArmRequest,
   CreateClassLevelRequest,
   ProgressionMapResponse,
@@ -520,6 +523,50 @@ export function useCreateClassArm(tenantId: string) {
         queryKey: queryKeys.academic.classStructure(tenantId, variables.academicYearId),
       });
       void queryClient.invalidateQueries({ queryKey: queryKeys.academic.all(tenantId) });
+    },
+  });
+}
+
+/** School calendar events (holidays, meetings, activities) for an academic year. */
+export function useCalendarEvents(tenantId: string, yearId: string) {
+  const client = useApiClient();
+  return useQuery({
+    queryKey: queryKeys.academic.calendarEvents(tenantId, yearId),
+    queryFn: () =>
+      client.get<ListCalendarEventsResponse>(
+        `/tenants/${tenantId}/academic-years/${yearId}/calendar-events`,
+      ),
+    staleTime: ACADEMIC_STALE_MS,
+    enabled: Boolean(tenantId && yearId),
+  });
+}
+
+/** Create a school calendar event. */
+export function useCreateCalendarEvent(tenantId: string) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CreateCalendarEventRequest) =>
+      client.post<CalendarEventResponse>(`/tenants/${tenantId}/calendar-events`, body),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.academic.calendarEvents(tenantId, variables.academicYearId),
+      });
+    },
+  });
+}
+
+/** Delete a school calendar event. */
+export function useDeleteCalendarEvent(tenantId: string, yearId: string) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (eventId: string) =>
+      client.delete<{ deleted: true }>(`/tenants/${tenantId}/calendar-events/${eventId}`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.academic.calendarEvents(tenantId, yearId),
+      });
     },
   });
 }

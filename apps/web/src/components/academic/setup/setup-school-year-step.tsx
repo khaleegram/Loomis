@@ -1,17 +1,21 @@
 'use client';
 
-import { useMemo } from 'react';
-import { useSetupSchoolYear } from '@loomis/api-client';
+import { useMemo, useState } from 'react';
+import { useFinalizeSchoolYear, useSetupSchoolYear } from '@loomis/api-client';
 import { setupSchoolYearRequest, type SetupSchoolYearRequest } from '@loomis/contracts';
+import type { AcademicYearResponse } from '@loomis/contracts';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormMessage, Input } from '@loomis/ui-web';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Check } from 'lucide-react';
 import { useForm, type Resolver } from 'react-hook-form';
 
 import { ChipOptionPicker, FormContextCard, SmartFieldLabel, SmartHint } from '@/components/shared/smart-form';
 import { academicErrorMessage } from '@/lib/academic/academic-errors';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
+import type { SchoolYearStepMode } from '@/lib/academic/academic-setup-utils';
+import { formatCalendarDate } from '@/lib/academic/term-labels';
 import { cn } from '@loomis/ui-web';
+import { SEMANTIC } from '@/lib/design/surfaces';
 
 const TERM_COUNT_OPTIONS = [3, 2, 1].map((n) => ({
   value: String(n),
@@ -31,12 +35,177 @@ function suggestYearDates(): { start: string; end: string; label: string } {
 
 interface SetupSchoolYearStepProps {
   tenantId: string;
-  pending?: boolean;
+  mode: SchoolYearStepMode;
+  /** Draft year waiting to be finalized (terms not live yet). */
+  draftYear?: AcademicYearResponse | null;
+  /** Active year already running. */
+  activeYear?: AcademicYearResponse | null;
+  openTermName?: string | null;
   onComplete: (yearId: string) => void;
   onSkip: () => void;
 }
 
-export function SetupSchoolYearStep({ tenantId, onComplete, onSkip }: SetupSchoolYearStepProps) {
+export function SetupSchoolYearStep({
+  tenantId,
+  mode,
+  draftYear,
+  activeYear,
+  openTermName,
+  onComplete,
+  onSkip,
+}: SetupSchoolYearStepProps) {
+  if (mode === 'finalize' && draftYear) {
+    return (
+      <FinalizeYearPanel
+        tenantId={tenantId}
+        draftYear={draftYear}
+        onComplete={onComplete}
+        onSkip={onSkip}
+      />
+    );
+  }
+
+  if (mode === 'ready' && activeYear) {
+    return (
+      <ReadyYearPanel
+        activeYear={activeYear}
+        openTermName={openTermName}
+        onContinue={() => onComplete(activeYear.id)}
+        onSkip={onSkip}
+      />
+    );
+  }
+
+  return <CreateYearForm tenantId={tenantId} onComplete={onComplete} onSkip={onSkip} />;
+}
+
+function FinalizeYearPanel({
+  tenantId,
+  draftYear,
+  onComplete,
+  onSkip,
+}: {
+  tenantId: string;
+  draftYear: AcademicYearResponse;
+  onComplete: (yearId: string) => void;
+  onSkip: () => void;
+}) {
+  const finalize = useFinalizeSchoolYear(tenantId, draftYear.id);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleFinalize() {
+    setError(null);
+    try {
+      const result = await finalize.mutateAsync();
+      onComplete(result.academicYear.id);
+    } catch (err) {
+      setError(academicErrorMessage(err));
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <p className={ACADEMIC_UI.sectionLabel}>Step 1</p>
+        <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-neutral-900">
+          Finish your school year
+        </h2>
+        <p className="mt-1.5 text-[14px] leading-relaxed text-neutral-500">
+          {draftYear.label} was started but terms are not live yet. One tap creates First, Second,
+          and Third Term and opens the current one.
+        </p>
+      </div>
+
+      <FormContextCard
+        badge="Almost there"
+        title={draftYear.label}
+        subtitle={`${formatCalendarDate(draftYear.startDate)} to ${formatCalendarDate(draftYear.endDate)} · ${draftYear.termCount} terms`}
+      />
+
+      {error ? (
+        <div className={`rounded-xl border p-3 text-sm ${SEMANTIC.danger.surface}`}>{error}</div>
+      ) : null}
+
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <button type="button" onClick={onSkip} className="text-[13px] font-medium text-neutral-400 hover:text-neutral-600">
+          Do this later
+        </button>
+        <button
+          type="button"
+          disabled={finalize.isPending}
+          onClick={() => void handleFinalize()}
+          className={cn(ACADEMIC_UI.btnPrimary, 'justify-center')}
+        >
+          {finalize.isPending ? 'Setting up terms…' : 'Create terms and go live'}
+          {!finalize.isPending ? <ArrowRight aria-hidden className="size-4" /> : null}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ReadyYearPanel({
+  activeYear,
+  openTermName,
+  onContinue,
+  onSkip,
+}: {
+  activeYear: AcademicYearResponse;
+  openTermName?: string | null;
+  onContinue: () => void;
+  onSkip: () => void;
+}) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <p className={ACADEMIC_UI.sectionLabel}>Step 1</p>
+        <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-neutral-900">
+          Your school year is running
+        </h2>
+        <p className="mt-1.5 text-[14px] leading-relaxed text-neutral-500">
+          Terms are set and the current one is open. Continue to pick your classes.
+        </p>
+      </div>
+
+      <div className="rounded-2xl border border-brand-200/60 bg-brand-50/50 p-5">
+        <div className="flex items-start gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-700">
+            <Check aria-hidden className="size-5" />
+          </span>
+          <div>
+            <p className="text-[16px] font-bold text-neutral-900">{activeYear.label}</p>
+            <p className="mt-0.5 text-[13px] text-neutral-500">
+              {formatCalendarDate(activeYear.startDate)} to {formatCalendarDate(activeYear.endDate)}
+            </p>
+            {openTermName ? (
+              <p className="mt-2 text-[13px] font-semibold text-brand-800">{openTermName} is open</p>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <button type="button" onClick={onSkip} className="text-[13px] font-medium text-neutral-400 hover:text-neutral-600">
+          Do this later
+        </button>
+        <button type="button" onClick={onContinue} className={cn(ACADEMIC_UI.btnPrimary, 'justify-center')}>
+          Continue to classes
+          <ArrowRight aria-hidden className="size-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CreateYearForm({
+  tenantId,
+  onComplete,
+  onSkip,
+}: {
+  tenantId: string;
+  onComplete: (yearId: string) => void;
+  onSkip: () => void;
+}) {
   const setup = useSetupSchoolYear(tenantId);
   const defaults = useMemo(() => suggestYearDates(), []);
 
@@ -78,7 +247,7 @@ export function SetupSchoolYearStep({ tenantId, onComplete, onSkip }: SetupSchoo
         </h2>
         <p className="mt-1.5 text-[14px] leading-relaxed text-neutral-500">
           One answer - Loomis creates First, Second, and Third Term and opens the current one. No
-          draft, no activate, no open-term ceremony.
+          extra steps after this.
         </p>
       </div>
 

@@ -1,5 +1,12 @@
 import type { FastifyInstance } from 'fastify';
-import { createAcademicYearRequest, setupSchoolYearRequest, type CreateAcademicYearRequest, type SetupSchoolYearRequest } from '@loomis/contracts';
+import {
+  createAcademicYearRequest,
+  createCalendarEventRequest,
+  setupSchoolYearRequest,
+  type CreateAcademicYearRequest,
+  type CreateCalendarEventRequest,
+  type SetupSchoolYearRequest,
+} from '@loomis/contracts';
 import { authenticate } from '../../../middleware/authenticate.js';
 import { requireRole } from '../../../middleware/require-role.js';
 import { requireTenantMatch } from '../../../middleware/require-tenant-match.js';
@@ -8,9 +15,12 @@ import {
   activateAcademicYearHandler,
   closeAcademicYearHandler,
   createAcademicYearHandler,
+  createCalendarEventHandler,
+  deleteCalendarEventHandler,
   finalizeSchoolYearHandler,
   getAcademicYearHandler,
   listAcademicYearsHandler,
+  listCalendarEventsHandler,
   setupSchoolYearHandler,
 } from '../handlers/index.js';
 
@@ -29,6 +39,8 @@ const yearReaders = [
   'parent',
   'student',
 ] as const;
+// Calendar event authors: school leadership and the admin officer who runs the diary.
+const calendarManagers = ['school_owner', 'principal', 'admin_officer'] as const;
 
 /** Academic year routes (FR-ASM-001/002/003; US-ASM-001). All under /api/v1. */
 export async function academicYearsRoutes(app: FastifyInstance): Promise<void> {
@@ -79,5 +91,27 @@ export async function academicYearsRoutes(app: FastifyInstance): Promise<void> {
     '/tenants/:tenantId/academic-years/:yearId/close',
     { preHandler: [authenticate, requireTenantMatch, requireRole(...yearAdmins)] },
     closeAcademicYearHandler,
+  );
+
+  // School calendar events (holidays, meetings, activities) for a year.
+  app.get<{ Params: { tenantId: string; yearId: string } }>(
+    '/tenants/:tenantId/academic-years/:yearId/calendar-events',
+    { preHandler: [authenticate, requireTenantMatch, requireRole(...yearReaders)] },
+    listCalendarEventsHandler,
+  );
+
+  app.post<{ Params: { tenantId: string }; Body: CreateCalendarEventRequest }>(
+    '/tenants/:tenantId/calendar-events',
+    {
+      preHandler: [authenticate, requireTenantMatch, requireRole(...calendarManagers)],
+      preValidation: [validateBody(createCalendarEventRequest)],
+    },
+    createCalendarEventHandler,
+  );
+
+  app.delete<{ Params: { tenantId: string; eventId: string } }>(
+    '/tenants/:tenantId/calendar-events/:eventId',
+    { preHandler: [authenticate, requireTenantMatch, requireRole(...calendarManagers)] },
+    deleteCalendarEventHandler,
   );
 }

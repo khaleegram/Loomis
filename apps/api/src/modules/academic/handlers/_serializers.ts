@@ -3,6 +3,8 @@ import type {
   AcademicTermStatus,
   AcademicYearResponse,
   AcademicYearStatus,
+  CalendarEventResponse,
+  CalendarEventType,
   EnrollmentSnapshotResponse,
   ClassArmResponse,
   ClassLevelResponse,
@@ -21,6 +23,7 @@ import type {
 import type {
   academicTerms,
   academicYears,
+  calendarEvents,
   classArms,
   classLevels,
   classProgressionMap,
@@ -43,6 +46,7 @@ type ExamConfigRow = typeof examConfigs.$inferSelect;
 type GradebookEntryRow = typeof gradebookEntries.$inferSelect;
 type GradeCorrectionRow = typeof gradeCorrectionLogs.$inferSelect;
 type ResultRow = typeof results.$inferSelect;
+type CalendarEventRow = typeof calendarEvents.$inferSelect;
 
 export function academicYearToResponse(row: AcademicYearRow): AcademicYearResponse {
   return {
@@ -231,6 +235,21 @@ export function gradeCorrectionToResponse(row: GradeCorrectionRow): GradeCorrect
     decidedAt: row.decidedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+export function calendarEventToResponse(row: CalendarEventRow): CalendarEventResponse {
+  return {
+    id: row.id,
+    tenantId: row.tenantId,
+    academicYearId: row.academicYearId,
+    termId: row.termId ?? null,
+    title: row.title,
+    description: row.description ?? null,
+    eventType: row.eventType as CalendarEventType,
+    startDate: row.startDate,
+    endDate: row.endDate ?? null,
+    createdAt: row.createdAt.toISOString(),
   };
 }
 

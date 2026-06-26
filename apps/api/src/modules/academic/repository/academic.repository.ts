@@ -2,6 +2,7 @@ import { and, asc, eq, gte, inArray, isNull, lte, ne, sql } from 'drizzle-orm';
 import {
   academicTerms,
   academicYears,
+  calendarEvents,
   classArms,
   classLevels,
   classProgressionMap,
@@ -1306,6 +1307,74 @@ export const academicRepository = {
           ),
         );
       return row?.count ?? 0;
+    });
+  },
+
+  // ── School calendar events ───────────────────────────────────────────────────
+
+  async listCalendarEvents(tenantId: string, academicYearId: string) {
+    return withTenantContext(tenantId, async (tx) =>
+      tx
+        .select()
+        .from(calendarEvents)
+        .where(
+          and(
+            eq(calendarEvents.tenantId, tenantId),
+            eq(calendarEvents.academicYearId, academicYearId),
+          ),
+        )
+        .orderBy(asc(calendarEvents.startDate)),
+    );
+  },
+
+  async createCalendarEvent(
+    tenantId: string,
+    input: {
+      academicYearId: string;
+      termId: string | null;
+      title: string;
+      description: string | null;
+      eventType: string;
+      startDate: string;
+      endDate: string | null;
+    },
+    createdById: string,
+  ) {
+    return withTenantContext(tenantId, async (tx) => {
+      const [event] = await tx
+        .insert(calendarEvents)
+        .values({
+          tenantId,
+          academicYearId: input.academicYearId,
+          termId: input.termId,
+          title: input.title,
+          description: input.description,
+          eventType: input.eventType,
+          startDate: input.startDate,
+          endDate: input.endDate,
+          createdById,
+        })
+        .returning();
+      return event;
+    });
+  },
+
+  async findCalendarEventById(tenantId: string, eventId: string) {
+    return withTenantContext(tenantId, async (tx) => {
+      const [event] = await tx
+        .select()
+        .from(calendarEvents)
+        .where(and(eq(calendarEvents.tenantId, tenantId), eq(calendarEvents.id, eventId)))
+        .limit(1);
+      return event ?? null;
+    });
+  },
+
+  async deleteCalendarEvent(tenantId: string, eventId: string): Promise<void> {
+    await withTenantContext(tenantId, async (tx) => {
+      await tx
+        .delete(calendarEvents)
+        .where(and(eq(calendarEvents.tenantId, tenantId), eq(calendarEvents.id, eventId)));
     });
   },
 };
