@@ -1,10 +1,12 @@
 import type { FastifyInstance } from 'fastify';
 import {
   convertWebsiteInquiryToAdmissionRequest,
+  submitWebsitePageViewRequest,
   submitWebsiteInquiryRequest,
   updateWebsiteSiteRequest,
   updateWebsiteInquiryRequest,
   type ConvertWebsiteInquiryToAdmissionRequest,
+  type SubmitWebsitePageViewRequest,
   type SubmitWebsiteInquiryRequest,
   type UpdateWebsiteInquiryRequest,
   type UpdateWebsiteSiteRequest,
@@ -19,10 +21,12 @@ import { websiteInquiryRateLimiter } from '../middleware/website-inquiry-rate-li
 import {
   checkWebsiteSlugHandler,
   convertWebsiteInquiryToAdmissionHandler,
+  getWebsiteAnalyticsHandler,
   getPublicWebsiteHandler,
   getWebsiteSiteHandler,
   listWebsiteInquiriesHandler,
   publishWebsiteHandler,
+  submitPublicWebsitePageViewHandler,
   submitPublicWebsiteInquiryHandler,
   unpublishWebsiteHandler,
   updateWebsiteInquiryHandler,
@@ -56,6 +60,19 @@ export async function websiteRoutes(app: FastifyInstance): Promise<void> {
       preHandler: [authenticate, requireTenantMatch, requireRole(...WEBSITE_EDITORS)],
     },
     checkWebsiteSlugHandler,
+  );
+
+  app.get<{ Params: { tenantId: string }; Querystring: { days?: string } }>(
+    '/tenants/:tenantId/website/analytics',
+    {
+      preHandler: [
+        authenticate,
+        requireTenantMatch,
+        requireRole(...WEBSITE_EDITORS),
+        requireCapability('website.analytics.view'),
+      ],
+    },
+    getWebsiteAnalyticsHandler,
   );
 
   app.put<{ Params: { tenantId: string }; Body: UpdateWebsiteSiteRequest }>(
@@ -145,6 +162,14 @@ export async function websiteRoutes(app: FastifyInstance): Promise<void> {
 /** Unauthenticated public school websites. */
 export async function publicWebsiteRoutes(app: FastifyInstance): Promise<void> {
   app.get<{ Params: { slug: string } }>('/public/sites/:slug', getPublicWebsiteHandler);
+
+  app.post<{ Params: { slug: string }; Body: SubmitWebsitePageViewRequest }>(
+    '/public/sites/:slug/page-view',
+    {
+      preValidation: [validateBody(submitWebsitePageViewRequest)],
+    },
+    submitPublicWebsitePageViewHandler,
+  );
 
   app.post<{ Params: { slug: string }; Body: SubmitWebsiteInquiryRequest }>(
     '/public/sites/:slug/inquiries',

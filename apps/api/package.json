@@ -10,6 +10,7 @@
     "start": "tsx src/index.ts",
     "start:compiled": "node dist/src/index.js",
     "db:migrate:prod": "node ./node_modules/drizzle-kit/bin.cjs migrate",
+    "db:migrate:railway": "node scripts/migrate-railway-prod.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
     "test": "vitest run",

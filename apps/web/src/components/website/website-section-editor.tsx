@@ -1,11 +1,29 @@
 'use client';
 
-import type { PublicWebsiteSiteResponse, WebsiteSection, WebsiteSiteResponse } from '@loomis/contracts';
+import type {
+  PublicWebsiteSiteResponse,
+  WebsiteSection,
+  WebsiteSectionType,
+  WebsiteSeo,
+  WebsiteSiteResponse,
+  WebsiteTheme,
+} from '@loomis/contracts';
 import { Alert, AlertDescription, Button, Input, Label, Skeleton, Textarea } from '@loomis/ui-web';
-import { CheckCircle2, ChevronDown, ChevronUp, Eye, EyeOff, GripVertical, XCircle } from 'lucide-react';
+import {
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  EyeOff,
+  GripVertical,
+  Plus,
+  Trash2,
+  XCircle,
+} from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { PublicSiteRenderer } from '@/components/website/public-site-renderer';
+import { WebsiteImageField } from '@/components/website/website-image-field';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { schoolPublicSiteUrl } from '@/lib/website/public-site-url';
 import { useCheckWebsiteSlug, useSchoolBranding } from '@loomis/api-client';
@@ -32,6 +50,38 @@ function textValue(value: unknown): string {
   return typeof value === 'string' ? value : '';
 }
 
+/** Section types a school can add manually (hero/about/contact ship by default). */
+const ADDABLE_SECTIONS: WebsiteSectionType[] = [
+  'principal_welcome',
+  'gallery',
+  'faq',
+  'whatsapp_cta',
+  'parent_portal_cta',
+  'admissions_cta',
+];
+
+function defaultPropsFor(type: WebsiteSectionType): Record<string, unknown> {
+  switch (type) {
+    case 'principal_welcome':
+      return { name: '', role: 'Principal', message: '' };
+    case 'gallery':
+      return { title: 'Life at our school', images: [] };
+    case 'faq':
+      return { title: 'Frequently asked questions', items: [] };
+    case 'whatsapp_cta':
+      return { prefillMessage: 'Hello, I would like to enquire about admissions.' };
+    case 'parent_portal_cta':
+      return {
+        title: 'Parents',
+        body: 'Access fees, attendance, and school updates through the Loomis parent portal.',
+      };
+    case 'admissions_cta':
+      return { title: 'Join Our School', body: '', buttonLabel: 'Enquire Now', formEnabled: true };
+    default:
+      return {};
+  }
+}
+
 interface WebsiteSectionEditorProps {
   tenantId: string;
   site: WebsiteSiteResponse;
@@ -39,6 +89,8 @@ interface WebsiteSectionEditorProps {
   onChange: (sections: WebsiteSection[]) => void;
   onSlugChange: (slug: string) => void;
   onTemplateChange: (templateId: WebsiteSiteResponse['templateId']) => void;
+  onThemeChange: (theme: WebsiteTheme) => void;
+  onSeoChange: (seo: WebsiteSeo) => void;
   onSave: () => void;
   isSaving: boolean;
 }
@@ -50,6 +102,8 @@ export function WebsiteSectionEditor({
   onChange,
   onSlugChange,
   onTemplateChange,
+  onThemeChange,
+  onSeoChange,
   onSave,
   isSaving,
 }: WebsiteSectionEditorProps) {
@@ -101,6 +155,26 @@ export function WebsiteSectionEditor({
     next[swapIdx] = { ...a, order: b.order };
     onChange(next);
   }
+
+  function addSection(type: WebsiteSectionType) {
+    const nextOrder = site.sections.reduce((max, s) => Math.max(max, s.order), -1) + 1;
+    const newSection: WebsiteSection = {
+      id: crypto.randomUUID(),
+      type,
+      enabled: true,
+      order: nextOrder,
+      props: defaultPropsFor(type),
+    };
+    onChange([...site.sections, newSection]);
+    setExpandedId(newSection.id);
+  }
+
+  function removeSection(id: string) {
+    onChange(site.sections.filter((s) => s.id !== id));
+  }
+
+  const existingTypes = new Set(site.sections.map((s) => s.type));
+  const addableTypes = ADDABLE_SECTIONS.filter((t) => !existingTypes.has(t));
 
   return (
     <div className="mt-8 grid gap-6 lg:grid-cols-2">
@@ -236,6 +310,17 @@ export function WebsiteSectionEditor({
                     >
                       <ChevronDown className="size-4" />
                     </button>
+                    {ADDABLE_SECTIONS.includes(section.type) ? (
+                      <button
+                        type="button"
+                        disabled={!canEdit}
+                        className="inline-flex size-9 items-center justify-center rounded-lg text-neutral-400 hover:bg-red-50 hover:text-red-500"
+                        onClick={() => removeSection(section.id)}
+                        aria-label="Remove section"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    ) : null}
                   </div>
                   {open ? (
                     <div className="space-y-3 border-t border-neutral-100 bg-neutral-50/50 px-5 py-4">
@@ -267,6 +352,47 @@ export function WebsiteSectionEditor({
                               }
                             />
                           </div>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div>
+                              <Label htmlFor={`${section.id}-cta`}>Button label</Label>
+                              <Input
+                                id={`${section.id}-cta`}
+                                disabled={!canEdit}
+                                value={textValue(props.ctaLabel)}
+                                placeholder="Admissions"
+                                onChange={(e) =>
+                                  updateSection(section.id, {
+                                    props: { ...props, ctaLabel: e.target.value },
+                                  })
+                                }
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor={`${section.id}-href`}>Button link</Label>
+                              <Input
+                                id={`${section.id}-href`}
+                                disabled={!canEdit}
+                                value={textValue(props.ctaHref)}
+                                placeholder="#admissions"
+                                onChange={(e) =>
+                                  updateSection(section.id, {
+                                    props: { ...props, ctaHref: e.target.value },
+                                  })
+                                }
+                              />
+                            </div>
+                          </div>
+                          <WebsiteImageField
+                            tenantId={tenantId}
+                            label="Background image"
+                            disabled={!canEdit}
+                            storageObjectId={textValue(props.backgroundStorageObjectId) || null}
+                            onChange={(id) =>
+                              updateSection(section.id, {
+                                props: { ...props, backgroundStorageObjectId: id },
+                              })
+                            }
+                          />
                         </>
                       ) : null}
                       {section.type === 'about' ? (
@@ -290,6 +416,155 @@ export function WebsiteSectionEditor({
                               id={`${section.id}-body`}
                               disabled={!canEdit}
                               rows={5}
+                              value={textValue(props.body)}
+                              onChange={(e) =>
+                                updateSection(section.id, {
+                                  props: { ...props, body: e.target.value },
+                                })
+                              }
+                            />
+                          </div>
+                          <WebsiteImageField
+                            tenantId={tenantId}
+                            label="Section image (optional)"
+                            disabled={!canEdit}
+                            storageObjectId={textValue(props.imageStorageObjectId) || null}
+                            onChange={(id) =>
+                              updateSection(section.id, {
+                                props: { ...props, imageStorageObjectId: id },
+                              })
+                            }
+                          />
+                        </>
+                      ) : null}
+                      {section.type === 'principal_welcome' ? (
+                        <>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div>
+                              <Label htmlFor={`${section.id}-name`}>Name</Label>
+                              <Input
+                                id={`${section.id}-name`}
+                                disabled={!canEdit}
+                                value={textValue(props.name)}
+                                placeholder="Mrs. Adaeze Okeke"
+                                onChange={(e) =>
+                                  updateSection(section.id, {
+                                    props: { ...props, name: e.target.value },
+                                  })
+                                }
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor={`${section.id}-role`}>Title / role</Label>
+                              <Input
+                                id={`${section.id}-role`}
+                                disabled={!canEdit}
+                                value={textValue(props.role)}
+                                placeholder="Principal"
+                                onChange={(e) =>
+                                  updateSection(section.id, {
+                                    props: { ...props, role: e.target.value },
+                                  })
+                                }
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <Label htmlFor={`${section.id}-message`}>Message</Label>
+                            <Textarea
+                              id={`${section.id}-message`}
+                              disabled={!canEdit}
+                              rows={5}
+                              value={textValue(props.message)}
+                              onChange={(e) =>
+                                updateSection(section.id, {
+                                  props: { ...props, message: e.target.value },
+                                })
+                              }
+                            />
+                          </div>
+                          <WebsiteImageField
+                            tenantId={tenantId}
+                            label="Principal photo"
+                            frameClassName="aspect-square max-w-[160px]"
+                            disabled={!canEdit}
+                            storageObjectId={textValue(props.photoStorageObjectId) || null}
+                            onChange={(id) =>
+                              updateSection(section.id, {
+                                props: { ...props, photoStorageObjectId: id },
+                              })
+                            }
+                          />
+                        </>
+                      ) : null}
+                      {section.type === 'gallery' ? (
+                        <GalleryEditor
+                          tenantId={tenantId}
+                          canEdit={canEdit}
+                          props={props}
+                          onChange={(patch) => updateSection(section.id, { props: patch })}
+                        />
+                      ) : null}
+                      {section.type === 'faq' ? (
+                        <FaqEditor
+                          canEdit={canEdit}
+                          props={props}
+                          onChange={(patch) => updateSection(section.id, { props: patch })}
+                        />
+                      ) : null}
+                      {section.type === 'whatsapp_cta' ? (
+                        <>
+                          <div>
+                            <Label htmlFor={`${section.id}-phone`}>WhatsApp number</Label>
+                            <Input
+                              id={`${section.id}-phone`}
+                              disabled={!canEdit}
+                              value={textValue(props.phoneE164)}
+                              placeholder="+2348012345678 (leave blank to use school phone)"
+                              onChange={(e) =>
+                                updateSection(section.id, {
+                                  props: { ...props, phoneE164: e.target.value },
+                                })
+                              }
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor={`${section.id}-prefill`}>Pre-filled message</Label>
+                            <Textarea
+                              id={`${section.id}-prefill`}
+                              disabled={!canEdit}
+                              rows={2}
+                              value={textValue(props.prefillMessage)}
+                              onChange={(e) =>
+                                updateSection(section.id, {
+                                  props: { ...props, prefillMessage: e.target.value },
+                                })
+                              }
+                            />
+                          </div>
+                        </>
+                      ) : null}
+                      {section.type === 'parent_portal_cta' ? (
+                        <>
+                          <div>
+                            <Label htmlFor={`${section.id}-title`}>Title</Label>
+                            <Input
+                              id={`${section.id}-title`}
+                              disabled={!canEdit}
+                              value={textValue(props.title)}
+                              onChange={(e) =>
+                                updateSection(section.id, {
+                                  props: { ...props, title: e.target.value },
+                                })
+                              }
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor={`${section.id}-body`}>Body</Label>
+                            <Textarea
+                              id={`${section.id}-body`}
+                              disabled={!canEdit}
+                              rows={3}
                               value={textValue(props.body)}
                               onChange={(e) =>
                                 updateSection(section.id, {
@@ -372,6 +647,26 @@ export function WebsiteSectionEditor({
               );
             })}
           </ul>
+          {canEdit && addableTypes.length > 0 ? (
+            <div className="border-t border-neutral-100 px-3 py-3">
+              <p className="px-2 text-[10px] font-bold uppercase tracking-[0.15em] text-neutral-400">
+                Add a section
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {addableTypes.map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => addSection(type)}
+                    className="inline-flex min-h-[40px] items-center gap-1.5 rounded-full border border-neutral-200 px-3 text-xs font-medium text-neutral-700 hover:border-brand-300 hover:text-brand-700"
+                  >
+                    <Plus className="size-3.5" aria-hidden />
+                    {SECTION_LABELS[type] ?? type}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
           {canEdit ? (
             <div className="border-t border-neutral-100 p-4">
               <button
@@ -384,6 +679,105 @@ export function WebsiteSectionEditor({
               </button>
             </div>
           ) : null}
+        </div>
+
+        <div className="rounded-2xl border border-brand-100/40 bg-white p-5 shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-neutral-400">Theme</p>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="theme-primary">Primary colour</Label>
+              <div className="mt-1 flex items-center gap-2">
+                <input
+                  id="theme-primary"
+                  type="color"
+                  disabled={!canEdit}
+                  value={site.theme.primaryColor}
+                  onChange={(e) => onThemeChange({ ...site.theme, primaryColor: e.target.value })}
+                  className="size-10 cursor-pointer rounded-lg border border-neutral-200"
+                />
+                <span className="text-xs text-neutral-500">{site.theme.primaryColor}</span>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="theme-accent">Accent colour</Label>
+              <div className="mt-1 flex items-center gap-2">
+                <input
+                  id="theme-accent"
+                  type="color"
+                  disabled={!canEdit}
+                  value={site.theme.accentColor}
+                  onChange={(e) => onThemeChange({ ...site.theme, accentColor: e.target.value })}
+                  className="size-10 cursor-pointer rounded-lg border border-neutral-200"
+                />
+                <span className="text-xs text-neutral-500">{site.theme.accentColor}</span>
+              </div>
+            </div>
+          </div>
+          <div className="mt-4">
+            <Label>Font style</Label>
+            <div className="mt-2 grid grid-cols-3 gap-2">
+              {(['modern', 'classic', 'friendly'] as const).map((font) => (
+                <button
+                  key={font}
+                  type="button"
+                  disabled={!canEdit}
+                  onClick={() => onThemeChange({ ...site.theme, fontStyle: font })}
+                  className={`min-h-[44px] rounded-xl border px-3 text-sm capitalize transition-colors ${
+                    site.theme.fontStyle === font
+                      ? 'border-brand-400 bg-brand-50 font-semibold text-brand-900'
+                      : 'border-neutral-200 hover:border-brand-200'
+                  }`}
+                >
+                  {font}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-brand-100/40 bg-white p-5 shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-neutral-400">
+            Search &amp; sharing (SEO)
+          </p>
+          <p className="mt-1 text-xs text-neutral-500">
+            How your site appears on Google and when shared on WhatsApp or social media.
+          </p>
+          <div className="mt-4 space-y-3">
+            <div>
+              <Label htmlFor="seo-title">Page title</Label>
+              <Input
+                id="seo-title"
+                disabled={!canEdit}
+                value={site.seo.title ?? ''}
+                placeholder="Grace International School — Admissions Open"
+                maxLength={120}
+                onChange={(e) =>
+                  onSeoChange({ ...site.seo, title: e.target.value || null })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="seo-desc">Description</Label>
+              <Textarea
+                id="seo-desc"
+                disabled={!canEdit}
+                rows={3}
+                value={site.seo.description ?? ''}
+                placeholder="A short summary of your school shown in search results."
+                maxLength={320}
+                onChange={(e) =>
+                  onSeoChange({ ...site.seo, description: e.target.value || null })
+                }
+              />
+            </div>
+            <WebsiteImageField
+              tenantId={tenantId}
+              label="Share image (Open Graph)"
+              disabled={!canEdit}
+              storageObjectId={site.seo.ogImageStorageObjectId}
+              onChange={(id) => onSeoChange({ ...site.seo, ogImageStorageObjectId: id })}
+            />
+          </div>
         </div>
       </div>
 
@@ -412,6 +806,165 @@ export function WebsiteSectionEditor({
         )}
       </div>
     </div>
+  );
+}
+
+interface SubEditorProps {
+  canEdit: boolean;
+  props: Record<string, unknown>;
+  onChange: (patch: Record<string, unknown>) => void;
+}
+
+function GalleryEditor({
+  tenantId,
+  canEdit,
+  props,
+  onChange,
+}: SubEditorProps & { tenantId: string }) {
+  const images = Array.isArray(props.images)
+    ? (props.images as Array<{ storageObjectId: string | null; caption?: string }>)
+    : [];
+
+  const updateImages = (next: Array<{ storageObjectId: string | null; caption?: string }>) =>
+    onChange({ ...props, images: next });
+
+  return (
+    <>
+      <div>
+        <Label htmlFor="gallery-title">Section title</Label>
+        <Input
+          id="gallery-title"
+          disabled={!canEdit}
+          value={textValue(props.title)}
+          onChange={(e) => onChange({ ...props, title: e.target.value })}
+        />
+      </div>
+      <div className="space-y-3">
+        {images.map((img, idx) => (
+          <div key={idx} className="rounded-xl border border-neutral-200 p-3">
+            <WebsiteImageField
+              tenantId={tenantId}
+              label={`Image ${idx + 1}`}
+              frameClassName="aspect-square max-w-[140px]"
+              disabled={!canEdit}
+              storageObjectId={img.storageObjectId ?? null}
+              onChange={(id) =>
+                updateImages(
+                  images.map((im, i) => (i === idx ? { ...im, storageObjectId: id } : im)),
+                )
+              }
+            />
+            <div className="mt-2 flex items-end gap-2">
+              <div className="flex-1">
+                <Label htmlFor={`gallery-cap-${idx}`}>Caption (optional)</Label>
+                <Input
+                  id={`gallery-cap-${idx}`}
+                  disabled={!canEdit}
+                  value={img.caption ?? ''}
+                  onChange={(e) =>
+                    updateImages(
+                      images.map((im, i) =>
+                        i === idx ? { ...im, caption: e.target.value } : im,
+                      ),
+                    )
+                  }
+                />
+              </div>
+              <button
+                type="button"
+                disabled={!canEdit}
+                className="inline-flex size-9 items-center justify-center rounded-lg text-neutral-400 hover:bg-red-50 hover:text-red-500"
+                onClick={() => updateImages(images.filter((_, i) => i !== idx))}
+                aria-label="Remove image"
+              >
+                <Trash2 className="size-4" />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+      {canEdit && images.length < 12 ? (
+        <button
+          type="button"
+          onClick={() => updateImages([...images, { storageObjectId: null }])}
+          className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-dashed border-neutral-300 px-3 text-xs font-medium text-neutral-600 hover:border-brand-300"
+        >
+          <Plus className="size-3.5" aria-hidden /> Add image
+        </button>
+      ) : null}
+    </>
+  );
+}
+
+function FaqEditor({ canEdit, props, onChange }: SubEditorProps) {
+  const items = Array.isArray(props.items)
+    ? (props.items as Array<{ question: string; answer: string }>)
+    : [];
+
+  const updateItems = (next: Array<{ question: string; answer: string }>) =>
+    onChange({ ...props, items: next });
+
+  return (
+    <>
+      <div>
+        <Label htmlFor="faq-title">Section title</Label>
+        <Input
+          id="faq-title"
+          disabled={!canEdit}
+          value={textValue(props.title)}
+          onChange={(e) => onChange({ ...props, title: e.target.value })}
+        />
+      </div>
+      <div className="space-y-3">
+        {items.map((item, idx) => (
+          <div key={idx} className="space-y-2 rounded-xl border border-neutral-200 p-3">
+            <div className="flex items-center justify-between">
+              <Label htmlFor={`faq-q-${idx}`}>Question {idx + 1}</Label>
+              <button
+                type="button"
+                disabled={!canEdit}
+                className="inline-flex size-8 items-center justify-center rounded-lg text-neutral-400 hover:bg-red-50 hover:text-red-500"
+                onClick={() => updateItems(items.filter((_, i) => i !== idx))}
+                aria-label="Remove question"
+              >
+                <Trash2 className="size-4" />
+              </button>
+            </div>
+            <Input
+              id={`faq-q-${idx}`}
+              disabled={!canEdit}
+              value={item.question}
+              placeholder="What are your school fees?"
+              onChange={(e) =>
+                updateItems(
+                  items.map((it, i) => (i === idx ? { ...it, question: e.target.value } : it)),
+                )
+              }
+            />
+            <Textarea
+              disabled={!canEdit}
+              rows={2}
+              value={item.answer}
+              placeholder="Answer…"
+              onChange={(e) =>
+                updateItems(
+                  items.map((it, i) => (i === idx ? { ...it, answer: e.target.value } : it)),
+                )
+              }
+            />
+          </div>
+        ))}
+      </div>
+      {canEdit && items.length < 15 ? (
+        <button
+          type="button"
+          onClick={() => updateItems([...items, { question: '', answer: '' }])}
+          className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-dashed border-neutral-300 px-3 text-xs font-medium text-neutral-600 hover:border-brand-300"
+        >
+          <Plus className="size-3.5" aria-hidden /> Add question
+        </button>
+      ) : null}
+    </>
   );
 }
 

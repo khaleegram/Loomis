@@ -78,9 +78,20 @@ function buildDefaultSections(schoolName: string, address: string): WebsiteSecti
     },
     {
       id: uuidv7(),
+      type: 'principal_welcome',
+      enabled: false,
+      order: 2,
+      props: {
+        name: '',
+        role: 'Principal',
+        message: 'Add a short welcome message from your school head here.',
+      },
+    },
+    {
+      id: uuidv7(),
       type: 'admissions_cta',
       enabled: true,
-      order: 2,
+      order: 3,
       props: {
         title: 'Join Our School',
         body: 'We welcome new families every term. Contact us to learn about our admission process.',
@@ -90,9 +101,29 @@ function buildDefaultSections(schoolName: string, address: string): WebsiteSecti
     },
     {
       id: uuidv7(),
+      type: 'gallery',
+      enabled: false,
+      order: 4,
+      props: {
+        title: 'Life at our school',
+        images: [],
+      },
+    },
+    {
+      id: uuidv7(),
+      type: 'faq',
+      enabled: false,
+      order: 5,
+      props: {
+        title: 'Frequently asked questions',
+        items: [],
+      },
+    },
+    {
+      id: uuidv7(),
       type: 'contact',
       enabled: true,
-      order: 3,
+      order: 6,
       props: {
         showMap: false,
         showPhone: true,
@@ -104,7 +135,7 @@ function buildDefaultSections(schoolName: string, address: string): WebsiteSecti
       id: uuidv7(),
       type: 'parent_portal_cta',
       enabled: true,
-      order: 4,
+      order: 7,
       props: {
         title: 'Parents',
         body: 'Access fees, attendance, and school updates through the Loomis parent portal.',

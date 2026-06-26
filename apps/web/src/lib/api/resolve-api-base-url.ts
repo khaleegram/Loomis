@@ -22,6 +22,13 @@ function railwayFallback(): string {
   );
 }
 
+function apiCustomDomainReady(): boolean {
+  return (
+    process.env.LOOMIS_API_CUSTOM_DOMAIN_READY === 'true' ||
+    process.env.NEXT_PUBLIC_LOOMIS_API_CUSTOM_DOMAIN_READY === 'true'
+  );
+}
+
 export function resolveApiBaseUrl(configured: string | undefined): string {
   const fallback = railwayFallback();
   const url = (configured ?? (isProd() ? fallback : DEV_DEFAULT)).replace(/\/$/, '');
@@ -29,7 +36,7 @@ export function resolveApiBaseUrl(configured: string | undefined): string {
   if (
     isProd() &&
     url.includes('api.loomis.digital') &&
-    process.env.LOOMIS_API_CUSTOM_DOMAIN_READY !== 'true'
+    !apiCustomDomainReady()
   ) {
     return fallback;
   }

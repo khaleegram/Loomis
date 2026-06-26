@@ -48,7 +48,8 @@ export type Capability =
   | 'website.view'
   | 'website.edit'
   | 'website.publish'
-  | 'website.inquiries.view';
+  | 'website.inquiries.view'
+  | 'website.analytics.view';
 
 const C = <T extends Capability[]>(...caps: T): ReadonlySet<Capability> => new Set(caps);
 
@@ -97,6 +98,7 @@ export const roleCapabilities: Record<Role, ReadonlySet<Capability>> = {
     'website.edit',
     'website.publish',
     'website.inquiries.view',
+    'website.analytics.view',
   ),
   principal: C(
     'staff.onboard',
@@ -124,6 +126,7 @@ export const roleCapabilities: Record<Role, ReadonlySet<Capability>> = {
     'website.edit',
     'website.publish',
     'website.inquiries.view',
+    'website.analytics.view',
   ),
   admin_officer: C(
     'staff.onboard',

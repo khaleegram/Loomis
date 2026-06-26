@@ -25,6 +25,14 @@ describe('resolveApiBaseUrl', () => {
     );
   });
 
+  it('honours api.loomis.digital when the browser-safe ready flag is set', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('NEXT_PUBLIC_LOOMIS_API_CUSTOM_DOMAIN_READY', 'true');
+    expect(resolveApiBaseUrl('https://api.loomis.digital/api/v1')).toBe(
+      'https://api.loomis.digital/api/v1',
+    );
+  });
+
   it('strips a trailing slash', () => {
     vi.stubEnv('NODE_ENV', 'development');
     expect(resolveApiBaseUrl('http://api.local/api/v1/')).toBe('http://api.local/api/v1');

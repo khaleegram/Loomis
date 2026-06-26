@@ -16,6 +16,7 @@ export default defineConfig({
     './drizzle/schema/comms.ts',
     './drizzle/schema/compliance.ts',
     './drizzle/schema/read-models.ts',
+    './drizzle/schema/website.ts',
   ],
   out: './drizzle/migrations',
   dialect: 'postgresql',
@@ -37,5 +38,6 @@ export default defineConfig({
     'comms',
     'compliance',
     'read_models',
+    'website',
   ],
 });

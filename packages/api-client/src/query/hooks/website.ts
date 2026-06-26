@@ -8,6 +8,7 @@ import type {
   SubmitWebsiteInquiryResponse,
   UpdateWebsiteInquiryRequest,
   UpdateWebsiteSiteRequest,
+  WebsiteAnalyticsResponse,
   WebsiteInquiryListResponse,
   WebsiteInquiryResponse,
   WebsitePublishResponse,
@@ -130,6 +131,20 @@ export function useWebsiteInquiries(tenantId: string, status?: string) {
     },
     enabled: Boolean(tenantId),
     staleTime: 30_000,
+  });
+}
+
+export function useWebsiteAnalytics(tenantId: string, days = 30) {
+  const client = useApiClient();
+  return useQuery({
+    queryKey: queryKeys.website.analytics(tenantId, days),
+    queryFn: () =>
+      client.get<WebsiteAnalyticsResponse>(
+        `/tenants/${tenantId}/website/analytics?days=${encodeURIComponent(String(days))}`,
+        { headers: { 'X-Tenant-Id': tenantId } },
+      ),
+    enabled: Boolean(tenantId),
+    staleTime: 60_000,
   });
 }
 

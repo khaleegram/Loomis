@@ -209,3 +209,37 @@ export const convertWebsiteInquiryToAdmissionResponse = z.object({
 export type ConvertWebsiteInquiryToAdmissionResponse = z.infer<
   typeof convertWebsiteInquiryToAdmissionResponse
 >;
+
+// ── Website analytics (Phase 3) ───────────────────────────────────────────────
+
+export const submitWebsitePageViewRequest = z.object({
+  path: z.string().min(1).max(500).default('/'),
+  referrer: z.string().max(1000).optional(),
+});
+export type SubmitWebsitePageViewRequest = z.infer<typeof submitWebsitePageViewRequest>;
+
+export const websiteAnalyticsDay = z.object({
+  date: z.string(),
+  pageViews: z.number().int().nonnegative(),
+  uniqueVisitors: z.number().int().nonnegative(),
+});
+export type WebsiteAnalyticsDay = z.infer<typeof websiteAnalyticsDay>;
+
+export const websiteAnalyticsTopReferrer = z.object({
+  host: z.string(),
+  pageViews: z.number().int().nonnegative(),
+});
+export type WebsiteAnalyticsTopReferrer = z.infer<typeof websiteAnalyticsTopReferrer>;
+
+export const websiteAnalyticsResponse = z.object({
+  rangeDays: z.number().int().positive(),
+  totals: z.object({
+    pageViews: z.number().int().nonnegative(),
+    uniqueVisitors: z.number().int().nonnegative(),
+    inquiries: z.number().int().nonnegative(),
+    admissionInterest: z.number().int().nonnegative(),
+  }),
+  daily: z.array(websiteAnalyticsDay),
+  topReferrers: z.array(websiteAnalyticsTopReferrer),
+});
+export type WebsiteAnalyticsResponse = z.infer<typeof websiteAnalyticsResponse>;

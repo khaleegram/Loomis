@@ -27,6 +27,8 @@ In the Vercel project for `apps/web`, set:
 |----------|--------|
 | `LOOMIS_API_BASE_URL` | `https://api.loomis.digital/api/v1` |
 | `NEXT_PUBLIC_API_BASE_URL` | `https://api.loomis.digital/api/v1` |
+| `LOOMIS_API_CUSTOM_DOMAIN_READY` | `true` once Railway custom domain TLS is verified |
+| `NEXT_PUBLIC_LOOMIS_API_CUSTOM_DOMAIN_READY` | `true` once Railway custom domain TLS is verified |
 | `WEB_APP_BASE_URL` | `https://www.loomis.digital` |
 | `NODE_ENV` | `production` |
 
@@ -135,9 +137,9 @@ Railway sets `PORT` automatically; the API uses it when `API_PORT` is unset.
 | TXT | `_railway-verify.api` | `railway-verify=…` (copy from Railway dashboard) |
 
 3. Wait for Railway **Verified: yes** and TLS (usually minutes; DNS can take up to 72h).
-4. On **Vercel**, set `LOOMIS_API_CUSTOM_DOMAIN_READY=true` and redeploy so the web app uses `api.loomis.digital` instead of the Railway fallback URL.
+4. On **Vercel**, set `LOOMIS_API_CUSTOM_DOMAIN_READY=true` and `NEXT_PUBLIC_LOOMIS_API_CUSTOM_DOMAIN_READY=true`, then redeploy so server and browser code use `api.loomis.digital` instead of the Railway fallback URL.
 
-**Until DNS is live:** the web app automatically uses `https://loomis-api-production.up.railway.app/api/v1` when env vars point at `api.loomis.digital` and `LOOMIS_API_CUSTOM_DOMAIN_READY` is unset. No Vercel change required for the interim fix.
+**Until DNS is live:** the web app automatically uses `https://loomis-api-production.up.railway.app/api/v1` when env vars point at `api.loomis.digital` and the custom-domain-ready flags are unset. No Vercel change required for the interim fix.
 
 ### 2.5b School website subdomains (`{slug}.loomis.digital`)
 
@@ -174,30 +176,38 @@ Notes:
 
 ### 2.6 Run migrations
 
-**Option A — Railway one-off command** (API service → Settings → Deploy → Custom start / or use CLI):
+`railway run pnpm db:migrate:prod` **does not work from your PC** — the API service’s
+`DATABASE_URL` uses `loomis-db.railway.internal`, which only resolves inside Railway.
 
-From your PC (after `railway login` and `railway link` → **loomis-api** service):
+**Recommended — from your PC (linked to loomis-api):**
 
 ```powershell
 cd apps/api
-railway run pnpm db:migrate:prod
+pnpm db:migrate:railway
+```
+
+This reads `DATABASE_PUBLIC_URL` from the **loomis-db** service and runs Drizzle migrate.
+
+**Manual alternative** — paste the **public** Postgres URL from Railway → loomis-db → Connect → Public network:
+
+```powershell
+cd apps/api
+$env:DATABASE_URL="postgresql://postgres:PASSWORD@HOST.proxy.rlwy.net:PORT/railway"
+pnpm db:migrate:prod
+```
+
+**Important:** every new `.sql` migration must also be registered in
+`drizzle/migrations/meta/_journal.json`. Drizzle skips SQL files that are not in the journal.
+
+Optional seed (demo only):
+
+```powershell
+cd apps/api
 railway run pnpm db:seed:rich:prod
 ```
 
-Run **from `apps/api`** — `db:migrate:prod` is not defined at the repo root. Use `db:seed:rich:prod` (not `db:seed:rich`), because the local seed script loads `.env.local` and will try `*.railway.internal` hostnames that do not resolve on your machine.
-
-**Option B — Local against prod** (careful): use the Postgres **public** URL from Railway → loomis-db → **Connect** → **Public network** (host ends in `.proxy.rlwy.net`). Do **not** use `*.railway.internal` from your PC — that hostname only works inside Railway.
-
-```powershell
-cd apps/api
-# Paste the PUBLIC url from Railway (not loomis-db.railway.internal)
-$env:DATABASE_URL="postgresql://postgres:PASSWORD@HOST.proxy.rlwy.net:PORT/railway"
-$env:DATABASE_AUDIT_URL=$env:DATABASE_URL
-pnpm db:migrate:prod
-pnpm db:seed:rich:prod
-```
-
-`db:seed:rich:prod` loads `.env.railway.local` for JWT/Redis/S3. Shell `DATABASE_URL` overrides the internal hostname in that file.
+`db:seed:rich:prod` loads `.env.railway.local` for JWT/Redis/S3. For seeds from your PC,
+override `DATABASE_URL` with the public URL as above.
 
 ### 2.7 Seed demo data (optional)
 

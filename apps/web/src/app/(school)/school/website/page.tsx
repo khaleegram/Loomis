@@ -7,7 +7,7 @@ import {
   useWebsiteSite,
 } from '@loomis/api-client';
 import { Alert, AlertDescription } from '@loomis/ui-web';
-import { ExternalLink, Inbox } from 'lucide-react';
+import { BarChart3, ExternalLink, Inbox } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -28,6 +28,7 @@ export default function SchoolWebsitePage() {
   const canEdit = useCanAny(['website.edit']);
   const canPublish = useCan('website.publish');
   const canViewInquiries = useCan('website.inquiries.view');
+  const canViewAnalytics = useCan('website.analytics.view');
   const { data: site, isLoading, error } = useWebsiteSite(tenantId);
   const updateMutation = useUpdateWebsiteSite(tenantId);
   const publishMutation = usePublishWebsite(tenantId);
@@ -95,6 +96,15 @@ export default function SchoolWebsitePage() {
                 Enquiries
               </Link>
             ) : null}
+            {canViewAnalytics ? (
+              <Link
+                href="/school/website/analytics"
+                className={`${ACADEMIC_UI.btnSecondary} inline-flex min-h-[44px] items-center gap-2`}
+              >
+                <BarChart3 className="size-4" aria-hidden />
+                Analytics
+              </Link>
+            ) : null}
             {draft.status === 'published' ? (
               <a
                 href={publicUrl}
@@ -150,6 +160,8 @@ export default function SchoolWebsitePage() {
         onChange={(sections: WebsiteSection[]) => setDraft({ ...draft, sections })}
         onSlugChange={(slug) => setDraft({ ...draft, slug })}
         onTemplateChange={(templateId) => setDraft({ ...draft, templateId })}
+        onThemeChange={(theme) => setDraft({ ...draft, theme })}
+        onSeoChange={(seo) => setDraft({ ...draft, seo })}
         onSave={handleSave}
         isSaving={updateMutation.isPending}
       />

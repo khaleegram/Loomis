@@ -112,3 +112,38 @@ export const websiteInquiries = websiteSchema.table(
     createdIdx: index('website_inquiries_created_at_idx').on(table.createdAt),
   }),
 );
+
+export const websitePageViews = websiteSchema.table(
+  'page_views',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    siteId: uuid('site_id')
+      .notNull()
+      .references(() => websiteSites.id, { onDelete: 'cascade' }),
+    path: varchar('path', { length: 500 }).notNull().default('/'),
+    referrerHost: varchar('referrer_host', { length: 255 }),
+    deviceType: varchar('device_type', { length: 20 }).notNull().default('unknown'),
+    dailyVisitorHash: varchar('daily_visitor_hash', { length: 64 }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    tenantCreatedIdx: index('website_page_views_tenant_created_at_idx').on(
+      table.tenantId,
+      table.createdAt,
+    ),
+    siteCreatedIdx: index('website_page_views_site_created_at_idx').on(
+      table.siteId,
+      table.createdAt,
+    ),
+    referrerIdx: index('website_page_views_referrer_host_idx').on(table.referrerHost),
+    deviceTypeValid: check(
+      'website_page_views_device_type_valid',
+      sql`${table.deviceType} IN ('desktop', 'mobile', 'tablet', 'bot', 'unknown')`,
+    ),
+  }),
+);

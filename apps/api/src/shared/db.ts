@@ -10,6 +10,7 @@ import * as financeSchema from '../../drizzle/schema/finance.js';
 import * as studentSchema from '../../drizzle/schema/student.js';
 import * as storageSchema from '../../drizzle/schema/storage.js';
 import * as riskSchema from '../../drizzle/schema/risk.js';
+import * as websiteSchema from '../../drizzle/schema/website.js';
 
 const env = getEnv();
 
@@ -26,6 +27,7 @@ export const db = drizzle(client, {
     ...studentSchema,
     ...storageSchema,
     ...riskSchema,
+    ...websiteSchema,
   },
 });
 

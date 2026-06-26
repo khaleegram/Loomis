@@ -2,11 +2,13 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import type {
   ConvertWebsiteInquiryToAdmissionRequest,
   SubmitWebsiteInquiryRequest,
+  SubmitWebsitePageViewRequest,
   UpdateWebsiteInquiryRequest,
   UpdateWebsiteSiteRequest,
 } from '@loomis/contracts';
 import { sendSuccess } from '../../../shared/http.js';
 import { requireWebsiteActor } from './_context.js';
+import { websiteAnalyticsService } from '../services/analytics.service.js';
 import { websiteInquiryService } from '../services/inquiry.service.js';
 import { websiteService } from '../services/website.service.js';
 
@@ -93,6 +95,18 @@ export async function submitPublicWebsiteInquiryHandler(
   return sendSuccess(reply, result, 201);
 }
 
+export async function submitPublicWebsitePageViewHandler(
+  req: FastifyRequest<{ Params: SlugParams; Body: SubmitWebsitePageViewRequest }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const userAgentHeader = req.headers['user-agent'];
+  await websiteAnalyticsService.recordPageView(req.params.slug, req.body, {
+    ip: req.ip,
+    userAgent: Array.isArray(userAgentHeader) ? userAgentHeader[0] : userAgentHeader,
+  });
+  return sendSuccess(reply, { ok: true }, 202);
+}
+
 export async function listWebsiteInquiriesHandler(
   req: FastifyRequest<{ Params: TenantParams; Querystring: { status?: string } }>,
   reply: FastifyReply,
@@ -134,4 +148,13 @@ export async function convertWebsiteInquiryToAdmissionHandler(
     actor,
   );
   return sendSuccess(reply, result, 201);
+}
+
+export async function getWebsiteAnalyticsHandler(
+  req: FastifyRequest<{ Params: TenantParams; Querystring: { days?: string } }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const days = req.query.days ? Number(req.query.days) : undefined;
+  const result = await websiteAnalyticsService.getAnalytics(req.params.tenantId, days);
+  return sendSuccess(reply, result);
 }
