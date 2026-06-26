@@ -1,16 +1,28 @@
 import type { FastifyInstance } from 'fastify';
-import { updateWebsiteSiteRequest, type UpdateWebsiteSiteRequest } from '@loomis/contracts';
+import {
+  submitWebsiteInquiryRequest,
+  updateWebsiteSiteRequest,
+  updateWebsiteInquiryRequest,
+  type SubmitWebsiteInquiryRequest,
+  type UpdateWebsiteInquiryRequest,
+  type UpdateWebsiteSiteRequest,
+} from '@loomis/contracts';
 import { authenticate } from '../../../middleware/authenticate.js';
+import { requireCapability } from '../../../middleware/require-capability.js';
 import { requireIdempotencyKey } from '../../../middleware/require-idempotency-key.js';
 import { requireRole } from '../../../middleware/require-role.js';
 import { requireTenantMatch } from '../../../middleware/require-tenant-match.js';
 import { validateBody } from '../../../shared/validation.js';
+import { websiteInquiryRateLimiter } from '../middleware/website-inquiry-rate-limiter.js';
 import {
   checkWebsiteSlugHandler,
   getPublicWebsiteHandler,
   getWebsiteSiteHandler,
+  listWebsiteInquiriesHandler,
   publishWebsiteHandler,
+  submitPublicWebsiteInquiryHandler,
   unpublishWebsiteHandler,
+  updateWebsiteInquiryHandler,
   updateWebsiteSiteHandler,
 } from '../handlers/website.handler.js';
 
@@ -77,9 +89,48 @@ export async function websiteRoutes(app: FastifyInstance): Promise<void> {
     },
     unpublishWebsiteHandler,
   );
+
+  app.get<{ Params: { tenantId: string }; Querystring: { status?: string } }>(
+    '/tenants/:tenantId/website/inquiries',
+    {
+      preHandler: [
+        authenticate,
+        requireTenantMatch,
+        requireRole(...WEBSITE_EDITORS),
+        requireCapability('website.inquiries.view'),
+      ],
+    },
+    listWebsiteInquiriesHandler,
+  );
+
+  app.patch<{
+    Params: { tenantId: string; inquiryId: string };
+    Body: UpdateWebsiteInquiryRequest;
+  }>(
+    '/tenants/:tenantId/website/inquiries/:inquiryId',
+    {
+      preHandler: [
+        authenticate,
+        requireTenantMatch,
+        requireRole(...WEBSITE_EDITORS),
+        requireCapability('website.inquiries.view'),
+      ],
+      preValidation: [validateBody(updateWebsiteInquiryRequest)],
+    },
+    updateWebsiteInquiryHandler,
+  );
 }
 
 /** Unauthenticated public school websites. */
 export async function publicWebsiteRoutes(app: FastifyInstance): Promise<void> {
   app.get<{ Params: { slug: string } }>('/public/sites/:slug', getPublicWebsiteHandler);
+
+  app.post<{ Params: { slug: string }; Body: SubmitWebsiteInquiryRequest }>(
+    '/public/sites/:slug/inquiries',
+    {
+      preHandler: [websiteInquiryRateLimiter],
+      preValidation: [validateBody(submitWebsiteInquiryRequest)],
+    },
+    submitPublicWebsiteInquiryHandler,
+  );
 }

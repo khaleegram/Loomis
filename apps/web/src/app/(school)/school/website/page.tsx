@@ -7,7 +7,8 @@ import {
   useWebsiteSite,
 } from '@loomis/api-client';
 import { Alert, AlertDescription } from '@loomis/ui-web';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Inbox } from 'lucide-react';
+import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 
 import {
@@ -26,6 +27,7 @@ export default function SchoolWebsitePage() {
   const tenantId = useTenantId() ?? '';
   const canEdit = useCanAny(['website.edit']);
   const canPublish = useCan('website.publish');
+  const canViewInquiries = useCan('website.inquiries.view');
   const { data: site, isLoading, error } = useWebsiteSite(tenantId);
   const updateMutation = useUpdateWebsiteSite(tenantId);
   const publishMutation = usePublishWebsite(tenantId);
@@ -39,8 +41,9 @@ export default function SchoolWebsitePage() {
 
   const handleSave = useCallback(async () => {
     if (!draft) return;
+    const chosenSlugIsValid = /^[a-z0-9]{3,30}$/.test(draft.slug);
     await updateMutation.mutateAsync({
-      slug: draft.slug,
+      ...(chosenSlugIsValid ? { slug: draft.slug } : {}),
       templateId: draft.templateId,
       theme: draft.theme,
       sections: draft.sections,
@@ -83,6 +86,15 @@ export default function SchoolWebsitePage() {
         canPublish={canPublish}
         actions={
           <>
+            {canViewInquiries ? (
+              <Link
+                href="/school/website/inquiries"
+                className={`${ACADEMIC_UI.btnSecondary} inline-flex min-h-[44px] items-center gap-2`}
+              >
+                <Inbox className="size-4" aria-hidden />
+                Enquiries
+              </Link>
+            ) : null}
             {draft.status === 'published' ? (
               <a
                 href={publicUrl}

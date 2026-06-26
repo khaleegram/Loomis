@@ -28,6 +28,10 @@ const SECTION_LABELS: Record<string, string> = {
   faq: 'FAQ',
 };
 
+function textValue(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
 interface WebsiteSectionEditorProps {
   tenantId: string;
   site: WebsiteSiteResponse;
@@ -193,7 +197,7 @@ export function WebsiteSectionEditor({
           <ul className="divide-y divide-neutral-100">
             {sortedSections.map((section) => {
               const open = expandedId === section.id;
-              const props = section.props as Record<string, string>;
+              const props = section.props as Record<string, unknown>;
               return (
                 <li key={section.id}>
                   <div className="flex items-center gap-2 px-3 py-3">
@@ -242,7 +246,7 @@ export function WebsiteSectionEditor({
                             <Input
                               id={`${section.id}-headline`}
                               disabled={!canEdit}
-                              value={props.headline ?? ''}
+                              value={textValue(props.headline)}
                               onChange={(e) =>
                                 updateSection(section.id, {
                                   props: { ...props, headline: e.target.value },
@@ -255,7 +259,7 @@ export function WebsiteSectionEditor({
                             <Input
                               id={`${section.id}-sub`}
                               disabled={!canEdit}
-                              value={props.subheadline ?? ''}
+                              value={textValue(props.subheadline)}
                               onChange={(e) =>
                                 updateSection(section.id, {
                                   props: { ...props, subheadline: e.target.value },
@@ -272,7 +276,7 @@ export function WebsiteSectionEditor({
                             <Input
                               id={`${section.id}-title`}
                               disabled={!canEdit}
-                              value={props.title ?? ''}
+                              value={textValue(props.title)}
                               onChange={(e) =>
                                 updateSection(section.id, {
                                   props: { ...props, title: e.target.value },
@@ -286,7 +290,7 @@ export function WebsiteSectionEditor({
                               id={`${section.id}-body`}
                               disabled={!canEdit}
                               rows={5}
-                              value={props.body ?? ''}
+                              value={textValue(props.body)}
                               onChange={(e) =>
                                 updateSection(section.id, {
                                   props: { ...props, body: e.target.value },
@@ -303,7 +307,7 @@ export function WebsiteSectionEditor({
                             <Input
                               id={`${section.id}-title`}
                               disabled={!canEdit}
-                              value={props.title ?? ''}
+                              value={textValue(props.title)}
                               onChange={(e) =>
                                 updateSection(section.id, {
                                   props: { ...props, title: e.target.value },
@@ -317,7 +321,7 @@ export function WebsiteSectionEditor({
                               id={`${section.id}-body`}
                               disabled={!canEdit}
                               rows={3}
-                              value={props.body ?? ''}
+                              value={textValue(props.body)}
                               onChange={(e) =>
                                 updateSection(section.id, {
                                   props: { ...props, body: e.target.value },
@@ -325,6 +329,41 @@ export function WebsiteSectionEditor({
                               }
                             />
                           </div>
+                          <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              disabled={!canEdit}
+                              checked={props.formEnabled === true}
+                              onChange={(e) =>
+                                updateSection(section.id, {
+                                  props: { ...props, formEnabled: e.target.checked },
+                                })
+                              }
+                              className="size-4 rounded border-neutral-300"
+                            />
+                            Show admission enquiry form on live site
+                          </label>
+                        </>
+                      ) : null}
+                      {section.type === 'contact' ? (
+                        <>
+                          <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              disabled={!canEdit}
+                              checked={props.formEnabled === true}
+                              onChange={(e) =>
+                                updateSection(section.id, {
+                                  props: { ...props, formEnabled: e.target.checked },
+                                })
+                              }
+                              className="size-4 rounded border-neutral-300"
+                            />
+                            Show contact form on live site
+                          </label>
+                          <p className="text-xs text-neutral-500">
+                            Enquiries arrive in Website → Enquiries and email your school contact.
+                          </p>
                         </>
                       ) : null}
                     </div>

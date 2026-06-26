@@ -2,6 +2,7 @@ import type { PublicWebsiteSiteResponse, WebsiteSection } from '@loomis/contract
 import { cn } from '@loomis/ui-web';
 import { Mail, MapPin, Phone } from 'lucide-react';
 
+import { WebsiteInquiryForm } from '@/components/website/website-inquiry-form';
 import { getAppLoginUrl } from '@/lib/website/public-site-url';
 
 function assetUrl(
@@ -83,18 +84,32 @@ function SectionBlock({
           id="admissions"
           style={{ backgroundColor: `${site.theme.primaryColor}14` }}
         >
-          <div className="rounded-2xl border border-brand-100/50 bg-white/80 p-8 text-center shadow-sm">
-            <h2 className="text-2xl font-extrabold text-neutral-900">
+          <div className="rounded-2xl border border-brand-100/50 bg-white/80 p-8 shadow-sm">
+            <h2 className="text-center text-2xl font-extrabold text-neutral-900">
               {(props.title as string) || 'Admissions'}
             </h2>
-            <p className="mx-auto mt-3 max-w-2xl text-neutral-600">{(props.body as string) || ''}</p>
-            <a
-              href="#contact"
-              className="mt-6 inline-flex min-h-[44px] items-center rounded-full px-6 py-3 text-sm font-semibold text-white"
-              style={{ backgroundColor: site.theme.accentColor }}
-            >
-              {(props.buttonLabel as string) || 'Contact Us'}
-            </a>
+            <p className="mx-auto mt-3 max-w-2xl text-center text-neutral-600">
+              {(props.body as string) || ''}
+            </p>
+            {props.formEnabled === true ? (
+              <div className="mx-auto mt-8 max-w-xl">
+                <WebsiteInquiryForm
+                  slug={site.slug}
+                  type="admission_interest"
+                  accentColor={site.theme.accentColor}
+                />
+              </div>
+            ) : (
+              <div className="text-center">
+                <a
+                  href="#contact"
+                  className="mt-6 inline-flex min-h-[44px] items-center rounded-full px-6 py-3 text-sm font-semibold text-white"
+                  style={{ backgroundColor: site.theme.accentColor }}
+                >
+                  {(props.buttonLabel as string) || 'Contact Us'}
+                </a>
+              </div>
+            )}
           </div>
         </section>
       );
@@ -127,6 +142,15 @@ function SectionBlock({
               </p>
             ) : null}
           </div>
+          {props.formEnabled === true ? (
+            <div className="mt-8 max-w-xl">
+              <WebsiteInquiryForm
+                slug={site.slug}
+                type="contact"
+                accentColor={site.theme.primaryColor}
+              />
+            </div>
+          ) : null}
         </section>
       );
     case 'whatsapp_cta': {

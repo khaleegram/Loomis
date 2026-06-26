@@ -121,3 +121,68 @@ export const publicWebsiteSiteResponse = z.object({
   publishedAt: z.string().datetime(),
 });
 export type PublicWebsiteSiteResponse = z.infer<typeof publicWebsiteSiteResponse>;
+
+// ── Website inquiries (Phase 2) ───────────────────────────────────────────────
+
+export const websiteInquiryType = z.enum(['contact', 'admission_interest']);
+export type WebsiteInquiryType = z.infer<typeof websiteInquiryType>;
+
+export const websiteInquiryStatus = z.enum(['new', 'read', 'archived']);
+export type WebsiteInquiryStatus = z.infer<typeof websiteInquiryStatus>;
+
+const optionalWebsiteText = (max: number) =>
+  z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.string().max(max).optional(),
+  );
+
+export const submitWebsiteInquiryRequest = z.object({
+  type: websiteInquiryType,
+  submitterName: z.string().min(2).max(200),
+  submitterEmail: z.string().email().max(255),
+  submitterPhone: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.string().min(7).max(20).optional(),
+  ),
+  message: z.string().min(10).max(2000),
+  /** Honeypot — must be empty; bots fill this field. */
+  website: z.string().optional(),
+  childFirstName: optionalWebsiteText(100),
+  childLastName: optionalWebsiteText(100),
+  classInterest: optionalWebsiteText(200),
+});
+export type SubmitWebsiteInquiryRequest = z.infer<typeof submitWebsiteInquiryRequest>;
+
+export const websiteInquiryResponse = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
+  siteId: z.string().uuid(),
+  type: websiteInquiryType,
+  submitterName: z.string(),
+  submitterEmail: z.string().email(),
+  submitterPhone: z.string().nullable(),
+  message: z.string(),
+  metadata: z.record(z.unknown()),
+  status: websiteInquiryStatus,
+  admissionId: z.string().uuid().nullable(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+export type WebsiteInquiryResponse = z.infer<typeof websiteInquiryResponse>;
+
+export const submitWebsiteInquiryResponse = z.object({
+  inquiryId: z.string().uuid(),
+  message: z.string(),
+});
+export type SubmitWebsiteInquiryResponse = z.infer<typeof submitWebsiteInquiryResponse>;
+
+export const websiteInquiryListResponse = z.object({
+  inquiries: z.array(websiteInquiryResponse),
+  total: z.number().int(),
+});
+export type WebsiteInquiryListResponse = z.infer<typeof websiteInquiryListResponse>;
+
+export const updateWebsiteInquiryRequest = z.object({
+  status: websiteInquiryStatus,
+});
+export type UpdateWebsiteInquiryRequest = z.infer<typeof updateWebsiteInquiryRequest>;

@@ -266,6 +266,8 @@ export const queryKeys = {
   /** School public website builder */
   website: {
     site: (tenantId: string) => ['website', tenantId, 'site'] as const,
+    inquiries: (tenantId: string, status?: string) =>
+      ['website', tenantId, 'inquiries', status ?? 'all'] as const,
   },
   /** Public school site (no tenant in key — slug is globally unique) */
   publicSite: (slug: string) => ['public-site', slug] as const,

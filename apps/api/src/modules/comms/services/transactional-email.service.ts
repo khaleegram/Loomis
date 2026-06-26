@@ -202,7 +202,7 @@ async function sendTransactionalEmail(input: {
       to: recipient,
       subject: input.subject,
       body: input.body,
-      html: input.html,
+      ...(input.html ? { html: input.html } : {}),
     });
     return { sent: true, recipient };
   } catch {
@@ -540,5 +540,40 @@ export const transactionalEmailService = {
 
     await recordDeliveryEvent({ tenantId: input.tenantId, userId: input.userId, result });
     return result;
+  },
+
+  async sendWebsiteInquiryNotificationEmail(input: {
+    tenantId: string;
+    to: string;
+    schoolName: string;
+    inquiryType: 'contact' | 'admission_interest';
+    submitterName: string;
+    submitterEmail: string;
+    submitterPhone: string | null;
+    message: string;
+    childFirstName?: string;
+    classInterest?: string;
+  }): Promise<EmailDeliveryResult> {
+    const recipient = input.to.toLowerCase();
+    const label =
+      input.inquiryType === 'admission_interest' ? 'Admission interest' : 'Website contact';
+    const lines = [
+      'Hello,',
+      '',
+      `A new ${label.toLowerCase()} enquiry arrived on your public school website.`,
+      '',
+      `From: ${input.submitterName}`,
+      `Email: ${input.submitterEmail}`,
+    ];
+    if (input.submitterPhone) lines.push(`Phone: ${input.submitterPhone}`);
+    if (input.childFirstName) lines.push(`Child: ${input.childFirstName}`);
+    if (input.classInterest) lines.push(`Class interest: ${input.classInterest}`);
+    lines.push('', 'Message:', input.message, '', `View enquiries: ${webAppBaseUrl()}/school/website/inquiries`);
+
+    return sendTransactionalEmail({
+      to: recipient,
+      subject: `${label} — ${input.schoolName}`,
+      body: lines.join('\n'),
+    });
   },
 };

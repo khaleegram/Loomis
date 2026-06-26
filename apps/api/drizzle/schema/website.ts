@@ -5,6 +5,7 @@ import {
   integer,
   jsonb,
   pgSchema,
+  text,
   timestamp,
   uniqueIndex,
   uuid,
@@ -77,5 +78,37 @@ export const websitePublishSnapshots = websiteSchema.table(
       table.version,
     ),
     siteIdx: index('website_publish_snapshots_site_id_idx').on(table.siteId),
+  }),
+);
+
+export const websiteInquiries = websiteSchema.table(
+  'inquiries',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    siteId: uuid('site_id')
+      .notNull()
+      .references(() => websiteSites.id, { onDelete: 'cascade' }),
+    type: varchar('type', { length: 20 }).notNull(),
+    submitterName: varchar('submitter_name', { length: 200 }).notNull(),
+    submitterEmail: varchar('submitter_email', { length: 255 }).notNull(),
+    submitterPhone: varchar('submitter_phone', { length: 20 }),
+    message: text('message').notNull(),
+    metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull().default({}),
+    status: varchar('status', { length: 20 }).notNull().default('new'),
+    admissionId: uuid('admission_id'),
+    ipHash: varchar('ip_hash', { length: 64 }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    tenantIdx: index('website_inquiries_tenant_id_idx').on(table.tenantId),
+    siteIdx: index('website_inquiries_site_id_idx').on(table.siteId),
+    statusIdx: index('website_inquiries_status_idx').on(table.tenantId, table.status),
+    createdIdx: index('website_inquiries_created_at_idx').on(table.createdAt),
   }),
 );

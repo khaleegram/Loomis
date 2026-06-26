@@ -2,7 +2,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   CheckWebsiteSlugResponse,
   PublicWebsiteSiteResponse,
+  SubmitWebsiteInquiryRequest,
+  SubmitWebsiteInquiryResponse,
+  UpdateWebsiteInquiryRequest,
   UpdateWebsiteSiteRequest,
+  WebsiteInquiryListResponse,
+  WebsiteInquiryResponse,
   WebsitePublishResponse,
   WebsiteSiteResponse,
 } from '@loomis/contracts';
@@ -97,5 +102,54 @@ export function usePublicSite(slug: string) {
   return useQuery({
     ...publicSiteQueryOptions(client, slug),
     enabled: Boolean(slug),
+  });
+}
+
+export function useSubmitWebsiteInquiry(slug: string) {
+  const client = useApiClient();
+  return useMutation({
+    mutationFn: (body: SubmitWebsiteInquiryRequest) =>
+      client.post<SubmitWebsiteInquiryResponse>(`/public/sites/${slug}/inquiries`, body, {
+        skipAuth: true,
+      }),
+  });
+}
+
+export function useWebsiteInquiries(tenantId: string, status?: string) {
+  const client = useApiClient();
+  return useQuery({
+    queryKey: queryKeys.website.inquiries(tenantId, status),
+    queryFn: () => {
+      const params = status ? `?status=${encodeURIComponent(status)}` : '';
+      return client.get<WebsiteInquiryListResponse>(
+        `/tenants/${tenantId}/website/inquiries${params}`,
+        { headers: { 'X-Tenant-Id': tenantId } },
+      );
+    },
+    enabled: Boolean(tenantId),
+    staleTime: 30_000,
+  });
+}
+
+export function useUpdateWebsiteInquiry(tenantId: string) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      inquiryId,
+      status,
+    }: {
+      inquiryId: string;
+      status: UpdateWebsiteInquiryRequest['status'];
+    }) =>
+      client.patch<WebsiteInquiryResponse>(
+        `/tenants/${tenantId}/website/inquiries/${inquiryId}`,
+        { status },
+        { headers: { 'X-Tenant-Id': tenantId } },
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['website', tenantId, 'inquiries'] });
+    },
   });
 }

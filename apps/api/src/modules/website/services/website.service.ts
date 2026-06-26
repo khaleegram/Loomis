@@ -85,6 +85,7 @@ function buildDefaultSections(schoolName: string, address: string): WebsiteSecti
         title: 'Join Our School',
         body: 'We welcome new families every term. Contact us to learn about our admission process.',
         buttonLabel: 'Enquire Now',
+        formEnabled: true,
       },
     },
     {
@@ -96,7 +97,7 @@ function buildDefaultSections(schoolName: string, address: string): WebsiteSecti
         showMap: false,
         showPhone: true,
         showEmail: true,
-        formEnabled: false,
+        formEnabled: true,
       },
     },
     {
