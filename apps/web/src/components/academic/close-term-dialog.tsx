@@ -27,6 +27,10 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
+import {
+  buildClosureChecklistFromPreview,
+  TermClosureChecklist,
+} from '@/components/academic/term-closure-checklist';
 import { academicErrorMessage } from '@/lib/academic/academic-errors';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 
@@ -137,7 +141,15 @@ export function CloseTermDialog({
         </Alert>
 
         {preview.isLoading ? (
-          <Skeleton className="h-20 w-full rounded-lg" />
+          <TermClosureChecklist items={[]} loading />
+        ) : preview.data ? (
+          <TermClosureChecklist
+            items={buildClosureChecklistFromPreview({
+              canCloseWithoutOverride: preview.data.canCloseWithoutOverride,
+              financialBlockers: preview.data.financialBlockers,
+              operationalBlockers: preview.data.operationalBlockers,
+            })}
+          />
         ) : null}
 
         {preview.isError ? (
@@ -145,33 +157,6 @@ export function CloseTermDialog({
             <AlertDescription>
               Could not load closure checks. You may still attempt to close — blockers will be returned
               on submit.
-            </AlertDescription>
-          </Alert>
-        ) : null}
-
-        {blockers?.financial?.length ? (
-          <Alert variant="destructive">
-            <AlertTitle>Financial blockers</AlertTitle>
-            <AlertDescription>
-              <ul className="mt-2 list-disc space-y-1 pl-4">
-                {blockers.financial.map((b) => (
-                  <li key={b}>{b}</li>
-                ))}
-              </ul>
-            </AlertDescription>
-          </Alert>
-        ) : null}
-
-        {blockers?.operational?.length ? (
-          <Alert variant="warning">
-            <AlertTitle>Operational blockers</AlertTitle>
-            <AlertDescription>
-              <ul className="mt-2 list-disc space-y-1 pl-4">
-                {blockers.operational.map((b) => (
-                  <li key={b}>{b}</li>
-                ))}
-              </ul>
-              <p className="mt-2">You may document an override reason below if your role permits.</p>
             </AlertDescription>
           </Alert>
         ) : null}

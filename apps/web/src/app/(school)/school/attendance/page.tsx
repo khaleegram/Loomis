@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from '@loomis/ui-web';
 import { useCallback, useMemo, useState } from 'react';
 
 import { AcademicScopePicker } from '@/components/academic/ops/academic-scope-picker';
+import { TodayAttendanceRegister } from '@/components/academic/ops/today-attendance-register';
 import { AttendanceAmendSheet } from '@/components/academic/ops/attendance-amend-sheet';
 import { AttendanceHero } from '@/components/academic/ops/attendance-hero';
 import {
@@ -144,6 +145,18 @@ export default function AttendancePage() {
   }, [rosterRows]);
 
   const canMarkToday = canMark && ctx.activeTerm?.status === 'open';
+  const isToday = selectedDate === todayCalendarDate();
+  const useTodayRegister = isClassTeacherRole(role) && isToday;
+
+  const todayRegisterRows = useMemo(
+    () =>
+      rosterRows.map((row) => ({
+        student: row.student,
+        status: (draftStatuses[row.student.id] ?? row.record?.status ?? 'present') as AttendanceStatus,
+        submitted: row.record !== null,
+      })),
+    [rosterRows, draftStatuses],
+  );
   const classLabel =
     (isClassTeacherRole(role) ? teacherCtx.classTeacherClassArmLabel : null) ??
     classArmOptions(ctx.arms, ctx.levels).find((arm) => arm.id === ctx.classArmId)?.label ??
@@ -206,6 +219,37 @@ export default function AttendancePage() {
               Choose a class in the scope bar above.
             </p>
           </div>
+        ) : useTodayRegister ? (
+          <TodayAttendanceRegister
+            rows={todayRegisterRows}
+            canMark={canMarkToday}
+            pending={markAttendance.isPending}
+            classLabel={classLabel}
+            dateLabel={selectedDateLabel}
+            errorMessage={submitError}
+            onStatusChange={(studentId, status) =>
+              setDraftStatuses((prev) => ({ ...prev, [studentId]: status }))
+            }
+            onSubmit={async () => {
+              if (!ctx.termId || !ctx.classArmId) return;
+              setSubmitError(null);
+              try {
+                await markAttendance.mutateAsync({
+                  termId: ctx.termId,
+                  classArmId: ctx.classArmId,
+                  attendanceDate: selectedDate,
+                  session: 'full_day',
+                  entries: todayRegisterRows.map((row) => ({
+                    studentId: row.student.id,
+                    status: row.status,
+                  })),
+                });
+                setDraftStatuses({});
+              } catch (err) {
+                setSubmitError(academicErrorMessage(err));
+              }
+            }}
+          />
         ) : (
           <AttendanceWeekRoster
             weekDates={weekDates}

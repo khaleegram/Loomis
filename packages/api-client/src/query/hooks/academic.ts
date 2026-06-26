@@ -20,6 +20,7 @@ import type {
   ProgressionMapResponse,
   ProgressionResponse,
   PromotionListResponse,
+  AcademicSetupPreferences,
   SetupClassArmsRequest,
   SetupClassArmsResponse,
   SetupClassLevelsRequest,
@@ -36,6 +37,7 @@ import type {
   StepUpResponse,
   StepUpSendSmsRequest,
   StepUpSendSmsResponse,
+  UpsertAcademicSetupPreferencesRequest,
   UpsertProgressionRequest,
 } from '@loomis/contracts';
 import type { ApiClient } from '../../http/client.js';
@@ -69,6 +71,31 @@ function invalidateAcademicQueries(
       queryKey: queryKeys.academic.censusPreview(tenantId, termId),
     });
   }
+}
+
+export function useAcademicSetupPreferences(tenantId: string) {
+  const client = useApiClient();
+  const queryKey = ['academic', 'setup-preferences', tenantId] as const;
+  return useQuery({
+    queryKey,
+    queryFn: () =>
+      client.get<AcademicSetupPreferences>(`/tenants/${tenantId}/academic/setup-preferences`),
+    enabled: Boolean(tenantId),
+    staleTime: ACADEMIC_STALE_MS,
+  });
+}
+
+export function useUpsertAcademicSetupPreferences(tenantId: string) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  const queryKey = ['academic', 'setup-preferences', tenantId] as const;
+  return useMutation({
+    mutationFn: (body: UpsertAcademicSetupPreferencesRequest) =>
+      client.put<AcademicSetupPreferences>(`/tenants/${tenantId}/academic/setup-preferences`, body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey });
+    },
+  });
 }
 
 export function academicYearsQueryOptions(client: ApiClient, tenantId: string) {

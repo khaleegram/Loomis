@@ -1,6 +1,12 @@
 import type { AcademicTermResponse, AcademicYearResponse, PromotionRecordResponse } from '@loomis/contracts';
 
 import { pickActiveYear, pickOpenTerm } from '@/lib/academic/academic-session-utils';
+import {
+  midTermBreakDate,
+  openDayDate,
+  resultDayDate,
+  type CalendarPreferences,
+} from '@/lib/academic/calendar-preferences';
 
 export { pickActiveYear, pickOpenTerm } from '@/lib/academic/academic-session-utils';
 
@@ -47,7 +53,11 @@ export interface CalendarEvent {
   description?: string;
 }
 
-export function buildTermCalendarEvents(term: AcademicTermResponse): CalendarEvent[] {
+export function buildTermCalendarEvents(
+  term: AcademicTermResponse,
+  prefs?: CalendarPreferences,
+): CalendarEvent[] {
+  const calendarPrefs = prefs ?? null;
   const events: CalendarEvent[] = [];
 
   if (term.startDate) {
@@ -106,6 +116,36 @@ export function buildTermCalendarEvents(term: AcademicTermResponse): CalendarEve
       date: term.endDate,
       category: 'term',
     });
+  }
+
+  if (calendarPrefs && term.startDate && term.endDate) {
+    if (calendarPrefs.hasMidTermBreak) {
+      events.push({
+        id: `${term.id}-midterm`,
+        label: 'Mid-term break',
+        date: midTermBreakDate(term.startDate, term.endDate),
+        category: 'term',
+        description: 'School closed for mid-term break.',
+      });
+    }
+    if (calendarPrefs.hasOpenDay) {
+      events.push({
+        id: `${term.id}-open-day`,
+        label: 'Open day / PTA',
+        date: openDayDate(term.endDate, term.examStartDate),
+        category: 'term',
+        description: 'Parents visit to see student progress.',
+      });
+    }
+    if (calendarPrefs.hasResultDay) {
+      events.push({
+        id: `${term.id}-result-day`,
+        label: 'Result day',
+        date: resultDayDate(term.endDate),
+        category: 'exam',
+        description: 'Report cards available to parents after publish.',
+      });
+    }
   }
 
   return events.sort((a, b) => a.date.localeCompare(b.date));

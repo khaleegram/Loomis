@@ -11,6 +11,7 @@ import {
   Layers,
   Settings2,
   Users,
+  ClipboardList,
 } from 'lucide-react';
 import { Skeleton, cn } from '@loomis/ui-web';
 
@@ -40,6 +41,7 @@ export default function AcademicHubPage() {
   ]);
   const canManageYear = useCanAny(['academic_year.manage', 'term.manage']);
   const canStructure = useCan('class_structure.manage');
+  const canConfigureResults = useCan('grading_scheme.configure');
   const canPromote = useCan('student.promote');
   const canGraduate = useCan('student.graduate');
 
@@ -96,6 +98,14 @@ export default function AcademicHubPage() {
       href: '/school/academic/setup',
       icon: Layers,
       show: canStructure,
+    },
+    {
+      id: 'results-setup',
+      title: 'Result setup',
+      description: 'CA + Exam scoring, grades, and position — answer 3 questions.',
+      href: '/school/academic/setup/results',
+      icon: ClipboardList,
+      show: canConfigureResults,
     },
     {
       id: 'promotions',

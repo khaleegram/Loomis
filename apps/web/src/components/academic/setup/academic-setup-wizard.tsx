@@ -21,10 +21,13 @@ import {
 } from 'lucide-react';
 
 import { ArmLetterDialog } from '@/components/academic/setup/arm-letter-dialog';
+import { SetupCalendarStep } from '@/components/academic/setup/setup-calendar-step';
+import { SetupSchoolYearStep } from '@/components/academic/setup/setup-school-year-step';
 import { academicErrorMessage } from '@/lib/academic/academic-errors';
 import { pickActiveYear } from '@/lib/academic/academic-session-utils';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import {
+  ARM_LETTERS,
   buildLevelsPayload,
   DEFAULT_CLASS_LADDER,
   LADDER_STAGES,
@@ -32,7 +35,7 @@ import {
 } from '@/lib/academic/default-class-ladder';
 import { SEMANTIC } from '@/lib/design/surfaces';
 
-type Step = 'levels' | 'arms-question' | 'arms-picker' | 'done';
+type Step = 'school-year' | 'levels' | 'arms-question' | 'arms-picker' | 'calendar' | 'done';
 
 interface AcademicSetupWizardProps {
   tenantId: string;
@@ -53,9 +56,12 @@ export function AcademicSetupWizard({ tenantId }: AcademicSetupWizardProps) {
 
   const setupLevels = useSetupClassLevels(tenantId);
 
+  const needsSchoolYear = !activeYear && years.length === 0;
+
   // Step state ----------------------------------------------------------------
-  const [step, setStep] = useState<Step>('levels');
+  const [step, setStep] = useState<Step>(() => (needsSchoolYear ? 'school-year' : 'levels'));
   const [error, setError] = useState<string | null>(null);
+  const [setupYearId, setSetupYearId] = useState<string | null>(activeYear?.id ?? null);
 
   // Pre-select: matching existing ladder codes if a school already started, else all.
   const [selectedCodes, setSelectedCodes] = useState<Set<string>>(() => {
@@ -117,6 +123,17 @@ export function AcademicSetupWizard({ tenantId }: AcademicSetupWizardProps) {
           <div className={`mb-5 rounded-xl border p-3 text-sm ${SEMANTIC.danger.surface}`}>{error}</div>
         ) : null}
 
+        {step === 'school-year' ? (
+          <SetupSchoolYearStep
+            tenantId={tenantId}
+            onComplete={(yearId) => {
+              setSetupYearId(yearId);
+              setStep('levels');
+            }}
+            onSkip={() => setStep('levels')}
+          />
+        ) : null}
+
         {step === 'levels' ? (
           <LevelsStep
             selectedCodes={selectedCodes}
@@ -132,7 +149,7 @@ export function AcademicSetupWizard({ tenantId }: AcademicSetupWizardProps) {
         {step === 'arms-question' ? (
           <ArmsQuestionStep
             onBack={() => setStep('levels')}
-            onNo={() => setStep('done')}
+            onNo={() => setStep('calendar')}
             onYes={() => setStep('arms-picker')}
           />
         ) : null}
@@ -140,10 +157,18 @@ export function AcademicSetupWizard({ tenantId }: AcademicSetupWizardProps) {
         {step === 'arms-picker' ? (
           <ArmsPickerStep
             tenantId={tenantId}
-            academicYearId={activeYear?.id ?? null}
+            academicYearId={setupYearId ?? activeYear?.id ?? null}
             yearLabel={activeYear?.label ?? null}
             onBack={() => setStep('arms-question')}
-            onDone={() => setStep('done')}
+            onDone={() => setStep('calendar')}
+          />
+        ) : null}
+
+        {step === 'calendar' ? (
+          <SetupCalendarStep
+            tenantId={tenantId}
+            onBack={() => setStep('arms-question')}
+            onComplete={() => setStep('done')}
           />
         ) : null}
 
@@ -160,16 +185,20 @@ export function AcademicSetupWizard({ tenantId }: AcademicSetupWizardProps) {
 
 // ── Progress rail ────────────────────────────────────────────────────────────
 
-const PROGRESS_STEPS: { id: Step; label: string }[] = [
+const PROGRESS_STEPS: { id: string; label: string }[] = [
+  { id: 'school-year', label: 'Year' },
   { id: 'levels', label: 'Classes' },
-  { id: 'arms-question', label: 'Arms' },
+  { id: 'arms', label: 'Arms' },
+  { id: 'calendar', label: 'Calendar' },
   { id: 'done', label: 'Done' },
 ];
 
 function progressIndex(step: Step): number {
-  if (step === 'levels') return 0;
-  if (step === 'arms-question' || step === 'arms-picker') return 1;
-  return 2;
+  if (step === 'school-year') return 0;
+  if (step === 'levels') return 1;
+  if (step === 'arms-question' || step === 'arms-picker') return 2;
+  if (step === 'calendar') return 3;
+  return 4;
 }
 
 function WizardProgress({ step }: { step: Step }) {
@@ -425,6 +454,8 @@ function ArmsPickerStep({
 
   const [search, setSearch] = useState('');
   const [openLevelId, setOpenLevelId] = useState<string | null>(null);
+  const [commonArms, setCommonArms] = useState<Set<string>>(new Set(['A', 'B']));
+  const [applyingCommonArms, setApplyingCommonArms] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
@@ -457,6 +488,35 @@ function ArmsPickerStep({
     } catch (err) {
       setError(academicErrorMessage(err));
     }
+  }
+
+  async function applyCommonArmsToAllClasses() {
+    if (!academicYearId || commonArms.size === 0) return;
+    setError(null);
+    setApplyingCommonArms(true);
+    try {
+      const armNames = [...commonArms].sort();
+      for (const level of levels) {
+        await setupArms.mutateAsync({
+          academicYearId,
+          classLevelId: level.id,
+          armNames,
+        });
+      }
+    } catch (err) {
+      setError(academicErrorMessage(err));
+    } finally {
+      setApplyingCommonArms(false);
+    }
+  }
+
+  function toggleCommonArm(letter: string) {
+    setCommonArms((prev) => {
+      const next = new Set(prev);
+      if (next.has(letter)) next.delete(letter);
+      else next.add(letter);
+      return next;
+    });
   }
 
   if (!academicYearId) {
@@ -501,6 +561,47 @@ function ArmsPickerStep({
       {error ? (
         <div className={`rounded-xl border p-3 text-sm ${SEMANTIC.danger.surface}`}>{error}</div>
       ) : null}
+
+      <div className="rounded-2xl border border-brand-200/60 bg-brand-50/50 p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-[14px] font-bold text-neutral-900">
+              Same arms for every class?
+            </p>
+            <p className="mt-0.5 text-[12px] text-neutral-500">
+              If your whole school uses A and B, select A/B once and apply to all classes.
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={applyingCommonArms || commonArms.size === 0}
+            onClick={() => void applyCommonArmsToAllClasses()}
+            className={cn(ACADEMIC_UI.btnPrimarySm, 'justify-center')}
+          >
+            {applyingCommonArms ? 'Applying…' : `Apply to all ${levels.length}`}
+          </button>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {ARM_LETTERS.slice(0, 5).map((letter) => {
+            const selected = commonArms.has(letter);
+            return (
+              <button
+                key={letter}
+                type="button"
+                onClick={() => toggleCommonArm(letter)}
+                className={cn(
+                  'flex size-10 items-center justify-center rounded-xl border text-sm font-extrabold transition',
+                  selected
+                    ? 'border-brand-400 bg-white text-brand-900 ring-1 ring-brand-200/70'
+                    : 'border-neutral-200 bg-white/70 text-neutral-500',
+                )}
+              >
+                {letter}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       <div className="relative">
         <Search
@@ -590,6 +691,7 @@ function ArmsPickerStep({
 // ── Step 3: Done ───────────────────────────────────────────────────────────────
 
 function DoneStep({ levelCount, onFinish }: { levelCount: number; onFinish: () => void }) {
+  const router = useRouter();
   return (
     <div className="space-y-6 text-center">
       <div className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-brand-50 text-brand-700 ring-1 ring-brand-200/60">
@@ -599,18 +701,20 @@ function DoneStep({ levelCount, onFinish }: { levelCount: number; onFinish: () =
         <h2 className="text-2xl font-extrabold tracking-tight text-neutral-900">
           Your classes are set
         </h2>
-        <p className="mx-auto mt-1.5 max-w-md text-[14px] leading-relaxed text-neutral-500">
-          {levelCount > 0
-            ? `${levelCount} class${levelCount > 1 ? 'es' : ''} ready. You can now admit students, build the timetable, and run results.`
-            : 'You can now admit students, build the timetable, and run results.'}
-        </p>
-      </div>
-      <div className="flex justify-center">
-        <button type="button" onClick={onFinish} className={cn(ACADEMIC_UI.btnPrimary, 'justify-center')}>
-          Go to Academic
-          <ArrowRight aria-hidden className="size-4" />
-        </button>
-      </div>
+          <p className="mx-auto mt-1.5 max-w-md text-[14px] leading-relaxed text-neutral-500">
+            {levelCount > 0
+              ? `${levelCount} class${levelCount > 1 ? 'es' : ''} ready. Set up results next, then admit students.`
+              : 'Set up results next, then admit students.'}
+          </p>
+        </div>
+        <div className="flex flex-wrap justify-center gap-2">
+          <button type="button" onClick={() => router.push('/school/academic/setup/results')} className={cn(ACADEMIC_UI.btnPrimary, 'justify-center')}>
+            Set up results
+          </button>
+          <button type="button" onClick={onFinish} className={cn(ACADEMIC_UI.btnSecondary, 'justify-center')}>
+            Go to Academic
+          </button>
+        </div>
     </div>
   );
 }

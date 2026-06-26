@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useAcademicTerms, useAcademicYears } from '@loomis/api-client';
+import { useAcademicSetupPreferences, useAcademicTerms, useAcademicYears } from '@loomis/api-client';
 import { Skeleton } from '@loomis/ui-web';
 
 import { AcademicCalendarView } from '@/components/academic/academic-calendar-view';
@@ -25,6 +25,7 @@ export default function AcademicCalendarPage() {
   const activeYear = useMemo(() => pickActiveYear(years), [years]);
 
   const termsQuery = useAcademicTerms(tenantId ?? '', activeYear?.id ?? '');
+  const preferencesQuery = useAcademicSetupPreferences(tenantId ?? '');
   const terms = termsQuery.data?.terms ?? [];
   const defaultTerm = useMemo(() => pickOpenTerm(terms), [terms]);
   const [selectedTermId, setSelectedTermId] = useState<string | null>(null);
@@ -36,8 +37,8 @@ export default function AcademicCalendarPage() {
   }, [selectedTermId, terms, defaultTerm]);
 
   const events = useMemo(
-    () => (selectedTerm ? buildTermCalendarEvents(selectedTerm) : []),
-    [selectedTerm],
+    () => (selectedTerm ? buildTermCalendarEvents(selectedTerm, preferencesQuery.data?.calendar) : []),
+    [selectedTerm, preferencesQuery.data?.calendar],
   );
 
   if (!tenantId) {
@@ -52,7 +53,7 @@ export default function AcademicCalendarPage() {
     return <p className="text-sm text-neutral-500">You do not have permission to view the academic calendar.</p>;
   }
 
-  const isLoading = yearsQuery.isLoading || termsQuery.isLoading;
+  const isLoading = yearsQuery.isLoading || termsQuery.isLoading || preferencesQuery.isLoading;
 
   return (
     <div className="space-y-8">

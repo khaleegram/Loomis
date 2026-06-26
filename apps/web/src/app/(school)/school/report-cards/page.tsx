@@ -8,6 +8,7 @@ import { useSearchParams } from 'next/navigation';
 
 import { AcademicScopePicker } from '@/components/academic/ops/academic-scope-picker';
 import { ReportCardBrowser } from '@/components/academic/ops/report-card-browser';
+import { ReportCardSetupPanel } from '@/components/academic/ops/report-card-setup-panel';
 import { PageBody } from '@/components/school/school-shell';
 import {
   classArmOptions,
@@ -46,6 +47,7 @@ export default function ReportCardsPage() {
   const role = useRole();
   const searchParams = useSearchParams();
   const canView = useCanAny(['gradebook.read', 'gradebook.write']);
+  const canConfigure = useCanAny(['grading_scheme.configure', 'result.publish']);
 
   const isClassTeacherView = isClassTeacherRole(role);
   const adminCtx = useAcademicOpsContext(tenantId ?? '');
@@ -161,6 +163,12 @@ export default function ReportCardsPage() {
           {[classLabel, ctx.activeTerm?.name].filter(Boolean).join(' · ')}
         </span>
       </div>
+
+      {canConfigure ? (
+        <div className="mb-4 print:hidden">
+          <ReportCardSetupPanel tenantId={tenantId} />
+        </div>
+      ) : null}
 
       <div className="mb-2 print:hidden">
         <AcademicScopePicker

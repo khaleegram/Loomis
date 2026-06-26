@@ -19,12 +19,14 @@ import type {
   SnapshotNowRequest,
   StagePromotionRequest,
   SetupSchoolYearRequest,
+  UpsertAcademicSetupPreferencesRequest,
   UpsertProgressionRequest,
   UpsertGradebookEntryRequest,
 } from '@loomis/contracts';
 import { sendSuccess } from '../../../shared/http.js';
 import { adjustmentService } from '../../ledger/services/adjustment.service.js';
 import {
+  academicSetupPreferencesService,
   academicYearService,
   censusService,
   classStructureService,
@@ -328,6 +330,29 @@ export async function setupClassArmsHandler(
     requireActor(req),
   );
   return sendSuccess(reply, { arms: arms.map(classArmToResponse) }, 201);
+}
+
+export async function getAcademicSetupPreferencesHandler(
+  req: FastifyRequest<{ Params: TenantParams }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const preferences = await academicSetupPreferencesService.getPreferences(
+    req.params.tenantId,
+    requireActor(req),
+  );
+  return sendSuccess(reply, preferences);
+}
+
+export async function upsertAcademicSetupPreferencesHandler(
+  req: FastifyRequest<{ Params: TenantParams; Body: UpsertAcademicSetupPreferencesRequest }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const preferences = await academicSetupPreferencesService.upsertPreferences(
+    req.params.tenantId,
+    req.body,
+    requireActor(req),
+  );
+  return sendSuccess(reply, preferences);
 }
 
 export async function createClassArmHandler(

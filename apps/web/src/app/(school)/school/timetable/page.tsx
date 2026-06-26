@@ -40,6 +40,8 @@ import { TimetableCommandStrip } from '@/components/academic/ops/timetable-comma
 
 import { TimetableHero } from '@/components/academic/ops/timetable-hero';
 
+import { TimetableSetupWizard } from '@/components/academic/ops/timetable-setup-wizard';
+
 import { TimetableScheduleCanvas } from '@/components/academic/ops/timetable-schedule-canvas';
 
 import { TimetableWeekGrid } from '@/components/academic/ops/timetable-week-grid';
@@ -237,6 +239,15 @@ export default function TimetablePage() {
     <PageBody className="max-w-[1400px] px-4 py-5 sm:px-6 sm:py-6 lg:px-12 lg:py-8">
 
       <div className="space-y-6">
+
+        {canManage ? (
+
+          <TimetableSetupWizard
+            tenantId={tenantId}
+            academicYearId={ctx.yearId}
+          />
+
+        ) : null}
 
         {canManage ? (
 

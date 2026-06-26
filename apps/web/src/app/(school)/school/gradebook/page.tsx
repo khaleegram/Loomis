@@ -18,6 +18,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { ConsolidatedGradebook } from '@/components/academic/ops/consolidated-gradebook';
 import { GradeCorrectionSheet } from '@/components/academic/ops/grade-correction-sheet';
+import { GradebookMissingBanner } from '@/components/academic/ops/gradebook-missing-banner';
 import { GradebookScopeBar } from '@/components/academic/ops/gradebook-scope-bar';
 import { GradebookSpreadsheet, type GradebookRow } from '@/components/academic/ops/gradebook-spreadsheet';
 import { GradebookToolbar } from '@/components/academic/ops/gradebook-toolbar';
@@ -325,6 +326,17 @@ export default function GradebookPage() {
         </Tabs>
       ) : null}
 
+      {!isRegisterView && canWrite && progress.incomplete > 0 && ctx.classArmId ? (
+        <div className="mb-3">
+          <GradebookMissingBanner
+            missingCount={progress.incomplete}
+            totalStudents={progress.total}
+            subjectLabel={resolvedSubjectId ? formatSubjectLabel(resolvedSubjectId) : null}
+            classLabel={classLabel}
+          />
+        </div>
+      ) : null}
+
       {(lockError || rosterQuery.isError || entriesQuery.isError || (classConfigs.length === 0 && !isRegisterView)) ? (
         <div className="mb-2 space-y-2">
           {rosterQuery.isError ? (
@@ -403,6 +415,7 @@ export default function GradebookPage() {
         </Alert>
       ) : null}
 
+      <div id="gradebook-entry">
       <GradebookWorkspace
         toolbar={
           isRegisterView ? (
@@ -475,6 +488,7 @@ export default function GradebookPage() {
           />
         )}
       </GradebookWorkspace>
+      </div>
 
       <GradeCorrectionSheet
         open={Boolean(correctionEntry)}

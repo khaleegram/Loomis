@@ -385,6 +385,50 @@ export const setupClassArmsResponse = z.object({
 });
 export type SetupClassArmsResponse = z.infer<typeof setupClassArmsResponse>;
 
+// ── Question-based Academic Setup Preferences ───────────────────────────────────
+
+export const academicCalendarPreferences = z.object({
+  hasMidTermBreak: z.boolean().default(true),
+  hasOpenDay: z.boolean().default(true),
+  hasResultDay: z.boolean().default(true),
+});
+export type AcademicCalendarPreferences = z.infer<typeof academicCalendarPreferences>;
+
+export const academicResultPreferences = z.object({
+  caWeight: z.number().int().min(0).max(100).default(40),
+  examWeight: z.number().int().min(0).max(100).default(60),
+  useGrades: z.boolean().default(true),
+  calculatePosition: z.boolean().default(true),
+  showPositionOnReport: z.boolean().default(true),
+}).refine((v) => v.caWeight + v.examWeight === 100, {
+  message: 'CA and Exam weights must add up to 100',
+  path: ['examWeight'],
+});
+export type AcademicResultPreferences = z.infer<typeof academicResultPreferences>;
+
+export const academicReportCardPreferences = z.object({
+  showScores: z.boolean().default(true),
+  showGrade: z.boolean().default(true),
+  showPosition: z.boolean().default(true),
+  showAttendance: z.boolean().default(true),
+  showTeacherComment: z.boolean().default(true),
+  showPrincipalComment: z.boolean().default(true),
+  useSchoolLogo: z.boolean().default(true),
+});
+export type AcademicReportCardPreferences = z.infer<typeof academicReportCardPreferences>;
+
+export const academicSetupPreferences = z.object({
+  calendar: academicCalendarPreferences.default({}),
+  results: academicResultPreferences.default({}),
+  reportCards: academicReportCardPreferences.default({}),
+});
+export type AcademicSetupPreferences = z.infer<typeof academicSetupPreferences>;
+
+export const upsertAcademicSetupPreferencesRequest = academicSetupPreferences.partial();
+export type UpsertAcademicSetupPreferencesRequest = z.infer<
+  typeof upsertAcademicSetupPreferencesRequest
+>;
+
 // ── Promotion & Graduation (FR-ASM-007/008) ──────────────────────────────────────
 
 export const promotionOutcome = z.enum(['promoted', 'held_back', 'graduated']);

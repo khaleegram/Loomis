@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import {
   createClassArmRequest,
   createClassLevelRequest,
+  upsertAcademicSetupPreferencesRequest,
   setupClassArmsRequest,
   setupClassLevelsRequest,
   upsertProgressionRequest,
@@ -9,6 +10,7 @@ import {
   type CreateClassLevelRequest,
   type SetupClassArmsRequest,
   type SetupClassLevelsRequest,
+  type UpsertAcademicSetupPreferencesRequest,
   type UpsertProgressionRequest,
 } from '@loomis/contracts';
 import { authenticate } from '../../../middleware/authenticate.js';
@@ -18,16 +20,25 @@ import { validateBody } from '../../../shared/validation.js';
 import {
   createClassArmHandler,
   createClassLevelHandler,
+  getAcademicSetupPreferencesHandler,
   getClassStructureHandler,
   listClassLevelsHandler,
   listProgressionsHandler,
   setupClassArmsHandler,
   setupClassLevelsHandler,
+  upsertAcademicSetupPreferencesHandler,
   upsertProgressionHandler,
 } from '../handlers/index.js';
 
 // FR-ASM-009: Principal or Admin Officer configure the class structure.
 const structureAdmins = ['school_owner', 'principal', 'admin_officer'] as const;
+const setupPreferenceAdmins = [
+  'school_owner',
+  'principal',
+  'admin_officer',
+  'exam_officer',
+  'deputy_exam_officer',
+] as const;
 const structureReaders = [
   'school_owner',
   'principal',
@@ -41,6 +52,23 @@ const structureReaders = [
 
 /** Class structure & progression routes (FR-ASM-009). All under /api/v1. */
 export async function classStructureRoutes(app: FastifyInstance): Promise<void> {
+  app.get<{ Params: { tenantId: string } }>(
+    '/tenants/:tenantId/academic/setup-preferences',
+    {
+      preHandler: [authenticate, requireTenantMatch, requireRole(...setupPreferenceAdmins)],
+    },
+    getAcademicSetupPreferencesHandler,
+  );
+
+  app.put<{ Params: { tenantId: string }; Body: UpsertAcademicSetupPreferencesRequest }>(
+    '/tenants/:tenantId/academic/setup-preferences',
+    {
+      preHandler: [authenticate, requireTenantMatch, requireRole(...setupPreferenceAdmins)],
+      preValidation: [validateBody(upsertAcademicSetupPreferencesRequest)],
+    },
+    upsertAcademicSetupPreferencesHandler,
+  );
+
   app.post<{ Params: { tenantId: string }; Body: CreateClassLevelRequest }>(
     '/tenants/:tenantId/class-levels',
     {

@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from '@loomis/ui-web';
 import { useMemo, useState } from 'react';
 
 import { AssignmentCreateSheet, AssignmentDetailSheet } from '@/components/academic/ops/assignment-sheets';
+import { AssignmentQuickPanel } from '@/components/academic/ops/assignment-quick-panel';
 import type { AssignmentTeachingSlot } from '@/components/academic/ops/assignment-subject-rail';
 import { AssignmentsHero, AssignmentsList } from '@/components/academic/ops/assignments-panel';
 import { AcademicScopePicker } from '@/components/academic/ops/academic-scope-picker';
@@ -129,6 +130,15 @@ export default function AssignmentsPage() {
           onCreateClick={() => setCreateOpen(true)}
           isLoading={assignmentsQuery.isLoading}
         />
+
+        {isTeachingStaffRole(role) ? (
+          <AssignmentQuickPanel
+            slots={teachingSlots}
+            assignments={assignments}
+            canCreate={canCreate}
+            onCreate={() => setCreateOpen(true)}
+          />
+        ) : null}
 
         <AcademicScopePicker
           classArmOptions={

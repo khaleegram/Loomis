@@ -23,6 +23,7 @@ import { AlertTriangle, Check } from 'lucide-react';
 
 import { BulkEnrollmentPanel } from '@/components/academic/bulk-enrollment-panel';
 import { GraduationCertificatesPanel } from '@/components/academic/graduation-certificates-panel';
+import { PromotionAutoStageContainer } from '@/components/academic/promotion-auto-stage-container';
 import { PromotionStagingPanel } from '@/components/academic/promotion-staging-panel';
 import { PromotionReviewTable } from '@/components/academic/promotion-review-table';
 import { AcademicSectionHeader } from '@/components/academic/academic-empty-state';
@@ -209,13 +210,22 @@ export default function AcademicPromotionsPage() {
       ) : null}
 
       {tab === 'stage' && fromYear && toYear ? (
-        <PromotionStagingPanel
-          tenantId={tenantId}
-          fromYear={fromYear}
-          toYear={toYear}
-          hasConfirmedPromotions={hasConfirmed}
-          onStaged={() => setTab('review')}
-        />
+        <div className="space-y-6">
+          <PromotionAutoStageContainer
+            tenantId={tenantId}
+            fromYear={fromYear}
+            toYear={toYear}
+            hasConfirmedPromotions={hasConfirmed}
+            onStaged={() => setTab('review')}
+          />
+          <PromotionStagingPanel
+            tenantId={tenantId}
+            fromYear={fromYear}
+            toYear={toYear}
+            hasConfirmedPromotions={hasConfirmed}
+            onStaged={() => setTab('review')}
+          />
+        </div>
       ) : null}
 
       {tab === 'review' ? (
