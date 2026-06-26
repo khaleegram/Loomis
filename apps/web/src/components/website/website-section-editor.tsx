@@ -2,12 +2,13 @@
 
 import type { PublicWebsiteSiteResponse, WebsiteSection, WebsiteSiteResponse } from '@loomis/contracts';
 import { Alert, AlertDescription, Button, Input, Label, Skeleton, Textarea } from '@loomis/ui-web';
-import { ChevronDown, ChevronUp, Eye, EyeOff, GripVertical } from 'lucide-react';
+import { CheckCircle2, ChevronDown, ChevronUp, Eye, EyeOff, GripVertical, XCircle } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { PublicSiteRenderer } from '@/components/website/public-site-renderer';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
-import { useSchoolBranding } from '@loomis/api-client';
+import { schoolPublicSiteUrl } from '@/lib/website/public-site-url';
+import { useCheckWebsiteSlug, useSchoolBranding } from '@loomis/api-client';
 
 const TEMPLATE_OPTIONS = [
   { id: 'prestige', label: 'Prestige', hint: 'Premium secondary' },
@@ -32,6 +33,7 @@ interface WebsiteSectionEditorProps {
   site: WebsiteSiteResponse;
   canEdit: boolean;
   onChange: (sections: WebsiteSection[]) => void;
+  onSlugChange: (slug: string) => void;
   onTemplateChange: (templateId: WebsiteSiteResponse['templateId']) => void;
   onSave: () => void;
   isSaving: boolean;
@@ -42,6 +44,7 @@ export function WebsiteSectionEditor({
   site,
   canEdit,
   onChange,
+  onSlugChange,
   onTemplateChange,
   onSave,
   isSaving,
@@ -49,6 +52,7 @@ export function WebsiteSectionEditor({
   const [expandedId, setExpandedId] = useState<string | null>(site.sections[0]?.id ?? null);
   const [showPreview, setShowPreview] = useState(true);
   const { data: branding } = useSchoolBranding(tenantId);
+  const slugCheck = useCheckWebsiteSlug(tenantId);
 
   const sortedSections = useMemo(
     () => [...site.sections].sort((a, b) => a.order - b.order),
@@ -97,6 +101,68 @@ export function WebsiteSectionEditor({
   return (
     <div className="mt-8 grid gap-6 lg:grid-cols-2">
       <div className="space-y-4">
+        <div className="rounded-2xl border border-brand-100/40 bg-white p-5 shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-neutral-400">
+            Website address
+          </p>
+          <h2 className="mt-2 text-sm font-bold text-neutral-900">Choose your one-word slug</h2>
+          <p className="mt-1 text-xs text-neutral-500">
+            This is the public address parents will type. Example: grace.loomis.digital
+          </p>
+
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-end">
+            <div className="flex-1">
+              <Label htmlFor="website-slug">School website word</Label>
+              <div className="mt-1 flex min-h-[44px] overflow-hidden rounded-xl border border-neutral-200 bg-white focus-within:border-brand-400">
+                <Input
+                  id="website-slug"
+                  disabled={!canEdit}
+                  value={site.slug}
+                  onChange={(e) =>
+                    onSlugChange(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''))
+                  }
+                  className="min-h-[44px] flex-1 border-0 shadow-none focus-visible:ring-0"
+                  placeholder="grace"
+                />
+                <span className="inline-flex items-center bg-neutral-50 px-3 text-sm font-medium text-neutral-500">
+                  .loomis.digital
+                </span>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!canEdit || slugCheck.isPending || site.slug.length < 3}
+              onClick={() => slugCheck.mutate(site.slug)}
+              className="min-h-[44px]"
+            >
+              {slugCheck.isPending ? 'Checking…' : 'Check'}
+            </Button>
+          </div>
+
+          <div className="mt-3 text-xs">
+            {slugCheck.data?.available ? (
+              <p className="flex items-center gap-1.5 text-accent-green-700">
+                <CheckCircle2 className="size-4" aria-hidden />
+                Available: {schoolPublicSiteUrl(slugCheck.data.slug).replace(/^https?:\/\//, '')}
+              </p>
+            ) : slugCheck.data ? (
+              <p className="flex items-center gap-1.5 text-danger">
+                <XCircle className="size-4" aria-hidden />
+                {slugCheck.data.reason === 'taken'
+                  ? 'That word is already taken.'
+                  : slugCheck.data.reason === 'reserved'
+                    ? 'That word is reserved by Loomis.'
+                    : 'Use one word only: lowercase letters and numbers.'}
+              </p>
+            ) : (
+              <p className="text-neutral-500">
+                Use lowercase letters and numbers only. No spaces, dots, or hyphens.
+              </p>
+            )}
+          </div>
+        </div>
+
         <div className="rounded-2xl border border-brand-100/40 bg-white p-5 shadow-sm">
           <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-neutral-400">Template</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-3">

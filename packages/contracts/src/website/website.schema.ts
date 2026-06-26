@@ -45,13 +45,38 @@ export type WebsiteSection = z.infer<typeof websiteSection>;
 
 export const websiteSections = z.array(websiteSection).max(24);
 
+/**
+ * School-chosen site address (becomes {slug}.loomis.digital).
+ * Keep this intentionally simple for school admins: one lowercase word, no
+ * spaces or punctuation. Existing auto-generated draft slugs may contain
+ * hyphens, but user-chosen updates must be clean one-word handles.
+ */
+export const websiteSlug = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(3, 'Address must be at least 3 characters')
+  .max(30, 'Address must be 30 characters or fewer')
+  .regex(
+    /^[a-z0-9]+$/,
+    'Use one lowercase word only: letters and numbers, no spaces',
+  );
+
 export const updateWebsiteSiteRequest = z.object({
+  slug: websiteSlug.optional(),
   templateId: websiteTemplateId.optional(),
   theme: websiteTheme.partial().optional(),
   sections: websiteSections.optional(),
   seo: websiteSeo.partial().optional(),
 });
 export type UpdateWebsiteSiteRequest = z.infer<typeof updateWebsiteSiteRequest>;
+
+export const checkWebsiteSlugResponse = z.object({
+  slug: z.string(),
+  available: z.boolean(),
+  reason: z.enum(['ok', 'taken', 'reserved', 'invalid']),
+});
+export type CheckWebsiteSlugResponse = z.infer<typeof checkWebsiteSlugResponse>;
 
 export const websiteSiteResponse = z.object({
   id: z.string().uuid(),

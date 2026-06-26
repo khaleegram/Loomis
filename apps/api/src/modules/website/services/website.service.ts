@@ -8,10 +8,12 @@ import {
   type PublicWebsiteSiteResponse,
   type WebsiteSiteResponse,
   type UpdateWebsiteSiteRequest,
+  type CheckWebsiteSlugResponse,
   SCHOOL_BRANDING_CONFIG_KEY,
   schoolBrandingConfig,
+  websiteSlug,
 } from '@loomis/contracts';
-import { publicSchoolSiteUrl, slugifySchoolName } from '@loomis/core';
+import { publicSchoolSiteUrl, RESERVED_SUBDOMAINS, slugifySchoolName } from '@loomis/core';
 import { uuidv7 } from 'uuidv7';
 import { getEnv } from '../../../config/env.js';
 import { writeAudit } from '../../../shared/audit.js';
@@ -221,6 +223,55 @@ export const websiteService = {
     return toSiteResponse(site, publishedVersion);
   },
 
+  async checkSlug(tenantId: string, candidate: string): Promise<CheckWebsiteSlugResponse> {
+    const parsed = websiteSlug.safeParse(candidate);
+    if (!parsed.success) {
+      return { slug: candidate, available: false, reason: 'invalid' };
+    }
+    const slug = parsed.data;
+    if (RESERVED_SUBDOMAINS.has(slug)) {
+      return { slug, available: false, reason: 'reserved' };
+    }
+    const site = await websiteRepository.findByTenantId(tenantId);
+    if (await websiteRepository.slugExists(slug, site?.id)) {
+      return { slug, available: false, reason: 'taken' };
+    }
+    return { slug, available: true, reason: 'ok' };
+  },
+
+  /** Validates a requested slug change; throws on conflict/reserved. */
+  async resolveSlugChange(
+    site: WebsiteSiteRow,
+    requested: string | undefined,
+  ): Promise<string | undefined> {
+    if (requested === undefined) return undefined;
+    const parsed = websiteSlug.safeParse(requested);
+    if (!parsed.success) {
+      throw new LoomisError(
+        'VALIDATION_ERROR',
+        422,
+        'Use one lowercase word only: letters and numbers, no spaces.',
+      );
+    }
+    const slug = parsed.data;
+    if (slug === site.slug) return undefined;
+    if (RESERVED_SUBDOMAINS.has(slug)) {
+      throw new LoomisError(
+        'WEBSITE_SLUG_RESERVED',
+        422,
+        'That address is reserved. Please choose another.',
+      );
+    }
+    if (await websiteRepository.slugExists(slug, site.id)) {
+      throw new LoomisError(
+        'WEBSITE_SLUG_TAKEN',
+        409,
+        'That address is already taken by another school. Please choose another.',
+      );
+    }
+    return slug;
+  },
+
   async updateSite(
     tenantId: string,
     input: UpdateWebsiteSiteRequest,
@@ -230,8 +281,10 @@ export const websiteService = {
     const theme = input.theme ? { ...parseTheme(site.theme), ...input.theme } : parseTheme(site.theme);
     const seo = input.seo ? { ...parseSeo(site.seo), ...input.seo } : parseSeo(site.seo);
     const sections = input.sections ?? parseSections(site.sections);
+    const nextSlug = await this.resolveSlugChange(site, input.slug);
 
     const updated = await websiteRepository.updateDraft(tenantId, site.id, {
+      ...(nextSlug !== undefined ? { slug: nextSlug } : {}),
       ...(input.templateId !== undefined ? { templateId: input.templateId } : {}),
       theme,
       seo,
@@ -253,6 +306,7 @@ export const websiteService = {
       metadata: {
         templateId: updated.templateId,
         sectionCount: sections.length,
+        ...(nextSlug !== undefined ? { slugChanged: true } : {}),
       },
     });
 

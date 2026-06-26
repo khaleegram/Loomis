@@ -73,6 +73,7 @@ export const websiteRepository = {
     tenantId: string,
     siteId: string,
     patch: {
+      slug?: string;
       templateId?: string;
       theme?: Record<string, unknown>;
       sections?: unknown[];
@@ -83,6 +84,7 @@ export const websiteRepository = {
       const [row] = await tx
         .update(websiteSites)
         .set({
+          ...(patch.slug !== undefined ? { slug: patch.slug } : {}),
           ...(patch.templateId !== undefined ? { templateId: patch.templateId } : {}),
           ...(patch.theme !== undefined ? { theme: patch.theme } : {}),
           ...(patch.sections !== undefined ? { sections: patch.sections } : {}),

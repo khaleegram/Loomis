@@ -68,7 +68,7 @@ Add to `Loomis_User_Stories_v1.md` as **Epic US-WEB — School Public Website**.
 ### US-WEB-001: Provision Default Website on Tenant Activation
 *As a Platform Administrator, I want every newly activated school to receive a default unpublished website seeded from their tenant profile, so that the school owner can publish quickly without starting from scratch.*
 
-On tenant activation, the system creates a `website_sites` row with a unique slug derived from the school name, selects the default template (`prestige`), seeds sections from tenant name/address/contact, and sets status `draft`. The School Owner receives an onboarding prompt linking to the website editor.
+On tenant activation, the system creates a `website_sites` row with a unique draft slug suggestion, selects the default template (`prestige`), seeds sections from tenant name/address/contact, and sets status `draft`. Before publish, the school chooses its own short one-word address in the website setup page (for example `grace`, producing `grace.loomis.digital`). The School Owner receives an onboarding prompt linking to the website editor.
 
 ### US-WEB-002: Choose and Preview a Website Template
 *As a School Owner or Principal, I want to pick from professional templates and preview how my site will look, so that I can launch a credible public presence without design skills.*
@@ -276,12 +276,15 @@ New schema: `website` (Drizzle file: `apps/api/drizzle/schema/website.ts`).
 
 Aggregated daily counters per site/path — not raw hit logs (NDPA minimization).
 
-### 5.5 Slug Generation
+### 5.5 Slug Selection
 
-On site creation:
-1. Slugify tenant name: `"Grace Academy, Lagos"` → `grace-academy-lagos`.
-2. If collision, append `-2`, `-3`, etc.
-3. Slug change after first publish requires `school_owner` + audit log entry (SEO redirect handled in Phase 3).
+On site creation, Loomis creates a draft slug suggestion so the record has a valid URL handle, but the school-facing setup flow treats this as editable. The school chooses a simple one-word slug:
+
+1. Only lowercase letters and numbers, 3–30 characters.
+2. No spaces, dots, punctuation, or hyphens in user-chosen slugs.
+3. Reserved labels (`www`, `api`, `app`, `admin`, etc.) are rejected.
+4. The API checks global availability before saving.
+5. Slug changes are audit-logged; published links immediately use the new subdomain.
 
 ---
 

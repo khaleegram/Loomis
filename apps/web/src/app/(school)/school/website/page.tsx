@@ -40,6 +40,7 @@ export default function SchoolWebsitePage() {
   const handleSave = useCallback(async () => {
     if (!draft) return;
     await updateMutation.mutateAsync({
+      slug: draft.slug,
       templateId: draft.templateId,
       theme: draft.theme,
       sections: draft.sections,
@@ -135,6 +136,7 @@ export default function SchoolWebsitePage() {
         site={draft}
         canEdit={canEdit}
         onChange={(sections: WebsiteSection[]) => setDraft({ ...draft, sections })}
+        onSlugChange={(slug) => setDraft({ ...draft, slug })}
         onTemplateChange={(templateId) => setDraft({ ...draft, templateId })}
         onSave={handleSave}
         isSaving={updateMutation.isPending}

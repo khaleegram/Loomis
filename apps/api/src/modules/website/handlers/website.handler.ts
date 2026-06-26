@@ -20,6 +20,17 @@ export async function getWebsiteSiteHandler(
   return sendSuccess(reply, site);
 }
 
+export async function checkWebsiteSlugHandler(
+  req: FastifyRequest<{ Params: TenantParams; Querystring: { slug?: string } }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const result = await websiteService.checkSlug(
+    req.params.tenantId,
+    req.query.slug ?? '',
+  );
+  return sendSuccess(reply, result);
+}
+
 export async function updateWebsiteSiteHandler(
   req: FastifyRequest<{ Params: TenantParams; Body: UpdateWebsiteSiteRequest }>,
   reply: FastifyReply,

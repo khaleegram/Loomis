@@ -228,6 +228,8 @@ export const loomisErrorCode = z.enum([
   // website
   'WEBSITE_NOT_FOUND',
   'WEBSITE_UNAVAILABLE',
+  'WEBSITE_SLUG_TAKEN',
+  'WEBSITE_SLUG_RESERVED',
   // generic
   'VALIDATION_ERROR',
   'IDEMPOTENCY_KEY_REQUIRED',

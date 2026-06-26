@@ -6,6 +6,7 @@ import { requireRole } from '../../../middleware/require-role.js';
 import { requireTenantMatch } from '../../../middleware/require-tenant-match.js';
 import { validateBody } from '../../../shared/validation.js';
 import {
+  checkWebsiteSlugHandler,
   getPublicWebsiteHandler,
   getWebsiteSiteHandler,
   publishWebsiteHandler,
@@ -32,6 +33,14 @@ export async function websiteRoutes(app: FastifyInstance): Promise<void> {
       preHandler: [authenticate, requireTenantMatch, requireRole(...WEBSITE_VIEWERS)],
     },
     getWebsiteSiteHandler,
+  );
+
+  app.get<{ Params: { tenantId: string }; Querystring: { slug?: string } }>(
+    '/tenants/:tenantId/website/slug-check',
+    {
+      preHandler: [authenticate, requireTenantMatch, requireRole(...WEBSITE_EDITORS)],
+    },
+    checkWebsiteSlugHandler,
   );
 
   app.put<{ Params: { tenantId: string }; Body: UpdateWebsiteSiteRequest }>(

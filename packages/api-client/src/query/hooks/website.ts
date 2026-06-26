@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
+  CheckWebsiteSlugResponse,
   PublicWebsiteSiteResponse,
   UpdateWebsiteSiteRequest,
   WebsitePublishResponse,
@@ -43,6 +44,17 @@ export function useUpdateWebsiteSite(tenantId: string) {
     onSuccess: (data) => {
       queryClient.setQueryData(queryKeys.website.site(tenantId), data);
     },
+  });
+}
+
+export function useCheckWebsiteSlug(tenantId: string) {
+  const client = useApiClient();
+  return useMutation({
+    mutationFn: (slug: string) =>
+      client.get<CheckWebsiteSlugResponse>(
+        `/tenants/${tenantId}/website/slug-check?slug=${encodeURIComponent(slug)}`,
+        { headers: { 'X-Tenant-Id': tenantId } },
+      ),
   });
 }
 
