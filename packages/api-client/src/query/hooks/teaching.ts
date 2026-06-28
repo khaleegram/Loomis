@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import type { TeachingStaffContextResponse } from '@loomis/contracts';
+import type { TeachingRosterResponse, TeachingStaffContextResponse } from '@loomis/contracts';
 import type { ApiClient } from '../../http/client.js';
 import { useApiClient } from '../context.js';
 import { assertTenantScopedKey, queryKeys } from '../keys.js';
@@ -19,10 +19,31 @@ export function teachingStaffContextQueryOptions(client: ApiClient, tenantId: st
   };
 }
 
+export function teachingRosterQueryOptions(client: ApiClient, tenantId: string, termId: string) {
+  const queryKey = queryKeys.academic.teachingRoster(tenantId, termId);
+  assertTenantScopedKey(queryKey, tenantId);
+  return {
+    queryKey,
+    queryFn: () =>
+      client.get<TeachingRosterResponse>(
+        `/tenants/${tenantId}/teaching/roster?termId=${encodeURIComponent(termId)}`,
+      ),
+    staleTime: STALE_MS,
+  };
+}
+
 export function useTeachingStaffContext(tenantId: string, termId: string | null) {
   const client = useApiClient();
   return useQuery({
     ...teachingStaffContextQueryOptions(client, tenantId, termId ?? ''),
+    enabled: Boolean(tenantId && termId),
+  });
+}
+
+export function useTeachingRoster(tenantId: string, termId: string | null) {
+  const client = useApiClient();
+  return useQuery({
+    ...teachingRosterQueryOptions(client, tenantId, termId ?? ''),
     enabled: Boolean(tenantId && termId),
   });
 }

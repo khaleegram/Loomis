@@ -111,6 +111,16 @@ export function ClassStructureManager({ tenantId }: ClassStructureManagerProps) 
     }
   }
 
+  function openArmDialog() {
+    setFormError(null);
+    armForm.reset({
+      academicYearId: activeYearId ?? '',
+      classLevelId: sortedLevels[0]?.id ?? '',
+      name: '',
+    });
+    setArmOpen(true);
+  }
+
   async function submitArm(values: CreateClassArmRequest) {
     setFormError(null);
     try {
@@ -232,7 +242,7 @@ export function ClassStructureManager({ tenantId }: ClassStructureManagerProps) 
           action={
             <button
               type="button"
-              onClick={() => setArmOpen(true)}
+              onClick={openArmDialog}
               disabled={!activeYearId || sortedLevels.length === 0}
               className={ACADEMIC_UI.btnPrimarySm}
             >

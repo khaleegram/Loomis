@@ -17,6 +17,7 @@ import type {
   RegisterDeviceKeyRequest,
   SyncOfflineAttendanceRequest,
   TeachingStaffContextQuery,
+  TeachingRosterQuery,
   UpdateAssignmentRequest,
 } from '@loomis/contracts';
 import { sendSuccess } from '../../../shared/http.js';
@@ -238,6 +239,18 @@ export async function getTeachingStaffContextHandler(
   reply: FastifyReply,
 ): Promise<FastifyReply> {
   const result = await teachingService.getStaffContext(
+    req.params.tenantId,
+    req.query.termId,
+    requireActor(req),
+  );
+  return sendSuccess(reply, result);
+}
+
+export async function getTeachingRosterHandler(
+  req: FastifyRequest<{ Params: TenantParams; Querystring: TeachingRosterQuery }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const result = await teachingService.getTermRoster(
     req.params.tenantId,
     req.query.termId,
     requireActor(req),

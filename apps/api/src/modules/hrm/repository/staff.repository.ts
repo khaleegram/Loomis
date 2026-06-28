@@ -628,6 +628,51 @@ export const staffRepository = {
     );
   },
 
+  async listSubjectAssignmentsForTerm(tenantId: string, termId: string) {
+    return withTenantContext(tenantId, async (tx) =>
+      tx
+        .select({
+          assignmentId: subjectAssignments.id,
+          classArmId: subjectAssignments.classArmId,
+          subjectId: subjectAssignments.subjectId,
+          staffProfileId: subjectAssignments.staffProfileId,
+          staffName: staffProfiles.fullName,
+        })
+        .from(subjectAssignments)
+        .innerJoin(staffProfiles, eq(staffProfiles.id, subjectAssignments.staffProfileId))
+        .where(
+          and(
+            eq(subjectAssignments.tenantId, tenantId),
+            eq(subjectAssignments.termId, termId),
+            eq(subjectAssignments.active, true),
+          ),
+        )
+        .orderBy(asc(subjectAssignments.classArmId), asc(subjectAssignments.subjectId)),
+    );
+  },
+
+  async listClassTeacherAssignmentsForTerm(tenantId: string, termId: string) {
+    return withTenantContext(tenantId, async (tx) =>
+      tx
+        .select({
+          assignmentId: classTeacherAssignments.id,
+          classArmId: classTeacherAssignments.classArmId,
+          staffProfileId: classTeacherAssignments.staffProfileId,
+          staffName: staffProfiles.fullName,
+        })
+        .from(classTeacherAssignments)
+        .innerJoin(staffProfiles, eq(staffProfiles.id, classTeacherAssignments.staffProfileId))
+        .where(
+          and(
+            eq(classTeacherAssignments.tenantId, tenantId),
+            eq(classTeacherAssignments.termId, termId),
+            eq(classTeacherAssignments.active, true),
+          ),
+        )
+        .orderBy(asc(classTeacherAssignments.classArmId)),
+    );
+  },
+
   async listActiveClassTeacherAssignments(tenantId: string, staffProfileId: string) {
     return withTenantContext(tenantId, async (tx) =>
       tx

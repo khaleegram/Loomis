@@ -70,4 +70,19 @@ export const teachingService = {
       classTeacherAssignment,
     };
   },
+
+  async getTermRoster(tenantId: string, termId: string, actor: ActorContext) {
+    requireTenant(actor, tenantId);
+
+    const [subjectAssignments, classTeachers] = await Promise.all([
+      staffRepository.listSubjectAssignmentsForTerm(tenantId, termId),
+      staffRepository.listClassTeacherAssignmentsForTerm(tenantId, termId),
+    ]);
+
+    return {
+      termId,
+      subjectAssignments,
+      classTeachers,
+    };
+  },
 };

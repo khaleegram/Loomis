@@ -63,8 +63,9 @@ import { BookOpen, Briefcase, Shield } from 'lucide-react';
 
 import { SEMANTIC, SURFACES } from '@/lib/design/surfaces';
 import { formatRoleLabel } from '@/components/school/school-nav-config';
-import { formatSubjectLabel, formatTermLabel } from '@/lib/academic/ops-labels';
+import { formatSubjectLabel, formatTermLabel, SCHOOL_SUBJECT_OPTIONS } from '@/lib/academic/ops-labels';
 import { SodNotice } from '@/components/school/sod-notice';
+import { CardOptionPicker } from '@/components/shared/smart-form';
 import {
   formatStaffDisplayRole,
   formatStaffExtensionLabels,
@@ -177,6 +178,10 @@ export function StaffMemberDetail({ staffProfileId, staff: staffProp }: StaffMem
   const classArmOptions = useMemo(
     () => classArms.map((arm) => ({ value: arm.id, label: arm.name })),
     [classArms],
+  );
+  const subjectCardOptions = useMemo(
+    () => SCHOOL_SUBJECT_OPTIONS.map((s) => ({ id: s.id, label: s.label })),
+    [],
   );
 
   const activeStaff = useMemo(
@@ -856,10 +861,15 @@ export function StaffMemberDetail({ staffProfileId, staff: staffProp }: StaffMem
                     name="subjectId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Subject ID</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Subject UUID" {...field} />
-                        </FormControl>
+                        <FormLabel>Subject</FormLabel>
+                        <CardOptionPicker
+                          options={subjectCardOptions}
+                          value={field.value}
+                          onChange={field.onChange}
+                          searchPlaceholder="Search subject…"
+                          emptyMessage="No subjects configured"
+                          showSearchMin={4}
+                        />
                         <FormMessage />
                       </FormItem>
                     )}

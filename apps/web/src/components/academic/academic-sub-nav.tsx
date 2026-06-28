@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
+  BookOpen,
   CalendarDays,
   GraduationCap,
   LayoutGrid,
@@ -47,6 +48,12 @@ const ACADEMIC_LINKS: {
     href: '/school/academic/structure',
     icon: Layers,
     capabilities: ['class_structure.manage'],
+  },
+  {
+    label: 'Teaching',
+    href: '/school/academic/teaching',
+    icon: BookOpen,
+    capabilities: ['subject.assign', 'classteacher.assign'],
   },
   {
     label: 'Calendar',

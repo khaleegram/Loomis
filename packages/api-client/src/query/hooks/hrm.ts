@@ -87,11 +87,21 @@ function invalidateStaffQueries(
   queryClient: ReturnType<typeof useQueryClient>,
   tenantId: string,
   staffProfileId?: string,
+  termId?: string,
 ) {
   void queryClient.invalidateQueries({ queryKey: queryKeys.hrm.staffList(tenantId) });
   if (staffProfileId) {
     void queryClient.invalidateQueries({
       queryKey: queryKeys.hrm.staffDetail(tenantId, staffProfileId),
+    });
+  }
+  if (termId) {
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.academic.teachingRoster(tenantId, termId),
+    });
+  } else {
+    void queryClient.invalidateQueries({
+      queryKey: ['academic', tenantId, 'teaching', 'roster'],
     });
   }
 }
@@ -143,24 +153,34 @@ export function useCreateSubjectAssignment(tenantId: string) {
         body,
       ),
     onSuccess: (_data, variables) =>
-      invalidateStaffQueries(queryClient, tenantId, variables.staffProfileId),
+      invalidateStaffQueries(queryClient, tenantId, variables.staffProfileId, variables.termId),
   });
 }
 
 /** Remove a subject assignment (US-HRM-002). */
-export function useRemoveSubjectAssignment(tenantId: string, staffProfileId: string) {
+export function useRemoveSubjectAssignment(tenantId: string, defaultStaffProfileId?: string) {
   const client = useApiClient();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
       assignmentId,
+      staffProfileId: _profileId,
       ...body
-    }: RemoveSubjectAssignmentRequest & { assignmentId: string }) =>
+    }: RemoveSubjectAssignmentRequest & {
+      assignmentId: string;
+      staffProfileId?: string;
+    }) =>
       client.post<SubjectAssignmentResponse>(
         `/tenants/${tenantId}/staff/subject-assignments/${assignmentId}/remove`,
         body,
       ),
-    onSuccess: () => invalidateStaffQueries(queryClient, tenantId, staffProfileId),
+    onSuccess: (_data, variables) =>
+      invalidateStaffQueries(
+        queryClient,
+        tenantId,
+        variables.staffProfileId ?? defaultStaffProfileId,
+        undefined,
+      ),
   });
 }
 
@@ -175,7 +195,7 @@ export function useAssignClassTeacher(tenantId: string) {
         body,
       ),
     onSuccess: (_data, variables) =>
-      invalidateStaffQueries(queryClient, tenantId, variables.staffProfileId),
+      invalidateStaffQueries(queryClient, tenantId, variables.staffProfileId, variables.termId),
   });
 }
 

@@ -951,6 +951,36 @@ export const teachingStaffContextResponse = z.object({
 });
 export type TeachingStaffContextResponse = z.infer<typeof teachingStaffContextResponse>;
 
+/** Term-wide teaching roster for principals (US-HRM-002 / US-HRM-003). */
+export const teachingRosterQuery = z.object({
+  termId: z.string().uuid(),
+});
+export type TeachingRosterQuery = z.infer<typeof teachingRosterQuery>;
+
+export const teachingRosterSubjectRow = z.object({
+  assignmentId: z.string().uuid(),
+  classArmId: z.string().uuid(),
+  subjectId: z.string().uuid(),
+  staffProfileId: z.string().uuid(),
+  staffName: z.string(),
+});
+export type TeachingRosterSubjectRow = z.infer<typeof teachingRosterSubjectRow>;
+
+export const teachingRosterClassTeacherRow = z.object({
+  assignmentId: z.string().uuid(),
+  classArmId: z.string().uuid(),
+  staffProfileId: z.string().uuid(),
+  staffName: z.string(),
+});
+export type TeachingRosterClassTeacherRow = z.infer<typeof teachingRosterClassTeacherRow>;
+
+export const teachingRosterResponse = z.object({
+  termId: z.string().uuid(),
+  subjectAssignments: z.array(teachingRosterSubjectRow),
+  classTeachers: z.array(teachingRosterClassTeacherRow),
+});
+export type TeachingRosterResponse = z.infer<typeof teachingRosterResponse>;
+
 export const parentTimetableQuery = z.object({
   studentId: z.string().uuid(),
   termId: z.string().uuid(),

@@ -6,6 +6,7 @@ import { useAcademicTerms, useAcademicYears, useClassLevels, usePromotions } fro
 import type { LucideIcon } from 'lucide-react';
 import {
   ArrowRight,
+  BookOpen,
   CalendarDays,
   GraduationCap,
   Layers,
@@ -47,6 +48,7 @@ export default function AcademicHubPage() {
   const canManageYear = useCanAny(['academic_year.manage', 'term.manage']);
   const canStructure = useCan('class_structure.manage');
   const canSetupGuide = useCanAny(['academic_year.manage', 'class_structure.manage']);
+  const canTeaching = useCanAny(['subject.assign', 'classteacher.assign']);
   const canPromote = useCan('student.promote');
   const canGraduate = useCan('student.graduate');
 
@@ -119,6 +121,14 @@ export default function AcademicHubPage() {
       href: '/school/academic/structure',
       icon: Layers,
       show: canStructure,
+    },
+    {
+      id: 'teaching',
+      title: 'Teaching',
+      description: 'Assign subjects to teachers and class teachers to each arm.',
+      href: '/school/academic/teaching',
+      icon: BookOpen,
+      show: canTeaching,
     },
     {
       id: 'promotions',

@@ -154,6 +154,8 @@ export const queryKeys = {
       ['academic', tenantId, 'timetable', 'me', termId] as const,
     teachingStaffContext: (tenantId: string, termId: string) =>
       ['academic', tenantId, 'teaching', 'me', termId] as const,
+    teachingRoster: (tenantId: string, termId: string) =>
+      ['academic', tenantId, 'teaching', 'roster', termId] as const,
     assignments: (tenantId: string, filters: AssignmentListFilters | string) =>
       ['academic', tenantId, 'assignments', filters] as const,
     myAssignments: (tenantId: string, termId: string) =>
