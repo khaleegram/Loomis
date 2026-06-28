@@ -1,5 +1,6 @@
 import { Queue, Worker, type ConnectionOptions } from 'bullmq';
 import { getEnv } from '../../../config/env.js';
+import { defaultQueueJobOptions } from '../../../shared/bullmq.js';
 import { breakGlassRepository } from '../repository/break-glass.repository.js';
 import { ivpBatchService } from '../services/ivp-batch.service.js';
 
@@ -26,7 +27,7 @@ export async function startIvpBatchJob(): Promise<void> {
   if (worker) return;
 
   const connection = connectionOptions();
-  queue = new Queue(QUEUE_NAME, { connection });
+  queue = new Queue(QUEUE_NAME, { connection, defaultJobOptions: defaultQueueJobOptions });
 
   await queue.add(
     'nightly-ivp-batch',

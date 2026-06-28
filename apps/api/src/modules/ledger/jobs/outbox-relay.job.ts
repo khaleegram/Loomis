@@ -1,5 +1,5 @@
 import { Queue, Worker } from 'bullmq';
-import { bullmqConnectionOptions } from '../../../shared/bullmq.js';
+import { bullmqConnectionOptions, defaultQueueJobOptions } from '../../../shared/bullmq.js';
 import { dispatchEvent } from '../../../shared/events/registry.js';
 import { db } from '../../../shared/db.js';
 import { ledgerOutboxRepository } from '../repository/index.js';
@@ -18,7 +18,7 @@ export async function startOutboxRelayJob(): Promise<void> {
   if (worker) return;
 
   const connection = bullmqConnectionOptions();
-  queue = new Queue(QUEUE_NAME, { connection });
+  queue = new Queue(QUEUE_NAME, { connection, defaultJobOptions: defaultQueueJobOptions });
 
   await queue.add(
     'relay-tick',

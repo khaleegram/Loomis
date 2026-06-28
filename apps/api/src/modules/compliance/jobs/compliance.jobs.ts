@@ -1,5 +1,6 @@
 import { Queue, Worker, type ConnectionOptions } from 'bullmq';
 import { getEnv } from '../../../config/env.js';
+import { defaultQueueJobOptions } from '../../../shared/bullmq.js';
 import { breachService } from '../services/breach.service.js';
 import { dsarService } from '../services/dsar.service.js';
 import { retentionService } from '../services/retention.service.js';
@@ -37,21 +38,21 @@ export async function startComplianceJobs(): Promise<void> {
 
   const connection = connectionOptions();
 
-  dsarQueue = new Queue(DSAR_QUEUE, { connection });
+  dsarQueue = new Queue(DSAR_QUEUE, { connection, defaultJobOptions: defaultQueueJobOptions });
   await dsarQueue.add(
     'daily-dsar-escalation',
     {},
     { repeat: { pattern: '0 8 * * *' }, jobId: 'compliance-dsar-escalation-daily' },
   );
 
-  breachQueue = new Queue(BREACH_QUEUE, { connection });
+  breachQueue = new Queue(BREACH_QUEUE, { connection, defaultJobOptions: defaultQueueJobOptions });
   await breachQueue.add(
     'hourly-breach-escalation',
     {},
     { repeat: { pattern: '0 * * * *' }, jobId: 'compliance-breach-escalation-hourly' },
   );
 
-  retentionQueue = new Queue(RETENTION_QUEUE, { connection });
+  retentionQueue = new Queue(RETENTION_QUEUE, { connection, defaultJobOptions: defaultQueueJobOptions });
   await retentionQueue.add(
     'nightly-retention',
     {},

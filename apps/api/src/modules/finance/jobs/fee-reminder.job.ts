@@ -1,5 +1,6 @@
 import { Queue, Worker, type ConnectionOptions } from 'bullmq';
 import { getEnv } from '../../../config/env.js';
+import { defaultQueueJobOptions } from '../../../shared/bullmq.js';
 import { feeReminderService } from '../services/fee-reminder.service.js';
 
 const QUEUE_NAME = 'finance-fee-reminders';
@@ -23,7 +24,7 @@ export async function startFeeReminderJob(): Promise<void> {
   if (worker) return;
 
   const connection = connectionOptions();
-  queue = new Queue(QUEUE_NAME, { connection });
+  queue = new Queue(QUEUE_NAME, { connection, defaultJobOptions: defaultQueueJobOptions });
 
   await queue.add(
     'daily-fee-reminders',

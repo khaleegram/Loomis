@@ -1,4 +1,4 @@
-import type { ConnectionOptions } from 'bullmq';
+import type { ConnectionOptions, DefaultJobOptions } from 'bullmq';
 import { getEnv } from '../config/env.js';
 
 /** BullMQ requires blocking Redis commands — do not use maxRetriesPerRequest: 3. */
@@ -13,3 +13,14 @@ export function bullmqConnectionOptions(): ConnectionOptions {
     ...(url.protocol === 'rediss:' ? { tls: {} } : {}),
   };
 }
+
+/**
+ * Retention applied to every queue. Without this, completed/failed job hashes
+ * accumulate in Redis forever — the high-frequency relay (every 1s) alone adds
+ * ~86k records/day, which is what filled the Redis volume and broke logins.
+ * Keep a small window for debugging, discard the rest.
+ */
+export const defaultQueueJobOptions: DefaultJobOptions = {
+  removeOnComplete: { count: 20 },
+  removeOnFail: { count: 100 },
+};

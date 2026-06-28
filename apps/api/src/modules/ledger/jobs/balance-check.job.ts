@@ -1,5 +1,5 @@
 import { Queue, Worker } from 'bullmq';
-import { bullmqConnectionOptions } from '../../../shared/bullmq.js';
+import { bullmqConnectionOptions, defaultQueueJobOptions } from '../../../shared/bullmq.js';
 import { balanceCheckService } from '../services/balance-check.service.js';
 
 const QUEUE_NAME = 'ledger-balance-check';
@@ -15,7 +15,7 @@ export async function startBalanceCheckJob(): Promise<void> {
   if (worker) return;
 
   const connection = bullmqConnectionOptions();
-  queue = new Queue(QUEUE_NAME, { connection });
+  queue = new Queue(QUEUE_NAME, { connection, defaultJobOptions: defaultQueueJobOptions });
 
   await queue.add(
     'nightly-balance-check',
