@@ -91,6 +91,8 @@ export const SCHOOL_NAV: SchoolNavItem[] = [
       'student.promote',
       'student.graduate',
       'class_structure.manage',
+      'subject.assign',
+      'classteacher.assign',
     ],
     hideForRoles: TEACHING_STAFF_ROLES,
   },
@@ -110,7 +112,6 @@ export const SCHOOL_NAV: SchoolNavItem[] = [
     icon: BookOpen,
     capabilities: ['timetable.manage', 'timetable.view'],
     hideForRoles: [
-      'school_owner',
       'principal',
       ...EXAM_OFFICER_ROLES,
       ...ADMIN_OFFICER_ROLES,
