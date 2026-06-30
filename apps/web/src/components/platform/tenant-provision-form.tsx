@@ -14,11 +14,9 @@ import {
   FormItem,
   FormMessage,
   Input,
-  SmartSearchSelect,
-  Textarea,
   cn,
 } from '@loomis/ui-web';
-import { usePlatformTiers, useProvisionTenant, usePlatformProvisionDraft, useUpsertPlatformProvisionDraft, useClearPlatformProvisionDraft } from '@loomis/api-client';
+import { usePlatformTiers, useProvisionTenant, usePlatformProvisionDraft, useUpsertPlatformProvisionDraft, useClearPlatformProvisionDraft, usePlatformTenants } from '@loomis/api-client';
 import { formatKobo } from '@loomis/core';
 import {
   Building2,
@@ -26,16 +24,22 @@ import {
   ChevronLeft,
   ChevronRight,
   Info,
-  Mail,
-  MapPin,
   Percent,
-  Phone,
 } from 'lucide-react';
 import { uuidv7 } from 'uuidv7';
 
 import { BRONZE } from '@/components/dashboard/dashboard-primitives';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
-import { NIGERIAN_STATE_OPTIONS } from '@/lib/geo/nigerian-states';
+import {
+  ProvisionContactFields,
+  ProvisionLocationFields,
+  ProvisionSchoolNameField,
+  ProvisionTierRecommender,
+  parseTenantAddress,
+  useSyncedTenantAddress,
+  validateAddressParts,
+} from '@/components/platform/tenant-provision-smart-fields';
+import { formatSchoolName } from '@/lib/provision/tenant-provision-smart';
 
 const STEPS = [
   { id: 0, label: 'School Info', hint: 'Identity & contact' },
@@ -136,6 +140,7 @@ export function TenantProvisionForm() {
   const draftHydratedRef = useRef(false);
 
   const { data: tiersData, isLoading: tiersLoading, isError: tiersError } = usePlatformTiers();
+  const { data: tenantsData } = usePlatformTenants();
   const provision = useProvisionTenant();
   const { data: savedDraft } = usePlatformProvisionDraft();
   const upsertDraft = useUpsertPlatformProvisionDraft();
@@ -147,6 +152,13 @@ export function TenantProvisionForm() {
   });
 
   const values = form.watch();
+  const { addressParts, setAddressParts } = useSyncedTenantAddress({
+    form,
+    regionName: 'region',
+    addressName: 'address',
+    initialAddress: DEFAULT_VALUES.address,
+    initialRegion: DEFAULT_VALUES.region,
+  });
 
   useEffect(() => {
     if (!savedDraft?.payload || draftHydratedRef.current) return;
@@ -165,7 +177,8 @@ export function TenantProvisionForm() {
     if (savedDraft.stepIndex <= 2) {
       setStep(savedDraft.stepIndex as 0 | 1 | 2);
     }
-  }, [savedDraft, form]);
+    setAddressParts(parseTenantAddress(payload.address ?? '', payload.region ?? ''));
+  }, [savedDraft, form, setAddressParts]);
 
   useEffect(() => {
     if (!draftHydratedRef.current) return;
@@ -202,6 +215,17 @@ export function TenantProvisionForm() {
     setSubmitError(null);
     setStepHint(null);
     if (step === 0) {
+      const addressError = validateAddressParts(addressParts, form.getValues('region'));
+      if (addressError) {
+        setStepHint(addressError);
+        return;
+      }
+
+      const normalizedName = formatSchoolName(form.getValues('name'));
+      if (normalizedName) {
+        form.setValue('name', normalizedName, { shouldValidate: true });
+      }
+
       const ok = await form.trigger([
         'name',
         'region',
@@ -359,165 +383,43 @@ export function TenantProvisionForm() {
           >
             {step === 0 ? (
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <FormField
+                <ProvisionSchoolNameField
                   control={form.control}
                   name="name"
-                  rules={{ required: 'School name is required', minLength: { value: 2, message: 'Min 2 characters' } }}
-                  render={({ field }) => (
-                    <FormItem className="lg:col-span-2">
-                      <FieldLabel required>School name</FieldLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Building2
-                            aria-hidden
-                            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400"
-                          />
-                          <Input
-                            {...field}
-                            className={cn(inputClass, 'pl-9')}
-                            placeholder="e.g. Greenfield Academy"
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  inputClass={inputClass}
+                  existingTenants={tenantsData?.tenants ?? []}
                 />
 
-                <FormField
+                <ProvisionLocationFields
                   control={form.control}
-                  name="region"
-                  rules={{ required: 'Select a state or region' }}
-                  render={({ field }) => (
-                    <FormItem className="lg:col-span-2">
-                      <FieldLabel required>State / region</FieldLabel>
-                      <FormControl>
-                        <SmartSearchSelect
-                          variant="field"
-                          value={field.value || null}
-                          onValueChange={(v) => {
-                            field.onChange(v ?? '');
-                            form.clearErrors('region');
-                          }}
-                          options={NIGERIAN_STATE_OPTIONS}
-                          placeholder="Select state…"
-                          searchPlaceholder="Search states (e.g. Lagos, FCT, Abuja)…"
-                        />
-                      </FormControl>
-                      <FormDescription className="text-[11px] text-neutral-400">
-                        Search all 37 states — used for regional reporting and PSF attribution.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  regionName="region"
+                  addressName="address"
+                  region={values.region}
+                  inputClass={inputClass}
+                  addressParts={addressParts}
+                  onAddressPartsChange={setAddressParts}
                 />
 
-                <FormField
+                <ProvisionContactFields
                   control={form.control}
-                  name="contactEmail"
-                  rules={{
-                    required: 'Contact email is required',
-                    pattern: {
-                      value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                      message: 'Enter a valid email (e.g. principal@school.ng)',
-                    },
-                  }}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FieldLabel required>Primary contact email</FieldLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Mail
-                            aria-hidden
-                            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400"
-                          />
-                          <Input
-                            {...field}
-                            type="email"
-                            className={cn(inputClass, 'pl-9')}
-                            placeholder="principal@school.ng"
-                            autoComplete="email"
-                          />
-                        </div>
-                      </FormControl>
-                      <FormDescription className="text-[11px] text-neutral-400">
-                        School Owner account and welcome email are sent here after provisioning.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="contactPhone"
-                  rules={{
-                    required: 'Mobile phone is required',
-                    pattern: {
-                      value: /^\+234[789]\d{9}$/,
-                      message: 'Use Nigerian format: +2348012345678',
-                    },
-                  }}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FieldLabel required>Mobile phone</FieldLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Phone
-                            aria-hidden
-                            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400"
-                          />
-                          <Input
-                            {...field}
-                            type="tel"
-                            className={cn(inputClass, 'pl-9')}
-                            placeholder="+2348012345678"
-                            autoComplete="tel"
-                          />
-                        </div>
-                      </FormControl>
-                      <FormDescription className="text-[11px] text-neutral-400">
-                        Primary mobile for the School Owner and urgent platform notices.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="address"
-                  rules={{ required: 'Address is required', minLength: { value: 2, message: 'Min 2 characters' } }}
-                  render={({ field }) => (
-                    <FormItem className="lg:col-span-2">
-                      <FieldLabel required>Physical address</FieldLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <MapPin
-                            aria-hidden
-                            className="pointer-events-none absolute left-3 top-3 size-4 text-neutral-400"
-                          />
-                          <Textarea
-                            {...field}
-                            rows={3}
-                            className="min-h-[88px] resize-none rounded-lg border-neutral-200 bg-white pl-9 text-[13px] placeholder:text-neutral-400 focus-visible:ring-brand-600/30"
-                            placeholder={
-                              values.region
-                                ? `Street, LGA, ${values.region}`
-                                : 'Street, LGA, State'
-                            }
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  emailName="contactEmail"
+                  phoneName="contactPhone"
+                  inputClass={inputClass}
                 />
               </div>
             ) : null}
 
             {step === 1 ? (
               <div className="space-y-4">
+                <ProvisionTierRecommender
+                  tiers={tiersData?.tiers ?? []}
+                  selectedTierCode={values.tierCode}
+                  onApplyTier={(tierCode) => {
+                    form.setValue('tierCode', tierCode, { shouldValidate: true });
+                    form.clearErrors('tierCode');
+                  }}
+                />
+
                 <FormField
                   control={form.control}
                   name="tierCode"

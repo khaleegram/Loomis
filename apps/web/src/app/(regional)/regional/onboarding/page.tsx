@@ -34,7 +34,6 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  SmartSearchSelect,
   cn,
 } from '@loomis/ui-web';
 import { CheckCircle2, Lock } from 'lucide-react';
@@ -45,7 +44,16 @@ import { PageBody } from '@/components/regional/regional-shell';
 import { REGIONAL_PAGE_CLASS, REGIONAL_UI } from '@/lib/regional/regional-ui';
 import { useOnboardingStore } from '@/lib/regional/onboarding-store';
 import { smartInputClass } from '@/components/shared/smart-form';
-import { NIGERIAN_STATE_OPTIONS } from '@/lib/geo/nigerian-states';
+import {
+  ProvisionContactFields,
+  ProvisionLocationFields,
+  ProvisionSchoolNameField,
+  ProvisionTierRecommender,
+  parseTenantAddress,
+  useSyncedTenantAddress,
+  validateAddressParts,
+} from '@/components/platform/tenant-provision-smart-fields';
+import { formatSchoolName } from '@/lib/provision/tenant-provision-smart';
 
 const STEPS = ['School Identity', 'Contact', 'Attribution', 'Tier', 'Review'] as const;
 
@@ -85,6 +93,15 @@ export default function RegionalOnboardingPage() {
     },
   });
 
+  const watchedValues = form.watch();
+  const { addressParts, setAddressParts } = useSyncedTenantAddress({
+    form,
+    regionName: 'region',
+    addressName: 'address',
+    initialAddress: draft.address,
+    initialRegion: draft.region,
+  });
+
   useEffect(() => {
     if (!serverDraft?.payload) return;
     const payload = serverDraft.payload;
@@ -100,9 +117,8 @@ export default function RegionalOnboardingPage() {
     if (serverDraft.stepIndex <= 4) {
       setStep(serverDraft.stepIndex as 0 | 1 | 2 | 3 | 4);
     }
-  }, [serverDraft, draft, form, setStep]);
-
-  const watchedValues = form.watch();
+    setAddressParts(parseTenantAddress(payload.address ?? draft.address, payload.region ?? draft.region));
+  }, [serverDraft, draft, form, setStep, setAddressParts]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -137,17 +153,26 @@ export default function RegionalOnboardingPage() {
     const step = draft.step;
     let valid = false;
     if (step === 0) {
-      valid = await form.trigger(['name', 'region']);
+      const addressError = validateAddressParts(addressParts, form.getValues('region'));
+      if (addressError) {
+        form.setError('address', { message: addressError });
+        return;
+      }
+      const normalizedName = formatSchoolName(form.getValues('name'));
+      if (normalizedName) {
+        form.setValue('name', normalizedName, { shouldValidate: true });
+      }
+      valid = await form.trigger(['name', 'region', 'address']);
       if (valid) {
         setField('name', form.getValues('name'));
         setField('region', form.getValues('region'));
+        setField('address', form.getValues('address'));
       }
     } else if (step === 1) {
-      valid = await form.trigger(['contactEmail', 'contactPhone', 'address']);
+      valid = await form.trigger(['contactEmail', 'contactPhone']);
       if (valid) {
         setField('contactEmail', form.getValues('contactEmail'));
         setField('contactPhone', form.getValues('contactPhone'));
-        setField('address', form.getValues('address'));
       }
     } else if (step === 2) {
       valid = draft.conflictDeclared;
@@ -274,97 +299,36 @@ export default function RegionalOnboardingPage() {
                 ) : null}
 
                 {draft.step === 0 ? (
-                  <>
-                    <FormField
+                  <div className="space-y-4">
+                    <ProvisionSchoolNameField
                       control={form.control}
                       name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>School name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="e.g. Grace Academy" className={smartInputClass} {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                      inputClass={smartInputClass}
+                      labelClass={(label) => <FormLabel>{label}</FormLabel>}
                     />
-                    <FormField
+                    <ProvisionLocationFields
                       control={form.control}
-                      name="region"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>State</FormLabel>
-                          <FormControl>
-                            <SmartSearchSelect
-                              variant="field"
-                              value={field.value || null}
-                              onValueChange={(v) => field.onChange(v ?? '')}
-                              options={NIGERIAN_STATE_OPTIONS}
-                              placeholder="Select state…"
-                              searchPlaceholder="Search states (e.g. Lagos, FCT, Abuja)…"
-                            />
-                          </FormControl>
-                          <FormDescription className="text-[11px] text-neutral-400">
-                            Search all 37 states — scroll or type to filter.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                      regionName="region"
+                      addressName="address"
+                      region={watchedValues.region}
+                      inputClass={smartInputClass}
+                      labelClass={(label) => <FormLabel>{label}</FormLabel>}
+                      addressParts={addressParts}
+                      onAddressPartsChange={setAddressParts}
                     />
-                  </>
+                  </div>
                 ) : null}
 
                 {draft.step === 1 ? (
-                  <>
-                    <FormField
+                  <div className="space-y-4">
+                    <ProvisionContactFields
                       control={form.control}
-                      name="contactEmail"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>School contact email</FormLabel>
-                          <FormControl>
-                            <Input type="email" placeholder="admin@school.edu.ng" className={smartInputClass} {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                      emailName="contactEmail"
+                      phoneName="contactPhone"
+                      inputClass={smartInputClass}
+                      labelClass={(label) => <FormLabel>{label}</FormLabel>}
                     />
-                    <FormField
-                      control={form.control}
-                      name="contactPhone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Mobile phone</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="tel"
-                              placeholder="+2348012345678"
-                              className={smartInputClass}
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormDescription className="text-[11px]">
-                            Nigerian mobile in E.164 format — used for the School Owner account.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="address"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Physical address</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Street, LGA, State" className={smartInputClass} {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                  </>
+                  </div>
                 ) : null}
 
                 {draft.step === 2 ? (
@@ -397,31 +361,40 @@ export default function RegionalOnboardingPage() {
                 ) : null}
 
                 {draft.step === 3 ? (
-                  <FormField
-                    control={form.control}
-                    name="tierCode"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Service tier</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger disabled={tiersLoading}>
-                              <SelectValue placeholder="Select tier" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {(tiersData?.tiers ?? []).map((tier) => (
-                              <SelectItem key={tier.code} value={tier.code}>
-                                {tier.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormDescription>Determines PSF rate and feature set</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="space-y-4">
+                    <ProvisionTierRecommender
+                      tiers={tiersData?.tiers ?? []}
+                      selectedTierCode={watchedValues.tierCode}
+                      onApplyTier={(tierCode) => {
+                        form.setValue('tierCode', tierCode, { shouldValidate: true });
+                      }}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="tierCode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Service tier</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger disabled={tiersLoading}>
+                                <SelectValue placeholder="Select tier" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {(tiersData?.tiers ?? []).map((tier) => (
+                                <SelectItem key={tier.code} value={tier.code}>
+                                  {tier.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>Determines PSF rate and feature set</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 ) : null}
 
                 {draft.step === 4 ? (
