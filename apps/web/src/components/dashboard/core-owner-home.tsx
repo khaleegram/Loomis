@@ -38,7 +38,7 @@ export function CoreOwnerHome({ tenantId, displayName }: CoreOwnerHomeProps) {
     schoolTermPulse,
     schoolName,
   } = useLeadershipAttention(tenantId, 'school_owner');
-  const inboxQuery = useWorkflowInbox(tenantId, { live: true });
+  const inboxQuery = useWorkflowInbox(tenantId);
   const ownerInbox = filterInboxByTypes(inboxQuery.data?.items ?? [], [
     'staff_role_change',
     'refund_request',
