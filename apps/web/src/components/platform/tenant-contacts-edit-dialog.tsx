@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import {
   nigerianMobilePhone,
@@ -26,7 +26,7 @@ import {
   Input,
 } from '@loomis/ui-web';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useFieldArray, useForm } from 'react-hook-form';
+import { useFieldArray, useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 
 const ROLE_LABELS: Record<z.infer<typeof tenantContactRole>, string> = {
@@ -104,9 +104,14 @@ export function TenantContactsEditDialog({
   });
 
   const { fields, append, remove } = useFieldArray({ control: form.control, name: 'contacts' });
+  const watchedContacts = useWatch({ control: form.control, name: 'contacts' }) ?? [];
 
+  /** Reset only when the dialog opens — not on every parent re-render of `tenant`. */
+  const wasOpenRef = useRef(false);
   useEffect(() => {
-    if (!open) return;
+    const justOpened = open && !wasOpenRef.current;
+    wasOpenRef.current = open;
+    if (!justOpened) return;
     form.reset({ contacts: toFormContacts(tenant) });
   }, [open, tenant, form]);
 
@@ -155,7 +160,9 @@ export function TenantContactsEditDialog({
 
         <Form {...form}>
           <form onSubmit={(e) => void form.handleSubmit(onSubmit)(e)} className="space-y-4 p-5">
-            {fields.map((field, index) => (
+            {fields.map((field, index) => {
+              const isPrimary = watchedContacts[index]?.isPrimary === true;
+              return (
               <div
                 key={field.id}
                 className="space-y-3 rounded-xl border border-neutral-100 bg-neutral-50/50 p-4"
@@ -163,10 +170,10 @@ export function TenantContactsEditDialog({
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-neutral-400">
                     Contact {index + 1}
-                    {form.watch(`contacts.${index}.isPrimary`) ? ' · Primary' : ''}
+                    {isPrimary ? ' · Primary' : ''}
                   </p>
                   <div className="flex items-center gap-2">
-                    {!form.watch(`contacts.${index}.isPrimary`) ? (
+                    {!isPrimary ? (
                       <button
                         type="button"
                         onClick={() => setPrimary(index)}
@@ -268,7 +275,8 @@ export function TenantContactsEditDialog({
                   />
                 </div>
               </div>
-            ))}
+            );
+            })}
 
             {fields.length < 10 ? (
               <Button
