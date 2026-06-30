@@ -14,7 +14,7 @@ import {
   updateTenantContactsRequest,
   updateTenantProfileRequest,
 } from '@loomis/contracts';
-import type { TenantResponse } from '@loomis/contracts';
+import type { TenantContactInput, TenantResponse } from '@loomis/contracts';
 import {
   usePlatformTenant,
   useUpdateTenantContacts,
@@ -73,8 +73,6 @@ const inputCls =
   'h-11 w-full rounded-xl border border-neutral-200 bg-white px-3.5 text-[14px] text-neutral-900 outline-none placeholder:text-neutral-400 focus:border-brand-300 focus:ring-2 focus:ring-brand-200/50';
 const btnPrimary =
   'inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-[13px] font-bold cursor-pointer transition';
-const btnSecondary =
-  'inline-flex items-center gap-2 rounded-xl border border-neutral-200 px-5 py-2.5 text-[13px] font-semibold text-neutral-700 cursor-pointer transition hover:bg-neutral-50';
 
 export default function TenantSettingsPage({
   params,
@@ -134,7 +132,7 @@ export default function TenantSettingsPage({
       return;
     }
     const input = contacts.map((c) => ({
-      role: c.role as any,
+      role: c.role as TenantContactInput['role'],
       fullName: c.fullName.trim(),
       email: c.email.trim(),
       phone: c.phone?.trim() || undefined,
@@ -148,8 +146,11 @@ export default function TenantSettingsPage({
     try {
       await updateContacts.mutateAsync(parsed.data);
       setContactsMsg({ ok: true, text: 'Contacts saved.' });
-    } catch (err: any) {
-      setContactsMsg({ ok: false, text: err?.message ?? 'Failed to save contacts.' });
+    } catch (err) {
+      setContactsMsg({
+        ok: false,
+        text: err instanceof Error ? err.message : 'Failed to save contacts.',
+      });
     }
   }
 
@@ -163,8 +164,11 @@ export default function TenantSettingsPage({
     try {
       await updateProfile.mutateAsync(parsed.data);
       setLocationMsg({ ok: true, text: 'Location saved.' });
-    } catch (err: any) {
-      setLocationMsg({ ok: false, text: err?.message ?? 'Failed to save location.' });
+    } catch (err) {
+      setLocationMsg({
+        ok: false,
+        text: err instanceof Error ? err.message : 'Failed to save location.',
+      });
     }
   }
 
@@ -260,7 +264,7 @@ export default function TenantSettingsPage({
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
-                    <label className="mb-1 block text-[11px] font-bold uppercase tracking-[0.1em] text-neutral-400">
+                    <label className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-neutral-400">
                       Role
                     </label>
                     <select
@@ -277,7 +281,7 @@ export default function TenantSettingsPage({
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-[11px] font-bold uppercase tracking-[0.1em] text-neutral-400">
+                    <label className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-neutral-400">
                       Full name
                     </label>
                     <input
@@ -289,7 +293,7 @@ export default function TenantSettingsPage({
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-[11px] font-bold uppercase tracking-[0.1em] text-neutral-400">
+                    <label className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-neutral-400">
                       Email
                     </label>
                     <input
@@ -301,7 +305,7 @@ export default function TenantSettingsPage({
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-[11px] font-bold uppercase tracking-[0.1em] text-neutral-400">
+                    <label className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-neutral-400">
                       Mobile (optional)
                     </label>
                     <input
@@ -360,7 +364,7 @@ export default function TenantSettingsPage({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-[11px] font-bold uppercase tracking-[0.1em] text-neutral-400">
+              <label className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-neutral-400">
                 State / region
               </label>
               <SmartSearchSelect
@@ -373,7 +377,7 @@ export default function TenantSettingsPage({
               />
             </div>
             <div>
-              <label className="mb-1 block text-[11px] font-bold uppercase tracking-[0.1em] text-neutral-400">
+              <label className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-neutral-400">
                 Address
               </label>
               <Textarea
