@@ -90,6 +90,7 @@ function invalidateStaffQueries(
   termId?: string,
 ) {
   void queryClient.invalidateQueries({ queryKey: queryKeys.hrm.staffList(tenantId) });
+  void queryClient.refetchQueries({ queryKey: queryKeys.hrm.staffList(tenantId), type: 'active' });
   if (staffProfileId) {
     void queryClient.invalidateQueries({
       queryKey: queryKeys.hrm.staffDetail(tenantId, staffProfileId),

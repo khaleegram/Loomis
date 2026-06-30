@@ -2,6 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useCreateStaff } from '@loomis/api-client';
@@ -65,6 +66,7 @@ function FieldLabel({ children, required }: { children: React.ReactNode; require
 }
 
 export default function AddStaffPage() {
+  const router = useRouter();
   const tenantId = useTenantId();
   const { financeMode, flags, isAdvanced } = useTenantExperience();
   const canOnboard = useCan('staff.onboard');
@@ -149,7 +151,9 @@ export default function AddStaffPage() {
         <p className="mt-2 text-[13px] leading-relaxed text-neutral-500">
           Creates an active account with default password{' '}
           <span className="font-mono text-neutral-700">11111111</span>. They must choose a new
-          password on first login — share login details securely with them.
+          password on first login — share login details securely with them. To add a{' '}
+          <strong className="font-semibold text-neutral-700">Principal</strong>, pick that role below
+          (your School Owner account already has the same operational powers).
         </p>
       </div>
 
@@ -213,16 +217,19 @@ export default function AddStaffPage() {
               <Copy aria-hidden className="size-3.5" />
               Copy credentials
             </Button>
-            <Button variant="outline" size="sm" className="gap-1.5 border-neutral-200" asChild>
-              <Link href="/school/staff">
-                <ArrowLeft aria-hidden className="size-3.5" />
-                Return to directory
-              </Link>
-            </Button>
             <Button
               size="sm"
               className="h-10 gap-1.5 rounded-lg px-5 text-[14px] font-medium text-[#0f1729]"
               style={{ background: '#c9a96e' }}
+              onClick={() => router.push('/school/staff')}
+            >
+              <ArrowLeft aria-hidden className="size-3.5" />
+              View staff list
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 border-neutral-200"
               onClick={() => {
                 createStaff.reset();
                 setSuccess(null);
