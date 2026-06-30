@@ -15,11 +15,19 @@ function toContactResponse(row: Awaited<
   };
 }
 
-function resolvePrimaryContact(contacts: TenantContactInput[]): TenantContactInput {
-  const primary =
-    contacts.find((contact) => contact.isPrimary === true || contact.role === 'primary') ??
-    contacts[0]!;
-  return { ...primary, role: 'primary', isPrimary: true };
+/**
+ * The primary contact is whichever row the caller flagged `isPrimary`, falling
+ * back to a `primary`-role row, then the first contact. Selecting by index (not
+ * by email/role) is what guarantees exactly one primary survives — comparing on
+ * the role-rewritten copy previously dropped the flag for proprietor/billing
+ * primaries and saved zero primaries, which locked the edit form.
+ */
+function resolvePrimaryIndex(contacts: TenantContactInput[]): number {
+  const flagged = contacts.findIndex((contact) => contact.isPrimary === true);
+  if (flagged >= 0) return flagged;
+  const byRole = contacts.findIndex((contact) => contact.role === 'primary');
+  if (byRole >= 0) return byRole;
+  return 0;
 }
 
 export const tenantContactService = {
@@ -29,14 +37,12 @@ export const tenantContactService = {
   },
 
   async replaceContacts(tenantId: string, contacts: TenantContactInput[]): Promise<TenantContact[]> {
-    const primary = resolvePrimaryContact(contacts);
-    const normalized = contacts.map((contact) => ({
+    const primaryIndex = resolvePrimaryIndex(contacts);
+    const primary = contacts[primaryIndex]!;
+    const normalized = contacts.map((contact, index) => ({
       ...contact,
-      isPrimary: contact.email === primary.email && contact.role === primary.role,
-      role:
-        contact.email === primary.email && contact.role === primary.role
-          ? ('primary' as const)
-          : contact.role,
+      isPrimary: index === primaryIndex,
+      role: index === primaryIndex ? ('primary' as const) : contact.role,
     }));
 
     const rows = await tenantContactRepository.replaceForTenant(tenantId, normalized);
