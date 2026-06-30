@@ -2,7 +2,6 @@
 
 import { Button, cn } from '@loomis/ui-web';
 import { Bell, BellOff, Loader2 } from 'lucide-react';
-import { useEffect } from 'react';
 
 import { SmartHint } from '@/components/shared/smart-form';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
@@ -17,12 +16,7 @@ export function ParentPushNotificationSettings({
   className,
   compact = false,
 }: ParentPushNotificationSettingsProps) {
-  const { status, error, serverEnabled, isLoading, enable, syncIfNeeded } =
-    useWebPushRegistration();
-
-  useEffect(() => {
-    void syncIfNeeded();
-  }, [syncIfNeeded]);
+  const { status, error, serverEnabled, isLoading, enable } = useWebPushRegistration();
 
   const statusCopy: Record<string, string> = {
     unsupported:

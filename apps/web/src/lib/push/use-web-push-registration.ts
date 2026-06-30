@@ -5,7 +5,7 @@ import {
   useRegisterWebDevice,
   useWebPushConfig,
 } from '@loomis/api-client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   clearPushRegistered,
@@ -39,6 +39,11 @@ export function useWebPushRegistration() {
     configQuery.data?.webPushEnabled && configQuery.data.vapidPublicKey,
   );
   const vapidPublicKey = configQuery.data?.vapidPublicKey ?? null;
+
+  const registerDeviceMutate = registerDevice.mutateAsync;
+  const registerPushMutate = registerPush.mutateAsync;
+  const syncInFlightRef = useRef(false);
+  const autoSyncAttemptedRef = useRef(false);
 
   const refreshStatus = useCallback(() => {
     if (!isWebPushSupported()) {
@@ -78,20 +83,20 @@ export function useWebPushRegistration() {
     let deviceId = getStoredWebDeviceId();
     if (!deviceId) {
       const fingerprint = getOrCreateDeviceFingerprint();
-      const registered = await registerDevice.mutateAsync({ deviceFingerprint: fingerprint });
+      const registered = await registerDeviceMutate({ deviceFingerprint: fingerprint });
       deviceId = registered.deviceId;
       storeWebDeviceId(deviceId);
     }
 
     const subscription = await subscribeToWebPush(vapidPublicKey);
-    await registerPush.mutateAsync({
+    await registerPushMutate({
       deviceId,
       platform: 'web',
       token: serializePushSubscription(subscription),
     });
 
     markPushRegistered();
-  }, [registerDevice, registerPush, vapidPublicKey]);
+  }, [registerDeviceMutate, registerPushMutate, vapidPublicKey]);
 
   const enable = useCallback(async () => {
     setError(null);
@@ -118,6 +123,9 @@ export function useWebPushRegistration() {
       setStatus('enabled');
       return;
     }
+    if (syncInFlightRef.current) return;
+
+    syncInFlightRef.current = true;
     setStatus('syncing');
     setError(null);
     try {
@@ -126,8 +134,24 @@ export function useWebPushRegistration() {
     } catch (err) {
       setStatus('error');
       setError(err instanceof Error ? err.message : 'Could not sync push subscription.');
+    } finally {
+      syncInFlightRef.current = false;
     }
   }, [registerWithApi, serverEnabled]);
+
+  useEffect(() => {
+    if (configQuery.isLoading || !serverEnabled) return;
+    if (autoSyncAttemptedRef.current) return;
+    if (!isWebPushSupported()) return;
+    if (Notification.permission !== 'granted') return;
+    if (isPushRegistered()) {
+      setStatus('enabled');
+      return;
+    }
+
+    autoSyncAttemptedRef.current = true;
+    void syncIfNeeded();
+  }, [configQuery.isLoading, serverEnabled, syncIfNeeded]);
 
   return {
     status,

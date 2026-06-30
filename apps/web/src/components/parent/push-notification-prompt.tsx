@@ -14,7 +14,7 @@ const DISMISS_KEY = 'loomis_push_prompt_dismissed';
  * In-app notifications are always created; push requires VAPID keys on the API.
  */
 export function PushNotificationPrompt() {
-  const { serverEnabled, isLoading, enable, syncIfNeeded } = useWebPushRegistration();
+  const { serverEnabled, isLoading, enable } = useWebPushRegistration();
   const [dismissed, setDismissed] = useState(true);
 
   useEffect(() => {
@@ -23,10 +23,6 @@ export function PushNotificationPrompt() {
     const alreadyRegistered = isPushRegistered();
     setDismissed(wasDismissed || alreadyRegistered);
   }, []);
-
-  useEffect(() => {
-    void syncIfNeeded();
-  }, [syncIfNeeded]);
 
   const canPrompt =
     isWebPushSupported() &&
