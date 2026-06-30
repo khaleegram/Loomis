@@ -4,16 +4,12 @@ import { use, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
-  Building2,
-  Mail,
   MapPin,
-  Phone,
   Plus,
   Trash2,
   User,
 } from 'lucide-react';
 import {
-  nigerianMobilePhone,
   tenantContactRole,
   updateTenantContactsRequest,
   updateTenantProfileRequest,
@@ -24,7 +20,7 @@ import {
   useUpdateTenantContacts,
   useUpdateTenantProfile,
 } from '@loomis/api-client';
-import { Input, Textarea, SmartSearchSelect } from '@loomis/ui-web';
+import { Textarea, SmartSearchSelect } from '@loomis/ui-web';
 
 import { PageBody } from '@/components/platform/platform-shell';
 import { NIGERIAN_STATE_OPTIONS } from '@/lib/geo/nigerian-states';
