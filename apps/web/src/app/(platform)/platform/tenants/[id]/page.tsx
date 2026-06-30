@@ -59,10 +59,8 @@ import { uuidv7 } from 'uuidv7';
 import { PageBody } from '@/components/platform/platform-shell';
 import { PlatformTenantExperienceCard } from '@/components/platform/platform-tenant-experience-card';
 import { TenantProductTierCard } from '@/components/platform/tenant-product-tier-card';
-import { TenantContactsEditDialog } from '@/components/platform/tenant-contacts-edit-dialog';
 import { PsfRateCard } from '@/components/platform/psf-rate-card';
 import { BreakGlassModal } from '@/components/platform/break-glass-modal';
-import { TenantProfileEditDialog } from '@/components/platform/tenant-profile-edit-dialog';
 import { TenantOnboardingTimeline } from '@/components/platform/tenant-onboarding-timeline';
 import { BRONZE } from '@/components/dashboard/dashboard-primitives';
 import { useAuth } from '@/lib/auth/auth-context';
@@ -158,8 +156,6 @@ export default function TenantDetailPage({ params }: TenantDetailPageProps) {
   const { session } = useAuth();
   const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
   const [bgModalOpen, setBgModalOpen] = useState(false);
-  const [editProfileOpen, setEditProfileOpen] = useState(false);
-  const [editContactsOpen, setEditContactsOpen] = useState(false);
   const suspendIdempotencyKey = useRef(uuidv7());
   const reinstateIdempotencyKey = useRef(uuidv7());
   const resendSetupKey = useRef(uuidv7());
@@ -513,22 +509,13 @@ export default function TenantDetailPage({ params }: TenantDetailPageProps) {
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setEditContactsOpen(true)}
+              <Link
+                href={`/platform/tenants/${tenant.id}/settings`}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 px-2.5 py-1.5 text-[12px] font-semibold text-neutral-700 transition hover:bg-neutral-50"
               >
                 <Pencil aria-hidden className="size-3.5" />
-                Edit contacts
-              </button>
-              <button
-                type="button"
-                onClick={() => setEditProfileOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 px-2.5 py-1.5 text-[12px] font-semibold text-neutral-700 transition hover:bg-neutral-50"
-              >
-                <MapPin aria-hidden className="size-3.5" />
-                Edit location
-              </button>
+                Edit settings
+              </Link>
             </div>
           </div>
 
@@ -892,18 +879,6 @@ export default function TenantDetailPage({ params }: TenantDetailPageProps) {
       {/* ════════════════════════════════════════════════════
           BREAK-GLASS MODAL
           ════════════════════════════════════════════════════ */}
-      <TenantProfileEditDialog
-        tenant={tenant}
-        open={editProfileOpen}
-        onOpenChange={setEditProfileOpen}
-      />
-
-      <TenantContactsEditDialog
-        tenant={tenant}
-        open={editContactsOpen}
-        onOpenChange={setEditContactsOpen}
-      />
-
       <BreakGlassModal
         open={bgModalOpen}
         tenantId={tenant.id}
