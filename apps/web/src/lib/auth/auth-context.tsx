@@ -180,6 +180,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             clearSession();
             return;
           }
+          // Stale session cookie without a refresh token — clear instead of
+          // leaving the shell in a permanent skeleton / reload loop.
+          await purgeStaleServerSession();
+          clearSession();
           return;
         }
 

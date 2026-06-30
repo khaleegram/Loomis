@@ -68,7 +68,12 @@ export function createWebApiClient(): ApiClient {
     }),
     onSessionInvalidated: () => {
       handleSessionInvalidated(() => {
-        window.location.assign('/login');
+        if (typeof window !== 'undefined') {
+          const path = window.location.pathname;
+          if (path !== '/change-password' && path !== '/login') {
+            window.location.assign('/login');
+          }
+        }
       });
     },
     getActiveTenantId,
