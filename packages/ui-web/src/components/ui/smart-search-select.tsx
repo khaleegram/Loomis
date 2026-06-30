@@ -86,7 +86,7 @@ export function SmartSearchSelect({
   }, [open]);
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
+    <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
@@ -105,9 +105,11 @@ export function SmartSearchSelect({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align={variant === 'field' ? 'start' : 'end'}
+        side="bottom"
         sideOffset={8}
+        collisionPadding={12}
         className={cn(
-          'z-[300] overflow-hidden rounded-xl border border-neutral-200 bg-white p-0 text-neutral-900 shadow-[0_12px_40px_rgba(15,23,42,0.14),0_2px_8px_rgba(15,23,42,0.06)]',
+          'z-[300] max-h-[min(24rem,calc(100vh-2rem))] overflow-hidden rounded-xl border border-neutral-200 bg-white p-0 text-neutral-900 shadow-[0_12px_40px_rgba(15,23,42,0.14),0_2px_8px_rgba(15,23,42,0.06)]',
           variant === 'field' ? 'w-[var(--radix-dropdown-menu-trigger-width)] min-w-[16rem]' : 'w-[min(22rem,calc(100vw-2rem))]',
           contentClassName,
         )}
@@ -132,7 +134,11 @@ export function SmartSearchSelect({
           </div>
         </div>
 
-        <div className="max-h-[min(20rem,50vh)] overflow-y-auto p-1.5 [scrollbar-width:thin]">
+        <div
+          className="max-h-[min(18rem,calc(100vh-8rem))] overflow-y-auto overscroll-contain p-1.5 touch-pan-y [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-neutral-300"
+          onWheel={(event) => event.stopPropagation()}
+          onTouchMove={(event) => event.stopPropagation()}
+        >
           {allLabel ? (
             <DropdownMenuItem
               onSelect={() => {

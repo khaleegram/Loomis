@@ -35,25 +35,13 @@ import { uuidv7 } from 'uuidv7';
 
 import { BRONZE } from '@/components/dashboard/dashboard-primitives';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
+import { NIGERIAN_STATE_OPTIONS } from '@/lib/geo/nigerian-states';
 
 const STEPS = [
   { id: 0, label: 'School Info', hint: 'Identity & contact' },
   { id: 1, label: 'Tier & Rate', hint: 'Billing configuration' },
   { id: 2, label: 'Review', hint: 'Confirm & provision' },
 ] as const;
-
-const NIGERIAN_STATES = [
-  'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue', 'Borno',
-  'Cross River', 'Delta', 'Ebonyi', 'Edo', 'Ekiti', 'Enugu', 'FCT', 'Gombe', 'Imo',
-  'Jigawa', 'Kaduna', 'Kano', 'Katsina', 'Kebbi', 'Kogi', 'Kwara', 'Lagos', 'Nasarawa',
-  'Niger', 'Ogun', 'Ondo', 'Osun', 'Oyo', 'Plateau', 'Rivers', 'Sokoto', 'Taraba', 'Yobe', 'Zamfara',
-] as const;
-
-const STATE_OPTIONS = NIGERIAN_STATES.map((state) => ({
-  value: state,
-  label: state,
-  keywords: state === 'FCT' ? 'Abuja Federal Capital Territory' : state,
-}));
 
 type ProvisionFormValues = {
   name: string;
@@ -411,7 +399,7 @@ export function TenantProvisionForm() {
                             field.onChange(v ?? '');
                             form.clearErrors('region');
                           }}
-                          options={STATE_OPTIONS}
+                          options={NIGERIAN_STATE_OPTIONS}
                           placeholder="Select state…"
                           searchPlaceholder="Search states (e.g. Lagos, FCT, Abuja)…"
                         />

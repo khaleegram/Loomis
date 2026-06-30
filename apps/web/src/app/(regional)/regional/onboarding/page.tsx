@@ -34,6 +34,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SmartSearchSelect,
   cn,
 } from '@loomis/ui-web';
 import { CheckCircle2, Lock } from 'lucide-react';
@@ -44,6 +45,7 @@ import { PageBody } from '@/components/regional/regional-shell';
 import { REGIONAL_PAGE_CLASS, REGIONAL_UI } from '@/lib/regional/regional-ui';
 import { useOnboardingStore } from '@/lib/regional/onboarding-store';
 import { smartInputClass } from '@/components/shared/smart-form';
+import { NIGERIAN_STATE_OPTIONS } from '@/lib/geo/nigerian-states';
 
 const STEPS = ['School Identity', 'Contact', 'Attribution', 'Tier', 'Review'] as const;
 
@@ -54,13 +56,6 @@ const SOCIAL_PROOF = [
   { stat: '36', line: 'states with active partner networks' },
   { stat: '4.8★', line: 'average partner satisfaction rating' },
 ] as const;
-
-const NIGERIAN_STATES = [
-  'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue', 'Borno',
-  'Cross River', 'Delta', 'Ebonyi', 'Edo', 'Ekiti', 'Enugu', 'FCT', 'Gombe', 'Imo',
-  'Jigawa', 'Kaduna', 'Kano', 'Katsina', 'Kebbi', 'Kogi', 'Kwara', 'Lagos', 'Nasarawa',
-  'Niger', 'Ogun', 'Ondo', 'Osun', 'Oyo', 'Plateau', 'Rivers', 'Sokoto', 'Taraba', 'Yobe', 'Zamfara',
-];
 
 type ProvisionForm = z.infer<typeof provisionTenantRequest>;
 
@@ -299,20 +294,19 @@ export default function RegionalOnboardingPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>State</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select state" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {NIGERIAN_STATES.map((s) => (
-                                <SelectItem key={s} value={s}>
-                                  {s}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormControl>
+                            <SmartSearchSelect
+                              variant="field"
+                              value={field.value || null}
+                              onValueChange={(v) => field.onChange(v ?? '')}
+                              options={NIGERIAN_STATE_OPTIONS}
+                              placeholder="Select state…"
+                              searchPlaceholder="Search states (e.g. Lagos, FCT, Abuja)…"
+                            />
+                          </FormControl>
+                          <FormDescription className="text-[11px] text-neutral-400">
+                            Search all 37 states — scroll or type to filter.
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}

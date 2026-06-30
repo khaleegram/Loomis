@@ -28,18 +28,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import type { z as zType } from 'zod';
 
-const NIGERIAN_STATES = [
-  'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue', 'Borno',
-  'Cross River', 'Delta', 'Ebonyi', 'Edo', 'Ekiti', 'Enugu', 'FCT', 'Gombe', 'Imo',
-  'Jigawa', 'Kaduna', 'Kano', 'Katsina', 'Kebbi', 'Kogi', 'Kwara', 'Lagos', 'Nasarawa',
-  'Niger', 'Ogun', 'Ondo', 'Osun', 'Oyo', 'Plateau', 'Rivers', 'Sokoto', 'Taraba', 'Yobe', 'Zamfara',
-] as const;
-
-const STATE_OPTIONS = NIGERIAN_STATES.map((state) => ({
-  value: state,
-  label: state,
-  keywords: state === 'FCT' ? 'Abuja Federal Capital Territory' : state,
-}));
+import { NIGERIAN_STATE_OPTIONS } from '@/lib/geo/nigerian-states';
 
 const editFormSchema = z.object({
   address: z.string().min(2).max(500),
@@ -125,7 +114,7 @@ export function TenantProfileEditDialog({
                       variant="field"
                       value={field.value || null}
                       onValueChange={(v) => field.onChange(v ?? '')}
-                      options={STATE_OPTIONS}
+                      options={NIGERIAN_STATE_OPTIONS}
                       placeholder="Search state…"
                       searchPlaceholder="Search states (e.g. Lagos, FCT)…"
                     />
