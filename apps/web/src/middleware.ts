@@ -56,10 +56,6 @@ export function middleware(req: NextRequest): NextResponse {
   const { pathname } = req.nextUrl;
   const session = parseSession(req.cookies.get(SESSION_COOKIE)?.value);
 
-  if (session?.mustChangePassword && pathname !== '/change-password') {
-    return NextResponse.redirect(new URL('/change-password', req.url));
-  }
-
   if (pathname === '/change-password') {
     if (!session) {
       return NextResponse.redirect(new URL('/login', req.url));
@@ -68,6 +64,10 @@ export function middleware(req: NextRequest): NextResponse {
       return NextResponse.redirect(new URL(landingPathForRole(session.role), req.url));
     }
     return NextResponse.next();
+  }
+
+  if (session?.mustChangePassword) {
+    return NextResponse.redirect(new URL('/change-password', req.url));
   }
 
   if (pathname === '/') {
