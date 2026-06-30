@@ -160,6 +160,49 @@ export const tenantOwnerService = {
     return { setupEmailSentAt: sentAt.toISOString(), email: emailResult };
   },
 
+  /**
+   * Keeps the School Owner login/setup email aligned with the school's primary
+   * contact. Syncs when the owner has not finished setup yet (still on a
+   * temporary password — correcting a typo before onboarding), or when the
+   * owner email still matches the previous primary. We never hijack an owner
+   * who has onboarded with a deliberately different email. Bumps user_ver to
+   * force re-auth.
+   */
+  async syncOwnerContact(
+    tenantId: string,
+    input: { newEmail: string; newPhone?: string | null; previousEmail: string | null },
+  ): Promise<{ synced: boolean; ownerEmail: string | null }> {
+    const ownerProfile = await findOwnerProfile(tenantId);
+    if (!ownerProfile) return { synced: false, ownerEmail: null };
+
+    const newEmail = input.newEmail.toLowerCase();
+    const currentOwnerEmail = ownerProfile.email?.toLowerCase() ?? null;
+    const previousPrimary = input.previousEmail?.toLowerCase() ?? null;
+
+    // Already correct — nothing to do.
+    if (currentOwnerEmail === newEmail) {
+      return { synced: false, ownerEmail: ownerProfile.email ?? null };
+    }
+
+    const ownerUser = await userRepository.findById(ownerProfile.userId);
+    const hasOnboarded = ownerUser ? ownerUser.mustChangePassword === false : true;
+
+    // An onboarded owner whose email deliberately differs from the primary
+    // contact must not be silently changed — leave it alone.
+    if (hasOnboarded && currentOwnerEmail !== previousPrimary) {
+      return { synced: false, ownerEmail: ownerProfile.email ?? null };
+    }
+
+    await userRepository.updateProfile(ownerProfile.userId, { email: newEmail });
+    await userRepository.incrementUserVer(ownerProfile.userId);
+    await staffRepository.updateProfileContact(tenantId, ownerProfile.userId, {
+      email: newEmail,
+      ...(input.newPhone ? { phone: input.newPhone } : {}),
+    });
+
+    return { synced: true, ownerEmail: newEmail };
+  },
+
   async getOwnerSetupStatus(tenantId: string): Promise<{
     hasOwnerAccount: boolean;
     ownerEmail: string | null;

@@ -224,7 +224,8 @@ export default function TenantSettingsPage({
             <div>
               <h2 className="text-[16px] font-extrabold text-neutral-900">School contacts</h2>
               <p className="text-[12px] text-neutral-500">
-                Primary contact gets welcome email and owner setup.
+                The primary contact email is also the school owner login. Fixing it here updates
+                where setup and welcome emails are sent.
               </p>
             </div>
           </div>

@@ -65,6 +65,26 @@ export const staffRepository = {
     });
   },
 
+  /** Updates a staff member's contact fields (used when correcting an owner's email/phone). */
+  async updateProfileContact(
+    tenantId: string,
+    userId: string,
+    fields: { email?: string; phone?: string; fullName?: string },
+  ) {
+    return withTenantContext(tenantId, async (tx) => {
+      const set: Record<string, unknown> = { updatedAt: new Date() };
+      if (fields.email !== undefined) set.email = fields.email.toLowerCase();
+      if (fields.phone !== undefined) set.phone = fields.phone;
+      if (fields.fullName !== undefined) set.fullName = fields.fullName;
+      const [profile] = await tx
+        .update(staffProfiles)
+        .set(set)
+        .where(and(eq(staffProfiles.tenantId, tenantId), eq(staffProfiles.userId, userId)))
+        .returning();
+      return profile ?? null;
+    });
+  },
+
   async createStaffWithInvitation(input: {
     profile: CreateStaffProfileInput;
     roleAssignment: Omit<CreateRoleAssignmentInput, 'staffProfileId'>;

@@ -182,8 +182,24 @@ export const tenantService = {
     input: UpdateTenantContactsRequest,
     _actor: ActorContext,
   ): Promise<TenantRow> {
-    await this.getTenant(id);
+    const existing = await this.getTenant(id);
+    const previousPrimaryEmail = existing.contactEmail ?? null;
+
     await tenantContactService.replaceContacts(id, input.contacts);
+
+    // Keep the School Owner login + setup email aligned with the primary contact,
+    // so correcting a typo here also fixes where the setup email is sent.
+    const primary =
+      input.contacts.find((c) => c.isPrimary === true || c.role === 'primary') ??
+      input.contacts[0];
+    if (primary) {
+      await tenantOwnerService.syncOwnerContact(id, {
+        newEmail: primary.email,
+        newPhone: primary.phone ?? null,
+        previousEmail: previousPrimaryEmail,
+      });
+    }
+
     const tenant = await tenantRepository.findById(id);
     if (!tenant) {
       throw new LoomisError('TENANT_NOT_FOUND', 404, 'Tenant not found');
