@@ -8,6 +8,7 @@ import { termService } from '../../academic/index.js';
 import { studentRepository } from '../../student/repository/index.js';
 import { assertParentPortalAccess } from '../../student/services/parent-portal-access.js';
 import { FINANCE_EVENT_TYPES } from '../events/types.js';
+import { isNombaConfigured } from '../gateway/index.js';
 import { financeRepository, type InvoiceWithItems } from '../repository/index.js';
 import type {
   ActorContext,
@@ -21,6 +22,35 @@ import {
   summarizeOutstandingRows,
 } from './outstanding-balance.utils.js';
 import { oldestOpenInvoiceId, type OpenInvoiceSlice } from './payment-allocation.utils.js';
+import { virtualAccountService } from './virtual-account.service.js';
+
+async function resolveParentVirtualAccount(
+  tenantId: string,
+  studentId: string,
+  actor: ActorContext,
+) {
+  if (!virtualAccountService.isEnabled()) {
+    return { virtualAccountEnabled: false, virtualAccount: null };
+  }
+  try {
+    const va = await virtualAccountService.ensureForStudent(
+      tenantId,
+      studentId,
+      actor as import('../../student/types.js').ActorContext,
+    );
+    return {
+      virtualAccountEnabled: true,
+      virtualAccount: {
+        accountNumber: va.accountNumber,
+        bankName: va.bankName,
+        accountName: va.accountName,
+        accountRef: va.accountRef,
+      },
+    };
+  } catch {
+    return { virtualAccountEnabled: false, virtualAccount: null };
+  }
+}
 
 interface ResolvedFeeStructure {
   feeStructureId: string;
@@ -373,7 +403,8 @@ export const invoiceService = {
 
     const classArmLabel = await resolveClassArmLabel(tenantId, studentId, termId);
     const env = getEnv();
-    const onlinePaymentEnabled = Boolean(env.PAYSTACK_SECRET_KEY);
+    const onlinePaymentEnabled = Boolean(env.PAYSTACK_SECRET_KEY) || isNombaConfigured();
+    const virtualAccountFields = await resolveParentVirtualAccount(tenantId, studentId, actor);
     const creditBalanceMinor = await financeRepository.getStudentCreditBalanceMinor(
       tenantId,
       studentId,
@@ -426,6 +457,7 @@ export const invoiceService = {
         dueDate: null,
         lineItems: [],
         onlinePaymentEnabled,
+        ...virtualAccountFields,
       };
     }
 
@@ -459,6 +491,7 @@ export const invoiceService = {
       dueDate: invoice.invoice.dueDate,
       lineItems: allocatePaidToLineItems(invoice.items, invoice.invoice.amountPaidMinor),
       onlinePaymentEnabled,
+      ...virtualAccountFields,
     };
   },
 };

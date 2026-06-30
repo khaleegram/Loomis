@@ -78,6 +78,7 @@ export const paystackGateway: PaymentGateway = {
       status,
       tenantId: typeof metadata.tenant_id === 'string' ? metadata.tenant_id : null,
       paymentId: typeof metadata.payment_id === 'string' ? metadata.payment_id : null,
+      virtualAccountRef: null,
       raw: payload,
     };
   },

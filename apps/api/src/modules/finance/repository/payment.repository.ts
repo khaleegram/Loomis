@@ -246,6 +246,92 @@ export const paymentRepository = {
   },
 
   /**
+   * Records a verified Nomba virtual-account inbound transfer in one transaction.
+   */
+  async createVerifiedInboundPayment(params: {
+    id: string;
+    tenantId: string;
+    invoiceId: string;
+    termId: string;
+    studentId: string;
+    amountMinor: number;
+    loggedById: string;
+    paymentDate: string;
+    gatewayProvider: string;
+    gatewayReference: string;
+    metadata: Record<string, unknown>;
+    receiptLineItems: Array<Record<string, unknown>>;
+    event: OutboxEventInput;
+  }): Promise<PaymentWithReceipt> {
+    return withTenantContext(params.tenantId, async (tx) => {
+      const verifiedAt = new Date();
+      const allocations = parsePaymentAllocations(params.metadata) ?? [];
+      const creditMinor = parseCreditMinor(params.metadata) ?? 0;
+      const allocatedTotal = allocations.reduce((sum, row) => sum + row.amountMinor, 0);
+      if (allocatedTotal + creditMinor !== params.amountMinor) {
+        throw new Error('Payment allocation total mismatch');
+      }
+
+      const [payment] = await tx
+        .insert(payments)
+        .values({
+          id: params.id,
+          tenantId: params.tenantId,
+          invoiceId: params.invoiceId,
+          termId: params.termId,
+          studentId: params.studentId,
+          channel: 'online',
+          method: 'bank_transfer',
+          amountMinor: params.amountMinor,
+          status: 'verified',
+          idempotencyKey: `nomba:${params.gatewayReference}`,
+          loggedById: params.loggedById,
+          verifiedById: null,
+          verifiedAt,
+          paymentDate: params.paymentDate,
+          gatewayProvider: params.gatewayProvider,
+          gatewayReference: params.gatewayReference,
+          gatewayAuthorizationUrl: null,
+          metadata: params.metadata,
+        })
+        .returning();
+      if (!payment) throw new Error('Failed to create inbound payment');
+
+      for (const allocation of allocations) {
+        await applyAmountToInvoice(tx, params.tenantId, allocation.invoiceId, allocation.amountMinor);
+      }
+
+      if (creditMinor > 0) {
+        await addStudentCreditInTx(tx, params.tenantId, params.studentId, creditMinor);
+      }
+
+      if (allocations.length === 0 && creditMinor === 0) {
+        await applyAmountToInvoice(tx, params.tenantId, params.invoiceId, params.amountMinor);
+      }
+
+      const sequenceNumber = await nextReceiptSequence(tx, params.tenantId, params.termId);
+      const [receipt] = await tx
+        .insert(receipts)
+        .values({
+          tenantId: params.tenantId,
+          paymentId: payment.id,
+          termId: params.termId,
+          sequenceNumber,
+          status: 'final',
+          amountMinor: params.amountMinor,
+          lineItems: params.receiptLineItems,
+          issuedById: params.loggedById,
+          finalizedAt: verifiedAt,
+        })
+        .returning();
+      if (!receipt) throw new Error('Failed to create receipt');
+
+      await financeOutboxRepository.append(tx, params.event);
+      return { payment, receipt };
+    });
+  },
+
+  /**
    * Verifies a payment, applies it to the invoice balance, finalizes the receipt,
    * and appends `payment.verified` to the outbox — all in one transaction.
    */

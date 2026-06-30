@@ -51,6 +51,16 @@ const envSchema = z.object({
   /** Deep link / mobile return URL after Paystack checkout (e.g. loomis://payments/complete). */
   PAYMENT_REDIRECT_MOBILE_URL: z.string().min(1).optional(),
 
+  /** Nomba (hackathon / virtual accounts). Sandbox: https://sandbox.nomba.com */
+  NOMBA_BASE_URL: z.string().url().optional(),
+  NOMBA_CLIENT_ID: z.string().uuid().optional(),
+  /** Nomba dashboard labels this client_secret; hackathon email may say private key. */
+  NOMBA_CLIENT_SECRET: z.string().min(1).optional(),
+  NOMBA_PRIVATE_KEY: z.string().min(1).optional(),
+  NOMBA_PARENT_ACCOUNT_ID: z.string().uuid().optional(),
+  NOMBA_SUB_ACCOUNT_ID: z.string().uuid().optional(),
+  NOMBA_WEBHOOK_SECRET: z.string().min(1).optional(),
+
   /** Public web app origin for links in transactional emails (defaults to http://localhost:3000 in dev). */
   WEB_APP_BASE_URL: z.string().url().optional(),
 
