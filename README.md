@@ -19,8 +19,14 @@ Revenue model: **Per-Student Fee (PSF)** — charged once per billable student p
 | `docs/loomis-roles-and-logins.md` | Demo logins, tier homes, MFA |
 | `docs/ROLE_EXPERIENCE_v1_RELEASE.md` | Role experience v1 release notes |
 | `docs/KNOWN_BLOCKERS.md` | Integrations not yet wired (`// BLOCKED:`) |
+| `docs/nomba/HACKATHON.md` | **Nomba hackathon** — reviewer guide (DevCareer 2026) |
+| `docs/nomba/per-student-virtual-accounts.md` | Nomba integration product spec |
 
 AI implementation guidance lives in `.cursor/rules/`.
+
+### Nomba hackathon (DevCareer 2026)
+
+Per-student **Nomba virtual accounts** for automated school fee collection. Judges and reviewers: start at [`docs/nomba/HACKATHON.md`](docs/nomba/HACKATHON.md) on branch `hackathon/nomba-virtual-accounts`.
 
 ## Monorepo Layout
 
