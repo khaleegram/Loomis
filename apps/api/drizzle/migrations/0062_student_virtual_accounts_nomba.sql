@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS "finance"."student_virtual_accounts" (
 	CONSTRAINT "student_virtual_accounts_status_valid" CHECK ("status" IN ('active', 'suspended'))
 );
 --> statement-breakpoint
-ALTER TABLE "finance"."student_virtual_accounts" ADD CONSTRAINT "student_virtual_accounts_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "finance"."student_virtual_accounts" ADD CONSTRAINT "student_virtual_accounts_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "tenant"."tenants"("id") ON DELETE no action ON UPDATE no action;
 --> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "student_virtual_accounts_tenant_student_unique" ON "finance"."student_virtual_accounts" USING btree ("tenant_id","student_id");
 --> statement-breakpoint
