@@ -27,7 +27,7 @@ import { Banknote, CreditCard } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { ParentFeesHero } from '@/components/parent/parent-fees-hero';
-import { ParentVirtualAccountCard } from '@/components/parent/parent-virtual-account-card';
+import { ParentVirtualAccountSection } from '@/components/parent/parent-virtual-account-section';
 import { ParentPaymentHistory } from '@/components/finance/parent-payment-history';
 import { PageBody } from '@/components/parent/parent-shell';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
@@ -229,6 +229,14 @@ function ParentFeesView() {
         ) : null}
       </div>
 
+      <ParentVirtualAccountSection
+        fees={fees}
+        childName={activeCard ? parentChildName(activeCard) : 'your child'}
+        isLoading={feesQuery.isLoading}
+        isRetrying={feesQuery.isFetching && !feesQuery.isLoading}
+        onRetry={() => void feesQuery.refetch()}
+      />
+
       {feesQuery.isError ? (
         <Alert variant="destructive">
           <AlertDescription>Failed to load fee status. Try again shortly.</AlertDescription>
@@ -258,15 +266,6 @@ function ParentFeesView() {
         </div>
       ) : (
         <div className="space-y-6">
-          {fees?.virtualAccount ? (
-            <ParentVirtualAccountCard
-              accountNumber={fees.virtualAccount.accountNumber}
-              bankName={fees.virtualAccount.bankName}
-              accountName={fees.virtualAccount.accountName}
-              childName={activeCard ? parentChildName(activeCard) : 'your child'}
-            />
-          ) : null}
-
           {(fees?.creditBalanceMinor ?? 0) > 0 ? (
             <Alert>
               <AlertDescription>

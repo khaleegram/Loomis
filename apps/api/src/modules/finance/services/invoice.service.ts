@@ -47,8 +47,14 @@ async function resolveParentVirtualAccount(
         accountRef: va.accountRef,
       },
     };
-  } catch {
-    return { virtualAccountEnabled: false, virtualAccount: null };
+  } catch (err) {
+    const code = err instanceof LoomisError ? err.code : 'UNKNOWN';
+    console.warn('finance.virtual_account.provision_failed', {
+      tenantId,
+      studentId,
+      code,
+    });
+    return { virtualAccountEnabled: true, virtualAccount: null };
   }
 }
 
