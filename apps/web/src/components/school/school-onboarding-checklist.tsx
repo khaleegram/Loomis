@@ -32,7 +32,7 @@ function StepAction({ step }: { step: TenantOnboardingStep }) {
 }
 
 export function SchoolOnboardingChecklist({ tenantId }: SchoolOnboardingChecklistProps) {
-  const { data: onboarding, isLoading } = useTenantOnboarding(tenantId, { live: true });
+  const { data: onboarding, isLoading } = useTenantOnboarding(tenantId);
 
   if (isLoading) {
     return <Skeleton className="h-48 w-full rounded-2xl" />;
