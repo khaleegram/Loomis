@@ -124,8 +124,8 @@ export default function AcademicHubPage() {
     },
     {
       id: 'teaching',
-      title: 'Teaching',
-      description: 'Assign subjects to teachers and class teachers to each arm.',
+      title: 'Teaching assignments',
+      description: 'Assign class teachers and subject teachers to each class arm.',
       href: '/school/academic/teaching',
       icon: BookOpen,
       show: canTeaching,

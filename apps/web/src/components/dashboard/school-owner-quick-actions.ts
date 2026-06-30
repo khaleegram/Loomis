@@ -1,6 +1,7 @@
 import {
   Banknote,
   BookOpen,
+  CalendarClock,
   ClipboardList,
   GraduationCap,
   Users,
@@ -34,10 +35,22 @@ export const SCHOOL_OWNER_QUICK_ACTIONS: SchoolOwnerQuickAction[] = [
     description: 'Roles, invitations, and leadership coverage.',
   },
   {
+    href: '/school/academic/teaching',
+    icon: GraduationCap,
+    label: 'Teaching assignments',
+    description: 'Assign class teachers and subject teachers to each class.',
+  },
+  {
+    href: '/school/timetable',
+    icon: CalendarClock,
+    label: 'Timetable',
+    description: 'Build periods, assign lessons, and publish the schedule.',
+  },
+  {
     href: '/school/academic',
     icon: BookOpen,
     label: 'Academic hub',
-    description: 'Sessions, census, promotions, and calendar.',
+    description: 'School year, classes, calendar, and promotions.',
   },
 ];
 
