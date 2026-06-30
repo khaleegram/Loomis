@@ -50,7 +50,7 @@ const ACADEMIC_LINKS: {
     capabilities: ['class_structure.manage'],
   },
   {
-    label: 'Teaching',
+    label: 'Teaching assignments',
     href: '/school/academic/teaching',
     icon: BookOpen,
     capabilities: ['subject.assign', 'classteacher.assign'],
