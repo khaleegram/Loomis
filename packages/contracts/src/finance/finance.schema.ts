@@ -284,7 +284,7 @@ export type OfflinePaymentMethod = z.infer<typeof offlinePaymentMethod>;
 export const onlinePaymentMethod = z.enum(['card', 'bank_transfer', 'ussd']);
 export type OnlinePaymentMethod = z.infer<typeof onlinePaymentMethod>;
 
-export const paymentGatewayProvider = z.enum(['paystack']);
+export const paymentGatewayProvider = z.enum(['paystack', 'nomba']);
 export type PaymentGatewayProvider = z.infer<typeof paymentGatewayProvider>;
 
 export const paymentStatus = z.enum([
@@ -352,6 +352,7 @@ export const paymentGatewayConfigResponse = z.object({
   provider: paymentGatewayProvider,
   publicKey: z.string().nullable(),
   onlinePaymentEnabled: z.boolean(),
+  virtualAccountEnabled: z.boolean().optional(),
 });
 export type PaymentGatewayConfigResponse = z.infer<typeof paymentGatewayConfigResponse>;
 
@@ -460,8 +461,33 @@ export const parentFeeStatusResponse = z.object({
   dueDate: calendarDate.nullable(),
   lineItems: z.array(parentFeeLineItem),
   onlinePaymentEnabled: z.boolean(),
+  /** Nomba dedicated virtual account for bank transfer (when configured). */
+  virtualAccountEnabled: z.boolean(),
+  virtualAccount: z
+    .object({
+      accountNumber: z.string(),
+      bankName: z.string(),
+      accountName: z.string(),
+      accountRef: z.string(),
+    })
+    .nullable(),
 });
 export type ParentFeeStatusResponse = z.infer<typeof parentFeeStatusResponse>;
+
+export const parentStudentVirtualAccountQuery = z.object({
+  studentId: z.string().uuid(),
+});
+export type ParentStudentVirtualAccountQuery = z.infer<typeof parentStudentVirtualAccountQuery>;
+
+export const studentVirtualAccountResponse = z.object({
+  studentId: z.string().uuid(),
+  accountNumber: z.string(),
+  bankName: z.string(),
+  accountName: z.string(),
+  accountRef: z.string(),
+  provider: z.literal('nomba'),
+});
+export type StudentVirtualAccountResponse = z.infer<typeof studentVirtualAccountResponse>;
 
 /** US-PAR-004. Parent views payment history for a linked child in a term. */
 export const parentPaymentsQuery = parentFeesQuery;

@@ -1,6 +1,7 @@
 import { getRedis } from '../../../../shared/redis.js';
 import { gatewayAbstractionLayer } from '../../gateway/index.js';
 import { paymentRepository } from '../../repository/index.js';
+import { inboundTransferService } from '../../services/inbound-transfer.service.js';
 import { paymentService } from '../../services/payment.service.js';
 import type { PaymentWebhookReceivedPayload } from '../types.js';
 
@@ -34,12 +35,31 @@ export async function handlePaymentWebhookReceived(
     return;
   }
 
-  const provider = payload.provider as 'paystack';
+  const provider = payload.provider as 'paystack' | 'nomba';
   const gateway = gatewayAbstractionLayer.get(provider);
   const parsed = gateway.parseWebhookEvent(JSON.stringify(webhookRow.payload));
 
   if (parsed.status !== 'success') {
     await paymentRepository.markWebhookProcessed(webhookRow.id);
+    return;
+  }
+
+  if (provider === 'nomba' && parsed.virtualAccountRef) {
+    if (
+      !parsed.gatewayReference ||
+      parsed.amountMinor == null ||
+      parsed.amountMinor <= 0
+    ) {
+      await paymentRepository.markWebhookProcessed(webhookRow.id);
+      return;
+    }
+
+    await inboundTransferService.settleFromWebhook({
+      virtualAccountRef: parsed.virtualAccountRef,
+      gatewayReference: parsed.gatewayReference,
+      amountMinor: parsed.amountMinor,
+      webhookEventId: webhookRow.id,
+    });
     return;
   }
 

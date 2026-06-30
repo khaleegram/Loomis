@@ -744,6 +744,27 @@ export const studentRepository = {
     });
   },
 
+  /** First linked parent user id for gateway-initiated fee payments. */
+  async findFirstParentUserIdForStudent(tenantId: string, studentId: string): Promise<string | null> {
+    return withTenantContext(tenantId, async (tx) => {
+      const [row] = await tx
+        .select({ userId: parentIdentities.userId })
+        .from(parentLinks)
+        .innerJoin(parentIdentities, eq(parentIdentities.id, parentLinks.parentIdentityId))
+        .where(
+          and(
+            eq(parentLinks.tenantId, tenantId),
+            eq(parentLinks.studentId, studentId),
+            eq(parentLinks.status, 'active'),
+            sql`${parentIdentities.userId} IS NOT NULL`,
+          ),
+        )
+        .orderBy(asc(parentLinks.createdAt))
+        .limit(1);
+      return row?.userId ?? null;
+    });
+  },
+
   async createParentLink(
     tenantId: string,
     parentIdentityId: string,

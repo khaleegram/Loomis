@@ -347,7 +347,7 @@ export const webhookEvents = financeSchema.table(
     statusIdx: index('webhook_events_status_idx').on(table.status, table.createdAt),
     providerValid: check(
       'webhook_events_provider_valid',
-      sql`${table.provider} IN ('paystack')`,
+      sql`${table.provider} IN ('paystack', 'nomba')`,
     ),
     statusValid: check(
       'webhook_events_status_valid',
@@ -454,7 +454,7 @@ export const reconciliationExceptions = financeSchema.table(
     ),
     providerValid: check(
       'reconciliation_exceptions_provider_valid',
-      sql`${table.provider} IN ('paystack')`,
+      sql`${table.provider} IN ('paystack', 'nomba')`,
     ),
     exceptionTypeValid: check(
       'reconciliation_exceptions_type_valid',
@@ -486,6 +486,48 @@ export const studentFeeCredits = financeSchema.table(
     balanceNonNegative: check(
       'student_fee_credits_balance_non_negative',
       sql`${table.balanceMinor} >= 0`,
+    ),
+  }),
+);
+
+/**
+ * Persistent Nomba virtual account per student (hackathon / US-FIN-004 bank transfer).
+ * One static NUBAN per (tenant, student) for parent fee collection.
+ */
+export const studentVirtualAccounts = financeSchema.table(
+  'student_virtual_accounts',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .$defaultFn(() => uuidv7()),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id),
+    studentId: uuid('student_id').notNull(),
+    provider: varchar('provider', { length: 20 }).notNull().default('nomba'),
+    accountRef: varchar('account_ref', { length: 120 }).notNull(),
+    accountNumber: varchar('account_number', { length: 20 }).notNull(),
+    bankName: varchar('bank_name', { length: 120 }).notNull(),
+    accountName: varchar('account_name', { length: 200 }).notNull(),
+    nombaAccountHolderId: varchar('nomba_account_holder_id', { length: 80 }),
+    status: varchar('status', { length: 20 }).notNull().default('active'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    tenantStudentUnique: uniqueIndex('student_virtual_accounts_tenant_student_unique').on(
+      table.tenantId,
+      table.studentId,
+    ),
+    accountRefUnique: uniqueIndex('student_virtual_accounts_account_ref_unique').on(table.accountRef),
+    accountNumberIdx: index('student_virtual_accounts_account_number_idx').on(table.accountNumber),
+    providerValid: check(
+      'student_virtual_accounts_provider_valid',
+      sql`${table.provider} IN ('nomba')`,
+    ),
+    statusValid: check(
+      'student_virtual_accounts_status_valid',
+      sql`${table.status} IN ('active', 'suspended')`,
     ),
   }),
 );

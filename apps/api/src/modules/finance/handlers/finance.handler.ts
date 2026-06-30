@@ -15,6 +15,7 @@ import type {
 } from '@loomis/contracts';
 import { LoomisError } from '../../../shared/errors.js';
 import { getEnv } from '../../../config/env.js';
+import { isNombaConfigured } from '../gateway/index.js';
 import { sendSuccess } from '../../../shared/http.js';
 import { feeStructureService, feeReminderService, feeReminderSettingsService, invoiceService, paymentService } from '../services/index.js';
 import { auditContext, requireParentActor, requireSchoolFinanceActor, requireTenantActor } from './_context.js';
@@ -278,10 +279,12 @@ export async function getPaymentGatewayConfigHandler(
   reply: FastifyReply,
 ): Promise<FastifyReply> {
   const env = getEnv();
+  const nombaEnabled = isNombaConfigured();
   return sendSuccess(reply, {
-    provider: 'paystack' as const,
+    provider: nombaEnabled ? ('nomba' as const) : ('paystack' as const),
     publicKey: env.PAYSTACK_PUBLIC_KEY ?? null,
-    onlinePaymentEnabled: Boolean(env.PAYSTACK_SECRET_KEY),
+    onlinePaymentEnabled: Boolean(env.PAYSTACK_SECRET_KEY) || nombaEnabled,
+    virtualAccountEnabled: nombaEnabled,
   });
 }
 

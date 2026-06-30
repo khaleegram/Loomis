@@ -1,4 +1,5 @@
 import type { PaymentGatewayProvider } from '@loomis/contracts';
+import { nombaGateway } from './nomba.gateway.js';
 import { paystackGateway } from './paystack.gateway.js';
 import type { PaymentGateway } from './types.js';
 
@@ -11,13 +12,18 @@ export type {
   VerifyTransactionResult,
 } from './types.js';
 
-/** Gateway Abstraction Layer — Paystack only (System Design §9.1). */
+export { createNombaVirtualAccount } from './nomba.gateway.js';
+export type { CreateNombaVirtualAccountInput, CreateNombaVirtualAccountResult } from './nomba.gateway.js';
+export { isNombaConfigured } from './nomba.client.js';
+
+/** Gateway Abstraction Layer — Paystack checkout + Nomba virtual accounts. */
 export const gatewayAbstractionLayer = {
-  get(_provider: PaymentGatewayProvider): PaymentGateway {
+  get(provider: PaymentGatewayProvider): PaymentGateway {
+    if (provider === 'nomba') return nombaGateway;
     return paystackGateway;
   },
 
   priorityOrder(): PaymentGatewayProvider[] {
-    return ['paystack'];
+    return ['nomba', 'paystack'];
   },
 };

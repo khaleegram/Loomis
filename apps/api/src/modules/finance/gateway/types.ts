@@ -22,6 +22,8 @@ export interface ParsedWebhookEvent {
   status: 'success' | 'failed' | 'unknown';
   tenantId: string | null;
   paymentId: string | null;
+  /** Nomba virtual account reference for inbound bank transfers. */
+  virtualAccountRef: string | null;
   raw: Record<string, unknown>;
 }
 

@@ -27,6 +27,7 @@ import { Banknote, CreditCard } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { ParentFeesHero } from '@/components/parent/parent-fees-hero';
+import { ParentVirtualAccountCard } from '@/components/parent/parent-virtual-account-card';
 import { ParentPaymentHistory } from '@/components/finance/parent-payment-history';
 import { PageBody } from '@/components/parent/parent-shell';
 import { ACADEMIC_UI } from '@/lib/academic/academic-ui';
@@ -256,6 +257,25 @@ function ParentFeesView() {
           ) : null}
         </div>
       ) : (
+        <div className="space-y-6">
+          {fees?.virtualAccount ? (
+            <ParentVirtualAccountCard
+              accountNumber={fees.virtualAccount.accountNumber}
+              bankName={fees.virtualAccount.bankName}
+              accountName={fees.virtualAccount.accountName}
+              childName={activeCard ? parentChildName(activeCard) : 'your child'}
+            />
+          ) : null}
+
+          {(fees?.creditBalanceMinor ?? 0) > 0 ? (
+            <Alert>
+              <AlertDescription>
+                Fee credit available: {formatKobo(fees?.creditBalanceMinor ?? 0)} — applies automatically to
+                future invoices.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
         <div className="grid gap-6 lg:grid-cols-2">
           {fees && fees.invoiceId ? (
           <div className={ACADEMIC_UI.dataPanel}>
@@ -413,6 +433,7 @@ function ParentFeesView() {
               )}
             </div>
           </div>
+        </div>
         </div>
       )}
 
