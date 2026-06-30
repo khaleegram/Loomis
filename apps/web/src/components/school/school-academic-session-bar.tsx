@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAcademicTerms } from '@loomis/api-client';
 import { Badge, cn } from '@loomis/ui-web';
 import { CalendarDays, ChevronDown, RotateCcw } from 'lucide-react';
@@ -53,6 +53,18 @@ export function SchoolAcademicSessionBar() {
 
   const [open, setOpen] = useState(false);
   const [pickerYearId, setPickerYearId] = useState<string | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(event: MouseEvent) {
+      if (!panelRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', onPointerDown);
+    return () => document.removeEventListener('mousedown', onPointerDown);
+  }, [open]);
 
   const resolvedPickerYearId = pickerYearId ?? yearId ?? sortedYears[0]?.id ?? null;
   const pickerTermsQuery = useAcademicTerms(tenantId ?? '', resolvedPickerYearId ?? '');
@@ -66,7 +78,7 @@ export function SchoolAcademicSessionBar() {
 
   if (isLoading) {
     return (
-      <span className="hidden shrink-0 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-[12px] font-medium text-neutral-500 lg:inline-flex">
+      <span className="inline-flex shrink-0 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-[12px] font-medium text-neutral-500">
         Session…
       </span>
     );
@@ -75,7 +87,7 @@ export function SchoolAcademicSessionBar() {
   if (!canSwitchTerm) {
     return (
       <span
-        className="hidden shrink-0 items-center gap-1.5 rounded-xl border border-brand-200/70 bg-brand-50/60 px-3 py-1.5 lg:inline-flex"
+        className="inline-flex max-w-[min(100%,14rem)] shrink-0 items-center gap-1.5 rounded-xl border border-brand-200/70 bg-brand-50/60 px-3 py-1.5"
         title="School working session"
       >
         <CalendarDays aria-hidden className="size-3.5 text-brand-700" />
@@ -90,7 +102,7 @@ export function SchoolAcademicSessionBar() {
   }
 
   return (
-    <div className="relative hidden shrink-0 lg:block">
+    <div ref={panelRef} className="relative shrink-0">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -127,7 +139,10 @@ export function SchoolAcademicSessionBar() {
               <span className="text-[10px] font-bold uppercase tracking-wide text-neutral-400">Year</span>
               <select
                 value={resolvedPickerYearId ?? ''}
-                onChange={(e) => setPickerYearId(e.target.value)}
+                onChange={(e) => {
+                  setPickerYearId(e.target.value);
+                  setOpen(false);
+                }}
                 className="h-10 w-full rounded-lg border border-neutral-200 bg-white px-3 text-[13px]"
               >
                 {sortedYears.map((year) => (
@@ -145,6 +160,7 @@ export function SchoolAcademicSessionBar() {
                   if (resolvedPickerYearId) {
                     setHistoricalTerm(resolvedPickerYearId, e.target.value);
                   }
+                  setOpen(false);
                 }}
                 disabled={pickerTerms.length === 0}
                 className="h-10 w-full rounded-lg border border-neutral-200 bg-white px-3 text-[13px]"
