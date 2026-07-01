@@ -3,7 +3,7 @@
 **Project:** Loomis × Nomba — Per-Student Fee Collection  
 **Team:** Argalengz (solo)  
 **Repository:** [github.com/khaleegram/Loomis](https://github.com/khaleegram/Loomis)  
-**Branch:** `hackathon/nomba-virtual-accounts`  
+**Branch:** `main` (hackathon work is merged here; production deploys from `main`)  
 **Build phase:** 1–7 July 2026 · First progress check: **3 July 2026**
 
 ---
@@ -33,11 +33,13 @@ Nigerian private schools collect most term fees via **bank transfer**. Money oft
 
 ## Demo credentials (Greenfield Academy)
 
+**Live demo:** https://www.loomis.digital/parent/fees
+
 Password for all seeded dev users: `LoomisDev2026!`
 
 | Role | Email | What to show |
 |------|-------|--------------|
-| **Parent** | `parent.jss3b@greenfield.loomis.com` | Dedicated NUBAN, fee balance, payment history |
+| **Parent** | `parent.jss3b@greenfield.loomis.com` | Dedicated NUBAN, **₦150** fee balance, payment history, hackathon reset panel |
 | **Accountant** | `accountant@greenfield.loomis.com` | Verified Nomba transfers in payment log |
 
 Full role list: [`docs/loomis-roles-and-logins.md`](../loomis-roles-and-logins.md)
@@ -46,52 +48,26 @@ Full role list: [`docs/loomis-roles-and-logins.md`](../loomis-roles-and-logins.m
 
 ---
 
-## Where the Nomba work lives
+## Reviewing hackathon code on GitHub
 
-Implementation is integrated into the existing Loomis monorepo (not a separate toy repo).
-
-### Documentation
+Judges **do not need to clone or run locally** — test on loomis.digital (credentials above) and browse code on `main`.
 
 | Path | Description |
 |------|-------------|
-| `docs/nomba/per-student-virtual-accounts.md` | Full product spec — happy path + unhappy paths |
-| `docs/nomba/HACKATHON.md` | This file |
-| `docs/nomba/SUBMISSION.md` | Form copy for DevCareer |
+| `docs/nomba/` | All hackathon documentation |
+| `apps/api/src/modules/finance/gateway/nomba.client.ts` | Nomba auth, VA API, webhook HMAC |
+| `apps/api/src/modules/finance/gateway/nomba.gateway.ts` | Gateway adapter |
+| `apps/api/src/modules/finance/services/virtual-account.service.ts` | Provision per-student VA |
+| `apps/api/src/modules/finance/services/inbound-transfer.service.ts` | Webhook → settlement |
+| `apps/api/src/modules/finance/services/hackathon-demo.service.ts` | Demo balance reset (₦150) |
+| `apps/api/drizzle/migrations/0062_student_virtual_accounts_nomba.sql` | VA table migration |
+| `apps/web/src/app/(parent)/parent/fees/` | Parent fees page |
+| `apps/web/src/components/parent/parent-virtual-account-card.tsx` | NUBAN card UI |
+| `packages/contracts/src/finance/finance.schema.ts` | Parent VA + fee response types |
 
-### Backend (finance module)
-
-| Path | Status | Description |
-|------|--------|-------------|
-| `apps/api/src/modules/finance/gateway/nomba.gateway.ts` | 🚧 Build phase | Nomba auth, VA create, webhook verify/parse |
-| `apps/api/src/modules/finance/gateway/index.ts` | 🚧 | Register `nomba` in gateway abstraction layer |
-| `apps/api/src/modules/finance/services/virtual-account.service.ts` | 🚧 | Provision per-student VA, resolve `accountRef` |
-| `apps/api/src/modules/finance/services/inbound-transfer.service.ts` | 🚧 | Webhook → FIFO invoice allocation + fee credits |
-| `apps/api/src/modules/finance/handlers/webhook.handler.ts` | ✅ Exists | Provider-param webhook route |
-| `apps/api/src/modules/finance/services/webhook.service.ts` | ✅ Exists | HMAC verify, idempotent `webhook_events` upsert |
-| `apps/api/drizzle/schema/finance.ts` | 🚧 | `student_virtual_accounts` table (planned) |
-| `apps/api/src/config/env.ts` | 🚧 | `NOMBA_*` env validation |
-
-### Shared contracts & client
-
-| Path | Status | Description |
-|------|--------|-------------|
-| `packages/contracts/src/finance/finance.schema.ts` | 🚧 | Add `nomba` provider + VA response types |
-| `packages/api-client/src/query/hooks/finance.ts` | 🚧 | Parent VA fetch hook |
-
-### Frontend
-
-| Path | Status | Description |
-|------|--------|-------------|
-| `apps/web/src/app/(parent)/parent/fees/page.tsx` | 🚧 | Dedicated NUBAN card + fee credit strip |
-
-### Existing Loomis primitives reused
-
-| Feature | Path / table |
-|---------|----------------|
-| FIFO invoice allocation | `payment-allocation.utils.ts` |
-| Pay-ahead / overpayment surplus | `student_fee_credits` table |
-| Webhook idempotency | `finance.webhook_events` unique `(provider, provider_event_id)` |
-| PSF settlement on verify | `payment.verified` → ledger pipeline |
+```bash
+git log main --since="2026-07-01" --oneline -- docs/nomba apps/api/src/modules/finance/gateway/nomba*
+```
 
 ---
 
@@ -120,18 +96,17 @@ payment.verified → receipt + parent notification + PSF settlement
 - [x] Hackathon idea selected — Build Phase
 - [x] Product specification (`docs/nomba/`)
 - [x] Production platform deployed (loomis.digital)
-- [x] Public GitHub repository + hackathon branch
+- [x] Public GitHub repository on `main` with `docs/nomba/` reviewer guide
 - [x] Nomba sandbox credentials issued; webhook URL registered
 - [x] Existing finance engine: FIFO allocation, fee credits, webhook idempotency (Paystack)
 
-### In progress (build phase — target 3 July)
+### Build phase (target 3 July)
 
-- [ ] Nomba gateway adapter (auth + create virtual account)
-- [ ] `student_virtual_accounts` persistence + provision on student
-- [ ] Inbound transfer settlement (under / over / pay-ahead)
-- [ ] Parent fees UI — show dedicated NUBAN
-- [ ] End-to-end sandbox demo on loomis.digital
-- [ ] `HACKATHON.md` file map updated to ✅
+- [x] Nomba gateway adapter (auth + create virtual account)
+- [x] `student_virtual_accounts` persistence + provision on student
+- [x] Inbound transfer settlement (under / over / pay-ahead)
+- [x] Parent fees UI — dedicated NUBAN
+- [ ] End-to-end sandbox demo on loomis.digital (transfer → webhook → balance; needs webhook signing secret on prod)
 
 ### Stretch (final submission)
 
@@ -187,11 +162,13 @@ See root `.env.example` for the full list.
 
 ## Commit history
 
-Reviewers: filter commits on branch `hackathon/nomba-virtual-accounts` from **1 July 2026** onward for hackathon-specific work.
+Reviewers: hackathon work is on **`main`**. Filter from **1 July 2026**:
 
 ```bash
-git log hackathon/nomba-virtual-accounts --since="2026-07-01" --oneline
+git log main --since="2026-07-01" --oneline -- docs/nomba apps/api/src/modules/finance/gateway/nomba*
 ```
+
+Or browse [`docs/nomba/HACKATHON.md`](./HACKATHON.md#reviewing-hackathon-code-on-github) for the full file list.
 
 ---
 
