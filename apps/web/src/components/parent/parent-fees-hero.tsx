@@ -18,6 +18,7 @@ interface ParentFeesHeroProps {
   totalBalanceMinor?: number;
   creditBalanceMinor?: number;
   isLoading?: boolean;
+  bankTransferMode?: boolean;
 }
 
 export function ParentFeesHero({
@@ -32,6 +33,7 @@ export function ParentFeesHero({
   totalBalanceMinor,
   creditBalanceMinor = 0,
   isLoading,
+  bankTransferMode = false,
 }: ParentFeesHeroProps) {
   const owedMinor = totalBalanceMinor ?? balanceMinor + arrearsBalanceMinor;
   const allClear = !isLoading && owedMinor <= 0;
@@ -56,7 +58,9 @@ export function ParentFeesHero({
               Pay school fees
             </h1>
             <p className={ACADEMIC_UI.pageDesc}>
-              Transfer to your child&apos;s dedicated account or pay online — balances update automatically.
+              {bankTransferMode
+                ? 'Each child has a dedicated bank account — transfer from any app and your balance updates automatically.'
+                : 'View invoices and pay school fees for your linked children.'}
             </p>
             <div className="mt-4 flex flex-wrap items-center gap-2">
               {childName ? <span className={ACADEMIC_UI.heroPillBrand}>{childName}</span> : null}

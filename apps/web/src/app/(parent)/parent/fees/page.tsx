@@ -154,6 +154,7 @@ function ParentFeesView() {
         totalBalanceMinor={fees?.totalBalanceMinor ?? fees?.balanceMinor ?? activeCard?.outstandingBalanceMinor ?? 0}
         creditBalanceMinor={creditBalanceMinor}
         isLoading={isLoading}
+        bankTransferMode={fees?.virtualAccountEnabled ?? false}
       />
 
       <ParentFeesScopeBar
@@ -212,6 +213,7 @@ function ParentFeesView() {
         isLoading={feesQuery.isLoading}
         onStartPayAhead={() => setPayAhead(true)}
         onlinePaymentEnabled={fees?.onlinePaymentEnabled ?? false}
+        bankTransferMode={fees?.virtualAccountEnabled ?? false}
       />
 
       {resolvedTermId && activeCard?.studentId ? (

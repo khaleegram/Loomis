@@ -15,6 +15,7 @@ interface ParentFeesInvoicePanelProps {
   isLoading: boolean;
   onStartPayAhead: () => void;
   onlinePaymentEnabled: boolean;
+  bankTransferMode?: boolean;
 }
 
 function LineProgress({ paidMinor, totalMinor }: { paidMinor: number; totalMinor: number }) {
@@ -36,6 +37,7 @@ export function ParentFeesInvoicePanel({
   isLoading,
   onStartPayAhead,
   onlinePaymentEnabled,
+  bankTransferMode = false,
 }: ParentFeesInvoicePanelProps) {
   if (isLoading) {
     return <Skeleton className="h-48 w-full rounded-2xl" />;
@@ -50,10 +52,12 @@ export function ParentFeesInvoicePanel({
         <Receipt className="mx-auto size-8 text-brand-500/70" aria-hidden />
         <p className="mt-3 text-[15px] font-bold text-neutral-900">No invoice for {termLabel ?? 'this term'} yet</p>
         <p className="mx-auto mt-2 max-w-md text-[13px] leading-relaxed text-neutral-500">
-          The school has not issued fees for this term. You can still transfer to your child&apos;s dedicated account —
-          extra is saved as credit.
+          The school has not issued fees for this term.
+          {bankTransferMode
+            ? ' You can still transfer to your child\u2019s dedicated account — extra is saved as credit.'
+            : ' Contact the bursar if you expected an invoice.'}
         </p>
-        {onlinePaymentEnabled ? (
+        {!bankTransferMode && onlinePaymentEnabled ? (
           <button type="button" className={`${ACADEMIC_UI.btnPrimary} mt-6`} onClick={onStartPayAhead}>
             Prepay for future terms
           </button>
