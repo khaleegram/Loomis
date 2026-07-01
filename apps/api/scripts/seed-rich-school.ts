@@ -1164,7 +1164,7 @@ async function ensureJss3BParentDemo(tenantId: string): Promise<{
     fullName: parentFullName,
     userId: parentUser.id,
   });
-  await studentRepository.markParentIdentityVerified(parentIdentity.id, 'email_otp');
+  await studentRepository.markParentIdentityVerified(parentIdentity.id, 'parent_accept');
 
   const repairedBindings = await studentRepository.repairActiveParentIdentityUserBindings(tenantId);
   if (repairedBindings > 0) {
@@ -1189,10 +1189,8 @@ async function ensureJss3BParentDemo(tenantId: string): Promise<{
         relationship: 'father',
       },
       principal.id,
-      'seed-no-otp',
-      new Date(Date.now() + 86_400_000),
     );
-    await studentRepository.activateParentLink(tenantId, link.id, 'email_otp');
+    await studentRepository.activateParentLink(tenantId, link.id, 'parent_accept');
   }
 
   const tenant = await withTenantContext(null, async (tx) => {

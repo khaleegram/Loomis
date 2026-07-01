@@ -10,9 +10,6 @@ import { studentOutboxRepository } from '../repository/outbox.repository.js';
 import { studentRepository } from '../repository/student.repository.js';
 import type { ActorContext } from '../types.js';
 import { normalizeEmail, requireTenant } from './_shared.js';
-import { parentOtpService } from './parent-otp.service.js';
-
-const OTP_TTL_MS = 15 * 60 * 1000;
 
 function serializeParentLink(
   row: NonNullable<Awaited<ReturnType<typeof studentRepository.findParentLinkById>>>,
@@ -34,7 +31,7 @@ function serializeParentLink(
 export const parentLinkService = {
   /**
    * US-SIS-004. Admin Officer initiates a parent link. School attestation is
-   * recorded at initiation; parent OTP verification is required before activation.
+   * recorded at initiation; the parent accepts from their portal (no OTP).
    * Admin Officer cannot call `acceptParentLink`.
    */
   async initiateParentLink(
@@ -50,22 +47,6 @@ export const parentLinkService = {
       throw new LoomisError('STUDENT_NOT_FOUND', 404, 'Student not found');
     }
 
-    const otp = parentOtpService.generateOtp();
-    const delivery = await parentOtpService.sendParentLinkOtp({
-      email: input.parentEmail,
-      phone: input.parentPhone,
-      otp,
-      linkId: 'pending',
-    });
-    if (!delivery.sent) {
-      throw new LoomisError(
-        'STUDENT_PARENT_LINK_OTP_BLOCKED',
-        503,
-        'Parent OTP delivery is unavailable — configure Resend and Termii credentials',
-        { reason: delivery.reason },
-      );
-    }
-
     const emailNormalized = normalizeEmail(input.parentEmail);
     const existingParentUser = await userRepository.findByEmail(input.parentEmail);
     const parentIdentity = await studentRepository.upsertParentIdentity({
@@ -75,17 +56,12 @@ export const parentLinkService = {
       userId: existingParentUser?.role === 'parent' ? existingParentUser.id : null,
     });
 
-    const otpHash = parentOtpService.hashOtp(otp);
-    const otpExpiresAt = new Date(Date.now() + OTP_TTL_MS);
-
     const link = await studentRepository.createParentLink(
       tenantId,
       parentIdentity.id,
       studentId,
       input,
       actor.userId,
-      otpHash,
-      otpExpiresAt,
     );
 
     await studentOutboxRepository.publish({
@@ -107,13 +83,13 @@ export const parentLinkService = {
   },
 
   /**
-   * US-SIS-005. Parent-only — verifies OTP and activates the link. Staff roles
+   * US-SIS-005. Parent-only — confirms and activates the link. Staff roles
    * are rejected (Admin Officer cannot self-complete, FR-SIS-003).
    */
   async acceptParentLink(
     tenantId: string,
     linkId: string,
-    input: AcceptParentLinkRequest,
+    _input: AcceptParentLinkRequest,
     actor: ActorContext,
   ) {
     if (actor.role !== 'parent') {
@@ -138,14 +114,11 @@ export const parentLinkService = {
     if (link.expiresAt < new Date()) {
       throw new LoomisError('STUDENT_PARENT_LINK_EXPIRED', 410, 'Parent link invitation has expired');
     }
-    if (!parentOtpService.verifyOtp(input.otp, link.otpHash)) {
-      throw new LoomisError('STUDENT_PARENT_OTP_INVALID', 422, 'Invalid or expired OTP');
-    }
 
     const activated = await studentRepository.activateParentLink(
       link.tenantId,
       linkId,
-      'email_otp',
+      'parent_accept',
     );
     if (!activated) {
       throw new LoomisError(
@@ -155,7 +128,7 @@ export const parentLinkService = {
       );
     }
 
-    await studentRepository.markParentIdentityVerified(link.parentIdentityId, 'email_otp');
+    await studentRepository.markParentIdentityVerified(link.parentIdentityId, 'parent_accept');
 
     const identity = await studentRepository.findParentIdentityById(link.parentIdentityId);
     if (!identity) {
@@ -178,7 +151,7 @@ export const parentLinkService = {
         parentLinkId: link.id,
         parentIdentityId: link.parentIdentityId,
         studentId: link.studentId,
-        verifiedByFactor: 'email_otp',
+        verifiedByFactor: 'parent_accept',
         activatedAt: activated.activatedAt?.toISOString() ?? new Date().toISOString(),
       },
     });

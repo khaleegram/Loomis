@@ -209,7 +209,7 @@ export const parentLinkStatus = z.enum([
 ]);
 export type ParentLinkStatus = z.infer<typeof parentLinkStatus>;
 
-/** US-SIS-004. Admin Officer initiates; parent must verify via OTP. */
+/** US-SIS-004. Admin Officer initiates; parent accepts from their portal. */
 export const initiateParentLinkRequest = z.object({
   parentFullName: z.string().min(2).max(200),
   parentEmail: z.string().email(),
@@ -219,9 +219,7 @@ export const initiateParentLinkRequest = z.object({
 export type InitiateParentLinkRequest = z.infer<typeof initiateParentLinkRequest>;
 
 /** US-SIS-005. Parent-only endpoint; Admin Officer cannot self-complete. */
-export const acceptParentLinkRequest = z.object({
-  otp: z.string().length(6).regex(/^\d{6}$/, 'OTP must be a 6-digit code'),
-});
+export const acceptParentLinkRequest = z.object({});
 export type AcceptParentLinkRequest = z.infer<typeof acceptParentLinkRequest>;
 
 export const parentLinkResponse = z.object({

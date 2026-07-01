@@ -5,11 +5,7 @@ import { LoomisError } from '../../../shared/errors.js';
 import { getRedis } from '../../../shared/redis.js';
 import { sendSms } from '../../comms/gateways/termii.gateway.js';
 
-export type SmsOtpPurpose =
-  | 'login'
-  | 'step_up'
-  | 'password_reset'
-  | 'parent_new_device';
+export type SmsOtpPurpose = 'step_up' | 'password_reset';
 
 const OTP_TTL_SECONDS = 5 * 60;
 const OTP_MAX_ATTEMPTS = 5;
@@ -93,11 +89,9 @@ export const smsOtpService = {
 
     if (!bypass) {
       const message =
-        input.purpose === 'login'
-          ? `Your Loomis sign-in code is ${otp}. Valid for 5 minutes.`
-          : input.purpose === 'step_up'
-            ? `Your Loomis verification code is ${otp}. Valid for 5 minutes.`
-            : `Your Loomis code is ${otp}. Valid for 5 minutes.`;
+        input.purpose === 'step_up'
+          ? `Your Loomis verification code is ${otp}. Valid for 5 minutes.`
+          : `Your Loomis code is ${otp}. Valid for 5 minutes.`;
       await sendSms({ to: input.phoneE164, message });
     }
 

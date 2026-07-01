@@ -88,8 +88,7 @@ export function OptionalTotpEnrollmentPanel() {
       <div>
         <h2 className="text-[14px] font-semibold text-neutral-900">Authenticator app (optional)</h2>
         <p className="mt-1 text-[13px] text-neutral-600">
-          Enroll Google Authenticator or a compatible app for sign-in on new devices and step-up
-          verification.
+          Enroll Google Authenticator or a compatible app for step-up verification on high-risk actions.
         </p>
       </div>
 

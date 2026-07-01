@@ -4,7 +4,6 @@ import type { PasswordResetConfirmRequest, PasswordResetResponse } from '@loomis
 import { uuidv7 } from 'uuidv7';
 import {
   advancedOptionalTotpLogin,
-  coreLoginRequiresSms,
   extractStaffExtensionRoles,
   mergeExperienceFlags,
   stepUpUsesSms,
@@ -210,135 +209,6 @@ export const authService = {
       }
     }
 
-    const tenantCtx = await loadTenantMfaContext(user.tenantId);
-    const enrolledMfa = await mfaRepository.findByUserId(user.id);
-    if (enrolledMfa?.status === 'active') {
-      if (ctx.persistentToken && ctx.deviceFingerprint) {
-        const deviceId = await deviceService.verifyPersistentToken(
-          user.id,
-          ctx.deviceFingerprint,
-          ctx.persistentToken,
-        );
-        if (deviceId) {
-          const bundle = await this.issueAuthenticatedSession(user, ctx, {
-            mfaCompleted: true,
-            deviceId,
-          });
-          return { kind: 'authenticated', bundle };
-        }
-      }
-      const mfaChallengeId = await this.createMfaChallenge(user.id, ctx, 'totp');
-      return { kind: 'mfa_required', mfaChallengeId, channel: 'totp' as const };
-    }
-
-    if (
-      tenantCtx &&
-      coreLoginRequiresSms(
-        role,
-        tenantCtx.experienceTier,
-        mergeExperienceFlags(tenantCtx.experienceFlags),
-      )
-    ) {
-      if (ctx.persistentToken && ctx.deviceFingerprint) {
-        const deviceId = await deviceService.verifyPersistentToken(
-          user.id,
-          ctx.deviceFingerprint,
-          ctx.persistentToken,
-        );
-        if (deviceId) {
-          const bundle = await this.issueAuthenticatedSession(user, ctx, {
-            mfaCompleted: true,
-            deviceId,
-          });
-          return { kind: 'authenticated', bundle };
-        }
-      }
-
-      if (!user.phone) {
-        throw new LoomisError(
-          'IDENTITY_SMS_PHONE_REQUIRED',
-          422,
-          'Your account needs a phone number on file before you can sign in with SMS verification',
-        );
-      }
-
-      const mfaChallengeId = await this.createMfaChallenge(user.id, ctx, 'sms');
-      const delivery = await smsOtpService.sendOtp({
-        userId: user.id,
-        phoneE164: user.phone,
-        purpose: 'login',
-      });
-      return {
-        kind: 'mfa_required',
-        mfaChallengeId,
-        channel: 'sms',
-        maskedPhone: delivery.maskedPhone,
-        devBypass: delivery.devBypass,
-      };
-    }
-
-    if (
-      tenantCtx &&
-      advancedOptionalTotpLogin(
-        role,
-        tenantCtx.experienceTier,
-        mergeExperienceFlags(tenantCtx.experienceFlags),
-      )
-    ) {
-      const mfaConfig = await mfaRepository.findByUserId(user.id);
-      if (mfaConfig?.status === 'active') {
-        if (ctx.persistentToken && ctx.deviceFingerprint) {
-          const deviceId = await deviceService.verifyPersistentToken(
-            user.id,
-            ctx.deviceFingerprint,
-            ctx.persistentToken,
-          );
-          if (deviceId) {
-            const bundle = await this.issueAuthenticatedSession(user, ctx, {
-              mfaCompleted: true,
-              deviceId,
-            });
-            return { kind: 'authenticated', bundle };
-          }
-        }
-        const mfaChallengeId = await this.createMfaChallenge(user.id, ctx, 'totp');
-        return { kind: 'mfa_required', mfaChallengeId, channel: 'totp' as const };
-      }
-    }
-
-    if (role === 'parent') {
-      if (ctx.persistentToken && ctx.deviceFingerprint) {
-        const deviceId = await deviceService.verifyPersistentToken(
-          user.id,
-          ctx.deviceFingerprint,
-          ctx.persistentToken,
-        );
-        if (deviceId) {
-          const bundle = await this.issueAuthenticatedSession(user, ctx, {
-            mfaCompleted: true,
-            deviceId,
-          });
-          return { kind: 'authenticated', bundle };
-        }
-      }
-
-      if (user.phone) {
-        const mfaChallengeId = await this.createMfaChallenge(user.id, ctx, 'sms');
-        const delivery = await smsOtpService.sendOtp({
-          userId: user.id,
-          phoneE164: user.phone,
-          purpose: 'parent_new_device',
-        });
-        return {
-          kind: 'mfa_required',
-          mfaChallengeId,
-          channel: 'sms',
-          maskedPhone: delivery.maskedPhone,
-          devBypass: delivery.devBypass,
-        };
-      }
-    }
-
     const bundle = await this.issueAuthenticatedSession(user, ctx, { mfaCompleted: false });
     return { kind: 'authenticated', bundle };
   },
@@ -380,38 +250,29 @@ export const authService = {
     }
 
     if (challenge.channel === 'sms') {
-      try {
-        await smsOtpService.verifyOtp({
-          userId: challenge.userId,
-          purpose: user.role === 'parent' ? 'parent_new_device' : 'login',
-          code,
-        });
-      } catch (error) {
-        challenge.attempts += 1;
-        if (challenge.attempts >= MFA_CHALLENGE_MAX_ATTEMPTS) {
-          await redis.del(key);
-        } else {
-          await redis.setex(key, MFA_CHALLENGE_TTL_SECONDS, JSON.stringify(challenge));
-        }
-        throw error;
-      }
-    } else {
-      const mfaConfig = await mfaRepository.findByUserId(challenge.userId);
-      if (!mfaConfig || mfaConfig.status !== 'active') {
-        await redis.del(key);
-        throw new LoomisError('IDENTITY_MFA_INVALID', 401, 'MFA is not available for this account');
-      }
+      await redis.del(key);
+      throw new LoomisError(
+        'IDENTITY_MFA_INVALID',
+        401,
+        'SMS login verification is no longer supported',
+      );
+    }
 
-      const valid = mfaService.verifyTotp(mfaConfig.encryptedSecret, code);
-      if (!valid) {
-        challenge.attempts += 1;
-        if (challenge.attempts >= MFA_CHALLENGE_MAX_ATTEMPTS) {
-          await redis.del(key);
-        } else {
-          await redis.setex(key, MFA_CHALLENGE_TTL_SECONDS, JSON.stringify(challenge));
-        }
-        throw new LoomisError('IDENTITY_MFA_INVALID', 401, 'Invalid MFA code');
+    const mfaConfig = await mfaRepository.findByUserId(challenge.userId);
+    if (!mfaConfig || mfaConfig.status !== 'active') {
+      await redis.del(key);
+      throw new LoomisError('IDENTITY_MFA_INVALID', 401, 'MFA is not available for this account');
+    }
+
+    const valid = mfaService.verifyTotp(mfaConfig.encryptedSecret, code);
+    if (!valid) {
+      challenge.attempts += 1;
+      if (challenge.attempts >= MFA_CHALLENGE_MAX_ATTEMPTS) {
+        await redis.del(key);
+      } else {
+        await redis.setex(key, MFA_CHALLENGE_TTL_SECONDS, JSON.stringify(challenge));
       }
+      throw new LoomisError('IDENTITY_MFA_INVALID', 401, 'Invalid MFA code');
     }
 
     await redis.del(key);

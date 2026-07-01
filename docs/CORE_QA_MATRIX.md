@@ -2,7 +2,7 @@
 
 Manual sign-off checklist for **Greenfield Academy** (`greenfield` slug, **Core** tier).  
 Aligned with `ROLE_EXPERIENCE_TIER_PLAN.md` §3 (Core roles) and Sprint 14 pilot exit criteria.  
-Password: `LoomisDev2026!` · Core SMS dev code: `000000`
+Password: `LoomisDev2026!` · Step-up SMS dev code: `000000`
 
 Test each role at **375px** and **desktop** unless noted.
 
@@ -28,7 +28,7 @@ Test each role at **375px** and **desktop** unless noted.
 
 | Role | Surface | Login | Must verify |
 |------|---------|-------|-------------|
-| **Parent** | Web `/parent/*` + mobile | `parent.jss3b@greenfield.loomis.com` | Child switcher; fees; SMS on new device only |
+| **Parent** | Web `/parent/*` + mobile | `parent.jss3b@greenfield.loomis.com` | Child switcher; fees; password-only login |
 | **Student** | Web `/parent/*` (student route group) | (seed student portal email from `pnpm db:seed`) | Read-only academics shell |
 
 **Mobile smoke:** `apps/mobile/.maestro/parent-smoke.yaml`

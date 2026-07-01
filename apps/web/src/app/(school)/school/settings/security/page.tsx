@@ -19,26 +19,20 @@ function CoreMfaPolicyNotice() {
       <h2 className="text-[14px] font-semibold text-neutral-900">Sign-in &amp; verification policy</h2>
       {isCore ? (
         <ul className="list-disc space-y-2 pl-5 text-[13px] text-neutral-600">
-          <li>
-            School Owner, Principal, and Finance staff sign in with password plus SMS on a new device.
-            Trusted devices skip SMS for 30 days.
-          </li>
+          <li>All school staff, parents, and students sign in with email and password only.</li>
           <li>Platform fee is recorded automatically on the billing date you set for each term.</li>
           <li>
             Refund approvals at or above ₦100,000 require SMS verification; smaller refunds do not.
           </li>
-          <li>Teachers sign in with password only.</li>
-          <li>
-            Parents use password on trusted devices; SMS is required on a new device login only.
-          </li>
           <li className="text-neutral-500">
-            Local development without Termii: SMS codes use <span className="font-mono">000000</span>.
+            Local development without Termii: step-up SMS codes use{' '}
+            <span className="font-mono">000000</span>.
           </li>
         </ul>
       ) : (
         <p className="text-[13px] text-neutral-600">
-          Advanced tier: authenticator (TOTP) step-up applies to high-risk actions such as large
-          refunds and data export. Optional SMS login may be enabled via tenant flags.
+          Advanced tier: sign-in is password-only. Authenticator (TOTP) step-up applies to
+          high-risk actions such as large refunds and data export when enrolled under Security.
         </p>
       )}
     </section>
@@ -143,7 +137,7 @@ export default function SecuritySettingsPage() {
                     <p className="text-[11px] text-neutral-500">
                       Registered {new Date(device.registeredAt).toLocaleDateString()} · Last seen{' '}
                       {new Date(device.lastSeenAt).toLocaleString()}
-                      {device.hasPersistentToken ? ' · Persistent MFA token' : ''}
+                      {device.hasPersistentToken ? ' · Trusted device' : ''}
                     </p>
                   </div>
                   <Button

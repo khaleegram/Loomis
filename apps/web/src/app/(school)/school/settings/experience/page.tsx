@@ -54,7 +54,7 @@ function TierPlanCard() {
           <h2 className="text-[14px] font-semibold text-neutral-900">Experience tier</h2>
           <p className="text-[13px] text-neutral-600">
             Your school runs on <span className="font-semibold text-neutral-900">{tierLabel}</span>{' '}
-            ({experienceTier}). Core includes finance officer mode, SMS hybrid login, and simple audit.
+            ({experienceTier}). Core includes finance officer mode, password-only sign-in, and simple audit.
           </p>
         </div>
       </div>

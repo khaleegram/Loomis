@@ -10,7 +10,7 @@ import {
 } from './core-mfa-policy.js';
 
 describe('coreLoginRequiresSms', () => {
-  it('requires SMS for Core principal', () => {
+  it('never requires SMS at login (platform-only login MFA)', () => {
     expect(
       coreLoginRequiresSms('principal', 'core', {
         workflowsInbox: false,
@@ -18,7 +18,7 @@ describe('coreLoginRequiresSms', () => {
         deputyExamEnabled: false,
         totpOptional: false,
       }),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it('does not require SMS for teachers in Core', () => {

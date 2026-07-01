@@ -42,7 +42,7 @@ pnpm dev
 | **Web login** | http://localhost:3000/login |
 | **Password (all seeded accounts)** | `LoomisDev2026!` |
 | **Platform / regional MFA (TOTP)** | Secret `JBSWY3DPEHPK3PXP` (base32) — add to authenticator as “Loomis Dev” |
-| **Core school SMS (dev bypass)** | `000000` when `TERMII_API_KEY` is **not** set (default local) |
+| **Core step-up SMS (dev bypass)** | `000000` when `TERMII_API_KEY` is **not** set (refunds ≥ ₦100k, etc.) |
 
 After `pnpm db:seed`, the console prints the **Greenfield Tenant ID** and the **student portal email** (opaque format).
 
@@ -52,31 +52,26 @@ Re-running `pnpm db:seed` is **idempotent** — missing role accounts are added 
 
 ---
 
-## Authentication by tier (what you see at login)
+## Authentication (what you see at login)
 
-### Platform & regional — always TOTP
+### Platform & regional — TOTP required
 
 1. Email + password `LoomisDev2026!`
 2. Authenticator code (secret `JBSWY3DPEHPK3PXP`)
 
-### Greenfield (Core tier) — SMS hybrid
+### School, parent & student — password only
 
-| Role group | First login / new browser | Return visit (same browser, ≤30 days) |
-|------------|---------------------------|----------------------------------------|
-| **Owner, Principal, Admin Officer, Accountant, Cashier** | Password → **SMS code** | Password only (trusted device) |
-| **Teachers, Class teachers, Exam / Timetable officers** | Password only | Password only |
-| **Parent** | Password → **SMS** on new device | Password only on trusted device |
-| **Student** | Password only | Password only |
+All tenant-scoped roles (school staff, parents, students) sign in with **email + password only**. No SMS or authenticator step at login.
 
-**Local dev SMS:** enter `000000` on the MFA screen (no Termii keys required).
+High-risk actions after login (census lock, large refunds, platform console changes) may still require **step-up** verification — see below.
 
-Optional: set `TERMII_API_KEY` + `TERMII_SENDER_ID` in `apps/api/.env.local` for real SMS delivery.
+**Local dev step-up SMS:** enter `000000` on the verification screen when `TERMII_API_KEY` is unset.
 
-**Clear trusted device:** log out all devices, clear site data / use a private window, or deregister the device under **Settings → Security**.
+Optional: set `TERMII_API_KEY` + `TERMII_SENDER_ID` in `apps/api/.env.local` for real SMS on step-up actions.
 
-### Advanced QA school — TOTP for step-up; password at login
+### Advanced / Enterprise schools — step-up after login
 
-Advanced tier school staff log in with **password only** (no Core SMS login). High-risk actions (census lock, large refunds, data export) still use **authenticator step-up** when configured.
+Advanced tier school staff log in with **password only**. High-risk actions (census lock, large refunds, data export) use **SMS or authenticator step-up** when configured.
 
 ---
 
@@ -138,13 +133,13 @@ Principal **cannot** submit new applications — by design (US-SIS-001). They ma
 
 Password for all: **`LoomisDev2026!`**
 
-| Role | Login email | Seeded phone | Login MFA (Core) | Default landing | Primary demo use |
-|------|-------------|--------------|------------------|-----------------|------------------|
-| **school_owner** | `owner@greenfield.loomis.com` | +2348011000005 | SMS → `000000` | `/school/dashboard` | Census lock, Experience settings, audit export (Advanced+) |
-| **principal** | `principal@greenfield.loomis.com` | +2348011000001 | SMS → `000000` | `/school/dashboard` | Operations home; **census lock**; timetable builder via **Academic → Timetable** |
-| **admin_officer** | `admin@greenfield.loomis.com` | +2348011000004 | SMS → `000000` | `/school/dashboard` | **Register students (one step)**, registry |
-| **accountant** | `accountant@greenfield.loomis.com` | +2348011000006 | SMS → `000000` | Finance desk | Verify payments |
-| **cashier** | `cashier@greenfield.loomis.com` | +2348011000007 | SMS → `000000` | Finance desk | Log payments |
+| Role | Login email | Seeded phone | Login | Default landing | Primary demo use |
+|------|-------------|--------------|-------|-----------------|------------------|
+| **school_owner** | `owner@greenfield.loomis.com` | +2348011000005 | Password only | `/school/dashboard` | Census lock, Experience settings, audit export (Advanced+) |
+| **principal** | `principal@greenfield.loomis.com` | +2348011000001 | Password only | `/school/dashboard` | Operations home; **census lock**; timetable builder via **Academic → Timetable** |
+| **admin_officer** | `admin@greenfield.loomis.com` | +2348011000004 | Password only | `/school/dashboard` | **Register students (one step)**, registry |
+| **accountant** | `accountant@greenfield.loomis.com` | +2348011000006 | Password only | Finance desk | Verify payments |
+| **cashier** | `cashier@greenfield.loomis.com` | +2348011000007 | Password only | Finance desk | Log payments |
 | **exam_officer** | `exam@greenfield.loomis.com` | +2348011000002 | Password only | `/school/exams` | Exams & publish |
 | **teacher** | `teacher01@greenfield.loomis.com` | +2348011000101 | Password only | `/school/dashboard` | Teacher Desk (My Schedule, gradebook, assignments) |
 | **class_teacher** | `teacher03@greenfield.loomis.com` | +2348011000103 | Password only | `/school/dashboard` | JSS1 B — attendance |
@@ -175,11 +170,11 @@ Seed sets `finance_mode=split` on the Advanced QA tenant. Re-run `pnpm db:seed` 
 
 Platform must set `experienceTier=enterprise` (Platform → Tenants → Experience card).
 
-| Role | Login email | Password | Login MFA | Default landing | Notes |
-|------|-------------|----------|-----------|-----------------|--------|
-| **school_owner** | `owner@enterprise.loomis.com` | `LoomisDev2026!` | Password + TOTP step-up on census | `/school/dashboard` | Attestations nav; mandatory authenticator on high-risk actions |
-| **principal** | `principal@enterprise.loomis.com` | `LoomisDev2026!` | Password + TOTP on emergency publish | `/school/dashboard` | **Attestations** nav; census lock; emergency publish after 120h EO idle only |
-| **exam_officer** | `exam@enterprise.loomis.com` | `LoomisDev2026!` | Password only | `/school/exams` | Normal publish path |
+| Role | Login email | Password | Login | Notes |
+|------|-------------|----------|-------|--------|
+| **school_owner** | `owner@enterprise.loomis.com` | `LoomisDev2026!` | Password only | Attestations nav; TOTP step-up on high-risk actions |
+| **principal** | `principal@enterprise.loomis.com` | `LoomisDev2026!` | Password only | **Attestations** nav; census lock; emergency publish after 120h EO idle only |
+| **exam_officer** | `exam@enterprise.loomis.com` | `LoomisDev2026!` | Password only | Normal publish path |
 
 Enterprise adds **Attestations** (`/school/academic/attestations`) for **Owner and Principal** and **SoD notices** on verify, refunds, and role change flows.
 
@@ -187,9 +182,9 @@ Enterprise adds **Attestations** (`/school/academic/attestations`) for **Owner a
 
 ### Parent / student (Greenfield)
 
-| Role | Login email | Password | Login MFA | Notes |
-|------|-------------|----------|-----------|--------|
-| **parent** | `parent.jss3b@greenfield.loomis.com` | `LoomisDev2026!` | SMS on **new device** → `000000` | Linked child JSS3 B; fees; attendance |
+| Role | Login email | Password | Login | Notes |
+|------|-------------|----------|-------|--------|
+| **parent** | `parent.jss3b@greenfield.loomis.com` | `LoomisDev2026!` | Password only | Linked child JSS3 B; fees; attendance |
 | **student** | *Printed by `pnpm db:seed`* | `LoomisDev2026!` | Password only | Opaque portal email in seed output |
 
 Parent seeded phone: `+2348015550196`
@@ -200,9 +195,9 @@ Parent seeded phone: `+2348015550196`
 
 Password: **`LoomisDev2026!`** for all below.
 
-| Role | Login email | MFA notes |
-|------|-------------|-----------|
-| **parent** | `parent.jss3b@greenfield.loomis.com` | SMS on new device |
+| Role | Login email | Login |
+|------|-------------|-------|
+| **parent** | `parent.jss3b@greenfield.loomis.com` | Password only |
 | **student** | *Greenfield student portal email (seed output)* | Password only |
 | **teacher** | `teacher01@greenfield.loomis.com` | Password only |
 | **class_teacher** | `teacher03@greenfield.loomis.com` | Password only |
@@ -262,6 +257,6 @@ principal@enterprise.loomis.com           principal (emergency publish after 120
 exam@enterprise.loomis.com                exam_officer
 
 Password (all):  LoomisDev2026!
-TOTP secret:     JBSWY3DPEHPK3PXP   (platform / regional / Advanced+ step-up)
-Core SMS (dev):  000000             (Greenfield leadership + finance + parent)
+TOTP secret:     JBSWY3DPEHPK3PXP   (platform / regional login + step-up)
+Step-up SMS:     000000             (Core refunds ≥ ₦100k when Termii unset)
 ```

@@ -659,7 +659,10 @@ export const studentRepository = {
     });
   },
 
-  async markParentIdentityVerified(parentIdentityId: string, factor: 'email_otp' | 'phone_otp') {
+  async markParentIdentityVerified(
+    parentIdentityId: string,
+    factor: 'email_otp' | 'phone_otp' | 'parent_accept',
+  ) {
     return withTenantContext(null, async (tx) => {
       const now = new Date();
       const [existing] = await tx
@@ -673,7 +676,10 @@ export const studentRepository = {
         .update(parentIdentities)
         .set({
           status: 'verified',
-          emailVerifiedAt: factor === 'email_otp' ? now : existing.emailVerifiedAt,
+          emailVerifiedAt:
+            factor === 'email_otp' || factor === 'parent_accept'
+              ? now
+              : existing.emailVerifiedAt,
           phoneVerifiedAt: factor === 'phone_otp' ? now : existing.phoneVerifiedAt,
           updatedAt: now,
         })
@@ -771,8 +777,8 @@ export const studentRepository = {
     studentId: string,
     input: InitiateParentLinkInput,
     initiatedById: string,
-    otpHash: string,
-    otpExpiresAt: Date,
+    otpHash?: string | null,
+    otpExpiresAt?: Date | null,
   ) {
     return withTenantContext(tenantId, async (tx) => {
       const now = new Date();
@@ -785,8 +791,8 @@ export const studentRepository = {
           studentId,
           relationship: input.relationship,
           status: 'school_attested',
-          otpHash,
-          otpExpiresAt,
+          otpHash: otpHash ?? null,
+          otpExpiresAt: otpExpiresAt ?? null,
           initiatedById,
           schoolAttestedById: initiatedById,
           schoolAttestedAt: now,

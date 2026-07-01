@@ -11,7 +11,7 @@ import {
 /** Core: SMS step-up for refunds at or above this amount (₦100,000). */
 export const CORE_SMS_REFUND_STEPUP_THRESHOLD_MINOR = 10_000_000;
 
-/** Roles that receive SMS OTP on first login / new device in Core (tier plan §4). */
+/** Leadership/finance roles that may enroll optional TOTP for step-up (Advanced tier). */
 export const CORE_SMS_LOGIN_ROLES: ReadonlySet<Role> = new Set([
   'school_owner',
   'principal',
@@ -31,15 +31,13 @@ export function resolveExperienceForMfa(
   };
 }
 
-/** Core login SMS when tier is Core and role is leadership/finance (not teachers). */
+/** School logins use password only; SMS login MFA is not used. */
 export function coreLoginRequiresSms(
-  role: Role,
-  experienceTier: ExperienceTier,
-  flags: ResolvedExperienceFlags,
+  _role: Role,
+  _experienceTier: ExperienceTier,
+  _flags: ResolvedExperienceFlags,
 ): boolean {
-  if (!isCoreTier(experienceTier)) return false;
-  if (flags.totpOptional) return false;
-  return CORE_SMS_LOGIN_ROLES.has(role);
+  return false;
 }
 
 /** Whether step-up for an action should verify SMS (Core) vs TOTP (Advanced/Enterprise). */
@@ -89,12 +87,12 @@ export function stepUpChannelLabel(channel: MfaChannel): string {
   return channel === 'sms' ? 'SMS code' : 'authenticator code';
 }
 
-/** Parents: SMS on new device login (tier plan §4 — not tier-scoped). */
-export function parentNewDeviceRequiresSms(role: Role): boolean {
-  return role === 'parent';
+/** Parents sign in with password only (no device SMS challenge). */
+export function parentNewDeviceRequiresSms(_role: Role): boolean {
+  return false;
 }
 
-/** Advanced optional TOTP: leadership/finance staff use authenticator when flag is on. */
+/** Advanced optional TOTP enrollment (step-up); not used for login MFA. */
 export function advancedOptionalTotpLogin(
   role: Role,
   experienceTier: ExperienceTier,

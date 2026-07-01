@@ -81,14 +81,14 @@ export function InitiateParentLinkDialog({
           surface="dialog"
           eyebrow="Parent portal"
           title="Invite a parent"
-          description="We email a one-time code so the parent can link their account. You cannot verify on their behalf."
+          description="The parent signs in and accepts the link from their portal. You cannot accept on their behalf."
         />
 
         <div className="flex-1 overflow-y-auto px-6 py-5">
           <FormContextCard
             badge="Linking to"
             title={studentName}
-            subtitle="Parent receives an email with next steps"
+            subtitle="Parent accepts from their portal after signing in"
           />
 
           <div className={cn('mb-5 mt-4 rounded-2xl border p-4', SEMANTIC.warning.surfaceSubtle)}>
@@ -97,7 +97,7 @@ export function InitiateParentLinkDialog({
               How it works
             </p>
             <p className={cn('mt-1 text-[12px] leading-relaxed', SEMANTIC.warning.text)}>
-              The parent must enter the OTP from their inbox. Links expire after 48 hours if not accepted.
+              The parent must accept the invitation while signed in. Links expire after 48 hours if not accepted.
             </p>
           </div>
 
@@ -145,7 +145,7 @@ export function InitiateParentLinkDialog({
                           <Input
                             {...field}
                             type="email"
-                            placeholder="Where we send the OTP"
+                            placeholder="Parent login email"
                             className={cn(smartInputClass, 'pl-9')}
                           />
                         </div>

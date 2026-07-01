@@ -155,9 +155,9 @@ Document for compliance/product:
 
 | Actor | Core login | Notes |
 |-------|------------|-------|
-| **Owner, Principal, Finance Officer** | Password + **SMS OTP on first login** + **trusted device 30 days** | After trust: password only for routine use |
+| **Owner, Principal, Finance Officer** | Password only | Step-up SMS/TOTP on high-risk actions only |
 | **Teachers, Class Teachers** | Password only | |
-| **Parents** | Password only | OTP on: password reset, new device login |
+| **Parents** | Password only | Parent link: accept from portal (no OTP) |
 | **Students** | Password only | |
 
 ### 4.2 Step-up (SMS unless Advanced enables TOTP)
@@ -171,8 +171,8 @@ Document for compliance/product:
 
 ### 4.3 Trusted device
 
-- **Yes — 30 days** after successful SMS OTP.
-- Explicit logout or device deregister clears trust.
+- Device registration remains available for session management.
+- Login MFA is **platform-only**; school roles do not use SMS or TOTP at sign-in.
 
 ### 4.4 Advanced / Enterprise
 

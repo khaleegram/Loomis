@@ -366,7 +366,7 @@ Mobile: Class Teacher stack — attendance ≤3 taps, offline sync.
 | **Primary screens** | Dashboard, Fees, Messages |
 | **Secondary screens** | Attendance, Results, Timetable, Contact settings |
 | **Hidden nav** | Assignments |
-| **Primary actions** | Pay fees, reply to messages, accept parent link (OTP) |
+| **Primary actions** | Pay fees, reply to messages, accept parent link |
 | **Approvals** | — |
 | **Reports consumed** | Per-child cards (attendance, results, fees) |
 
