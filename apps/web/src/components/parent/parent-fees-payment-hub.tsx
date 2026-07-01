@@ -267,7 +267,7 @@ export function ParentFeesPaymentHub(props: ParentFeesPaymentHubProps) {
         <BankTransferPanel
           childName={childName}
           showVa={nombaMode}
-          va={va}
+          va={va ?? null}
           isRetryingVa={isRetryingVa}
           onRetryVa={onRetryVa}
           totalOwed={totalOwed}
