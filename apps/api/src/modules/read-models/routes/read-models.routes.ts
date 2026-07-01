@@ -12,6 +12,7 @@ import {
   getParentResultsHandler,
   getParentTimetableHandler,
   getRegionalAnalyticsHandler,
+  postHackathonDemoResetFeesHandler,
 } from '../handlers/read-models.handler.js';
 
 /** Read-model query routes (System Design §6.2; FR-PAR-001 / FR-REG-004). */
@@ -65,6 +66,15 @@ export async function readModelsRoutes(app: FastifyInstance): Promise<void> {
       preValidation: [validateQuery(parentPaymentsQuery)],
     },
     getParentPaymentsHandler,
+  );
+
+  app.post<{ Querystring: ParentFeesQuery }>(
+    '/parents/me/fees/hackathon-reset',
+    {
+      preHandler: [authenticate, requireTenantMatch, requireRole('parent')],
+      preValidation: [validateQuery(parentFeesQuery)],
+    },
+    postHackathonDemoResetFeesHandler,
   );
 
   app.get<{ Querystring: { region?: string } }>(

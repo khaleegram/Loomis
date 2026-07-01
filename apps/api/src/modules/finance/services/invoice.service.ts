@@ -9,6 +9,7 @@ import { studentRepository } from '../../student/repository/index.js';
 import { assertParentPortalAccess } from '../../student/services/parent-portal-access.js';
 import { FINANCE_EVENT_TYPES } from '../events/types.js';
 import { isNombaConfigured } from '../gateway/index.js';
+import { hackathonDemoService } from './hackathon-demo.service.js';
 import { financeRepository, type InvoiceWithItems } from '../repository/index.js';
 import type {
   ActorContext,
@@ -411,6 +412,7 @@ export const invoiceService = {
     const env = getEnv();
     const onlinePaymentEnabled = Boolean(env.PAYSTACK_SECRET_KEY) || isNombaConfigured();
     const virtualAccountFields = await resolveParentVirtualAccount(tenantId, studentId, actor);
+    const hackathonDemoResetEnabled = hackathonDemoService.isEnabled();
     const creditBalanceMinor = await financeRepository.getStudentCreditBalanceMinor(
       tenantId,
       studentId,
@@ -463,6 +465,7 @@ export const invoiceService = {
         dueDate: null,
         lineItems: [],
         onlinePaymentEnabled,
+        hackathonDemoResetEnabled,
         ...virtualAccountFields,
       };
     }
@@ -497,6 +500,7 @@ export const invoiceService = {
       dueDate: invoice.invoice.dueDate,
       lineItems: allocatePaidToLineItems(invoice.items, invoice.invoice.amountPaidMinor),
       onlinePaymentEnabled,
+      hackathonDemoResetEnabled,
       ...virtualAccountFields,
     };
   },

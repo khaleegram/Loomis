@@ -1,7 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   ChildAttendanceResponse,
   ChildPublishedResultsResponse,
+  HackathonDemoResetResponse,
   ParentDashboardResponse,
   ParentFeeStatusResponse,
   ParentPaymentsListResponse,
@@ -111,5 +112,32 @@ export function useParentPayments(
       }),
     staleTime: STALE_MS,
     enabled: Boolean(tenantId && studentId && termId),
+  });
+}
+
+export function useHackathonResetDemoFees(tenantId: string) {
+  const client = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { studentId: string; termId: string }) => {
+      const params = new URLSearchParams({
+        studentId: input.studentId,
+        termId: input.termId,
+      });
+      return client.post<HackathonDemoResetResponse>(
+        `/parents/me/fees/hackathon-reset?${params.toString()}`,
+        {},
+        { headers: { 'X-Tenant-Id': tenantId } },
+      );
+    },
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.parent.dashboard() });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.parent.fees(tenantId, variables.studentId, variables.termId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.parent.payments(tenantId, variables.studentId, variables.termId),
+      });
+    },
   });
 }

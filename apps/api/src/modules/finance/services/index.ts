@@ -7,4 +7,5 @@ export { refundService } from './refund.service.js';
 export { reconciliationService } from './reconciliation.service.js';
 export { inboundTransferService } from './inbound-transfer.service.js';
 export { virtualAccountService } from './virtual-account.service.js';
+export { hackathonDemoService } from './hackathon-demo.service.js';
 export { webhookService } from './webhook.service.js';

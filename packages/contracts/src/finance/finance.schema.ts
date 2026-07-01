@@ -471,8 +471,21 @@ export const parentFeeStatusResponse = z.object({
       accountRef: z.string(),
     })
     .nullable(),
+  /** True when HACKATHON_DEMO_RESET_ENABLED — shows sandbox reset control on parent fees. */
+  hackathonDemoResetEnabled: z.boolean().optional(),
 });
 export type ParentFeeStatusResponse = z.infer<typeof parentFeeStatusResponse>;
+
+export const hackathonDemoResetResponse = z.object({
+  studentId: z.string().uuid(),
+  termId: z.string().uuid(),
+  invoiceId: z.string().uuid(),
+  amountChargedMinor: koboAmount,
+  amountPaidMinor: koboAmount,
+  balanceMinor: koboAmount,
+  creditBalanceMinor: koboAmount,
+});
+export type HackathonDemoResetResponse = z.infer<typeof hackathonDemoResetResponse>;
 
 export const parentStudentVirtualAccountQuery = z.object({
   studentId: z.string().uuid(),

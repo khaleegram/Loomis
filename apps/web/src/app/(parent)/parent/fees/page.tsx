@@ -3,6 +3,7 @@
 import {
   useAcademicTerms,
   useAcademicYears,
+  useHackathonResetDemoFees,
   useInitializeOnlinePayment,
   useMyProfile,
   useParentDashboard,
@@ -18,6 +19,7 @@ import { ParentFeesHero } from '@/components/parent/parent-fees-hero';
 import { ParentFeesInvoicePanel } from '@/components/parent/parent-fees-invoice-panel';
 import { ParentFeesPaymentHub } from '@/components/parent/parent-fees-payment-hub';
 import { ParentFeesScopeBar } from '@/components/parent/parent-fees-scope-bar';
+import { ParentHackathonResetPanel } from '@/components/parent/parent-hackathon-reset-panel';
 import { PageBody } from '@/components/parent/parent-shell';
 import { useAuth } from '@/lib/auth/auth-context';
 import { financeErrorMessage } from '@/lib/finance/finance-errors';
@@ -80,6 +82,7 @@ function ParentFeesView() {
     resolvedTermId ?? '',
     activeCard?.studentId ?? '',
   );
+  const hackathonReset = useHackathonResetDemoFees(activeCard?.tenantId ?? '');
 
   const fees = feesQuery.data;
   const isLoading = dashboardQuery.isLoading || feesQuery.isLoading;
@@ -221,6 +224,20 @@ function ParentFeesView() {
           tenantId={activeCard.tenantId}
           payments={paymentsQuery.data?.payments ?? []}
           isLoading={paymentsQuery.isLoading}
+        />
+      ) : null}
+
+      {fees?.hackathonDemoResetEnabled && activeCard?.studentId && resolvedTermId ? (
+        <ParentHackathonResetPanel
+          childName={childName}
+          demoFeeMinor={15_000}
+          isResetting={hackathonReset.isPending}
+          onReset={async () => {
+            await hackathonReset.mutateAsync({
+              studentId: activeCard.studentId,
+              termId: resolvedTermId,
+            });
+          }}
         />
       ) : null}
     </div>

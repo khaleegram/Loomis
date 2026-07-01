@@ -33,6 +33,7 @@ import { enrollmentService } from '../src/modules/student/services/enrollment.se
 import { studentService } from '../src/modules/student/services/student.service.js';
 import { financeRepository } from '../src/modules/finance/repository/index.js';
 import { feeStructureService } from '../src/modules/finance/services/fee-structure.service.js';
+import { hackathonDemoService } from '../src/modules/finance/services/hackathon-demo.service.js';
 import { invoiceService } from '../src/modules/finance/services/invoice.service.js';
 import { parentDashboardRepository } from '../src/modules/read-models/repository/index.js';
 import { psfRateService } from '../src/modules/tenant/services/psf-rate.service.js';
@@ -1223,8 +1224,11 @@ async function ensureJss3BParentDemo(tenantId: string): Promise<{
           termId: openTerm.id,
           classLevelId: jss3Level.id,
           items: [
-            { name: 'Tuition', category: 'tuition', amountMinor: 15_000_000 },
-            { name: 'Development levy', category: 'development_levy', amountMinor: 2_500_000 },
+            {
+              name: 'Hackathon demo fee',
+              category: 'tuition',
+              amountMinor: hackathonDemoService.HACKATHON_DEMO_FEE_MINOR,
+            },
           ],
         },
         actor,
@@ -1243,7 +1247,7 @@ async function ensureJss3BParentDemo(tenantId: string): Promise<{
         jss3bStudent.studentId,
         openTerm.id,
       );
-      const invoice = await invoiceService.issueInvoice(
+      await invoiceService.issueInvoice(
         tenantId,
         {
           academicYearId: year.id,
@@ -1256,10 +1260,14 @@ async function ensureJss3BParentDemo(tenantId: string): Promise<{
         actor,
         SEED_AUDIT,
       );
-      outstandingBalance = invoice.invoice.balanceMinor;
-    } else {
-      outstandingBalance = existingInvoice.balanceMinor;
     }
+
+    const reset = await hackathonDemoService.resetStudentFeesInternal(
+      tenantId,
+      jss3bStudent.studentId,
+      openTerm.id,
+    );
+    outstandingBalance = reset.balanceMinor;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.warn(`  Parent demo fees skipped: ${message}`);

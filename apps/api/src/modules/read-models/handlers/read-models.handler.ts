@@ -14,6 +14,7 @@ import { gradebookService } from '../../academic/services/gradebook.service.js';
 import { timetableService } from '../../academic/services/timetable.service.js';
 import { paymentToResponse } from '../../finance/handlers/_serializers.js';
 import { invoiceService } from '../../finance/services/invoice.service.js';
+import { hackathonDemoService } from '../../finance/services/hackathon-demo.service.js';
 import { paymentService } from '../../finance/services/payment.service.js';
 import { parentDashboardReadService, regionalAnalyticsReadService } from '../services/index.js';
 
@@ -168,6 +169,25 @@ export async function getParentPaymentsHandler(
   );
 
   return sendSuccess(reply, { payments: results.map(paymentToResponse) });
+}
+
+export async function postHackathonDemoResetFeesHandler(
+  req: FastifyRequest<{ Querystring: ParentFeesQuery }>,
+  reply: FastifyReply,
+): Promise<FastifyReply> {
+  const tenantId = req.headers['x-tenant-id'];
+  if (typeof tenantId !== 'string' || !tenantId) {
+    throw new LoomisError('VALIDATION_ERROR', 400, 'X-Tenant-Id header is required');
+  }
+
+  const result = await hackathonDemoService.resetLinkedChildFees(
+    tenantId,
+    req.query.studentId,
+    req.query.termId,
+    requireActor(req),
+  );
+
+  return sendSuccess(reply, result);
 }
 
 export async function getRegionalAnalyticsHandler(

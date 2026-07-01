@@ -61,6 +61,15 @@ const envSchema = z.object({
   NOMBA_SUB_ACCOUNT_ID: z.string().uuid().optional(),
   NOMBA_WEBHOOK_SECRET: z.string().min(1).optional(),
 
+  /**
+   * Hackathon only: allow parents to reset linked-child fee balances to ₦150 demo owed.
+   * Enable on loomis.digital / Railway during Nomba sandbox demos only.
+   */
+  HACKATHON_DEMO_RESET_ENABLED: z.preprocess(
+    (value) => value === true || value === 'true' || value === '1',
+    z.boolean().default(false),
+  ),
+
   /** Public web app origin for links in transactional emails (defaults to http://localhost:3000 in dev). */
   WEB_APP_BASE_URL: z.string().url().optional(),
 

@@ -22,7 +22,9 @@
     "db:seed:rich:prod": "node --env-file=../../.env.railway.local ./node_modules/tsx/dist/cli.mjs scripts/seed-rich-school.ts",
     "db:seed:timetables": "node --env-file=../../.env.local ./node_modules/tsx/dist/cli.mjs scripts/seed-rich-school.ts --timetables-only",
     "db:seed:advanced-demo": "node --env-file=../../.env.local ./node_modules/tsx/dist/cli.mjs scripts/seed-advanced-demo-data.ts",
-    "db:seed:prod": "node ./node_modules/tsx/dist/cli.mjs scripts/seed-prod-all.ts"
+    "db:seed:prod": "node ./node_modules/tsx/dist/cli.mjs scripts/seed-prod-all.ts",
+    "db:hackathon:reset-jss3b:prod": "node --env-file=../../.env.railway.local ./node_modules/tsx/dist/cli.mjs scripts/hackathon-reset-jss3b-fees.ts",
+    "db:hackathon:reset-jss3b:railway": "node scripts/hackathon-reset-railway-prod.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1063.0",
