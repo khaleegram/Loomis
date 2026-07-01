@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2, CreditCard, Receipt, Wallet } from 'lucide-react';
+import { CheckCircle2, Sparkles, Wallet } from 'lucide-react';
 
 import { ACADEMIC_PAGE_TITLE_STYLE, ACADEMIC_UI } from '@/lib/academic/academic-ui';
 import { formatKobo } from '@loomis/core';
@@ -34,112 +34,95 @@ export function ParentFeesHero({
   isLoading,
 }: ParentFeesHeroProps) {
   const owedMinor = totalBalanceMinor ?? balanceMinor + arrearsBalanceMinor;
-  const stats = [
-    {
-      label: 'Total charged',
-      value: isLoading ? '—' : formatKobo(amountChargedMinor),
-      hint: 'This term invoice',
-      icon: Receipt,
-      gradient: SURFACES.kpi.g3,
-    },
-    {
-      label: 'Paid',
-      value: isLoading ? '—' : formatKobo(amountPaidMinor),
-      hint: 'Verified payments',
-      icon: CheckCircle2,
-      gradient: SURFACES.kpi.g2,
-    },
-    {
-      label: 'Total owed',
-      value: isLoading ? '—' : formatKobo(owedMinor),
-      hint:
-        arrearsBalanceMinor > 0
-          ? `${formatKobo(balanceMinor)} this term · ${formatKobo(arrearsBalanceMinor)} arrears`
-          : creditBalanceMinor > 0
-            ? `${formatKobo(creditBalanceMinor)} pay-ahead credit`
-            : owedMinor > 0
-              ? 'Tap Pay below'
-              : 'All clear',
-      icon: Wallet,
-      gradient: owedMinor > 0 ? SURFACES.kpi.g4 : SURFACES.kpi.g2,
-    },
-    {
-      label: 'Portal',
-      value: 'Fees',
-      hint: 'Track and pay online',
-      icon: CreditCard,
-      gradient: SURFACES.kpi.g1,
-    },
-  ];
+  const allClear = !isLoading && owedMinor <= 0;
+  const paidPercent =
+    amountChargedMinor > 0 ? Math.min(100, Math.round((amountPaidMinor / amountChargedMinor) * 100)) : 0;
 
   return (
-    <div className="hero-panel rounded-2xl">
+    <div className={ACADEMIC_UI.heroPanel}>
       <div
-        className="relative px-4 pb-16 pt-6 sm:px-6 sm:pb-20 sm:pt-8 lg:px-8 lg:pt-10"
+        className="relative overflow-hidden px-4 py-6 sm:px-6 sm:py-8 lg:px-8"
         style={{ background: SURFACES.hero }}
       >
-        <div className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full bg-brand-400/10 blur-3xl" aria-hidden />
+        <div
+          className="pointer-events-none absolute -right-20 -top-20 size-56 rounded-full bg-brand-400/15 blur-3xl"
+          aria-hidden
+        />
 
-        <div className="relative min-w-0">
-          <p className={ACADEMIC_UI.sectionLabel}>Family portal · school fees</p>
-          <h1 className="text-foreground" style={ACADEMIC_PAGE_TITLE_STYLE}>
-            Fee status
-          </h1>
-          <p className={ACADEMIC_UI.pageDesc}>
-            What you owe this term and from earlier terms — pay in one tap when you are ready.
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            {childName ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-200/60 bg-white/85 px-3 py-1 text-[11px] font-semibold text-brand-800 shadow-sm">
-                {childName}
-              </span>
-            ) : null}
-            {schoolName ? (
-              <span className="rounded-full border border-neutral-200/80 bg-white/75 px-3 py-1 text-[11px] font-semibold text-neutral-600">
-                {schoolName}
-              </span>
-            ) : null}
-            {classLabel ? (
-              <span className="rounded-full border border-neutral-200/80 bg-white/75 px-3 py-1 text-[11px] font-semibold text-neutral-600">
-                {classLabel}
-              </span>
-            ) : null}
-            {termLabel ? (
-              <span className="rounded-full border border-neutral-200/80 bg-white/75 px-3 py-1 text-[11px] font-semibold text-neutral-600">
-                {termLabel}
-              </span>
-            ) : null}
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0 flex-1">
+            <p className={ACADEMIC_UI.sectionLabel}>Family portal · school fees</p>
+            <h1 className="text-foreground" style={ACADEMIC_PAGE_TITLE_STYLE}>
+              Pay school fees
+            </h1>
+            <p className={ACADEMIC_UI.pageDesc}>
+              Transfer to your child&apos;s dedicated account or pay online — balances update automatically.
+            </p>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {childName ? <span className={ACADEMIC_UI.heroPillBrand}>{childName}</span> : null}
+              {schoolName ? <span className={ACADEMIC_UI.heroPill}>{schoolName}</span> : null}
+              {classLabel ? <span className={ACADEMIC_UI.heroPill}>{classLabel}</span> : null}
+              {termLabel ? <span className={ACADEMIC_UI.heroPill}>{termLabel}</span> : null}
+            </div>
+          </div>
+
+          <div className="shrink-0 rounded-2xl bg-card/90 px-5 py-4 shadow-lg ring-1 ring-brand-100/30 backdrop-blur-sm sm:min-w-[220px]">
+            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-neutral-400">
+              {allClear ? 'Balance' : 'Amount owed'}
+            </p>
+            <p
+              className="mt-1 tabular-nums text-neutral-900"
+              style={{ fontSize: 'clamp(1.75rem, 4vw, 2.25rem)', fontWeight: 800, letterSpacing: '-0.03em' }}
+            >
+              {isLoading ? '—' : formatKobo(owedMinor)}
+            </p>
+            <p className="mt-1 flex items-center gap-1.5 text-[12px] font-medium text-neutral-600">
+              {allClear ? (
+                <>
+                  <CheckCircle2 className="size-3.5 text-accent-green-600" aria-hidden />
+                  All fees cleared for this view
+                </>
+              ) : arrearsBalanceMinor > 0 ? (
+                <>
+                  <Wallet className="size-3.5 text-amber-600" aria-hidden />
+                  Includes {formatKobo(arrearsBalanceMinor)} from earlier terms
+                </>
+              ) : (
+                <>
+                  <Sparkles className="size-3.5 text-brand-600" aria-hidden />
+                  Pay below to settle
+                </>
+              )}
+            </p>
           </div>
         </div>
 
-        <div className="relative z-10 -mb-24 mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-          {stats.map((stat) => {
-            const Icon = stat.icon;
-            return (
-              <div key={stat.label} className="card overflow-hidden rounded-xl p-4 sm:p-5">
-                <div className="mb-3">
-                  <span
-                    className="flex size-8 items-center justify-center rounded-xl text-white shadow-sm sm:size-9"
-                    style={{ background: stat.gradient }}
-                  >
-                    <Icon aria-hidden className="size-3.5 sm:size-4" />
-                  </span>
-                </div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-400">{stat.label}</p>
-                <p
-                  className="mt-1 tabular-nums leading-none text-neutral-900"
-                  style={{
-                    fontSize: 'clamp(1.125rem, 2vw, 1.5rem)',
-                    fontWeight: 800,
-                    letterSpacing: '-0.02em',
-                  }}
-                >
-                  {stat.value}
-                </p>
-                <p className="mt-1 text-[11px] font-medium text-neutral-500">{stat.hint}</p>
-              </div>
-            );
-          })}
+        <div className="relative mt-6 grid grid-cols-3 gap-2 sm:gap-4">
+          {[
+            { label: 'Term invoice', value: isLoading ? '—' : formatKobo(amountChargedMinor) },
+            {
+              label: 'Paid',
+              value: isLoading ? '—' : formatKobo(amountPaidMinor),
+              sub: !isLoading && amountChargedMinor > 0 ? `${paidPercent}% of invoice` : undefined,
+            },
+            {
+              label: creditBalanceMinor > 0 ? 'Credit' : 'This term',
+              value:
+                isLoading ? '—' : creditBalanceMinor > 0 ? formatKobo(creditBalanceMinor) : formatKobo(balanceMinor),
+              sub: creditBalanceMinor > 0 ? 'Pay-ahead balance' : 'Remaining this term',
+            },
+          ].map((row) => (
+            <div
+              key={row.label}
+              className="rounded-xl bg-card/75 px-3 py-3 shadow-sm ring-1 ring-white/60 sm:px-4 sm:py-3.5"
+            >
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-400">{row.label}</p>
+              <p className="mt-0.5 text-[15px] font-extrabold tabular-nums tracking-tight text-neutral-900 sm:text-base">
+                {row.value}
+              </p>
+              {row.sub ? <p className="mt-0.5 text-[10px] font-medium text-neutral-500">{row.sub}</p> : null}
+            </div>
+          ))}
         </div>
       </div>
     </div>
